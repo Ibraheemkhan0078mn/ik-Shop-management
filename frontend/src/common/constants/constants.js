@@ -1,0 +1,101 @@
+
+export const backendBaseUrl= "http://localhost:4000/api/v1"
+
+
+
+
+export const DEFAULT_PERMISSIONS = {
+  // Students
+  'students-view': false,
+  'student-create': false,
+  'student-update': false,
+  'student-delete': false,
+  'student-attendance-view': false,
+  'student-attendance-create': false,
+  'student-financial-view': false,
+  'student-deposits-view': false,
+  'student-deposit-create': false,
+  'student-marks-view': false,
+  'student-marks-update': false,
+  'student-filter': false,
+  
+  // Teachers
+  'teachers-view': false,
+  'teacher-create': false,
+  'teacher-update': false,
+  'teacher-delete': false,
+  'teacher-attendance-view': false,
+  'teacher-attendance-create': false,
+  'teacher-financial-view': false,
+  'teacher-payment-view': false,
+  'teacher-payment-create': false,
+  'teacher-payment-recalculate': false,
+  'teacher-documents-view': false,
+  'teacher-documents-create': false,
+  'teacher-documents-delete': false,
+  'teacher-investment-view': false,
+  'teacher-investment-create': false,
+  'teacher-investment-update': false,
+  'teacher-investment-delete': false,
+  'teacher-class-partnership-view': false,
+  'teacher-class-partnership-create': false,
+  'teacher-class-partnership-update': false,
+  'teacher-class-partnership-delete': false,
+  'teacher-filter': false,
+  
+  // Classes
+  'classes-view': false,
+  'class-create': false,
+  'class-update': false,
+  'class-delete': false,
+  'class-course-view': false,
+  'class-course-create': false,
+  'class-course-update': false,
+  'class-course-delete': false,
+  'class-exam-view': false,
+  'class-exam-create': false,
+  'class-exam-update': false,
+  'class-exam-delete': false,
+  'class-subject-view': false,
+  'class-subject-create': false,
+  'class-subject-update': false,
+  'class-subject-delete': false,
+  
+  // Expenses
+  'expenses-view': false,
+  'expense-create': false,
+  'expense-update': false,
+  'expense-delete': false,
+  'expense-month-total': false,
+  'expense-category-view': false,
+  'expense-category-search': false,
+  'expense-search-previous': false,
+  
+  // Qarzas (Debt)
+  'qarzas-without-account-view': false,
+  'qarza-without-account-create': false,
+  'qarza-without-account-update': false,
+  'qarza-without-account-delete': false,
+  'qarzas-with-account-view': false,
+  'qarza-with-account-create': false,
+  'qarza-with-account-update': false,
+  'qarza-with-account-delete': false,
+  'qarza-payment-view': false,
+  'qarza-payment-create': false,
+  'qarza-payment-update': false,
+  'qarza-payment-delete': false,
+  
+  // System
+  'reports-view': false,
+  'reports-alerts-view': false,
+  'storage-view': false,
+  'storage-all-sync': false,
+  'storage-excel-generate': false,
+  'users-view': false,
+  'user-create': false,
+  'user-update': false,
+  'user-delete': false,
+  'website-applies-view': false,
+  'website-applies-delete': false,
+  'copyrights-view': false,
+};

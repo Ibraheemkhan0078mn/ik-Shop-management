@@ -1,0 +1,6 @@
+import api from "../../../lib/api.js";
+ 
+export const getAllQarzaAccountsApi = async () => {
+    const response = await api.get("/api/qarzaRoutes/getAllQarzaAccount");
+    return response.data;
+};

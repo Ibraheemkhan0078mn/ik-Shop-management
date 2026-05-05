@@ -1,0 +1,80 @@
+// import { getLocalProductModel } from "../../../configs/connect.db.js";
+
+
+
+// export async function changeProductStockQuatity(productId,type, quantity ) {
+//     try {
+//         let ProductModel = getLocalProductModel()
+//         if (!type || !quantity) return;
+//         if (type == "add") {
+//             await ProductModel.findOneAndUpdate(
+//                 { _id: productId },
+//                 { $inc: { currentStockLevel: Number(quantity) } }
+//             );
+//         } else {
+//             await ProductModel.findOneAndUpdate(
+//                 { _id: item?.product },
+//                 { $inc: { currentStockLevel: Number(quantity) * -1 } }
+//             );
+//         }
+
+
+//     } catch (error) {
+//         throw new Error(error)
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+
+import { getLocalProductModel } from "../../../configs/connect.db.js";
+
+export async function handleProductStockQuantity(productId, origin, quantity) {
+    try {
+        const ProductModel = getLocalProductModel();
+
+        if (!productId || !origin || quantity == null) return;
+
+        if (origin === "create") {
+            // New product/purchase created → increment stock
+            await ProductModel.findOneAndUpdate(
+                { _id: productId },
+                { $inc: { currentStockLevel: Number(quantity) } }
+            );
+
+        } else if (origin === "update") {
+            // Fetch current stock to calculate delta
+            const product = await ProductModel.findById(productId);
+            if (!product) throw new Error("Product not found");
+
+            const currentStock = product.currentStockLevel;
+            const newQuantity = Number(quantity);
+
+            if (newQuantity === currentStock) return; // No change needed
+
+            const delta = newQuantity - currentStock;
+            // delta > 0 → inc, delta < 0 → dec (handled by $inc with negative)
+            await ProductModel.findOneAndUpdate(
+                { _id: productId },
+                { $inc: { currentStockLevel: delta } }
+            );
+
+        } else if (origin === "delete") {
+            // Product/purchase deleted → decrement stock
+            await ProductModel.findOneAndUpdate(
+                { _id: productId },
+                { $inc: { currentStockLevel: Number(quantity) * -1 } }
+            );
+        }
+
+    } catch (error) {
+        throw new Error(error);
+    }
+}

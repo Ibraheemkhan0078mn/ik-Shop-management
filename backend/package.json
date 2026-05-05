@@ -1,0 +1,27 @@
+{
+    "name": "backend-main",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "nodemon index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "bcryptjs": "^3.0.3",
+        "connect-mongo": "^6.0.0",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "express-async-handler": "^1.2.0",
+        "express-session": "^1.19.0",
+        "mongoose": "^9.2.3",
+        "multer": "^2.1.1",
+        "nodemon": "^3.1.14",
+        "yup": "^1.7.1",
+        "zod": "^4.3.6"
+    }
+}

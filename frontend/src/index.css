@@ -1,0 +1,295 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------- Scrollbar & base ---------- */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ---------- Theme Tokens ---------- */
+:root {
+    --app-bg: #f6f1e9;
+    --app-bg-2: #efe7dc;
+    --surface: #fffaf3;
+    --surface-muted: #f7efe3;
+    --ink: #1f1a17;
+    --muted: #6d5d52;
+    --accent: #b45309;
+    --accent-2: #0f766e;
+    --border: #eadfce;
+}
+
+body {
+    font-family: "Segoe UI", "Iowan Old Style", "Georgia", serif;
+    color: var(--ink);
+    background: var(--app-bg);
+}
+
+.font-display {
+    font-family: "Iowan Old Style", "Georgia", serif;
+    letter-spacing: -0.01em;
+}
+
+/* ---------- App / Sidebar BG ---------- */
+.bg-app-bg {
+    background: linear-gradient(180deg, var(--app-bg), var(--app-bg-2));
+}
+
+/* ---------- Sidebar Base ---------- */
+.bg-sidebar {
+    @apply flex flex-col h-full;
+    background-color: var(--surface);
+    color: var(--ink);
+    width: 64;
+    /* compact but readable */
+    font-size: 0.875rem;
+    /* matches tab text */
+}
+
+/* ---------- Sidebar Header/Footer ---------- */
+.sidebar-header {
+    @apply px-4 py-2.5 font-semibold text-sm uppercase;
+    color: var(--ink);
+}
+
+.sidebar-footer {
+    @apply px-4 py-2.5 mt-auto flex justify-between items-center rounded-t-lg shadow-inner gap-2;
+    background-color: var(--surface-muted);
+}
+
+/* ---------- Sidebar Items (Stable on Click) ---------- */
+.sidebar-item {
+    @apply flex items-center gap-2.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer select-none transition-colors duration-200;
+    color: var(--muted);
+    /* muted for inactive */
+    /* stable layout */
+    border: 1px solid transparent;
+    /* reserve space for active border */
+}
+
+.sidebar-item svg {
+    @apply w-5 h-5  hover:text-white transition-colors duration-200;
+}
+
+/* Hover effect -> subtle, no layout shift */
+.sidebar-item:hover {
+    color: #fff;
+    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+}
+
+/* Active effect -> smooth, stable */
+.sidebar-item-active {
+    @apply text-white font-semibold;
+    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    border: 1px solid rgba(15, 118, 110, 0.55);
+    /* same width, prevents jump */
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    /* soft shadow */
+    transform: none;
+    /* no scale on active */
+}
+
+/* Active icon */
+.sidebar-item-active svg {
+    @apply text-white;
+}
+
+/* Badges remain the same */
+.sidebar-badge {
+    @apply ml-auto px-1.5 py-0.5 text-xs font-semibold rounded-md select-none;
+    background-color: var(--surface-muted);
+    color: var(--muted);
+}
+
+.sidebar-badge-active {
+    @apply text-white;
+    background-color: var(--accent-2);
+}
+
+/* ---------- Buttons (kept, but aligned) ---------- */
+.btn-add,
+.btn-back {
+    @apply flex items-center border gap-2 px-5 py-2 rounded-full  font-medium text-sm transition-all duration-200 shadow-sm cursor-pointer select-none;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+}
+
+.btn-add {
+    color: var(--accent-2);
+}
+
+.btn-add:hover {
+    @apply text-white shadow-md;
+    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    transform: translateY(-1px);
+}
+
+.btn-back {
+    color: var(--muted);
+}
+
+.btn-back:hover {
+    @apply text-white shadow-md;
+    background: linear-gradient(90deg, var(--accent), #92400e);
+    transform: translateY(-1px);
+}
+
+/* close button */
+.btn-close {
+    @apply flex items-center justify-center rounded-md font-medium border shadow-sm transition-all duration-200 cursor-pointer;
+    background-color: var(--surface);
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.btn-close:hover {
+    @apply shadow-md;
+    background-color: var(--surface-muted);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+/* ---------- Inputs / tabs / cards (kept consistent) ---------- */
+.input-search {
+    @apply w-full pl-10 pr-4 py-2.5 text-sm rounded-full shadow-sm outline-none transition-all duration-200;
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+}
+
+.input-search:focus {
+    @apply ring-2;
+    border: 1px solid var(--accent-2);
+    /* same width, prevents jump */
+    box-shadow: 0 6px 18px rgba(15, 118, 110, 0.18);
+    /* soft shadow */
+}
+
+/* tabs */
+.tab-item {
+    @apply relative flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer select-none;
+}
+
+.tab-active {
+    @apply shadow-md;
+    background-color: var(--surface);
+    color: var(--accent-2);
+    border: 1px solid var(--accent-2);
+}
+
+.tab-inactive {
+    @apply border hover:text-(--ink);
+    background-color: var(--surface);
+    color: var(--muted);
+    border-color: var(--border);
+    background-image: none;
+}
+
+.tab-count {
+    @apply ml-2 px-2 py-0.5 text-xs font-semibold rounded-md select-none;
+}
+
+.tab-count-active {
+    @apply text-white;
+    background-color: var(--accent-2);
+}
+
+.tab-count-inactive {
+    @apply text-(--muted);
+    background-color: var(--surface-muted);
+}
+
+/* small slide-in animation for underline */
+@keyframes slide-in {
+    0% {
+        transform: scaleX(0);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scaleX(1);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in {
+    @apply origin-left;
+    animation: slide-in 0.25s ease-out forwards;
+}
+
+/* cards */
+.card {
+    @apply rounded-2xl p-5 flex flex-col transition-all duration-200 overflow-hidden;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 14px 30px rgba(64, 45, 28, 0.1);
+}
+
+.card-header {
+    @apply flex items-center justify-between gap-2 mb-3;
+}
+
+.card-title {
+    @apply text-lg font-semibold wrap-break-word capitalize;
+    color: var(--ink);
+}
+
+.card-badge {
+    @apply text-xs px-2 py-1 rounded-md font-semibold;
+}
+
+.card-badge-positive {
+    background-color: rgba(15, 118, 110, 0.15);
+    color: var(--accent-2);
+}
+
+.card-badge-negative {
+    background-color: rgba(180, 83, 9, 0.15);
+    color: var(--accent);
+}
+
+.card-body {
+    @apply flex-1 space-y-2 text-sm;
+    color: var(--muted);
+}
+
+.card-actions {
+    @apply mt-4 flex justify-between gap-2 pt-2 text-xs;
+    border-top: 1px solid var(--border);
+}
+
+.card-button {
+    @apply flex items-center gap-1 rounded-lg py-1 px-3 transition hover:shadow-sm;
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+
+.card-button-edit {
+    border-color: var(--border);
+}
+
+.card-button-delete {
+    border-color: var(--border);
+}
+
+.card-button-edit:hover {
+    color: var(--accent-2);
+    border-color: rgba(15, 118, 110, 0.45);
+}
+
+.card-button-delete:hover {
+    color: var(--accent);
+    border-color: rgba(180, 83, 9, 0.45);
+}
