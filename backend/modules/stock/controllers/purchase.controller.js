@@ -163,7 +163,7 @@ export const createPurchase = asyncHandler(async (req, res, next) => {
         // );
 
 
-        await handleProductStockQuantity(item?.product,"add", item?.quantity)
+        await handleProductStockQuantity(item?.product,"create", item?.quantity)
 
         purchaseItems.push({
             product: item.product,

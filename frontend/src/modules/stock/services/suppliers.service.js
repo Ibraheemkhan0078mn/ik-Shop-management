@@ -9,7 +9,7 @@ export const supplierApi = baseApi.injectEndpoints({
                 url: "/suppliers/pagination",
                 params: { page, limit, ...filters },
             }),
-            transformResponse: (raw) => raw.data || raw,
+            transformResponse: (raw) => { console.log(raw); return raw.data.data || raw },
             providesTags: ["Supplier"],
         }),
 
@@ -48,7 +48,7 @@ export const supplierApi = baseApi.injectEndpoints({
 });
 
 export const {
-    useGetSuppliersQuery:    useSuppliers,
+    useGetSuppliersQuery: useSuppliers,
     useGetAllSuppliersQuery: useAllSuppliers,
     useGetSupplierByIdQuery: useSupplier,
     useCreateSupplierMutation: useCreateSupplier,

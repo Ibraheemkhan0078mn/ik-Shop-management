@@ -20,21 +20,42 @@ export const getSuppliers = asyncHandler(async (req, res, next) => {
 });
 
 
-export const getPaginatedSuppliers=asyncHandler( async (req,res)=>{
+export const getPaginatedSuppliers = asyncHandler(async (req, res) => {
     const SupplierModel = getLocalSupplierModel();
     const suppliers = await paginateModel({
-        model:SupplierModel,
-        page:req.query.page,
-        limit:req.query.limit,
-        populate:["supplier"],
-        sort:{createdAt:-1},
-     })
+        model: SupplierModel,
+        page: req.query.page,
+        limit: req.query.limit,
+        sort: { createdAt: -1 },
+    })
 
 
-     return res.status(200).json({
+    return res.status(200).json({
         success: true,
         message: "Suppliers retrieved successfully",
         data: suppliers,
+    });
+})
+
+
+
+
+
+
+export const getSupplierById = asyncHandler(async (req, res, next) => {
+    const SupplierModel = getLocalSupplierModel();
+    const { id } = req.params;
+
+    const supplier = await SupplierModel.findById(id);
+
+    if (!supplier) {
+        return next(new ErrorResponse("Supplier not found", 404));
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Supplier retrieved successfully",
+        data: supplier,
     });
 })
 

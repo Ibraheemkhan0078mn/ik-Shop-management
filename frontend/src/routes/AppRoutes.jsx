@@ -21,6 +21,7 @@ import PosPage from "../modules/POSmodule/pages/PosPage.jsx";
 import Categories from "../modules/productsModule/components/Categories.jsx";
 import SubCategories from "../modules/productsModule/components/SubCategories.jsx";
 import ProductPurchase from '../modules/stock/pages/ProductPurchase.jsx'
+import SupplierPage from "../modules/stock/pages/SupplierpAGE.jsx";
 
 function AppRoutes() {
     return (
@@ -34,7 +35,17 @@ function AppRoutes() {
             <Route path="/products/categories" element={<Categories />} />
             <Route path="/products/sub-categories" element={<SubCategories />} />
             <Route path="/products/view/:id" element={<ViewProductPage />} />
+
+
+
+
             <Route path="/purchases" element={<ProductPurchase />} />
+            <Route path="/suppliers" element={<SupplierPage />} />
+
+
+
+
+
             <Route path="/accounts/staff" element={<AllTeachers />} />
             <Route path="/qarzaAccount" element={<QarzaAccounts />} />
             <Route path="/EachQarzaAccountRecord/:id" element={<EachQarzaAccountRecords />} />

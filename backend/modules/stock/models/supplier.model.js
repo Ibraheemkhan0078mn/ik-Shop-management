@@ -9,10 +9,8 @@ const supplierSchema = new mongoose.Schema(
         // The legal or trade name of the supplier
         name: {
             type: String,
-            required: [true, "Supplier name is required"],
             trim: true,
         },
-        // Main contact person at the supplier company
         contactPerson: {
             type: String,
             trim: true,

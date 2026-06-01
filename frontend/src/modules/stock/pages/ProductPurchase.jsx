@@ -2,22 +2,24 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useDeletePurchase, usePurchases } from "../services/purchases.service.js";
 import PaginatedTable from "../../../components/common/PaginatedTable.jsx";
 import ViewPurchaseDetail from "../components/ViewPurchaseDetail.jsx";
 import AddPurchases from "../components/AddPurchases.jsx";
 import UpdatePurchaseModal from "../components/UpdatePurchase.jsx";
+import SupplierComp from "../components/SupplierComp.jsx";
 
 export default function ItemPurchasePage() {
-    let [deletePurchaseMutation]= useDeletePurchase()
+    let [deletePurchaseMutation] = useDeletePurchase()
     const language = useSelector((state) => state.auth.user?.language || "en");
+    const Navigate = useNavigate()
 
     const [viewItem, setViewItem] = useState(null);
     const [viewModel, setViewModel] = useState(false);
     const [addPurchasesVisibility, setAddPurchasesVisibility] = useState(false)
-
+    const [supplierCompVisibility, setSupplierCompVisibility] = useState(false)
     // ── Table columns config ──────────────────────────────────
     const columns = {
         "Supplier": "supplier.name",
@@ -48,12 +50,19 @@ export default function ItemPurchasePage() {
 
 
             {addPurchasesVisibility && <AddPurchases open={addPurchasesVisibility} onClose={() => setAddPurchasesVisibility(false)} />}
+            {/* {supplierCompVisibility && <SupplierComp setVisibility={setSupplierCompVisibility} />} */}
+
+
 
             {/* Header Buttons */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
                 <button className="btn-add" onClick={() => setAddPurchasesVisibility(true)}>
                     <Plus className="w-4 h-4" />
                     {language === "en" ? "Add Purchase" : "خرید شامل کریں"}
+                </button>
+                <button className="btn-add" onClick={() => { Navigate("/suppliers") }}>
+                    <Plus className="w-4 h-4" />
+                    {language === "en" ? "Supplier" : "سپلائر"}
                 </button>
             </div>
 
@@ -64,7 +73,7 @@ export default function ItemPurchasePage() {
                 limit={20}
                 isUpdate={true}
                 isDelete={true}
-                onDelete={(id)=>{handlePurchaseDelete(id)}}
+                onDelete={(id) => { handlePurchaseDelete(id) }}
                 UpdateComp={UpdatePurchaseModal}
                 rtkGetDataQuery={usePurchases}
                 onRowClick={(purchase) => {

@@ -5,6 +5,7 @@ import {
     updateSupplier,
     deleteSupplier,
     getPaginatedSuppliers,
+    getSupplierById,
 } from "../controllers/supplier.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -14,6 +15,7 @@ router.use(protect);
 
 router.get("/", getSuppliers);
 router.get("/pagination", getPaginatedSuppliers)
+router.get("/:id", getSupplierById)
 router.post("/", authorize("admin"), createSupplier);
 router.put("/:id", authorize("admin"), updateSupplier);
 router.delete("/:id", authorize("admin"), deleteSupplier);
