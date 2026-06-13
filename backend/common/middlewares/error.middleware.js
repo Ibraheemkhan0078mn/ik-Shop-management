@@ -17,9 +17,17 @@ const errorHandler = (err, req, res, next) => {
     }
 
     if (err.name === "ValidationError") {
-        const message = err.errors
-            ? err.errors.filter(Boolean).join(", ")
-            : err.message;
+        // Yup gives err.errors as an array of strings.
+        // Mongoose gives err.errors as an object of { field: errorObject }.
+        // Handle both shapes.
+        let message;
+        if (Array.isArray(err.errors)) {
+            message = err.errors.filter(Boolean).join(", ");
+        } else if (err.errors && typeof err.errors === "object") {
+            message = Object.values(err.errors).map((e) => e?.message || e).join(", ");
+        } else {
+            message = err.message;
+        }
         error = new ErrorResponse(message, 400);
     }
 

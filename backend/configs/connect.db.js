@@ -7,6 +7,7 @@ import batchSchema from "../modules/stock/models/batch.model.js";
 import supplierSchema from "../modules/stock/models/supplier.model.js";
 import purchaseSchema from "../modules/stock/models/purchase.model.js";
 import orderSchema from "../modules/pos/models/order.model.js";
+import holdOrderSchema from "../modules/pos/models/holdOrder.model.js";
 import memberSchema from "../modules/member/models/member.model.js";
 import expenseSchema from "../modules/expenses/models/expense.model.js";
 import inventorySchema from "../modules/assets/models/inventory.model.js";
@@ -23,6 +24,7 @@ import QarzaAccountSchema from "../modules/qarza/models/qarzaAccount.model.js";
 import QarzaPaymentSchema from "../modules/qarza/models/qarzaPayment.js";
 import wastageSchema from "../modules/stock/models/wastage.model.js";
 import returnSchema from "../modules/stock/models/return.model.js";
+import { MONGODB_URI } from "../common/constants/constants.js";
 
 let UserModel = null;
 let ProductModel = null;
@@ -32,6 +34,7 @@ let BatchModel = null;
 let SupplierModel = null;
 let PurchaseModel = null;
 let OrderModel = null;
+let HoldOrderModel = null;
 let ActivityLogModel = null;
 let ChangeTrackModel = null;
 let MemberModel = null;
@@ -50,8 +53,9 @@ let WastageModel = null;
 let ReturnModel = null;
 
 export const connectDb = async () => {
-    const LocalConnection = await mongoose
-        .createConnection(process.env.MONGO_URI_LOCAL, { dbName: "IMS-NEW" })
+    console.log("the connection is running")
+    const LocalConnection = await mongoose 
+        .createConnection( "mongodb://localhost:27017/shop-management", { dbName: "IMS-NEW" })
         .asPromise();
 
     if (LocalConnection.host) {
@@ -69,6 +73,7 @@ export const connectDb = async () => {
     SupplierModel = LocalConnection.model("Suppliers", supplierSchema);
     PurchaseModel = LocalConnection.model("Purchases", purchaseSchema);
     OrderModel = LocalConnection.model("Orders", orderSchema);
+    HoldOrderModel = LocalConnection.model("HoldOrders", holdOrderSchema);
 
     MemberModel = LocalConnection.model("Members", memberSchema);
     ExpensesModel = LocalConnection.model("Expenses", expenseSchema);
@@ -115,3 +120,4 @@ export const getLocalBatchModel = () => BatchModel || null;
 export const getLocalSupplierModel = () => SupplierModel || null;
 export const getLocalPurchaseModel = () => PurchaseModel || null;
 export const getLocalOrderModel = () => OrderModel || null;
+export const getLocalHoldOrderModel = () => HoldOrderModel || null;

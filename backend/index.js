@@ -1,6 +1,6 @@
 import express from "express";
 import dontenv from "dotenv";
-import MongoStore from "connect-mongo";
+// import MongoStore from "connect-mongo";
 import session from "express-session";
 import cors from "cors";
 
@@ -15,6 +15,7 @@ import SubCategoryRouter from "./modules/product/routes/subCategory.router.js";
 import SupplierRouter from "./modules/stock/routes/supplier.router.js";
 import PurchaseRouter from "./modules/stock/routes/purchase.router.js";
 import OrderRouter from "./modules/pos/routes/order.router.js";
+import HoldOrderRouter from "./modules/pos/routes/holdOrder.router.js";
 
 import expensesRouter from './modules/expenses/routes/expenses.route.js'
 import memberRoutes from './modules/member/routes/member.route.js'
@@ -38,23 +39,23 @@ app.use(
     ),
 );
 
-app.use(
-    session({
-        secret: process.env.SESSION_SECRET || "ims_secret_key",
-        resave: false,
-        saveUninitialized: false,
-        store: MongoStore.create({
-            mongoUrl: process.env.MONGO_URI_LOCAL,
-            collectionName: "sessions",
-            ttl: 14 * 24 * 60 * 60,
-        }),
-        cookie: {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            maxAge: 1000 * 60 * 60 * 24,
-        },
-    }),
-);
+// app.use(
+//     session({
+//         secret: process.env.SESSION_SECRET || "ims_secret_key",
+//         resave: false,
+//         saveUninitialized: false,
+//         store: MongoStore.create({
+//             mongoUrl: process.env.MONGO_URI_LOCAL,
+//             collectionName: "sessions",
+//             ttl: 14 * 24 * 60 * 60,
+//         }),
+//         cookie: {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === "production",
+//             maxAge: 1000 * 60 * 60 * 24,
+//         },
+//     }),
+// );
 
 app.use("/api/auth", AuthRouter);
 app.use("/api/products", ProductRouter);
@@ -64,6 +65,7 @@ app.use("/api/subcategories", SubCategoryRouter);
 app.use("/api/suppliers", SupplierRouter);
 app.use("/api/purchases", PurchaseRouter);
 app.use("/api/orders", OrderRouter);
+app.use("/api/hold-orders", HoldOrderRouter);
 
 
 app.use("/api/expenseRoutes", expensesRouter)

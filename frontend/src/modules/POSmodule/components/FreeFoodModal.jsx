@@ -1,71 +1,63 @@
-// ============================================
-// 10. components/modals/FreeFoodModal.jsx
-// ============================================
-import React, { useState } from "react";
+import { useState } from "react";
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  FreeFoodModal
+//
+//  Appears when the cashier clicks "Free Food".
+//  Requires a manager code to authorize giving away the order for free.
+//  The code is verified by the backend — only the manager knows it.
+//
+//  Props:
+//    onClose    — closes the modal
+//    onConfirm(managerCode) — sends the code to PosPage for verification
+//    language   — "en" or "ur"
+// ─────────────────────────────────────────────────────────────────────────────
 export default function FreeFoodModal({ onClose, onConfirm, language }) {
     const [managerCode, setManagerCode] = useState("");
-    const [managerCodeInvalid, setManagerCodeInvalid] = useState(false);
+    const [hasError,    setHasError]    = useState(false);
 
     const handleSubmit = () => {
-        if (!managerCode.trim()) {
-            setManagerCodeInvalid(true);
-            return;
-        }
+        if (!managerCode.trim()) { setHasError(true); return; }
         onConfirm(managerCode);
     };
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-lg p-5 w-full max-w-sm">
-                <h3 className="text-lg font-semibold mb-4">
-                    {language === "en" ? "Manager Approval" : "منیجر کی منظوری"}
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+
+                <h3 className="text-lg font-semibold text-gray-800 mb-5">
+                    {language === "en" ? "Manager Approval Required" : "منیجر کی منظوری ضروری ہے"}
                 </h3>
 
-                <div className="relative w-full mb-4">
+                <div className="mb-5">
+                    <label className="block text-sm text-gray-600 mb-1">
+                        {language === "en" ? "Manager Code" : "منیجر کا کوڈ"}
+                    </label>
                     <input
                         type="password"
-                        id="managerCode"
                         value={managerCode}
-                        onChange={(e) => {
-                            setManagerCode(e.target.value);
-                            setManagerCodeInvalid(false);
-                        }}
-                        placeholder=" "
-                        className={`block w-full px-2.5 pb-2.5 pt-4 text-sm text-gray-900 bg-transparent border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 peer ${
-                            managerCodeInvalid
-                                ? "border-red-500"
-                                : "border-gray-400"
-                        }`}
+                        autoFocus
+                        onChange={(e) => { setManagerCode(e.target.value); setHasError(false); }}
+                        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500
+                            ${hasError ? "border-red-500" : "border-gray-300"}`}
+                        placeholder={language === "en" ? "Enter manager code" : "کوڈ درج کریں"}
                     />
-                    <label
-                        htmlFor="managerCode"
-                        className={`absolute left-2.5 z-10 px-1 bg-white text-gray-500 text-sm duration-300 transform origin-[0] ${
-                            managerCode
-                                ? "top-2 -translate-y-4 scale-75 text-blue-500"
-                                : "top-1/2 -translate-y-1/2 scale-100 text-gray-400"
-                        } peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-500`}
-                    >
-                        {language === "en"
-                            ? "Enter Manager Code"
-                            : "منیجر کا کوڈ درج کریں"}
-                    </label>
+                    {hasError && (
+                        <p className="text-xs text-red-500 mt-1">
+                            {language === "en" ? "Code is required." : "کوڈ ضروری ہے۔"}
+                        </p>
+                    )}
                 </div>
 
-                <div className="flex justify-end gap-2 mt-3">
-                    <button
-                        onClick={onClose}
-                        className="px-3 py-1.5 border border-gray-400 rounded-md text-gray-700 hover:bg-gray-100 transition"
-                    >
+                <div className="flex justify-end gap-3">
+                    <button onClick={onClose}
+                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700">
                         {language === "en" ? "Cancel" : "منسوخ کریں"}
                     </button>
-                    <button
-                        onClick={handleSubmit}
-                        className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
-                    >
-                        {language === "en"
-                            ? "Approve & Print"
-                            : "منظوری اور پرنٹ کریں"}
+                    <button onClick={handleSubmit}
+                        className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition">
+                        {language === "en" ? "Approve & Print" : "منظوری اور پرنٹ کریں"}
                     </button>
                 </div>
             </div>

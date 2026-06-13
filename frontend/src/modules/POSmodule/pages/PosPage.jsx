@@ -1,394 +1,376 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+
 import { fetchQarzaAccounts } from "../../qarza/slices/qarzaSlice.js";
-import { useOrders, useAddOrder, useDeleteOrder } from "../../orders/services/orders.service.js";
+import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
+import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder } from "../services/holdOrders.service.js";
+import { useProducts } from "../../productsModule/services/product.service.js";
 import api from "../../../lib/api";
 
-import PortionModal from "../components/PortionModal.jsx";
-import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
-import FreeFoodModal from "../components/FreeFoodModal.jsx";
-import SplitBillModal from "../components/SplitBillModal.jsx";
-import QarzaAccountCreation from "../../qarza/parts/QarzaCreation.jsx";
-
+import PaginatedList from "../../../components/common/PaginatedList.jsx";
 import PosCartSidebar from "../components/PosCartSidebar.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
+import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
+import PortionModal from "../components/PortionModal.jsx";
+import SplitBillModal from "../components/SplitBillModal.jsx";
+import FreeFoodModal from "../components/FreeFoodModal.jsx";
+import QarzaAccountCreation from "../../qarza/parts/QarzaCreation.jsx";
 
 import { showError, showSuccess } from "../../../utils/toastHelpers.js";
 import { printOrder } from "../../../utils/printOrder.js";
-import { useNavigate } from "react-router-dom";
-import { useProducts } from "../../productsModule/services/product.service.js";
 
-// ─── PaginatedTable import (your existing component) ───────────────────────
-import PaginatedTable from "../../../components/common/PaginatedTable.jsx"; // adjust path as needed
-
-// ─── Column definition for products ────────────────────────────────────────
-const columns = {
-    "Product Name": "name",
-    "Product Code": "productCode",
-    "Barcode": "barcode",
-    "Category": "category.name",
-    "Total Batches": "batches.length",
-    "Notes": "description",
-};
+// ─────────────────────────────────────────────────────────────────────────────
+//  PosPage — main Point of Sale screen
+//
+//  Layout:
+//    LEFT  → product table (click a row to add it to cart)
+//    RIGHT → cart sidebar (shows items, subtotal, checkout button)
+//
+//  Flow:
+//    Click product → check batches → (batch modal OR direct add) → cart
+//    Cart ready → Proceed to Payment → PaymentModal → order saved → print
+//    Hold → saved to hold-orders DB → resume later → checkout → hold deleted
+// ─────────────────────────────────────────────────────────────────────────────
 export default function PosPage() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
 
-    // ── Auth ──────────────────────────────────────────────────────────────
+    // ── Auth & language ────────────────────────────────────────────────────
     const authUser = useSelector((s) => s.auth);
-    const user = authUser?.role
-        ? authUser
-        : { role: "admin", permissions: { deleteOrders: true } };
+    const user = authUser?.role ? authUser : { role: "admin", permissions: { deleteOrders: true } };
     const language = user?.language || "en";
 
-    // ── Products ──────────────────────────────────────────────────────────
-    const { data: productsData, refetch: refetchProducts } = useProducts();
-    const products = productsData?.data || productsData || [];
+    // ── Data fetching ──────────────────────────────────────────────────────
+    const { data: productsRaw, refetch: refetchProducts } = useProducts();
+    const products = productsRaw?.data || productsRaw || [];   // used to resolve product images on resume
 
-    // ── Orders ────────────────────────────────────────────────────────────
     const ordersQuery = useOrders();
     const addOrderMutation = useAddOrder();
-    const deleteOrderMutation = useDeleteOrder();
+    const orderHistory = (ordersQuery.data?.data || ordersQuery.data || []);
 
-    const allOrders = ordersQuery.data?.data || ordersQuery.data || [];
-    const heldOrders = allOrders.filter((o) => o.status === "held");
-    const orderHistory = allOrders.filter((o) => o.status !== "held");
+    const holdOrdersQuery = useHoldOrders();
+    const createHoldMutation = useCreateHoldOrder();
+    const deleteHoldMutation = useDeleteHoldOrder();
+    const holdOrders = holdOrdersQuery.data?.data || holdOrdersQuery.data || [];
 
-    // ── Qarza accounts (flexible: Redux + optional override) ──────────────
-    const reduxQarzaAccounts = useSelector((s) => s.qarza?.accounts || []);
-    const [localQarzaAccounts, setLocalQarzaAccounts] = useState([]);
-    // Use local override if populated, else fall back to Redux
-    const qarzaAccounts = localQarzaAccounts.length
-        ? localQarzaAccounts
-        : reduxQarzaAccounts;
+    // ── Qarza accounts (for credit/hybrid payments) ────────────────────────
+    // We keep a local copy so a newly created account appears instantly
+    // without waiting for a Redux refetch.
+    const reduxQarza = useSelector((s) => s.qarza?.accounts || []);
+    const [localQarza, setLocalQarza] = useState([]);
+    const qarzaAccounts = localQarza.length ? localQarza : reduxQarza;
 
-    // ── Cart ──────────────────────────────────────────────────────────────
+    // ── Cart ───────────────────────────────────────────────────────────────
     const [cart, setCart] = useState([]);
 
-    // ── Batch (sticky) ────────────────────────────────────────────────────
+    // When a held order is resumed, we store its DB _id here.
+    // We delete it from the DB only after checkout succeeds — not on resume.
+    const [resumedHoldId, setResumedHoldId] = useState(null);
+
+    // ── Sticky batches (per product) ───────────────────────────────────────
+    // If a cashier picks a batch and ticks "Save as default", that batch is
+    // reused for every subsequent click on the same product.
     const [stickyBatches, setStickyBatches] = useState({});
-    const [selectedProductForBatch, setSelectedProductForBatch] = useState(null);
+
+    // ── Modal visibility flags ─────────────────────────────────────────────
     const [showBatchModal, setShowBatchModal] = useState(false);
-
-    // ── Portion modal ─────────────────────────────────────────────────────
     const [showPortionModal, setShowPortionModal] = useState(false);
-    const [selectedProductForPortion, setSelectedProductForPortion] = useState(null);
-    const [selectedPortionType, setSelectedPortionType] = useState("full");
-    const [customPrice, setCustomPrice] = useState("");
-    const [editingCartIndex, setEditingCartIndex] = useState(null);
-
-    // ── Split bill modal ──────────────────────────────────────────────────
-    const [showSplitModal, setShowSplitModal] = useState(false);
-
-    // ── Free food modal ───────────────────────────────────────────────────
-    const [showFreeFoodModal, setShowFreeFoodModal] = useState(false);
-
-    // ── Qarza creation popup ──────────────────────────────────────────────
-    const [showQarza, setShowQarza] = useState(false);
-
-    // ── Payment modal ─────────────────────────────────────────────────────
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-
-    // ── Held orders drawer ────────────────────────────────────────────────
+    const [showSplitModal, setShowSplitModal] = useState(false);
+    const [showFreeFoodModal, setShowFreeFoodModal] = useState(false);
+    const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showHeldOrders, setShowHeldOrders] = useState(false);
 
-    // ── Fetch qarza on mount ───────────────────────────────────────────────
+    // ── Batch modal — which product was clicked ────────────────────────────
+    const [batchProduct, setBatchProduct] = useState(null);
+
+    // ── Portion modal — which cart item is being edited ────────────────────
+    const [portionItem, setPortionItem] = useState(null);    // cart item being edited
+    const [portionIndex, setPortionIndex] = useState(null);    // its index in cart
+    const [portionType, setPortionType] = useState("full");  // selected portion
+    const [portionCustomPrice, setPortionCustomPrice] = useState("");     // custom price input
+
+    // ── Fetch qarza accounts once on mount ─────────────────────────────────
+    useEffect(() => { dispatch(fetchQarzaAccounts()); }, [dispatch]);
+
+    // ── Shift+Enter shortcut → open payment modal ──────────────────────────
     useEffect(() => {
-        dispatch(fetchQarzaAccounts());
-    }, [dispatch]);
+        const onKey = (e) => { if (e.shiftKey && e.key === "Enter" && cart.length) setShowPaymentModal(true); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [cart]);
 
-    // ── Totals ─────────────────────────────────────────────────────────────
-    const subtotal = cart.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
+    // ── Cart subtotal ──────────────────────────────────────────────────────
+    const subtotal = cart.reduce((sum, item) => sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0), 0);
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  HELPERS
-    // ════════════════════════════════════════════════════════════════════════
-    const getImageUrl = (img) => {
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 1 — CART HELPERS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Converts a relative image path to a full URL
+    const toImageUrl = (img) => {
         if (!img) return null;
-        if (img.startsWith("http")) return img;
-        return `http://localhost:5001${img}`;
+        return img.startsWith("http") ? img : `http://localhost:5001${img}`;
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  PRODUCT CLICK → BATCH CHECK → CART
-    // ════════════════════════════════════════════════════════════════════════
-    const handleProductClick = useCallback((product) => {
-        const stickyBatch = stickyBatches[product._id];
-        if (stickyBatch && stickyBatch.quantity > 0) {
-            addItemToCart(product, "full", null, stickyBatch);
-            return;
-        }
-        setSelectedProductForBatch(product);
-        setShowBatchModal(true);
-    }, [stickyBatches]);
+    // True when two cart items represent the same line (same product + portion + price + batch)
+    const isSameLine = (cartItem, id, pt, up, bid) =>
+        cartItem._id === id &&
+        cartItem.portionType === pt &&
+        cartItem.unitPrice === up &&
+        cartItem.batchId === bid;
 
-    const handleBatchSelectionConfirm = (prod, batch, isSticky) => {
-        addItemToCart(prod, "full", null, batch);
-        if (isSticky && batch) {
-            setStickyBatches((prev) => ({ ...prev, [prod._id]: batch }));
-        } else {
-            setStickyBatches((prev) => {
-                const next = { ...prev };
-                delete next[prod._id];
-                return next;
-            });
-        }
+    // Increase qty of a specific cart line by 1
+    const incQty = (id, pt, up, bid) =>
+        setCart((prev) => prev.map((i) => isSameLine(i, id, pt, up, bid) ? { ...i, qty: i.qty + 1 } : i));
+
+    // Decrease qty — removes the line if it reaches 0
+    const decQty = (id, pt, up, bid) =>
+        setCart((prev) =>
+            prev
+                .map((i) => isSameLine(i, id, pt, up, bid) ? { ...i, qty: i.qty - 1 } : i)
+                .filter((i) => i.qty > 0),
+        );
+
+    // Remove an entire cart line
+    const removeFromCart = (id, pt, up, bid) =>
+        setCart((prev) => prev.filter((i) => !isSameLine(i, id, pt, up, bid)));
+
+    // Set an exact qty value for a cart line
+    const setCartItemQty = (id, pt, up, bid, value) => {
+        if (value < 1) return;
+        setCart((prev) => prev.map((i) => isSameLine(i, id, pt, up, bid) ? { ...i, qty: value } : i));
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  ADD ITEM TO CART
-    // ════════════════════════════════════════════════════════════════════════
-    const addItemToCart = (p, portionType = "full", customPriceValue = null, batch = null) => {
-        const basePrice = batch ? batch.sellingPrice : p.price;
-        let finalUnitPrice = basePrice - (basePrice * (p.discount || 0)) / 100;
-        let portion = "full";
+    // Empty the cart
+    const clearCart = () => setCart([]);
 
-        if (portionType === "half") {
-            finalUnitPrice = finalUnitPrice / 2;
-            portion = "half";
-        } else if (portionType === "custom") {
-            finalUnitPrice = Number(customPriceValue) || finalUnitPrice;
-            portion = "custom";
-        }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 2 — ADDING ITEMS TO CART
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Core function — adds (or increments) one product in the cart
+    const addItemToCart = (product, portionType = "full", customPriceValue = null, batch = null) => {
+        // Calculate base price: use batch selling price if batch provided, otherwise product price
+        const basePrice = Number(batch ? batch.sellingPrice : product.price) || 0;
+        const discount = Number(product.discount) || 0;
+        const priceAfterDisc = basePrice - (basePrice * discount) / 100;
+
+        // Apply portion adjustment
+        let finalPrice = priceAfterDisc;
+        if (portionType === "half") finalPrice = priceAfterDisc / 2;
+        if (portionType === "custom") finalPrice = Number(customPriceValue) || priceAfterDisc;
+
+        const batchId = batch?._id || null;
 
         setCart((prev) => {
-            const match = prev.find(
-                (i) =>
-                    i._id === p._id &&
-                    i.portionType === portion &&
-                    i.unitPrice === finalUnitPrice &&
-                    i.batchId === (batch?._id || null)
-            );
-
-            if (match) {
+            // If exact same line exists → just increment qty
+            const exists = prev.find((i) => isSameLine(i, product._id, portionType, finalPrice, batchId));
+            if (exists) {
                 return prev.map((i) =>
-                    i._id === p._id &&
-                        i.portionType === portion &&
-                        i.unitPrice === finalUnitPrice &&
-                        i.batchId === (batch?._id || null)
+                    isSameLine(i, product._id, portionType, finalPrice, batchId)
                         ? { ...i, qty: i.qty + 1 }
-                        : i
+                        : i,
                 );
             }
 
-            return [
-                ...prev,
-                {
-                    ...p,
-                    qty: 1,
-                    note: "",
-                    unitPrice: finalUnitPrice,
-                    image: getImageUrl(p.image),
-                    portionType: portion,
-                    originalPrice: basePrice - (basePrice * (p.discount || 0)) / 100,
-                    batchId: batch?._id || null,
-                    batchNumber: batch?.batchNumber || null,
-                },
-            ];
+            // Otherwise add a new line
+            return [...prev, {
+                ...product,
+                qty: 1,
+                unitPrice: finalPrice,
+                originalPrice: priceAfterDisc,  // full price before portion split — needed for edit
+                image: toImageUrl(product.image),
+                portionType,
+                batchId,
+                batchNumber: batch?.batchNumber || null,
+            }];
         });
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  CART OPERATIONS
-    // ════════════════════════════════════════════════════════════════════════
-    const incQty = (id, portionType, unitPrice, batchId) =>
-        setCart((prev) =>
-            prev.map((i) =>
-                i._id === id && i.portionType === portionType &&
-                    i.unitPrice === unitPrice && i.batchId === batchId
-                    ? { ...i, qty: i.qty + 1 }
-                    : i
-            )
-        );
+    // Called when a product row is clicked in the table
+    // → If a sticky batch exists for this product, use it directly
+    // → If product has batches, show the batch selection modal
+    // → If no batches, add directly
+    const handleProductClick = useCallback(async (product) => {
+        // 1. Sticky batch check
+        const sticky = stickyBatches[product._id];
+        if (sticky?.quantity > 0) { addItemToCart(product, "full", null, sticky); return; }
 
-    const decQty = (id, portionType, unitPrice, batchId) =>
-        setCart((prev) =>
-            prev
-                .map((i) =>
-                    i._id === id && i.portionType === portionType &&
-                        i.unitPrice === unitPrice && i.batchId === batchId
-                        ? { ...i, qty: i.qty - 1 }
-                        : i
-                )
-                .filter((i) => i.qty > 0)
-        );
+        // 2. Fetch batches for this product
+        try {
+            const { data } = await api.get(`/batches/${product._id}`);
+            const batches = data?.data || data || [];
 
-    const removeFromCart = (id, portionType, unitPrice, batchId) =>
-        setCart((prev) =>
-            prev.filter(
-                (i) =>
-                    !(i._id === id && i.portionType === portionType &&
-                        i.unitPrice === unitPrice && i.batchId === batchId)
-            )
-        );
+            if (batches.length === 0) {
+                // No batches tracked → add with product's base price
+                addItemToCart(product, "full", null, null);
+            } else {
+                // Batches exist → let cashier choose one
+                setBatchProduct(product);
+                setShowBatchModal(true);
+            }
+        } catch {
+            // API error → fall back to direct add
+            addItemToCart(product, "full", null, null);
+        }
+    }, [stickyBatches]);
 
-    const setCustomQty = (id, portionType, unitPrice, batchId, value) => {
-        if (value < 1) return;
-        setCart((prev) =>
-            prev.map((i) =>
-                i._id === id && i.portionType === portionType &&
-                    i.unitPrice === unitPrice && i.batchId === batchId
-                    ? { ...i, qty: value }
-                    : i
-            )
-        );
+    // Called from BatchSelectionModal after cashier picks a batch
+    const handleBatchConfirm = (product, batch, makeSticky) => {
+        addItemToCart(product, "full", null, batch);
+
+        // Save or clear sticky batch based on checkbox in modal
+        if (makeSticky && batch) {
+            setStickyBatches((prev) => ({ ...prev, [product._id]: batch }));
+        } else {
+            setStickyBatches((prev) => { const next = { ...prev }; delete next[product._id]; return next; });
+        }
     };
 
-    const clearCart = () => {
-        setCart([]);
-    };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  PORTION MODAL (edit cart item)
-    // ════════════════════════════════════════════════════════════════════════
-    const openEditModal = (item, index) => {
-        setSelectedProductForPortion(item);
-        setEditingCartIndex(index);
-        setSelectedPortionType(item.portionType || "full");
-        setCustomPrice(item.portionType === "custom" ? item.unitPrice : "");
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 3 — PORTION MODAL (changing price type of a cart item)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Opens the modal to change Full / Half / Custom price on a cart item
+    const openPortionModal = (item, index) => {
+        setPortionItem(item);
+        setPortionIndex(index);
+        setPortionType(item.portionType || "full");
+        setPortionCustomPrice(item.portionType === "custom" ? String(item.unitPrice) : "");
         setShowPortionModal(true);
     };
 
-    const handlePortionConfirm = () => {
-        if (!selectedProductForPortion || editingCartIndex === null) return;
+    const closePortionModal = () => {
+        setShowPortionModal(false);
+        setPortionItem(null);
+        setPortionIndex(null);
+        setPortionCustomPrice("");
+    };
 
-        if (selectedPortionType === "custom" && (!customPrice || Number(customPrice) <= 0)) {
-            showError(language === "en" ? "Please enter a valid custom price." : "براہ کرم ایک درست کسٹم قیمت درج کریں۔");
+    // Applies the new portion type to the cart item
+    const handlePortionConfirm = () => {
+        if (!portionItem || portionIndex === null) return;
+
+        if (portionType === "custom" && (!portionCustomPrice || Number(portionCustomPrice) <= 0)) {
+            showError(language === "en" ? "Enter a valid custom price." : "درست کسٹم قیمت درج کریں۔");
             return;
         }
 
         setCart((prev) => {
-            const newCart = [...prev];
-            const itemToEdit = newCart[editingCartIndex];
-            const currentQty = itemToEdit.qty;
+            const updated = [...prev];
+            const item = updated[portionIndex];
+            const savedQty = item.qty;
+            const basePrice = Number(item.originalPrice) || Number(item.unitPrice) || 0;
 
-            let finalUnitPrice =
-                itemToEdit.originalPrice ||
-                itemToEdit.price - (itemToEdit.price * (itemToEdit.discount || 0)) / 100;
+            let newPrice = basePrice;
+            if (portionType === "half") newPrice = basePrice / 2;
+            if (portionType === "custom") newPrice = Number(portionCustomPrice);
 
-            if (selectedPortionType === "half") finalUnitPrice = finalUnitPrice / 2;
-            else if (selectedPortionType === "custom") finalUnitPrice = Number(customPrice);
+            // Remove the old entry
+            updated.splice(portionIndex, 1);
 
-            newCart.splice(editingCartIndex, 1);
-
-            const existingIndex = newCart.findIndex(
-                (i) =>
-                    i._id === itemToEdit._id &&
-                    i.portionType === selectedPortionType &&
-                    i.unitPrice === finalUnitPrice &&
-                    i.batchId === itemToEdit.batchId
+            // If a line with the same new settings already exists → merge qty
+            const duplicate = updated.findIndex((i) =>
+                i._id === item._id &&
+                i.portionType === portionType &&
+                i.unitPrice === newPrice &&
+                i.batchId === item.batchId,
             );
 
-            if (existingIndex > -1) {
-                newCart[existingIndex].qty += currentQty;
+            if (duplicate > -1) {
+                updated[duplicate].qty += savedQty;
             } else {
-                newCart.push({
-                    ...itemToEdit,
-                    portionType: selectedPortionType,
-                    unitPrice: finalUnitPrice,
-                    qty: currentQty,
-                });
+                updated.push({ ...item, portionType, unitPrice: newPrice, qty: savedQty });
             }
 
-            return newCart;
+            return updated;
         });
 
-        setShowPortionModal(false);
-        setSelectedProductForPortion(null);
-        setEditingCartIndex(null);
-        setCustomPrice("");
+        closePortionModal();
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  HOLD ORDER
-    // ════════════════════════════════════════════════════════════════════════
-    const handleHoldOrder = async ({ customerName, selectedWaiter, orderDiscount, paymentMethod, selectedQarzaAccountId, cashReceived }) => {
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 4 — HOLD ORDER
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Saves the current cart to the hold-orders DB, then clears the cart.
+    // Note: does NOT create a real order — just pauses it.
+    const handleHoldOrder = async ({ customerName, selectedWaiter, orderDiscount }) => {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
         try {
             const { data } = await api.get("/orders/generate-number");
             const discountAmt = Math.max(0, Number(orderDiscount) || 0);
             const total = Math.max(0, subtotal - discountAmt);
-            const change = Math.max(0, (Number(cashReceived) || 0) - total);
 
-            const body = {
-                createdAt: new Date().toISOString(),
+            await createHoldMutation.mutateAsync({
                 orderNumber: data.orderNumber,
+                items: buildOrderItems(),
                 subtotal,
                 discountAmount: discountAmt,
                 totalAmount: total,
-                items: buildOrderItems(),
-                customerName,
-                paymentMethod,
-                waiter: selectedWaiter,
-                cashReceived: Number(cashReceived) || 0,
-                change,
-                qarzaAccount: paymentMethod === "credit" ? selectedQarzaAccountId || undefined : undefined,
-                status: "held",
-            };
+                customerName: customerName || "",
+                waiter: selectedWaiter || "",
+            });
 
-            await addOrderMutation.mutateAsync(body);
             clearCart();
-            showSuccess(language === "en" ? "Order held successfully!" : "آرڈر کامیابی کے ساتھ روک دیا گیا!");
+            setResumedHoldId(null);
+            showSuccess(language === "en" ? "Order held!" : "آرڈر روک دیا گیا!");
             setShowPaymentModal(false);
         } catch {
-            showError("Failed to hold order");
+            showError("Failed to hold order.");
         }
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  RESUME HELD ORDER
-    // ════════════════════════════════════════════════════════════════════════
-    const handleResumeOrder = (order) => {
-        if (!order.items?.length) {
-            showError(language === "en" ? "No items in this held order!" : "اس زیر التواء آرڈر میں کوئی آئٹمز نہیں ہیں!");
+    // Loads a held order back into the cart WITHOUT deleting it from DB yet.
+    // It will be deleted only after checkout succeeds (see handleCheckout).
+    const handleResumeOrder = (holdOrder) => {
+        if (!holdOrder.items?.length) {
+            showError(language === "en" ? "No items in this order!" : "اس آرڈر میں آئٹمز نہیں ہیں!");
             return;
         }
 
-        const items = (order.items || []).map((it) => {
-            const product = products.find((p) => p._id === it.product);
+        const restoredCart = holdOrder.items.map((item) => {
+            const productData = products.find((p) => p._id === String(item.product));
             return {
-                _id: it.productId || it.product || it._id,
-                name: it.name,
-                qty: it.qty || it.quantity || 1,
-                unitPrice: it.unitPrice || it.price || 0,
-                originalPrice: it.originalPrice || it.unitPrice,
-                image: getImageUrl(product?.image),
-                portionType: it.portionType || "full",
+                _id:           String(item.product),
+                name:          item.name,
+                qty:           item.quantity ?? 1,
+                unitPrice:     Number(item.unitPrice)     ?? 0,
+                originalPrice: Number(item.originalPrice) ?? Number(item.unitPrice) ?? 0,
+                image:         toImageUrl(productData?.image),
+                portionType:   item.portionType  || "full",
+                batchId:       item.batchId      ?? null,
+                batchNumber:   item.batchNumber  ?? null,
             };
         });
 
-        setCart(items);
+        setCart(restoredCart);
+        setResumedHoldId(holdOrder._id);  // track so we can delete it after checkout
         setShowHeldOrders(false);
-
-        (async () => {
-            try { await deleteOrderMutation.mutateAsync(order._id || order.id); } catch { }
-        })();
     };
 
-    const handleDeleteHeld = async (id) => {
-        try {
-            const order = heldOrders.find((o) => (o._id || o.id) === id);
-            await deleteOrderMutation.mutateAsync(id);
-            if (order?.paymentMethod === "credit") dispatch(fetchQarzaAccounts());
-        } catch { }
+    // Manually deletes a held order (cashier clicks delete button)
+    const handleDeleteHeldOrder = async (id) => {
+        try { await deleteHoldMutation.mutateAsync(id); } catch { }
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  CHECKOUT (called from PaymentModal)
-    // ════════════════════════════════════════════════════════════════════════
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 5 — CHECKOUT
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Creates the final order in DB, prints the receipt, clears the cart.
+    // If this cart was resumed from a held order, the hold is deleted here.
     const handleCheckout = async ({
-        customerName,
-        selectedWaiter,
-        orderDiscount,
-        paymentMethod,       // "cash" | "online" | "credit" | "hybrid"
-        selectedQarzaAccountId,
-        cashReceived,
-        onlinePlatform,
-        onlineAmount,
-        hybridCash,
-        hybridQarza,
-        hybridQarzaAccountId,
+        customerName, selectedWaiter, orderDiscount,
+        paymentMethod, selectedQarzaAccountId, cashReceived,
+        onlinePlatform, onlineAmount,
+        hybridCash, hybridQarza, hybridQarzaAccountId,
     }) => {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
@@ -399,35 +381,39 @@ export default function PosPage() {
             const change = Math.max(0, (Number(cashReceived) || 0) - total);
 
             const orderBody = {
-                createdAt: new Date().toISOString(),
                 orderNumber: data.orderNumber,
+                createdAt: new Date().toISOString(),
                 subtotal,
                 discountAmount: discountAmt,
                 totalAmount: total,
                 items: buildOrderItems(),
+                customerName: paymentMethod === "credit" ? "" : customerName,
                 waiter: selectedWaiter,
-                customerName: paymentMethod === "credit" ? undefined : customerName,
                 paymentMethod,
-                // Cash
+                status: "completed",
+
+                // Cash fields
                 cashReceived: paymentMethod === "cash" ? Number(cashReceived) || 0 : 0,
                 change: paymentMethod === "cash" ? change : 0,
-                // Online
-                onlinePlatform: paymentMethod === "online" ? onlinePlatform : undefined,
-                onlineAmount: paymentMethod === "online" ? Number(onlineAmount) || 0 : undefined,
-                // Qarza (single)
-                qarzaAccount: paymentMethod === "credit" ? selectedQarzaAccountId : undefined,
-                // Hybrid
-                hybridCash: paymentMethod === "hybrid" ? Number(hybridCash) || 0 : undefined,
-                hybridQarza: paymentMethod === "hybrid" ? Number(hybridQarza) || 0 : undefined,
-                hybridQarzaAccount: paymentMethod === "hybrid" ? hybridQarzaAccountId : undefined,
-                status: "completed",
+
+                // Online fields
+                onlinePlatform: paymentMethod === "online" ? onlinePlatform : "",
+                onlineAmount: paymentMethod === "online" ? Number(onlineAmount) || 0 : 0,
+
+                // Qarza (credit) fields
+                qarzaAccount: paymentMethod === "credit" ? selectedQarzaAccountId : null,
+
+                // Hybrid fields
+                hybridCash: paymentMethod === "hybrid" ? Number(hybridCash) || 0 : 0,
+                hybridQarza: paymentMethod === "hybrid" ? Number(hybridQarza) || 0 : 0,
+                hybridQarzaAccount: paymentMethod === "hybrid" ? hybridQarzaAccountId : null,
             };
 
             const res = await addOrderMutation.mutateAsync(orderBody);
 
-            // Build print object
+            // Print the receipt
             const selectedAccount = qarzaAccounts.find((a) => a._id === selectedQarzaAccountId);
-            const orderToPrint = {
+            printOrder({
                 ...orderBody,
                 ...res.order,
                 orderNumber: res.order?.orderNumber || orderBody.orderNumber,
@@ -435,89 +421,88 @@ export default function PosPage() {
                 qarzaAccount:
                     paymentMethod === "credit" && selectedAccount
                         ? { _id: selectedAccount._id, name: selectedAccount.name }
-                        : undefined,
-            };
-            printOrder(orderToPrint);
+                        : null,
+            });
+
+            // Delete the hold if this cart came from a resumed hold order
+            if (resumedHoldId) {
+                try { await deleteHoldMutation.mutateAsync(resumedHoldId); } catch { }
+                setResumedHoldId(null);
+            }
 
             clearCart();
             setShowPaymentModal(false);
             dispatch(fetchQarzaAccounts());
             refetchProducts();
         } catch (err) {
-            showError(err?.message || "Failed to create order");
+            showError(err?.message || "Failed to create order.");
         }
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  SPLIT BILL PRINT
-    // ════════════════════════════════════════════════════════════════════════
-    const handleSplitBill = (count, orderDiscount = 0) => {
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 6 — SPLIT BILL
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Opens a print window showing how much each person owes
+    const handleSplitBill = (personCount) => {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
-        if (!count || count <= 0) return showError(language === "en" ? "Enter valid number of people!" : "درست افراد کی تعداد درج کریں!");
+        if (!personCount || personCount < 1) return showError(language === "en" ? "Enter a valid number!" : "درست تعداد درج کریں!");
 
-        const discountAmt = Math.max(0, Number(orderDiscount) || 0);
-        const total = Math.max(0, subtotal - discountAmt);
-        const perPerson = total / count;
+        const perPerson = subtotal / personCount;
 
-        const html = `
-          <html><head><title>Split Bill</title>
-          <style>
-            body{font-family:Arial;padding:12px}
-            .center{text-align:center}
-            table{width:100%;border-collapse:collapse}
-            td,th{padding:6px;border-bottom:1px solid #ddd}
-            .right{text-align:right}
-          </style>
-          </head><body>
-            <h2 class="center">Split Bill</h2>
-            <p>Date: ${new Date().toLocaleString()}</p>
-            <p>Total: Rs ${total.toFixed(0)}</p>
-            <p>Split into ${count} parts</p>
-            <h3 class="center">Each: Rs ${perPerson.toFixed(0)}</h3>
-            <hr/>
-            <p class="center">Thank you!</p>
-          </body></html>
-        `;
-        const w = window.open("", "PRINT", "height=600,width=400");
-        if (!w) return showError("Please allow popups for printing.");
-        w.document.write(html);
-        w.document.close();
-        w.focus();
-        setTimeout(() => w.print(), 200);
+        const html = `<html><head><title>Split Bill</title>
+            <style>body{font-family:Arial;padding:12px}.c{text-align:center}</style></head>
+            <body>
+                <h2 class="c">Split Bill</h2>
+                <p>Date: ${new Date().toLocaleString()}</p>
+                <p>Total: Rs ${subtotal.toFixed(0)}</p>
+                <p>Split between ${personCount} people</p>
+                <h3 class="c">Each person pays: Rs ${perPerson.toFixed(0)}</h3>
+                <hr/><p class="c">Thank you!</p>
+            </body></html>`;
+
+        const printWindow = window.open("", "PRINT", "height=600,width=400");
+        if (!printWindow) return showError("Please allow popups to print.");
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 200);
         setShowSplitModal(false);
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  FREE FOOD
-    // ════════════════════════════════════════════════════════════════════════
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 7 — FREE FOOD
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Verifies manager code, then creates a 0-cost order
     const handleFreeFood = async (managerCode, customerName = "", selectedWaiter = "") => {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
         if (!managerCode.trim()) return showError(language === "en" ? "Enter Manager Code!" : "منیجر کا کوڈ درج کریں!");
 
         try {
-            const response = await api.post("/settings/verify-manager", { code: managerCode });
-            if (response.data.status === "error") return showError(response.data.data.message);
+            const verifyRes = await api.post("/settings/verify-manager", { code: managerCode });
+            if (verifyRes.data.status === "error") return showError(verifyRes.data.data.message);
+            showSuccess(verifyRes.data.data);
 
-            showSuccess(response.data.data);
             const { data } = await api.get("/orders/generate-number");
-
             const orderBody = {
-                createdAt: new Date().toISOString(),
                 orderNumber: data.orderNumber,
+                createdAt: new Date().toISOString(),
                 subtotal,
-                discountAmount: subtotal,
+                discountAmount: subtotal,   // full discount = free
                 totalAmount: 0,
                 items: buildOrderItems(),
                 customerName: customerName || "N/A",
-                note: "FREE FOOD (Manager Approved)",
-                paymentMethod: "free",
                 waiter: selectedWaiter,
+                note: "FREE FOOD — Manager Approved",
+                paymentMethod: "free",
                 status: "completed",
             };
 
             const res = await addOrderMutation.mutateAsync(orderBody);
-            const orderToPrint = { ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber };
-            printOrder(orderToPrint, "Free Food");
+            printOrder({ ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber }, "Free Food");
 
             clearCart();
             setShowFreeFoodModal(false);
@@ -525,156 +510,140 @@ export default function PosPage() {
         } catch { }
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  HELPERS — build order items array
-    // ════════════════════════════════════════════════════════════════════════
-    const buildOrderItems = () =>
-        cart.map((i) => ({
-            product: i._id,
-            name: i.name,
-            quantity: i.qty,
-            unitPrice: i.unitPrice,
-            lineTotal: i.unitPrice * i.qty,
-            originalPrice: i.originalPrice || i.unitPrice,
-            portionType: i.portionType || "full",
-            batchId: i.batchId || null,
-            batchNumber: i.batchNumber || null,
-        }));
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  HOTKEY: Shift+Enter → open payment modal
-    // ════════════════════════════════════════════════════════════════════════
-    useEffect(() => {
-        const handler = (e) => {
-            if (e.shiftKey && e.key === "Enter") {
-                if (cart.length) setShowPaymentModal(true);
-            }
-        };
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [cart]);
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 8 — SHARED UTILITY
+    // ═════════════════════════════════════════════════════════════════════════
 
-    // ════════════════════════════════════════════════════════════════════════
+    // Converts the cart array into the format the backend order schema expects
+    const buildOrderItems = () => cart.map((item) => ({
+        product:       item._id,
+        name:          item.name,
+        quantity:      item.qty,
+        unitPrice:     item.unitPrice,
+        lineTotal:     item.unitPrice * item.qty,
+        originalPrice: item.originalPrice ?? item.unitPrice,   // ?? not || so 0 is preserved
+        portionType:   item.portionType   || "full",
+        batchId:       item.batchId       ?? null,
+        batchNumber:   item.batchNumber   ?? null,
+    }));
+
+
+    // ═════════════════════════════════════════════════════════════════════════
     //  RENDER
-    // ════════════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════════
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
 
-            {/* ── Left: Product Table ─────────────────────────────────── */}
+            {/* ── LEFT: Product table ────────────────────────────────────── */}
             <main className="flex-1 flex flex-col overflow-hidden p-4 gap-3">
 
-                {/* Header */}
+                {/* Top bar */}
                 <div className="flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-cyan-700 tracking-tight">
-                        Point of Sale
-                    </h1>
+                    <h1 className="text-xl font-bold text-cyan-700 tracking-tight">Point of Sale</h1>
                     <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowHeldOrders(true)}
-                            className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg border border-amber-200 hover:bg-amber-200 transition font-medium"
-                        >
-                            Held Orders ({heldOrders.length})
+                        <button onClick={() => setShowHeldOrders(true)}
+                            className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg border border-amber-200 hover:bg-amber-200 transition font-medium">
+                            Held Orders ({holdOrders.length})
                         </button>
-                        <button
-                            onClick={() => setShowFreeFoodModal(true)}
-                            className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg border border-green-200 hover:bg-green-200 transition font-medium"
-                        >
+                        <button onClick={() => setShowFreeFoodModal(true)}
+                            className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg border border-green-200 hover:bg-green-200 transition font-medium">
                             Free Food
                         </button>
-                        <button
-                            onClick={() => setShowSplitModal(true)}
-                            className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg border border-purple-200 hover:bg-purple-200 transition font-medium"
-                        >
+                        <button onClick={() => setShowSplitModal(true)}
+                            className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg border border-purple-200 hover:bg-purple-200 transition font-medium">
                             Split Bill
                         </button>
                     </div>
                 </div>
 
-                {/* ── PaginatedTable: products, row click → add to cart ── */}
-                <div className="flex-1 overflow-auto bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <PaginatedTable
+                {/* Product list — clicking a card calls handleProductClick */}
+                <div className="flex-1 overflow-hidden bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <PaginatedList
                         endpoint="/products/pagination"
-                        columns={columns}
                         limit={20}
-                        onRowClick={handleProductClick}
-                        rtkGetDataQuery={useProducts}
-                    // No isUpdate / isDelete
+                        dataKey="data"
+                        wrapperClassName="h-full"
+                        className="p-3"
+                        renderItems={(products) => (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                {products.map((product) => (
+                                    <ProductCard
+                                        key={product._id}
+                                        product={product}
+                                        onClick={() => handleProductClick(product)}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     />
                 </div>
             </main>
 
-            {/* ── Right: Cart Sidebar ──────────────────────────────────── */}
+            {/* ── RIGHT: Cart sidebar ────────────────────────────────────── */}
             <PosCartSidebar
                 cart={cart}
                 subtotal={subtotal}
+                resumedHoldId={resumedHoldId}
+                holdOrders={holdOrders}
+                orderHistory={orderHistory}
+                showHeldOrders={showHeldOrders}
+                setShowHeldOrders={setShowHeldOrders}
+                user={user}
                 incQty={incQty}
                 decQty={decQty}
                 removeFromCart={removeFromCart}
-                setCustomQty={setCustomQty}
-                openEditModal={openEditModal}
+                setCartItemQty={setCartItemQty}
+                openPortionModal={openPortionModal}
                 onCheckout={() => setShowPaymentModal(true)}
-                showHeldOrders={showHeldOrders}
-                setShowHeldOrders={setShowHeldOrders}
-                heldOrders={heldOrders}
-                orderHistory={orderHistory}
                 handleResumeOrder={handleResumeOrder}
-                handleDeleteHeld={handleDeleteHeld}
-                user={user}
-                language={language}
+                handleDeleteHeldOrder={handleDeleteHeldOrder}
             />
 
-            {/* ══════════════════════════════════════════════════════════
-                MODALS
-            ══════════════════════════════════════════════════════════ */}
+            {/* ── MODALS ──────────────────────────────────────────────────── */}
 
-            {/* Payment Modal */}
             {showPaymentModal && (
                 <PosPaymentModal
                     subtotal={subtotal}
-                    qarzaAccounts={qarzaAccounts}
                     onCheckout={handleCheckout}
                     onHold={handleHoldOrder}
                     onClose={() => setShowPaymentModal(false)}
-                    onCreateQarza={() => setShowQarza(true)}
+                    onCreateQarza={() => setShowQarzaModal(true)}
                     language={language}
                 />
             )}
 
-            {/* Portion Modal */}
             {showPortionModal && (
                 <PortionModal
-                    product={selectedProductForPortion}
-                    selectedPortionType={selectedPortionType}
-                    setSelectedPortionType={setSelectedPortionType}
-                    customPrice={customPrice}
-                    setCustomPrice={setCustomPrice}
-                    onClose={() => setShowPortionModal(false)}
+                    product={portionItem}
+                    selectedPortionType={portionType}
+                    setSelectedPortionType={setPortionType}
+                    customPrice={portionCustomPrice}
+                    setCustomPrice={setPortionCustomPrice}
+                    onClose={closePortionModal}
                     onConfirm={handlePortionConfirm}
                     language={language}
                 />
             )}
 
-            {/* Batch Selection Modal */}
             {showBatchModal && (
                 <BatchSelectionModal
-                    product={selectedProductForBatch}
-                    initialIsSticky={!!stickyBatches[selectedProductForBatch?._id]}
+                    product={batchProduct}
+                    initialIsSticky={!!stickyBatches[batchProduct?._id]}
                     onClose={() => setShowBatchModal(false)}
-                    onConfirm={handleBatchSelectionConfirm}
+                    onConfirm={handleBatchConfirm}
                     language={language}
                 />
             )}
 
-            {/* Split Bill Modal */}
             {showSplitModal && (
                 <SplitBillModal
                     onClose={() => setShowSplitModal(false)}
-                    onConfirm={(count) => handleSplitBill(count)}
+                    onConfirm={handleSplitBill}
                     language={language}
                 />
             )}
 
-            {/* Free Food Modal */}
             {showFreeFoodModal && (
                 <FreeFoodModal
                     onClose={() => setShowFreeFoodModal(false)}
@@ -683,20 +652,19 @@ export default function PosPage() {
                 />
             )}
 
-            {/* Qarza Account Creation */}
-            {showQarza && (
+            {showQarzaModal && (
                 <QarzaAccountCreation
-                    setQarzaAccountCreationFormPopupVisibility={setShowQarza}
+                    setQarzaAccountCreationFormPopupVisibility={setShowQarzaModal}
                     type="personal"
                     onCreated={(newAccount) => {
-                        // Inject into local state immediately without waiting for Redux refetch
-                        setLocalQarzaAccounts((prev) => [...prev, newAccount]);
+                        // Add to local list so it appears instantly in the dropdown
+                        setLocalQarza((prev) => [...prev, newAccount]);
                         dispatch(fetchQarzaAccounts());
                     }}
                 />
             )}
 
-            {/* Held Orders Overlay */}
+            {/* Dimmed backdrop when Held Orders drawer is open */}
             {showHeldOrders && (
                 <div
                     className="fixed inset-0 z-40 bg-gray-900/20 backdrop-blur-sm"
@@ -704,5 +672,54 @@ export default function PosPage() {
                 />
             )}
         </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ProductCard — one product tile in the POS product grid
+//  Clicking it triggers the batch-check → add-to-cart flow in PosPage
+// ─────────────────────────────────────────────────────────────────────────────
+function ProductCard({ product, onClick }) {
+    const imageUrl = product.image
+        ? (product.image.startsWith("http") ? product.image : `http://localhost:5001${product.image}`)
+        : null;
+
+    return (
+        <button
+            onClick={onClick}
+            className="flex flex-col items-center gap-1.5 p-3 bg-gray-50 hover:bg-cyan-50 border border-gray-200 hover:border-cyan-300
+                       rounded-xl transition-all active:scale-95 text-left w-full"
+        >
+            {/* Product image or placeholder */}
+            {imageUrl ? (
+                <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="w-full aspect-square object-cover rounded-lg bg-gray-100"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                />
+            ) : (
+                <div className="w-full aspect-square rounded-lg bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                    No image
+                </div>
+            )}
+
+            {/* Name */}
+            <p className="text-xs font-semibold text-gray-800 text-center leading-tight line-clamp-2 w-full">
+                {product.name}
+            </p>
+
+            {/* Price */}
+            <p className="text-sm font-bold text-cyan-700">
+                Rs {(Number(product.price) || 0).toLocaleString()}
+            </p>
+
+            {/* Category */}
+            {product.category?.name && (
+                <span className="text-[10px] text-gray-400 truncate w-full text-center">
+                    {product.category.name}
+                </span>
+            )}
+        </button>
     );
 }

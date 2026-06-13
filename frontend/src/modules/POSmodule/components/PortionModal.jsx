@@ -1,9 +1,21 @@
-// ============================================
-// 11. components/modals/PortionModal.jsx
-// ============================================
-import React from "react";
 import { X } from "lucide-react";
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  PortionModal
+//
+//  Opens when the cashier clicks on a cart item name.
+//  Lets them change the portion type: Full price / Half price / Custom price.
+//
+//  Props:
+//    product               — the cart item being edited
+//    selectedPortionType   — current selection: "full" | "half" | "custom"
+//    setSelectedPortionType — updates the selection
+//    customPrice           — custom price input value
+//    setCustomPrice        — updates the custom price
+//    onClose               — closes the modal without saving
+//    onConfirm             — applies the change to the cart
+//    language              — "en" or "ur"
+// ─────────────────────────────────────────────────────────────────────────────
 export default function PortionModal({
     product,
     selectedPortionType,
@@ -16,111 +28,82 @@ export default function PortionModal({
 }) {
     if (!product) return null;
 
-    const fullPrice =
-        product.originalPrice ||
-        product.price - (product.price * (product.discount || 0)) / 100;
+    // Base price of this item (before any portion split)
+    // Try originalPrice first (stored when item was added), fall back to unitPrice
+    const basePrice = Number(product.originalPrice) || Number(product.unitPrice) || 0;
+
+    const PORTIONS = [
+        { key: "full",   label: language === "en" ? "Full"         : "پورا",       price: basePrice          },
+        { key: "half",   label: language === "en" ? "Half"         : "آدھا",       price: basePrice / 2      },
+        { key: "custom", label: language === "en" ? "Custom Price" : "کسٹم قیمت",  price: null               },
+    ];
 
     return (
-        <div className="fixed right-10 top-5 rounded-full bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl p-6 w-96">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
-                    <span>
-                        {language === "en"
-                            ? "Select Portion"
-                            : "حصہ منتخب کریں"}
-                    </span>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600"
-                    >
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800">
+                        {language === "en" ? "Select Portion" : "حصہ منتخب کریں"}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-5 h-5" />
-                    </button>
-                </h3>
-                <p className="text-lg font-medium mb-4">{product.name}</p>
-
-                <div className="mb-6 grid grid-cols-3 gap-2">
-                    <button
-                        onClick={() => {
-                            setSelectedPortionType("full");
-                            setCustomPrice("");
-                        }}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                            selectedPortionType === "full"
-                                ? "bg-blue-600 text-white shadow-md"
-                                : "bg-white text-gray-700 border border-gray-400 hover:bg-gray-100"
-                        }`}
-                    >
-                        {language === "en" ? "Full" : "پورا"}
-                        <br />
-                        <span className="text-xs font-normal">
-                            Rs {fullPrice.toFixed(0)}
-                        </span>
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            setSelectedPortionType("half");
-                            setCustomPrice("");
-                        }}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                            selectedPortionType === "half"
-                                ? "bg-blue-600 text-white shadow-md"
-                                : "bg-white text-gray-700 border border-gray-400 hover:bg-gray-100"
-                        }`}
-                    >
-                        {language === "en" ? "Half" : "آدھا"}
-                        <br />
-                        <span className="text-xs font-normal">
-                            Rs {(fullPrice / 2).toFixed(0)}
-                        </span>
-                    </button>
-
-                    <button
-                        onClick={() => setSelectedPortionType("custom")}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                            selectedPortionType === "custom"
-                                ? "bg-blue-600 text-white shadow-md"
-                                : "bg-white text-gray-700 border border-gray-400 hover:bg-gray-100"
-                        }`}
-                    >
-                        {language === "en" ? "Custom Price" : "کسٹم قیمت"}
                     </button>
                 </div>
 
+                <p className="text-base font-medium text-gray-700 mb-5">{product.name}</p>
+
+                {/* Portion buttons */}
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                    {PORTIONS.map(({ key, label, price }) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                setSelectedPortionType(key);
+                                if (key !== "custom") setCustomPrice("");
+                            }}
+                            className={`px-4 py-3 rounded-lg text-sm font-semibold transition text-center
+                                ${selectedPortionType === key
+                                    ? "bg-blue-600 text-white shadow-md"
+                                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                                }`}
+                        >
+                            {label}
+                            {price !== null && (
+                                <span className="block text-xs font-normal mt-0.5">
+                                    Rs {price.toFixed(0)}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Custom price input — only shown when "custom" is selected */}
                 {selectedPortionType === "custom" && (
-                    <div className="relative w-full mb-6">
+                    <div className="mb-6">
+                        <label className="block text-sm text-gray-600 mb-1">
+                            {language === "en" ? "Enter Custom Price" : "کسٹم قیمت درج کریں"}
+                        </label>
                         <input
                             type="number"
-                            id="customPrice"
                             autoFocus
-                            placeholder=" "
                             value={customPrice}
                             onChange={(e) => setCustomPrice(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && onConfirm()}
-                            className="block w-full px-3 pt-4 pb-2 text-sm text-gray-900 bg-white border border-gray-400 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 peer"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        <label
-                            htmlFor="customPrice"
-                            className="absolute left-3 z-10 px-1 bg-white text-gray-500 text-sm duration-300 transform origin-[0] top-2 -translate-y-4 scale-75 peer-focus:text-blue-500"
-                        >
-                            {language === "en"
-                                ? "Enter Custom Price"
-                                : "کسٹم قیمت درج کریں"}
-                        </label>
                     </div>
                 )}
 
+                {/* Action buttons */}
                 <div className="flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm border border-gray-400 rounded-lg hover:bg-gray-100 transition"
-                    >
+                    <button onClick={onClose}
+                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700">
                         {language === "en" ? "Cancel" : "منسوخ کریں"}
                     </button>
-                    <button
-                        onClick={onConfirm}
-                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition"
-                    >
+                    <button onClick={onConfirm}
+                        className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition">
                         {language === "en" ? "Update Cart" : "اپ ڈیٹ کریں"}
                     </button>
                 </div>

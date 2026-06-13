@@ -1,94 +1,97 @@
-import asyncHandler from "express-async-handler";
-import ErrorResponse from "../../../common/utils/ErrorResponse.js";
+import asyncHandler   from "express-async-handler";
+import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
 import { createOrderSchema } from "../schemas/order.schema.js";
-import { getLocalOrderModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel } from "../../../configs/connect.db.js";
 
-export const generateOrderNumber = asyncHandler(async (req, res, next) => {
-    const OrderModel = getLocalOrderModel();
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/generate-number
+//  Returns a unique order number for today — e.g. ORD-20250613-0001
+// ─────────────────────────────────────────────────────────────────────────────
+export const generateOrderNumber = asyncHandler(async (req, res) => {
+    const Order     = getLocalOrderModel();
+    const HoldOrder = getLocalHoldOrderModel();
 
-    const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+    const endOfDay   = new Date(new Date().setHours(23, 59, 59, 999));
+    const dateRange  = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
 
-    const count = await OrderModel.countDocuments({
-        createdAt: { $gte: startOfDay, $lt: endOfDay },
-    });
+    // Count from BOTH collections so hold numbers and order numbers never clash
+    const [orderCount, holdCount] = await Promise.all([
+        Order.countDocuments(dateRange),
+        HoldOrder.countDocuments(dateRange),
+    ]);
 
-    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
-    const orderNumber = `ORD-${dateStr}-${(count + 1).toString().padStart(4, "0")}`;
+    const dateStr     = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+    const orderNumber = `ORD-${dateStr}-${String(orderCount + holdCount + 1).padStart(4, "0")}`;
 
-    res.status(200).json({
-        success: true,
-        orderNumber,
-    });
+    res.status(200).json({ success: true, orderNumber });
 });
 
-export const getOrders = asyncHandler(async (req, res, next) => {
-    const OrderModel = getLocalOrderModel();
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders
+//  Returns all completed/cancelled orders, newest first.
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrders = asyncHandler(async (req, res) => {
+    const Order  = getLocalOrderModel();
+    const orders = await Order.find().sort({ createdAt: -1 });
 
-    const orders = await OrderModel.find().sort({ createdAt: -1 });
-
-    res.status(200).json({
-        success: true,
-        message: "Orders retrieved successfully",
-        data: orders,
-    });
+    res.status(200).json({ success: true, message: "Orders fetched successfully", data: orders });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  POST /orders
+//  Creates a new completed order.
+//  Accepts both qty/quantity and price/unitPrice field names from the frontend.
+// ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
-    const OrderModel = getLocalOrderModel();
+    const Order = getLocalOrderModel();
 
-    const normalizedItems = req.body.items.map((item) => ({
-        product: item.product || item._id,
-        name: item.name,
-        quantity: item.quantity || item.qty,
-        unitPrice: item.unitPrice || item.price,
-        originalPrice: item.originalPrice || item.unitPrice || item.price,
-        lineTotal:
-            item.lineTotal ||
-            (item.unitPrice || item.price) * (item.quantity || item.qty),
-        portionType: item.portionType || "full",
-    }));
+    // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
+    const normalizedItems = req.body.items.map((item) => {
+        const qty       = Number(item.quantity  ?? item.qty      ?? 1);
+        const price     = Number(item.unitPrice  ?? item.price    ?? 0);
+        const origPrice = Number(item.originalPrice ?? item.unitPrice ?? item.price ?? 0);
+        const total     = item.lineTotal != null ? Number(item.lineTotal) : price * qty;
 
-    const bodyToValidate = { ...req.body, items: normalizedItems };
-
-    const validatedData = await createOrderSchema.validate(bodyToValidate, {
-        abortEarly: false,
-        stripUnknown: true,
+        return {
+            product:       item.product || item._id,
+            name:          item.name,
+            quantity:      qty,
+            unitPrice:     price,
+            originalPrice: origPrice,
+            lineTotal:     total,
+            portionType:   item.portionType || "full",
+            batchId:       item.batchId     ?? null,
+            batchNumber:   item.batchNumber ?? null,
+        };
     });
 
-    const existingOrder = await OrderModel.findOne({
-        orderNumber: validatedData.orderNumber,
-    });
+    // Validate with yup schema
+    const validatedData = await createOrderSchema.validate(
+        { ...req.body, items: normalizedItems },
+        { abortEarly: false, stripUnknown: true },
+    );
 
-    if (existingOrder) {
-        return next(new ErrorResponse("Order number already exists", 400));
-    }
+    // Prevent duplicate order numbers
+    const duplicate = await Order.findOne({ orderNumber: validatedData.orderNumber });
+    if (duplicate) return next(new ErrorResponse("Order number already exists", 400));
 
-    const order = await OrderModel.create(validatedData);
+    const order = await Order.create(validatedData);
 
-    res.status(201).json({
-        success: true,
-        message: "Order created successfully",
-        order,
-    });
+    res.status(201).json({ success: true, message: "Order created successfully", order });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  DELETE /orders/:id
+//  Permanently deletes a completed/cancelled order.
+// ─────────────────────────────────────────────────────────────────────────────
 export const deleteOrder = asyncHandler(async (req, res, next) => {
-    const OrderModel = getLocalOrderModel();
-    const { id } = req.params;
+    const Order = getLocalOrderModel();
+    const order = await Order.findById(req.params.id);
 
-    const order = await OrderModel.findById(id);
-
-    if (!order) {
-        return next(new ErrorResponse("Order not found", 404));
-    }
+    if (!order) return next(new ErrorResponse("Order not found", 404));
 
     await order.deleteOne();
 
-    res.status(200).json({
-        success: true,
-        message: "Order deleted successfully",
-        data: {},
-    });
+    res.status(200).json({ success: true, message: "Order deleted successfully", data: {} });
 });
