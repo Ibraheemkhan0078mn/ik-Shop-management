@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { FileText, IndianRupee, ArrowLeft, Eye, Receipt, History, Trash2 } from 'lucide-react';
 import { useDeleteSalaryPaymentMutation } from '../../member/api/member.rtk.api.js';
-import TransactionReceipt from '../../../common/components/Reciept';
+// import TransactionReceipt from '../../../common/components/Reciept';
 
 const MemberInvoicesAndFeeDeposits = ({ memberId, setVisibility, responseData }) => {
 
@@ -87,7 +87,7 @@ const MemberInvoicesAndFeeDeposits = ({ memberId, setVisibility, responseData })
             />
 
 
-            {paymentReceiptVisibility && <TransactionReceipt data={paymentReceiptData} setVisibility={setPaymentReceiptVisibility} />}
+            {/* {paymentReceiptVisibility && <TransactionReceipt data={paymentReceiptData} setVisibility={setPaymentReceiptVisibility} />} */}
 
 
 

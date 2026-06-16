@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { CirclePlus, CalendarDays, Search, X, Sparkles, Calendar, QrCode } from 'lucide-react'
-import Scanner from '../../../common/components/Scanner'
+// import Scanner from '../../../common/components/Scanner.jsx'
 import {
     useGetAttendanceByDateQuery,
     useMarkScannerAttendanceMutation,
@@ -89,9 +89,9 @@ export const MemberMakingAttendenceComp = ({ setVisibility }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
             <div className="absolute inset-0 app-overlay app-enter" onClick={() => setVisibility(false)} />
 
-            {scannerOpen && (
+            {/* {scannerOpen && (
                 <Scanner onScan={handleScan} onClose={() => setScannerOpen(false)} />
-            )}
+            )} */}
 
             <div className="relative w-full max-w-5xl h-[85vh] bg-surface rounded-[2.5rem] shadow-2xl shadow-sm/20 border border-surface flex flex-col overflow-hidden app-enter">
 

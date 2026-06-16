@@ -3,7 +3,7 @@ import { Trash2, DollarSign, CreditCard, Receipt, Users, Calendar, ChevronDown, 
 import { useDeleteSalaryPaymentMutation } from '../api/member.rtk.api.js';
 import ScreenTabButton from '../../../common/components/ScreenTabButton';
 import MemberSalaryPaymentCreationComp from './MemberSalaryPaymentCreationComp';
-import TransactionReceipt from '../../../common/components/Reciept';
+// import TransactionReceipt from '../../../common/components/Reciept';
 
 const MemberFeeDepositsAndDetails = ({ memberId, setVisibility, responseData }) => {
 
@@ -49,9 +49,9 @@ const MemberFeeDepositsAndDetails = ({ memberId, setVisibility, responseData }) 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
 
-            {paymentReceiptVisibility && (
-                <TransactionReceipt data={paymentReceiptData} setVisibility={setPaymentReceiptVisibility} />
-            )}
+            {/* {paymentReceiptVisibility && (
+                // <TransactionReceipt data={paymentReceiptData} setVisibility={setPaymentReceiptVisibility} />
+            )} */}
             {createPaymentVisibility && (
                 <MemberSalaryPaymentCreationComp setVisible={setCreatePaymentVisibility} memberId={memberId} />
             )}
