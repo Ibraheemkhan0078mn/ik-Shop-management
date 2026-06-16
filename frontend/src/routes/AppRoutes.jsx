@@ -7,21 +7,23 @@ import StaffPage from "../modules/teacher/pages/AllTeachers.jsx";
 import BusinessExpenses from "../modules/expense/pages/AllExpense.jsx";
 import Analytics from "../modules/dashbaord/pages/Analytics";
 import Generals from "../modules/setting/pages/Generals.jsx";
-import ReturnPage from "../modules/stock/pages/ReturnPage.jsx";
-import AddPurchaseModal from "../modules/stock/components/AddPurchases.jsx";
+import ReturnPage      from "../modules/returns/pages/ReturnPage.jsx";
+import WastagePage     from "../modules/wastage/pages/WastagePage.jsx";
+import ProductPurchase  from "../modules/productPurchases/pages/ProductPurchase.jsx";
+import SupplierPage     from "../modules/suppliers/pages/SupplierPage.jsx";
 import ViewProductPage from "../modules/productsModule/pages/Products.jsx";
 import QuickActions from "../modules/dashbaord/pages/QuickActions.jsx"
 import QarzaAccounts from "../modules/qarza/pages/QarzaAccounts.jsx";
 import EachQarzaAccountRecords from "../modules/qarza/pages/EachQarzaAccountRecords.jsx";
 import AllTeachers from "../modules/teacher/pages/AllTeachers.jsx";
 import AllInvestors from "../modules/Investor/pages/AllInvestors.jsx";
+import AllMembers from "../modules/member/pages/AllMembers.jsx";
 import Inventory from "../modules/Inventory/pages/Inventory.jsx";
 import AllExpenses from "../modules/expense/pages/AllExpense.jsx";
 import PosPage from "../modules/POSmodule/pages/PosPage.jsx";
 import Categories from "../modules/productsModule/components/Categories.jsx";
 import SubCategories from "../modules/productsModule/components/SubCategories.jsx";
-import ProductPurchase from '../modules/stock/pages/ProductPurchase.jsx'
-import SupplierPage from "../modules/stock/pages/SupplierpAGE.jsx";
+
 
 function AppRoutes() {
     return (
@@ -41,6 +43,8 @@ function AppRoutes() {
 
             <Route path="/purchases" element={<ProductPurchase />} />
             <Route path="/suppliers" element={<SupplierPage />} />
+            <Route path="/returns"   element={<ReturnPage />} />
+            <Route path="/wastage"   element={<WastagePage />} />
 
 
 
@@ -50,7 +54,7 @@ function AppRoutes() {
             <Route path="/qarzaAccount" element={<QarzaAccounts />} />
             <Route path="/EachQarzaAccountRecord/:id" element={<EachQarzaAccountRecords />} />
             <Route path="/staff" element={<StaffPage />} />
-            <Route path="/member" element={<AllTeachers />} />
+            <Route path="/member" element={<AllMembers />} />
             <Route path="/investor" element={<AllInvestors />} />
             <Route path="/assets" element={<Inventory />} />
             <Route path="/expenses" element={<AllExpenses />} />

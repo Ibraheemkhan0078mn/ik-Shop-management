@@ -3,9 +3,9 @@ import userSchema from "../modules/auth/models/auth.model.js";
 import productSchema from "../modules/product/models/product.model.js";
 import categorySchema from "../modules/product/models/category.model.js";
 import subCategorySchema from "../modules/product/models/subCategory.model.js";
-import batchSchema from "../modules/stock/models/batch.model.js";
-import supplierSchema from "../modules/stock/models/supplier.model.js";
-import purchaseSchema from "../modules/stock/models/purchase.model.js";
+import batchSchema from "../modules/productPurchases/models/batch.model.js";
+import supplierSchema from "../modules/suppliers/models/supplier.model.js";
+import purchaseSchema from "../modules/productPurchases/models/purchase.model.js";
 import orderSchema from "../modules/pos/models/order.model.js";
 import holdOrderSchema from "../modules/pos/models/holdOrder.model.js";
 import memberSchema from "../modules/member/models/member.model.js";
@@ -20,10 +20,14 @@ import { memberInvoiceSchema } from "../modules/member/models/memberInvoice.js";
 import memberPaymentSchema from "../modules/member/models/memberPayment.model.js";
 import imageChangeTrackSchema from "../modules/others/models/imageChangeTrack.model.js";
 import memberInvestmentSchema from "../modules/member/models/memberInvestment.model.js";
+import memberSalaryPaymentSchema from "../modules/member/models/memberSalaryPayment.model.js";
+import memberSalaryChangeSchema from "../modules/member/models/memberSalaryChange.model.js";
+import classPartnershipSchema from "../modules/member/models/classPartnership.model.js";
+import partnerInvestmentSchema from "../modules/member/models/partnerInvestment.model.js";
 import QarzaAccountSchema from "../modules/qarza/models/qarzaAccount.model.js";
 import QarzaPaymentSchema from "../modules/qarza/models/qarzaPayment.js";
-import wastageSchema from "../modules/stock/models/wastage.model.js";
-import returnSchema from "../modules/stock/models/return.model.js";
+import wastageSchema from "../modules/wastage/models/wastage.model.js";
+import returnSchema from "../modules/returns/models/return.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
 
 let UserModel = null;
@@ -47,6 +51,10 @@ let MemberInvoiceModel = null;
 let MemberPaymentModel = null;
 let ImageChangeTrackModel = null;
 let MemberInvestmentModel = null;
+let MemberSalaryPaymentModel = null;
+let MemberSalaryChangeModel = null;
+let ClassPartnershipModel = null;
+let PartnerInvestmentModel = null;
 let QarzaAccountModel = null;
 let QarzaPaymentModel = null;
 let WastageModel = null;
@@ -87,6 +95,10 @@ export const connectDb = async () => {
     MemberPaymentModel = LocalConnection.model("MemberPayment", memberPaymentSchema)
     ImageChangeTrackModel = LocalConnection.model("ImageChangeTracks", imageChangeTrackSchema)
     MemberInvestmentModel = LocalConnection.model("MemberInvestment", memberInvestmentSchema)
+    MemberSalaryPaymentModel = LocalConnection.model("MemberSalaryPayment", memberSalaryPaymentSchema)
+    MemberSalaryChangeModel = LocalConnection.model("MemberSalaryChange", memberSalaryChangeSchema)
+    ClassPartnershipModel = LocalConnection.model("ClassPartnership", classPartnershipSchema)
+    PartnerInvestmentModel = LocalConnection.model("PartnerInvestment", partnerInvestmentSchema)
     QarzaAccountModel = LocalConnection.model("QarzaAccount", QarzaAccountSchema)
     QarzaPaymentModel = LocalConnection.model("QarzaPayment", QarzaPaymentSchema)
     WastageModel = LocalConnection.model("Wastages", wastageSchema)
@@ -101,6 +113,10 @@ export const getLocalWastageModel = () => WastageModel || null;
 export const getLocalQarzaAccountModel = () => QarzaAccountModel || null;
 export const getLocalQarzaPaymentModel = () => QarzaPaymentModel || null;
 export const getLocalMemberInvestmentModel = () => MemberInvestmentModel || null;
+export const getLocalMemberSalaryPaymentModel = () => MemberSalaryPaymentModel || null;
+export const getLocalMemberSalaryChangeModel = () => MemberSalaryChangeModel || null;
+export const getLocalClassPartnershipModel = () => ClassPartnershipModel || null;
+export const getLocalPartnerInvestmentModel = () => PartnerInvestmentModel || null;
 export const getLocalImageChangeTrackModel = () => ImageChangeTrackModel || null;
 export const getLocalMemberPaymentModel = () => MemberPaymentModel || null;
 export const getLocalMemberInvoiceModel = () => MemberInvoiceModel || null;

@@ -1,6 +1,6 @@
 import { useState }                                    from "react";
 import { X, CheckCircle2, ChevronRight, PackageOpen }  from "lucide-react";
-import { useBatchesByProduct }                         from "../../stock/services/batch.service";
+import { useBatchesByProduct } from "../../productPurchases/services/batch.service";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  BatchSelectionModal

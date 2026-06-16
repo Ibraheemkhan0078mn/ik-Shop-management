@@ -1,12 +1,16 @@
-
+﻿
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useTeacherCreate } from '../api/teacher.api.js';
-import { useHotkeys } from 'react-hotkeys-hook';
 
-const TeacherCreate = ({ setVisibility, setData }) => {
-    let teacherCreationMutate = useTeacherCreate()
+import { useCreateMemberMutation } from '../../member/api/member.rtk.api.js';
+import { useHotkeys } from 'react-hotkeys-hook';
+import ImageCropper from '../../../common/components/ImageCropper.jsx';
+import api from '../../../lib/api.js';
+
+const MemberCreate = ({ setVisibility, setData }) => {
+    let [createMember] = useCreateMemberMutation()
+    let { data: allclassesData } = useGetAllClassesQuery();
 
     const fileInputRef = useRef(null);
 
@@ -18,7 +22,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
     const generateRollNo = () => Math.floor(100000 + Math.random() * 900000).toString();
 
     const [formData, setFormData] = useState({
-        teacherId: generateRollNo(),
+        memberId: generateRollNo(),
         name: '',
         fatherName: '',
         phone: '',
@@ -45,7 +49,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
         skills: [],
         experiences: [],
         educationDegrees: [],
-        teacherProfileImage: null,
+        memberProfileImage: null,
         notes: '',
         isActive: true
     });
@@ -53,11 +57,11 @@ const TeacherCreate = ({ setVisibility, setData }) => {
     useHotkeys("esc", (e) => { e.preventDefault(); e.stopPropagation(); setVisibility(false); }, { enableOnFormTags: true })
 
     useEffect(() => {
-        if (!formData.teacherId) return;
+        if (!formData.memberId) return;
 
         const checkDuplicate = async () => {
             try {
-                const response = await apiClient.get(`/memberRoutess/${formData.teacherId}`);
+                const response = await api.get(`/memberRoutes/${formData.memberId}`);
 
                 if (response.data.duplicate) {
                     yourFunction(); // replace with your actual function
@@ -72,7 +76,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
         }, 500);
 
         return () => clearTimeout(debounce);
-    }, [formData.teacherId]);
+    }, [formData.memberId]);
 
 
 
@@ -91,7 +95,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
 
     const addTag = (category, stateKey) => {
         const val = tempInputs[category].trim();
-        if (!val) return;
+        if (!val) return; 
         setFormData(prev => ({ ...prev, [stateKey]: [...prev[stateKey], val] }));
         setTempInputs(prev => ({ ...prev, [category]: '' }));
     };
@@ -100,22 +104,32 @@ const TeacherCreate = ({ setVisibility, setData }) => {
         setFormData(prev => ({ ...prev, [stateKey]: prev[stateKey].filter((_, i) => i !== index) }));
     };
 
-    const handleProfileChange = (e) => {
-        const file = e.target.files[0];
+    // const handleProfileChange = (e) => {
+    //     const file = e.target.files[0];
+    //     if (file) {
+    //         setFormData(prev => ({ ...prev, memberProfileImage: file }));
+    //         setImagePreview(URL.createObjectURL(file));
+    //     }
+    // };
+
+        const handleProfileChange = (files) => {
+        const file = files[0];
         if (file) {
-            setFormData(prev => ({ ...prev, teacherProfileImage: file }));
+            setFormData(prev => ({ ...prev, memberProfileImage: file }));
             setImagePreview(URL.createObjectURL(file));
         }
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            console.log(formData)
             const data = new FormData();
 
             // Logic: Separate Files/Arrays from regular fields
             Object.keys(formData).forEach(key => {
-                if (!['teacherProfileImage', 'documents', 'languages', 'skills', 'experiences', 'educationDegrees', 'givenClasses'].includes(key)) {
+                if (!['memberProfileImage', 'documents', 'languages', 'skills', 'experiences', 'educationDegrees', 'givenClasses'].includes(key)) {
                     data.append(key, formData[key]);
                 }
             });
@@ -125,42 +139,59 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                 data.append(key, JSON.stringify(formData[key]));
             });
 
-            if (formData.teacherProfileImage) data.append('teacherProfileImage', formData.teacherProfileImage);
+            if (formData.memberProfileImage) data.append('memberProfileImage', formData.memberProfileImage);
             formData?.documents?.forEach((file) => data.append('documents', file));
 
 
-            await teacherCreationMutate.mutateAsync(data)
+            await createMember(data).unwrap()
 
             toast.success("Faculty Registered Successfully");
             setVisibility(false);
 
         } catch (error) {
-            console.error(error)
+            console.log(error)
         }
         toast.info("Processing Submission...");
     };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"></div>
+            <div className="absolute inset-0 app-overlay"></div>
 
-            <div className="relative max-h-[95vh] w-full max-w-[90%] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row animate-in zoom-in-95">
+            <div className="relative max-h-[95vh] w-full max-w-[90%] bg-surface rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row app-enter">
 
                 {/* Left Panel: Profile Photo Section */}
-                <div className="lg:w-[20%] bg-linear-to-b from-cyan-700 to-cyan-600 p-8 flex flex-col items-center border-r border-slate-100">
-                    <div className="relative group w-40 h-40 border-4 shadow-md border-cyan-800 rounded-full mb-6">
-                        <div onClick={() => fileInputRef.current.click()} className="w-full h-full rounded-full bg-cyan-800 border-4 border-cyan-500/30 overflow-hidden cursor-pointer hover:scale-105 transition-all flex items-center justify-center">
-                            {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <i className="ri-camera-3-line text-3xl text-cyan-500"></i>}
+                <div className="lg:w-[20%] app-gradient-vertical p-8 flex flex-col items-center border-r border-edge">
+                    {/* <div className="relative group w-40 h-40 border-4 shadow-md border-primary-hover rounded-full mb-6">
+                        <div onClick={() => fileInputRef.current.click()} className="w-full h-full rounded-full bg-primary-hover border-4 border-edge-brand/30 overflow-hidden cursor-pointer hover:scale-105 transition-all flex items-center justify-center">
+                            {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <i className="ri-camera-3-line text-3xl text-ink"></i>}
                         </div>
                         <input type="file" ref={fileInputRef} onChange={handleProfileChange} hidden accept="image/*" />
-                    </div>
-                    <h2 className="text-xl font-black text-white text-center uppercase tracking-tighter">New Registration</h2>
-                    <p className="text-[10px] text-slate-500 font-bold mt-2 uppercase tracking-widest">{formData.post}</p>
+                    </div> */}
+                    <ImageCropper
+                        accept="image/*"
+                        aspectRatio={1}
+                        cropShape="round"
+                        showPreview={false}
+                        onChange={handleProfileChange}
+                    >
+                        <div className="w-50 h-50 rounded-full bg-primary-hover border-4 border-edge-brand/30 overflow-hidden cursor-pointer hover:scale-105 transition-all flex items-center justify-center">
+                            {imagePreview
+                                ? <img src={imagePreview} className="w-50 h-50 object-cover rounded-full" />
+                                : <div className="w-50 h-50 rounded-full flex flex-col items-center justify-center gap-2">
+                                    <i className="ri-user-settings-line text-6xl text-accent" />
+                                    <span className="text-[9px] font-black text-accent uppercase tracking-widest">Upload Photo</span>
+                                </div>
+                            }
+                        </div>
+                    </ImageCropper>
+                    <h2 className="text-xl font-black text-primary-foreground text-center uppercase tracking-tighter">New Registration</h2>
+                    <p className="text-[10px] text-ink-muted font-bold mt-2 uppercase tracking-widest">{formData.post}</p>
                 </div>
 
                 {/* Right Panel: Scrollable Form */}
-                <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                    <button onClick={() => setVisibility(false)} className="absolute right-6 top-6 z-20 w-10 h-10 bg-slate-50 hover:bg-rose-500 hover:text-white rounded-full flex items-center justify-center transition-all">
+                <div className="flex-1 flex flex-col bg-surface overflow-hidden">
+                    <button onClick={() => setVisibility(false)} className="absolute right-6 top-6 z-20 w-10 h-10 bg-surface-muted hover:bg-danger hover:text-primary-foreground rounded-full flex items-center justify-center transition-all">
                         <i className="ri-close-line text-xl"></i>
                     </button>
 
@@ -171,15 +202,15 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                             <SectionHeader title="Basic Personal Information" />
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="relative">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Reg ID</label>
-                                    <input name="teacherId" value={formData.teacherId} onChange={handleChange} readOnly={!isRollEditable} className={`w-full bg-slate-50 border-2 rounded-2xl px-4 py-3 font-bold ${isRollEditable ? 'border-cyan-500' : 'border-transparent'}`} />
-                                    <button type="button" onClick={() => setIsRollEditable(!isRollEditable)} className="absolute right-3 top-9 text-slate-400"><i className={isRollEditable ? "ri-lock-unlock-line" : "ri-lock-line"}></i></button>
+                                    <label className="block text-[10px] font-black text-ink-subtle uppercase mb-2 ml-1">Reg ID</label>
+                                    <input name="memberId" value={formData.memberId} onChange={handleChange} readOnly={!isRollEditable} className={`w-full bg-surface-muted border-2 rounded-2xl px-4 py-3 font-bold ${isRollEditable ? 'border-edge-brand' : 'border-transparent'}`} />
+                                    <button type="button" onClick={() => setIsRollEditable(!isRollEditable)} className="absolute right-3 top-9 text-ink-subtle"><i className={isRollEditable ? "ri-lock-unlock-line" : "ri-lock-line"}></i></button>
                                 </div>
                                 <CustomInput autoFocus label="Full Name" name="name" value={formData.name} onChange={handleChange} required icon="ri-user-line" />
                                 <CustomInput label="Father Name" name="fatherName" value={formData.fatherName} onChange={handleChange} icon="ri-parent-line" />
-                                <CustomInput label="Phone No" name="phone" value={formData.phone} onChange={handleChange} required icon="ri-phone-line" />
+                                <CustomInput type={"number"} label="Phone No" name="phone" value={formData.phone} onChange={handleChange} required icon="ri-phone-line" />
                                 <CustomInput label="Investment Start Date" name="hiringDate" type="date" value={formData.hiringDate} onChange={handleChange} icon="ri-calendar-line" />
-                                {/* <CustomSelect label="Designation" name="post" value={formData.post} onChange={handleChange} options={[{ v: 'teacher', n: 'Teacher' }, { v: 'intern', n: 'Intern' }]} opLabel="n" opValue="v" /> */}
+                                {/* <CustomSelect label="Designation" name="post" value={formData.post} onChange={handleChange} options={[{ v: 'member', n: 'Member' }, { v: 'intern', n: 'Intern' }]} opLabel="n" opValue="v" /> */}
                             </div>
                         </section>
 
@@ -187,7 +218,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
 
 
                         {/* Section 3: Class Selection */}
-                        {/* {formData.post === 'teacher' && (
+                        {/* {formData.post === 'member' && (
                             <section className="space-y-4">
                                 <SectionHeader title="Class Assignments" />
                                 <div className="flex flex-wrap gap-2">
@@ -202,7 +233,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                                     givenClasses: exists ? p.givenClasses.filter(id => id !== cls._id) : [...p.givenClasses, cls._id]
                                                 }));
                                             }}
-                                            className={`px-4 py-2 rounded-xl text-[12px] font-black uppercase transition-all border-2 ${formData.givenClasses.includes(cls._id) ? 'bg-cyan-600 border-cyan-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
+                                            className={`px-4 py-2 rounded-xl text-[12px] font-black uppercase transition-all border-2 ${formData.givenClasses.includes(cls._id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-surface border-edge text-ink-subtle'}`}
                                         >
                                             {cls.className}
                                         </button>
@@ -214,22 +245,22 @@ const TeacherCreate = ({ setVisibility, setData }) => {
 
 
                         {/* Section 2: Financial & Partnership */}
-                        {/* <section className="p-6 bg-slate-50 rounded-[2rem] space-y-6">
+                        {/* <section className="p-6 bg-surface-muted rounded-[2rem] space-y-6">
                             <SectionHeader title="Contract & Financials" />
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
 
-                                {formData.post === 'teacher' && (
+                                {formData.post === 'member' && (
                                     <CustomInput label="Fixed Monthly Salary" name="salary" type="number" 
     onWheel={(e) => e.target.blur()} value={formData.salary} onChange={handleChange} icon="ri-money-dollar-circle-line" />
                                 )}
 
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 mb-2 ml-1 text-[10px] font-black text-slate-400 uppercase">
+                                    <label className="flex items-center gap-2 mb-2 ml-1 text-[10px] font-black text-ink-subtle uppercase">
                                         Absence Deduction
-                                        <input type="checkbox" name="isAbsenceCutEnabled" checked={formData.isAbsenceCutEnabled} onChange={handleChange} className="w-4 h-4 accent-cyan-600" />
+                                        <input type="checkbox" name="isAbsenceCutEnabled" checked={formData.isAbsenceCutEnabled} onChange={handleChange} className="w-4 h-4 accent-primary" />
                                     </label>
                                     {formData.isAbsenceCutEnabled && (
-                                        <div className="animate-in fade-in slide-in-from-left-2">
+                                        <div className="app-enter slide-in-from-left-2">
                                             <CustomInput label="" name="perAttendenceCut" type="number" 
     onWheel={(e) => e.target.blur()} value={formData.perAttendenceCut} onChange={handleChange} icon="ri-scissors-cut-line" />
                                         </div>
@@ -241,15 +272,15 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                         </section> */}
 
                         {/* Section 2: Financial & Partnership */}
-                        {/* <section className="p-8 bg-slate-50 rounded-[2.5rem] space-y-8 border border-slate-100 shadow-sm">
+                        {/* <section className="p-8 bg-surface-muted rounded-[2.5rem] space-y-8 border border-edge shadow-sm">
                             <SectionHeader title="Contract & Financials" icon="ri-bank-card-line" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
 
-                                <div className={`space-y-4 p-5 rounded-2xl border transition-all duration-300 ${formData.isSalary ? 'bg-white border-cyan-200 shadow-md scale-[1.02]' : 'bg-white/50 border-slate-200 opacity-90'}`}>
+                                <div className={`space-y-4 p-5 rounded-2xl border transition-all duration-300 ${formData.isSalary ? 'bg-surface border-edge-brand shadow-md scale-[1.02]' : 'bg-surface/50 border-edge opacity-90'}`}>
                                     <label className="flex items-center justify-between cursor-pointer group">
-                                        <span className="flex items-center gap-3 text-[11px] font-black text-slate-500 uppercase tracking-widest">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${formData.isSalary ? 'bg-cyan-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                        <span className="flex items-center gap-3 text-[11px] font-black text-ink-muted uppercase tracking-widest">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${formData.isSalary ? 'bg-primary-muted text-primary-foreground' : 'bg-surface-muted text-ink-subtle'}`}>
                                                 <i className="ri-money-dollar-circle-line text-lg"></i>
                                             </div>
                                             Salary Setup
@@ -259,12 +290,12 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                             name="isSalary"
                                             checked={formData.isSalary}
                                             onChange={handleChange}
-                                            className="w-5 h-5 accent-cyan-600 cursor-pointer"
+                                            className="w-5 h-5 accent-primary cursor-pointer"
                                         />
                                     </label>
 
                                     {formData.isSalary && (
-                                        <div className="animate-in zoom-in-95 fade-in duration-300 pt-2">
+                                        <div className="app-enter pt-2">
                                             <CustomInput
                                                 label="Fixed Monthly Salary"
                                                 name="salary"
@@ -280,10 +311,10 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                 </div>
 
                                 {formData.isSalary && Number(formData.salary) > 0 && (
-                                    <div className={`space-y-4 p-5 rounded-2xl border animate-in slide-in-from-right-5 duration-500 transition-all ${formData.isAbsenceCutEnabled ? 'bg-white border-red-200 shadow-md scale-[1.02]' : 'bg-white/50 border-slate-200'}`}>
+                                    <div className={`space-y-4 p-5 rounded-2xl border app-enter transition-all ${formData.isAbsenceCutEnabled ? 'bg-surface border-danger shadow-md scale-[1.02]' : 'bg-surface/50 border-edge'}`}>
                                         <label className="flex items-center justify-between cursor-pointer group">
-                                            <span className="flex items-center gap-3 text-[11px] font-black text-slate-500 uppercase tracking-widest">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${formData.isAbsenceCutEnabled ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                            <span className="flex items-center gap-3 text-[11px] font-black text-ink-muted uppercase tracking-widest">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${formData.isAbsenceCutEnabled ? 'bg-danger text-primary-foreground' : 'bg-surface-muted text-ink-subtle'}`}>
                                                     <i className="ri-scissors-cut-line text-lg"></i>
                                                 </div>
                                                 Absence Policy
@@ -298,7 +329,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                         </label>
 
                                         {formData.isAbsenceCutEnabled && (
-                                            <div className="animate-in slide-in-from-top-2 fade-in duration-300 pt-2">
+                                            <div className="app-enter pt-2">
                                                 <CustomInput
                                                     label="Per Day Deduction"
                                                     name="perAttendenceCut"
@@ -318,10 +349,10 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                         </section> */}
 
                         {/* 
-                        <div className="flex flex-wrap gap-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                        <div className="flex flex-wrap gap-6 p-6 bg-surface-muted rounded-[2rem] border border-edge">
 
-                            <div className="flex items-center gap-4 py-3 px-5 bg-white rounded-2xl shadow-sm border border-slate-100 min-w-[200px] justify-between">
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Business Partner</span>
+                            <div className="flex items-center gap-4 py-3 px-5 bg-surface rounded-2xl shadow-sm border border-edge min-w-[200px] justify-between">
+                                <span className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Business Partner</span>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -330,18 +361,18 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                         checked={formData.isPartner}
                                         onChange={(e) => { setFormData(prev => ({ ...formData, isPartner: !formData.isPartner, partnerType: "" })) }}
                                     />
-                                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-cyan-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                    <div className="w-11 h-6 bg-border rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                 </label>
                             </div>
                             {formData.isPartner && (
-                                <div className="space-y-4 animate-in fade-in duration-300">
-                                    <div className="flex p-1 bg-slate-100 rounded-xl w-72">
+                                <div className="space-y-4 app-enter">
+                                    <div className="flex p-1 bg-surface-muted rounded-xl w-72">
                                         {['overall', 'custom'].map((type) => (
                                             <button
                                                 key={type}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, partnerType: type, overallPartnerShareValue: "" })}
-                                                className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${formData.partnerType === type ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-500'}`}
+                                                className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${formData.partnerType === type ? 'bg-primary text-primary-foreground shadow-md' : 'text-ink-muted'}`}
                                             >
                                                 {type}
                                             </button>
@@ -349,7 +380,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                     </div>
 
                                     {formData.partnerType === 'overall' && (
-                                        <div className="w-full max-w-sm animate-in slide-in-from-left-2">
+                                        <div className="w-full max-w-sm app-enter">
                                             <CustomInput label="Institute Share (%)" name="overallPartnerShareValue" type="number" 
     onWheel={(e) => e.target.blur()} value={formData.overallPartnerShareValue} onChange={handleChange} icon="ri-percent-line" />
                                         </div>
@@ -361,13 +392,13 @@ const TeacherCreate = ({ setVisibility, setData }) => {
  */}
 
 
-                        <div className="flex flex-wrap gap-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                        <div className="flex flex-wrap gap-6 p-6 bg-surface-muted rounded-[2rem] border border-edge">
 
 
 
                             {/* Is Active Toggle */}
-                            <div className="flex items-center gap-4 py-3 px-5 bg-white rounded-2xl shadow-sm border border-slate-100 min-w-[200px] justify-between">
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Account Status</span>
+                            <div className="flex items-center gap-4 py-3 px-5 bg-surface rounded-2xl shadow-sm border border-edge min-w-[200px] justify-between">
+                                <span className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Account Status</span>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -376,7 +407,7 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                         checked={formData.isActive}
                                         onChange={handleChange}
                                     />
-                                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                    <div className="w-11 h-6 bg-border rounded-full peer peer-checked:bg-success after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                 </label>
                             </div>
 
@@ -385,20 +416,20 @@ const TeacherCreate = ({ setVisibility, setData }) => {
 
                         {/* Section 4: Advanced Toggle Section */}
                         <div className="flex justify-center">
-                            <button type="button" onClick={() => setShowAdvancedFields(!showAdvancedFields)} className="px-6 py-2 bg-slate-900 text-white rounded-full text-[12px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-cyan-600 transition-colors">
+                            <button type="button" onClick={() => setShowAdvancedFields(!showAdvancedFields)} className="px-6 py-2 bg-inverse text-primary-foreground rounded-full text-[12px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-primary transition-colors">
                                 {showAdvancedFields ? "Hide Extra Details" : "Show Extra Details (Bank, Education, CNIC)"}
                                 <i className={showAdvancedFields ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}></i>
                             </button>
                         </div>
 
                         {showAdvancedFields && (
-                            <div className="space-y-8 animate-in slide-in-from-top-4 duration-300">
+                            <div className="space-y-8 app-enter">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <CustomInput label="CNIC Number" name="cnicNo" value={formData.cnicNo} minLength={0} maxLength={13} onChange={handleChange} icon="ri-id-card-line" />
+                                    <CustomInput type={"number"} label="CNIC Number" name="cnicNo" value={formData.cnicNo} minLength={0} maxLength={13} onChange={handleChange} icon="ri-id-card-line" />
                                     <CustomInput label="Highest Education" name="education" value={formData.education} onChange={handleChange} icon="ri-graduation-cap-line" />
                                     <CustomInput label="Bank Name" name="bankName" value={formData.bankName} onChange={handleChange} icon="ri-bank-line" />
-                                    <CustomInput label="Account Number" name="accountNumber" value={formData.accountNumber} onChange={handleChange} icon="ri-numbers-line" />
-                                    <CustomInput label="Official Email" name="email" value={formData.email} onChange={handleChange} icon="ri-mail-line" />
+                                    <CustomInput type={"number"} label="Account Number" name="accountNumber" value={formData.accountNumber} onChange={handleChange} icon="ri-numbers-line" />
+                                    <CustomInput type={"email"} label="Official Email" name="email" value={formData.email} onChange={handleChange} icon="ri-mail-line" />
                                     <CustomInput label="Home Address" name="address" value={formData.address} onChange={handleChange} icon="ri-map-pin-line" />
                                 </div>
 
@@ -413,13 +444,13 @@ const TeacherCreate = ({ setVisibility, setData }) => {
                                 </div>
 
                                 <div className="w-full">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1"> Notes</label>
-                                    <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 outline-none focus:border-cyan-500 font-bold text-slate-700 min-h-[100px]" placeholder="Update teacher history..." />
+                                    <label className="block text-[10px] font-black text-ink-subtle uppercase mb-2 ml-1"> Notes</label>
+                                    <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full bg-surface border-2 border-edge rounded-2xl p-4 outline-none focus:border-edge-brand font-bold text-ink min-h-[100px]" placeholder="Update member history..." />
                                 </div>
                             </div>
                         )}
 
-                        <button type="submit" className="w-full py-5 bg-cyan-600 hover:bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95">
+                        <button type="submit" className="w-full py-5 bg-primary hover:bg-inverse text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95">
                             Verify & Register Faculty
                         </button>
                     </form>
@@ -433,48 +464,48 @@ const TeacherCreate = ({ setVisibility, setData }) => {
 
 const SectionHeader = ({ title }) => (
     <div className="flex items-center gap-3">
-        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{title}</h3>
-        <div className="h-px flex-1 bg-slate-100"></div>
+        <h3 className="text-[11px] font-black text-ink uppercase tracking-widest">{title}</h3>
+        <div className="h-px flex-1 bg-surface-muted"></div>
     </div>
 );
 
 const CustomInput = ({ label, icon, value, ...props }) => (
     <div className="relative w-full group">
-        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-cyan-600 transition-colors">{label}</label>
+        <label className="block text-[11px] font-black text-ink-subtle uppercase tracking-widest mb-2 ml-1 group-focus-within:text-primary transition-colors">{label}</label>
         <div className="relative">
-            <i className={`${icon} absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cyan-500 text-lg transition-colors`}></i>
-            <input {...props} value={value} className="w-full bg-white border-2 border-slate-100 rounded-xl pl-11 pr-5 py-3 outline-none focus:border-cyan-500 transition-all font-bold text-slate-700 text-sm" />
+            <i className={`${icon} absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-ink text-lg transition-colors`}></i>
+            <input {...props} value={value} className="w-full bg-surface border-2 border-edge rounded-xl pl-11 pr-5 py-3 outline-none focus:border-edge-brand transition-all font-bold text-ink text-sm" />
         </div>
     </div>
 );
 
 const CustomSelect = ({ label, options, opLabel, opValue, value, ...props }) => (
     <div className="relative w-full group">
-        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-cyan-600 transition-colors">{label}</label>
+        <label className="block text-[11px] font-black text-ink-subtle uppercase tracking-widest mb-2 ml-1 group-focus-within:text-primary transition-colors">{label}</label>
         <div className="relative">
-            <select {...props} value={value} className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-all font-bold text-slate-700 text-sm appearance-none cursor-pointer">
+            <select {...props} value={value} className="w-full bg-surface border-2 border-edge rounded-xl px-4 py-3 outline-none focus:border-edge-brand transition-all font-bold text-ink text-sm appearance-none cursor-pointer">
                 {options?.map((opt, i) => <option key={i} value={opt[opValue]}>{opt[opLabel]}</option>)}
             </select>
-            <i className="ri-arrow-down-s-line absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-lg"></i>
+            <i className="ri-arrow-down-s-line absolute right-4 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none text-lg"></i>
         </div>
     </div>
 );
 
 const DynamicTagInput = ({ label, list, value, onChange, onAdd, onRemove }) => (
-    <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
-        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+    <div className="bg-surface-muted p-4 rounded-2xl space-y-3">
+        <label className="text-[11px] font-black text-ink-subtle uppercase tracking-widest">{label}</label>
         <div className="flex gap-2">
-            <input type="text" value={value} onChange={(e) => onChange(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAdd())} className="flex-1 bg-white border-2 border-slate-100 rounded-xl px-4 py-2 text-[11px] font-bold outline-none" placeholder={`Add ${label}...`} />
-            <button type="button" onClick={onAdd} className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-cyan-600 transition-all"><i className="ri-add-line"></i></button>
+            <input type="text" value={value} onChange={(e) => onChange(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAdd())} className="flex-1 bg-surface border-2 border-edge rounded-xl px-4 py-2 text-[11px] font-bold outline-none" placeholder={`Add ${label}...`} />
+            <button type="button" onClick={onAdd} className="w-9 h-9 bg-inverse text-primary-foreground rounded-xl flex items-center justify-center hover:bg-primary transition-all"><i className="ri-add-line"></i></button>
         </div>
         <div className="flex flex-wrap gap-1.5">
             {list.map((item, i) => (
-                <span key={i} className="px-2 py-1 bg-white border border-slate-200 text-slate-700 rounded-lg text-[11px] font-bold flex items-center gap-2">
-                    {item} <i className="ri-close-line cursor-pointer text-rose-500" onClick={() => onRemove(i)}></i>
+                <span key={i} className="px-2 py-1 bg-surface border border-edge text-ink rounded-lg text-[11px] font-bold flex items-center gap-2">
+                    {item} <i className="ri-close-line cursor-pointer text-danger" onClick={() => onRemove(i)}></i>
                 </span>
             ))}
         </div>
     </div>
 );
 
-export default TeacherCreate;
+export default MemberCreate;

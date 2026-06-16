@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
-import { fetchQarzaAccounts } from "../../qarza/slices/qarzaSlice.js";
+import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
@@ -32,7 +32,6 @@ import { printOrder } from "../../../utils/printOrder.js";
 //    Hold → saved to hold-orders DB → resume later → checkout → hold deleted
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PosPage() {
-    const dispatch = useDispatch();
 
     // ── Auth & language ────────────────────────────────────────────────────
     const authUser = useSelector((s) => s.auth);
@@ -53,11 +52,9 @@ export default function PosPage() {
     const holdOrders = holdOrdersQuery.data?.data || holdOrdersQuery.data || [];
 
     // ── Qarza accounts (for credit/hybrid payments) ────────────────────────
-    // We keep a local copy so a newly created account appears instantly
-    // without waiting for a Redux refetch.
-    const reduxQarza = useSelector((s) => s.qarza?.accounts || []);
+    const { data: fetchedQarza = [], refetch: refetchQarza } = useQarzaAccounts();
     const [localQarza, setLocalQarza] = useState([]);
-    const qarzaAccounts = localQarza.length ? localQarza : reduxQarza;
+    const qarzaAccounts = localQarza.length ? localQarza : fetchedQarza;
 
     // ── Cart ───────────────────────────────────────────────────────────────
     const [cart, setCart] = useState([]);
@@ -90,7 +87,7 @@ export default function PosPage() {
     const [portionCustomPrice, setPortionCustomPrice] = useState("");     // custom price input
 
     // ── Fetch qarza accounts once on mount ─────────────────────────────────
-    useEffect(() => { dispatch(fetchQarzaAccounts()); }, [dispatch]);
+    // handled by RTK Query useQarzaAccounts hook above
 
     // ── Shift+Enter shortcut → open payment modal ──────────────────────────
     useEffect(() => {
@@ -432,7 +429,7 @@ export default function PosPage() {
 
             clearCart();
             setShowPaymentModal(false);
-            dispatch(fetchQarzaAccounts());
+            refetchQarza();
             refetchProducts();
         } catch (err) {
             showError(err?.message || "Failed to create order.");
@@ -657,9 +654,8 @@ export default function PosPage() {
                     setQarzaAccountCreationFormPopupVisibility={setShowQarzaModal}
                     type="personal"
                     onCreated={(newAccount) => {
-                        // Add to local list so it appears instantly in the dropdown
                         setLocalQarza((prev) => [...prev, newAccount]);
-                        dispatch(fetchQarzaAccounts());
+                        refetchQarza();
                     }}
                 />
             )}

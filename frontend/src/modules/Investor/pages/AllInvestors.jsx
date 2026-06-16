@@ -1,44 +1,39 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import { MyContext } from '../../../context/MyContext'
-import AdminSideTeacherFilteration from '../parts/AdminSideTeacherFilteration'
+﻿import React, {  useEffect, useRef, useState } from 'react'
+import AdminSideMemberFilteration from '../parts/AdminSideMemberFilteration'
 import { CirclePlus, Filter } from 'lucide-react'
-import ScreenTabButton from '../../../common/components/ScreenTabButton.jsx'
-import EachTeacherDataComp from '../parts/EachInvestorDataComp'
-import TeacherCreate from '../parts/InvestorCreate'
-import { useGetAllTeacherData } from '../api/teacher.api'
+import ScreenTabButton from '../../../common/components/ScreenTabButton'
+import EachMemberDataComp from '../parts/EachInvestorDataComp'
+import MemberCreate from '../parts/InvestorCreate'
+import { useGetAllMembersQuery } from '../../member/api/member.rtk.api.js'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '../../../common/components/PermissionGaurd.jsx'
-import { backendBaseUrl } from '../../../common/constants/constants'
-
+import { PermissionGuard } from '../../../common/components/PermissionGaurd'
 
 
 
 
 
 const AllInvestors = () => {
-    let { data: allTeachersData } = useGetAllTeacherData()
+    let { data: allMembersData } = useGetAllMembersQuery()
     let AdminStudentPageRef = useRef()
-    // const [allTeachersData, setAllTeacherData] = useState([])
-    let {
-        TeacherFilterationObjContextState,
-    } = useContext(MyContext)
+    // const [allMembersData, setAllMemberData] = useState([])
 
 
-    let [teacherFilterationPanelVisibility, setTeacherFilterationPanelVisibility] = useState(false)
-    let [currentClickedTeacherId, setCurrentClickedTeacherId] = useState(null)
-    let [teacherDataPanelVisibility, setTeacherDataPanelVisibility] = useState(false)
-    let [teacherCreationCompVisibility, setTeacherCreationCompVisibility] = useState(false)
+
+    let [memberFilterationPanelVisibility, setMemberFilterationPanelVisibility] = useState(false)
+    let [currentClickedMemberId, setCurrentClickedMemberId] = useState(null)
+    let [memberDataPanelVisibility, setMemberDataPanelVisibility] = useState(false)
+    let [memberCreationCompVisibility, setMemberCreationCompVisibility] = useState(false)
     const [allInvestorData, setallInvestorData] = useState([])
 
 
-    useHotkeys("ctrl+n", () => { setTeacherCreationCompVisibility(true) }, [])
+    useHotkeys("ctrl+n", () => { setMemberCreationCompVisibility(true) }, [])
 
 
     useEffect(() => {
-        if (allTeachersData?.length > 0) {
-            setallInvestorData(allTeachersData.filter(t => t?.post == "investor"))
+        if (allMembersData?.length > 0) {
+            setallInvestorData(allMembersData.filter(t => t?.post == "investor"))
         }
-    }, [allTeachersData])
+    }, [allMembersData])
 
 
 
@@ -68,9 +63,9 @@ const AllInvestors = () => {
 
 
 
-            <AdminSideTeacherFilteration setTeacherFilterationPanelVisibility={setTeacherFilterationPanelVisibility} teacherFilterationPanelVisibility={teacherFilterationPanelVisibility} />
-            {teacherDataPanelVisibility && <EachTeacherDataComp teacherId={currentClickedTeacherId} setVisibility={setTeacherDataPanelVisibility} />}
-            {teacherCreationCompVisibility && <TeacherCreate setVisibility={setTeacherCreationCompVisibility} />}
+            <AdminSideMemberFilteration setMemberFilterationPanelVisibility={setMemberFilterationPanelVisibility} memberFilterationPanelVisibility={memberFilterationPanelVisibility} />
+            {memberDataPanelVisibility && <EachMemberDataComp memberId={currentClickedMemberId} setVisibility={setMemberDataPanelVisibility} />}
+            {memberCreationCompVisibility && <MemberCreate setVisibility={setMemberCreationCompVisibility} />}
 
 
 
@@ -92,10 +87,10 @@ const AllInvestors = () => {
 
                 {/* Header Section */}
                 <div className="mb-10">
-                    <h1 className="w-max bg-gradient-to-r from-cyan-600 to-blue-800 bg-clip-text text-4xl font-bold text-transparent">
+                    <h1 className="w-max app-gradient bg-clip-text text-4xl font-bold text-transparent">
                         Investor
                     </h1>
-                    <p className="text-slate-500 text-lg font-medium">
+                    <p className="text-ink-muted text-lg font-medium">
                         All Investor are present here.
                     </p>
                 </div>
@@ -111,7 +106,7 @@ const AllInvestors = () => {
 
                     <PermissionGuard permission={"investor-create"}>
                         <div onClick={() => {
-                            setTeacherCreationCompVisibility(true)
+                            setMemberCreationCompVisibility(true)
                         }}>
                             <ScreenTabButton text={"Add Investor"} lucideIcon={CirclePlus} />
                         </div>
@@ -121,8 +116,8 @@ const AllInvestors = () => {
 
 
                     {/* 
-                    <PermissionGuard permission={"teacher-attendance-view"}>
-                        <div onClick={() => { setTeacherAttendanceVisibility(true) }}
+                    <PermissionGuard permission={"member-attendance-view"}>
+                        <div onClick={() => { setMemberAttendanceVisibility(true) }}
                         >
                             <ScreenTabButton text={"Attendance"} lucideIcon={CalendarCheck} />
                         </div>
@@ -130,7 +125,7 @@ const AllInvestors = () => {
 
 
                     <div
-                        onClick={() => { setTeacherFilterationPanelVisibility(prev => !prev) }}
+                        onClick={() => { setMemberFilterationPanelVisibility(prev => !prev) }}
                     >
                         <ScreenTabButton text={"Filter"} lucideIcon={Filter} />
                     </div>
@@ -159,45 +154,23 @@ const AllInvestors = () => {
 
 
 
-                                allInvestorData?.map((eachTeacherData, index) => {
+                                allInvestorData?.map((eachMemberData, index) => {
 
 
 
 
 
-                                    let teacherNameMatching = !TeacherFilterationObjContextState?.teacherName || eachTeacherData?.name?.toLowerCase().includes(TeacherFilterationObjContextState?.teacherName?.toLowerCase())
-                                    let teacherIdMatching = !TeacherFilterationObjContextState?.teacherInstituteId || eachTeacherData?.instituteId?.toLowerCase()?.includes(TeacherFilterationObjContextState.teacherInstituteId?.toLowerCase())
-                                    let teacherPostMatching = !TeacherFilterationObjContextState?.post || eachTeacherData.post?.toLowerCase() == TeacherFilterationObjContextState.post?.toLowerCase()
-                                    if (teacherNameMatching && teacherIdMatching && teacherPostMatching) {
+                                   if (true) {
 
 
 
 
-
-                                        let InitialLetter;
-                                        if (eachTeacherData?.name) {
-
-                                            let teacherNameSectionArray = eachTeacherData?.name?.split(" ")
-
-                                            if (teacherNameSectionArray?.length > 0) {
-                                                let firstName, SecondName, firstletter, secondLetter;
-                                                firstName = teacherNameSectionArray[0]
-                                                SecondName = teacherNameSectionArray[1]
-
-                                                firstletter = firstName?.split('')
-                                                secondLetter = SecondName?.split("")
-
-
-                                                if (firstletter[0]) {
-                                                    if (secondLetter && secondLetter[0] != undefined) {
-                                                        InitialLetter = firstletter[0] + secondLetter[0]
-                                                    } else {
-                                                        InitialLetter = firstletter[0]
-                                                    }
-                                                }
-                                            }
-
-                                        }
+                                        const InitialLetter = eachMemberData?.name
+                                            ?.trim()
+                                            .split(" ")
+                                            .slice(0, 2)
+                                            .map(word => word[0])
+                                            .join("")
 
 
 
@@ -209,57 +182,64 @@ const AllInvestors = () => {
                                             <div
                                                 key={index}
                                                 onClick={() => {
-                                                    //  Navigate(`/eachTeacherDataPage/${eachTeacherData?._id}`)
-                                                    setCurrentClickedTeacherId(eachTeacherData?._id)
-                                                    setTeacherDataPanelVisibility(true)
+                                                    //  Navigate(`/eachMemberDataPage/${eachMemberData?._id}`)
+                                                    setCurrentClickedMemberId(eachMemberData?._id)
+                                                    console.log(eachMemberData?._id)
+                                                    setMemberDataPanelVisibility(true)
                                                 }
                                                 }
-                                                className="group p-6 bg-white rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:-translate-y-2 cursor-pointer w-72 xl:w-80"
+                                                className="group p-6 bg-surface rounded-[2rem] shadow-sm border border-edge flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:-translate-y-2 cursor-pointer w-72 xl:w-80"
                                             >
-                                                {/* Avatar Section */}
                                                 <div className="w-24 h-24 mb-4 relative">
                                                     {/* If no image exists, use your gradient InitialLetter circle */}
-                                                    {
-                                                        eachTeacherData?.profileImage ?
-                                                            <img
-                                                                className="w-full h-full rounded-full border-4 border-white shadow-md flex items-center justify-center bg-gradient-to-r from-[#64d9a3] to-[#1c6f48] text-white text-2xl font-bold transition-transform group-hover:scale-105"
-                                                                src={`${backendBaseUrl}/uploads/${eachTeacherData.profileImage}`} alt="" />
-                                                            :
-                                                            <div className="w-full h-full capitalize rounded-full border-4 border-white shadow-md flex items-center justify-center bg-gradient-to-r from-[#64d9a3] to-[#1c6f48] text-white text-2xl font-bold transition-transform group-hover:scale-105">
-                                                                {InitialLetter}
-                                                            </div>
-                                                    }
+                                                    {eachMemberData?.profileImage ? (
+                                                        <img
+                                                            className="w-full h-full capitalize rounded-full border-4 border-surface shadow-md flex items-center justify-center app-gradient text-primary-foreground text-2xl font-bold transition-transform group-hover:scale-105"
+                                                            src={`http://localhost:4000/uploads/${eachMemberData.profileImage}`}
+                                                            alt=""
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none'
+                                                                e.target.nextSibling.style.display = 'flex'
+                                                            }}
+                                                        />
+                                                    ) : null}
 
+                                                    <div
+                                                        className="w-full h-full capitalize rounded-full border-4 border-surface shadow-md flex items-center justify-center app-gradient text-primary-foreground text-2xl font-bold transition-transform group-hover:scale-105"
+                                                        style={{ display: eachMemberData?.profileImage ? 'none' : 'flex' }}
+                                                    >
+                                                        {InitialLetter}
+                                                    </div>
 
                                                     {/* Status Badge (The green dot from the image) */}
-                                                    {/* <div className="absolute bottom-1 right-1 w-5 h-5 bg-teal-500 border-2 border-white rounded-full"></div> */}
+                                                    {/* <div className="absolute bottom-1 right-1 w-5 h-5 bg-accent border-2 border-surface rounded-full"></div> */}
                                                 </div>
 
                                                 {/* Name and Post */}
-                                                <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors uppercase truncate w-full text-center">
-                                                    {eachTeacherData.name}
+                                                <h3 className="text-lg font-bold text-ink group-hover:text-primary transition-colors uppercase truncate w-full text-center">
+                                                    {eachMemberData.name}
                                                 </h3>
-                                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
-                                                    {eachTeacherData?.post || "Faculty"}
+                                                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-4">
+                                                    {eachMemberData?.post || "Faculty"}
                                                 </p>
 
                                                 {/* Info Box (Gray container from image) */}
-                                                <div className="w-full flex justify-between items-center bg-slate-50 rounded-2xl px-4 py-3 mt-auto group-hover:bg-blue-50 transition-colors">
+                                                <div className="w-full flex justify-between items-center bg-surface-muted rounded-2xl px-4 py-3 mt-auto group-hover:bg-primary-muted transition-colors">
                                                     <div className="text-left">
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Institute ID</p>
-                                                        <p className="text-xs font-bold text-slate-700">#{eachTeacherData?.instituteId || "N/A"}</p>
+                                                        <p className="text-[10px] text-ink-subtle font-bold uppercase tracking-tighter">Institute ID</p>
+                                                        <p className="text-xs font-bold text-ink">#{eachMemberData?.instituteId || "N/A"}</p>
                                                     </div>
 
                                                     {/* Action Icon */}
-                                                    <div className="w-8 h-8 rounded-full bg-white text-slate-300 group-hover:text-blue-600 flex items-center justify-center shadow-sm transition-colors">
+                                                    <div className="w-8 h-8 rounded-full bg-surface text-ink-subtle group-hover:text-primary flex items-center justify-center shadow-sm transition-colors">
                                                         <i className="ri-arrow-right-line text-lg"></i>
                                                     </div>
                                                 </div>
 
                                                 {/* Hidden Detail Footer (Optional tags for Phone/Education) */}
                                                 {/* <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                <span className="text-[9px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-bold uppercase">
-                                                    {eachTeacherData.phoneNo}
+                                                <span className="text-[9px] bg-primary-muted text-primary px-2 py-1 rounded-md font-bold uppercase">
+                                                    {eachMemberData.phoneNo}
                                                 </span>
                                             </div> */}
                                             </div>
@@ -276,7 +256,7 @@ const AllInvestors = () => {
 
                                 })
                                 :
-                                <div className='text-gray-600 h-[50vh] w-full flex justify-center items-center'>No Investors found</div>
+                                <div className='text-ink-muted h-[50vh] w-full flex justify-center items-center'>No Investors found</div>
                         }
                     </div>
 

@@ -7,6 +7,9 @@ import {
     CreditCard,
     Package,
     TrendingUp,
+    Trash2,
+    RotateCcw,
+    Truck,
 } from "lucide-react";
 
 export const sidebarData = (language = "en") => ({
@@ -45,16 +48,31 @@ export const sidebarData = (language = "en") => ({
         // },
         {
             id: "Purchases",
-            title: "Purchases",
+            title: language === "en" ? "Purchases" : "خریداری",
             url: "/purchases",
             icon: CreditCard,
-            allowedUrls: [
-                "/purchases",
-                "/purchase/wastage",
-                "/purchase/return",
-                "/purchases/suppliers",
-                "/purchases/manufacturer",
-            ],
+            allowedUrls: ["/purchases"],
+        },
+        {
+            id: "Returns",
+            title: language === "en" ? "Returns" : "واپسی",
+            url: "/returns",
+            icon: RotateCcw,
+            allowedUrls: ["/returns"],
+        },
+        {
+            id: "Wastage",
+            title: language === "en" ? "Wastage" : "ضیاع",
+            url: "/wastage",
+            icon: Trash2,
+            allowedUrls: ["/wastage"],
+        },
+        {
+            id: "Suppliers",
+            title: language === "en" ? "Suppliers" : "سپلائرز",
+            url: "/suppliers",
+            icon: Truck,
+            allowedUrls: ["/suppliers"],
         },
         {
             id: "Reports",

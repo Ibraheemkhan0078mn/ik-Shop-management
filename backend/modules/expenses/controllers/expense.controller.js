@@ -226,33 +226,10 @@ export const expenseCatagCreate = async (req, res) => {
 
 export const expenseCatagGetAll = async (req, res) => {
     try {
-        let localExpenseCatagModel = getLocalExpensesModel();
+        let localExpenseCatagModel = getLocalExpenseCategoryModel();
 
-        let allExpenseCatags = await localExpenseCatagModel.find();
-
-        if (allExpenseCatags?.length > 0) {
-            const seenNames = new Set();
-            const deletedIds = new Set();
-
-            for (let expCatag of allExpenseCatags) {
-                let expCatagName = expCatag.name.toLowerCase().trim();
-
-                if (seenNames.has(expCatagName)) {
-                    // This is a duplicate — delete it
-                    deletedIds.add(expCatag._id.toString());
-                    await localExpenseCatagModel.findOneAndDelete({ _id: expCatag._id });
-                } else {
-                    // First occurrence — keep it
-                    seenNames.add(expCatagName);
-                }
-            }
-        }
-
-        // Re-fetch after deletions so frontend gets clean data
-        const cleanExpenseCatags = await localExpenseCatagModel.find();
-
-        return res.json({ success: true, expenseCatags: cleanExpenseCatags });
-
+        const allExpenseCatags = await localExpenseCatagModel.find();
+        return res.json({ success: true, expenseCatags: allExpenseCatags });
     } catch (err) {
         return res.json({ success: false, msg: "Error getting expense categories" });
     }

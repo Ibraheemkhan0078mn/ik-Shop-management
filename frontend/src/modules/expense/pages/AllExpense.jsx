@@ -1,277 +1,239 @@
+// src/modules/expense/pages/AllExpense.jsx
+import { useState, useCallback, useMemo } from "react";
+import { Plus, Tag, Calendar, Edit2, Trash2 } from "lucide-react";
+import { useSelector }      from "react-redux";
+import {
+    useExpenses,
+    useDeleteExpense,
+} from "../services/expense.service.js";
+import ExpenseModal          from "../components/ExpenseModal.jsx";
+import CategoryModal         from "../components/CategoryModal.jsx";
 
+// ─── highlight helper ───────────────────────────────────────────────────────
+const highlightMatch = (text, search) => {
+    if (!search || !text) return text;
+    const str = String(text);
+    const i   = str.toLowerCase().indexOf(search.toLowerCase());
+    if (i === -1) return str;
+    return (
+        <>
+            {str.slice(0, i)}
+            <mark className="rounded-sm px-0"
+                style={{ background: "rgba(180,83,9,0.2)", color: "var(--accent)" }}>
+                {str.slice(i, i + search.length)}
+            </mark>
+            {str.slice(i + search.length)}
+        </>
+    );
+};
 
+export default function AllExpense() {
+    const language        = useSelector(s => s.auth?.user?.language ?? "en");
+    const [deleteExpense] = useDeleteExpense();
 
+    const [modal,      setModal]      = useState(null);   // null | "create" | { expense }
+    const [catModal,   setCatModal]   = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [dateFilter, setDateFilter] = useState("none");
+    const [catSearch,  setCatSearch]  = useState("");
 
+    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
+    // RTK Query — refetch when refreshKey or dateFilter changes
+    const { data: expenses = [], isLoading, refetch } = useExpenses(
+        { skip: 0, limit: 200, date: dateFilter },
+        { refetchOnMountOrArgChange: true }
+    );
 
+    // re-trigger refetch when refreshKey increments
+    const [prevKey, setPrevKey] = useState(refreshKey);
+    if (prevKey !== refreshKey) { setPrevKey(refreshKey); refetch(); }
 
-import React, { useEffect, useRef, useState } from "react";
-import ExpenseCreation from "../parts/expenseCreations.jsx";
-import ExpenseUpdate from "../parts/ExpenseUpdate.jsx";
-import { CassetteTape, PlusCircle, Search } from "lucide-react";
-import EachExpenseInCardView from "../parts/EachExpenseInCardView.jsx";
-import EachExpenseInTableView from "../parts/EachExpenseInTableView.jsx";
-import ExpenseCatags from "../parts/ExpenseCatags.jsx";
-import ExpenseCatagCreation from "../parts/ExpenseCatagCreation.jsx";
-import ScreenTabButton from "../../../common/components/ScreenTabButton.jsx";
-import api from "../../../services/axiosInstance.js";
-import { PermissionGuard } from '../../../common/components/PermissionGaurd.jsx'
-import { useHotkeys } from "react-hotkeys-hook";
+    const filtered = useMemo(() =>
+        catSearch
+            ? expenses.filter(e => e.category?.toLowerCase().includes(catSearch.toLowerCase()))
+            : expenses,
+    [expenses, catSearch]);
 
-export default function AllExpenses() {
-    const AdminExpensePageRef = useRef();
-    let expenseCardsView = localStorage.getItem("expenseView") || "table";
-    let [expenseCreationVisiblity, setExpenseCreationVisibility] = useState(false);
-    let [expensesData, setExpensesData] = useState([]);
-    let [currentToUpdateExpenseData, setCurrentToUpdateExpenseData] = useState(null);
-    let [expenseUpdateVisibility, setExpenseUpdateVisibility] = useState(false);
-    let [expenseCatagCreationVisibility, setExpenseCatagCreationVisibility] = useState(false);
-    let [expenseCatagVisibility, setExpenseCatagVisibility] = useState(false);
-    let [searchDate, setSearchDate] = useState("none"); // Default "none" for all data
-    let limitExpense = 20;
-    let skipExpense = useRef(0);
-    let [loadingExpense, setLoadingExpense] = useState(false);
-    let [hasMore, setHasMore] = useState(true);
-    let [catagSearch, setCatagSearch] = useState("");
+    const handleDelete = async (id, e) => {
+        e.stopPropagation();
+        if (!window.confirm("Delete this expense?")) return;
+        await deleteExpense(id);
+        refresh();
+    };
 
-    useHotkeys("ctrl+n", () => { setExpenseCreationVisibility(true) }, { enableOnFormTags: true });
-
-    async function getExpenses(origin) {
-        try {
-            // Reset scroll position on update/delete/date change
-            if (origin == "update" || origin == "delete" || origin == "dateChange") {
-                skipExpense.current = 0;
-                setHasMore(true);
-            }
-
-            setLoadingExpense(true);
-
-            let skipTo = (origin == "update" || origin == "delete" || origin == "dateChange") ? 0 : skipExpense.current;
-            let res = await api.get(`/expenseRoutes/getExpense/${skipTo}/${limitExpense}/${searchDate}`);
-
-            if (res.data) {
-                setLoadingExpense(false);
-            }
-
-            if (res.data.success) {
-                let expenses = res.data.expenses;
-
-                if (expenses?.length > 0) {
-                    // Reset data on update/delete/date change, otherwise append
-                    if (origin == "update" || origin == "delete" || origin == "dateChange") {
-                        setExpensesData(expenses);
-                        skipExpense.current = expenses.length;
-                    } else {
-                        setExpensesData(prev => [...prev, ...expenses]);
-                        skipExpense.current = skipExpense.current + expenses.length;
-                    }
-
-                    // Check if more data available
-                    if (expenses.length < limitExpense) {
-                        setHasMore(false);
-                    }
-                } else {
-                    // No more data
-                    setHasMore(false);
-                    if (skipExpense.current === 0) {
-                        setExpensesData([]);
-                    }
-                }
-            }
-        } catch (error) {
-            setLoadingExpense(false);
-            console.error(error);
-        }
-    }
-
-    // Initial load
-    useEffect(() => {
-        getExpenses("dateChange");
-    }, [searchDate]);
-
-    function handleContainerScroll() {
-        let container = AdminExpensePageRef.current;
-        if (!container) return;
-
-        let result = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
-
-        if (result && !loadingExpense && hasMore) {
-            getExpenses();
-        }
-    }
-
-
-
-    async function handleCatagSearchIconClick() {
-        try {
-            if (catagSearch) {
-                let res = await api.post(`/expenseRoutes/getCatagBasesExpense`, { catagName: catagSearch });
-                if (res.data.success) {
-                    setExpensesData(res.data.expenses);
-                    setHasMore(false); // Category search doesn't support pagination
-                }
-            }
-        } catch (error) {
-            console.error(error?.message);
-        }
-    }
+    // totals for the current view
+    const total = useMemo(() =>
+        filtered.reduce((s, e) => s + (Number(e.amount) || 0), 0),
+    [filtered]);
 
     return (
-        <div className='h-full overflow-hidden relative flex'>
-            {/* <Navbar /> */}
+        <div>
+            {/* modals */}
+            {modal === "create" && (
+                <ExpenseModal mode="create" onClose={() => setModal(null)} onSuccess={refresh} />
+            )}
+            {modal && typeof modal === "object" && (
+                <ExpenseModal mode="update" expense={modal.expense} onClose={() => setModal(null)} onSuccess={refresh} />
+            )}
+            {catModal && <CategoryModal onClose={() => setCatModal(false)} />}
 
-            {expenseCreationVisiblity && (
-                <ExpenseCreation
-                    getExpensesFunc={getExpenses}
-                    setVisibility={setExpenseCreationVisibility}
-                    setExpensesData={setExpensesData}
+            {/* toolbar */}
+            <div className="flex flex-wrap items-center gap-3 mb-5">
+                <button className="btn-add" onClick={() => setModal("create")}>
+                    <Plus className="w-4 h-4" />
+                    {language === "en" ? "Add Expense" : "اخراجات شامل کریں"}
+                </button>
+                <button className="btn-add" onClick={() => setCatModal(true)}>
+                    <Tag className="w-4 h-4" />
+                    {language === "en" ? "Categories" : "زمرے"}
+                </button>
+
+                {/* category search */}
+                <input
+                    type="text"
+                    value={catSearch}
+                    onChange={e => setCatSearch(e.target.value)}
+                    placeholder={language === "en" ? "Search by category…" : "زمرے سے تلاش…"}
+                    className="input-search"
+                    style={{ maxWidth: "200px" }}
                 />
-            )}
 
-            {expenseUpdateVisibility && (
-                <ExpenseUpdate
-                    getExpensesFunc={getExpenses}
-                    setVisibility={setExpenseUpdateVisibility}
-                    setExpensesData={setExpensesData}
-                    expenseData={currentToUpdateExpenseData}
+                {/* month filter */}
+                <input
+                    type="month"
+                    value={dateFilter === "none" ? "" : dateFilter}
+                    onChange={e => {
+                        setDateFilter(e.target.value || "none");
+                        refresh();
+                    }}
+                    className="px-3 py-2 text-sm rounded-xl outline-none transition"
+                    style={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        color: "var(--ink)",
+                    }}
                 />
-            )}
 
-            {expenseCatagVisibility && (
-                <ExpenseCatags
-                    setVisibility={setExpenseCatagVisibility}
-                    setExpenseCatagCreationVisibility={setExpenseCatagCreationVisibility}
-                />
-            )}
-
-            {expenseCatagCreationVisibility && (
-                <ExpenseCatagCreation setVisibility={setExpenseCatagCreationVisibility} />
-            )}
-
-
-
-
-
-
-
-
-
-
-
-
-
-            <div
-                ref={AdminExpensePageRef}
-                onWheel={(e) => {
-                    AdminExpensePageRef.current.scrollTop += e.deltaY;
-                }}
-                onScroll={handleContainerScroll}
-                className="h-screen overflow-y-scroll flex-1 p-10 font-sans"
-            >
-                <div className="mb-10">
-                    <h1 className="w-max bg-gradient-to-r from-cyan-600 to-blue-800 bg-clip-text text-4xl font-bold text-transparent">
-                        Expenses
-                    </h1>
-                    <p className="text-slate-500 text-lg font-medium">
-                        All Expenses is present here.
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-5 px-2">
-                    <PermissionGuard permission={"expense-create"}>
-                        <div onClick={() => { setExpenseCreationVisibility(true) }}>
-                            <ScreenTabButton text={"Add Expense"} lucideIcon={PlusCircle} />
-                        </div>
-                    </PermissionGuard>
-
-                    <PermissionGuard permission={"expense-category-view"}>
-                        <div onClick={() => { setExpenseCatagVisibility(true) }}>
-                            <ScreenTabButton text={"Categories"} lucideIcon={CassetteTape} />
-                        </div>
-                    </PermissionGuard>
-
-                    <PermissionGuard permission={"expense-search-previous"}>
-                        <div className="group w-max  transition-colors duration-100 flex items-center gap-3 bg-white border-2 border-slate-200 shadow-sm cursor-pointer text-zinc-700 p-2.5 px-6 rounded-xl font-semibold">
-                            <input
-                                value={catagSearch}
-                                type="text"
-                                className="focus:ring-0  cursor-pointer outline-0 border-0"
-                                placeholder="Search on Category..."
-                                onChange={(e) => { setCatagSearch(e.target.value); handleCatagSearchIconClick() }}
-                            />
-                            <Search
-                                onClick={handleCatagSearchIconClick}
-                                className="text-cyan-600 "
-                            />
-                        </div>
-                    </PermissionGuard>
-
-                    <PermissionGuard permission={"expense-category-search"}>
-                        <div className="group flex-1  transition-colors duration-100 flex items-center gap-3 bg-white border-2 border-slate-200 shadow-sm cursor-pointer text-zinc-700 p-2.5 px-6 rounded-xl font-semibold">
-                            <input
-                                value={searchDate === "none" ? "" : searchDate}
-                                type="month"
-                                onClick={() => { setCatagSearch("") }}
-                                className="flex-1 [&::-webkit-calendar-picker-indicator]:invert-0  focus:ring-0  cursor-pointer outline-0 border-0"
-                                onChange={(e) => {
-                                    setSearchDate(e.target.value || "none");
-                                }}
-                            />
-                        </div>
-                    </PermissionGuard>
-                </div>
-
-                {expenseCardsView == "table" && (
-                    <div className="flex w-full border-b mt-10 border-gray-600 bg-slate-100 font-semibold text-slate-700">
-                        <div className="w-[15%] px-5 py-3 text-center">Amount</div>
-                        {/* <div className="w-[10%] px-5 py-3 text-center">Type</div> */}
-                        <div className="w-[12%] px-5 py-3 whitespace-nowrap text-center">Date</div>
-                        <div className="w-[15%] px-5 py-3 whitespace-nowrap text-center">Category</div>
-                        <div className="flex-1 px-5 py-3 text-center">Notes</div>
-                        <div className="w-[20%] px-5 py-3 whitespace-nowrap text-center">Actions</div>
-                    </div>
-                )}
-
-                {expensesData?.length < 1 ? (
-                    <div className='text-gray-600 h-[50vh] w-full flex justify-center items-center'>
-                        {searchDate === "none"
-                            ? "No expenses found"
-                            : `No expenses found for ${searchDate}`
-                        }
-                    </div>
-                ) : (
-                    <div className={`w-full ${expenseCardsView == "card" ? "flex gap-2 flex-wrap justify-center" : null}`}>
-                        {expensesData.map((exp, index) => (
-                            <div key={exp._id || index} className={`${expenseCardsView == "card" ? "w-max" : "w-full"}`}>
-                                {expenseCardsView == "card" ? (
-                                    <EachExpenseInCardView
-                                        getExpensesFunc={getExpenses}
-                                        exp={exp}
-                                        setExpenseUpdateVisibility={setExpenseUpdateVisibility}
-                                        setCurrentToUpdateExpenseData={setCurrentToUpdateExpenseData}
-                                        setExpensesData={setExpensesData}
-                                    />
-                                ) : (
-                                    <EachExpenseInTableView
-                                        getExpensesFunc={getExpenses}
-                                        exp={exp}
-                                        setExpenseUpdateVisibility={setExpenseUpdateVisibility}
-                                        setCurrentToUpdateExpenseData={setCurrentToUpdateExpenseData}
-                                        setExpensesData={setExpensesData}
-                                        catagSearch={catagSearch}
-                                    />
-                                )}
-                            </div>
-                        ))}
-
-                        {loadingExpense && (
-                            <div className="w-full py-4 text-center text-gray-500">
-                                Loading more expenses...
-                            </div>
-                        )}
+                {/* total badge */}
+                {filtered.length > 0 && (
+                    <div className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                        style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }}>
+                        <span style={{ color: "var(--muted)" }}>Total:</span>
+                        <span style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>({filtered.length})</span>
                     </div>
                 )}
             </div>
+
+            {/* loading */}
+            {isLoading && (
+                <div className="flex justify-center items-center py-12">
+                    <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                        style={{ borderColor: "var(--accent-2)", borderTopColor: "transparent" }} />
+                </div>
+            )}
+
+            {/* empty */}
+            {!isLoading && filtered.length === 0 && (
+                <div className="flex justify-center items-center py-12 text-sm"
+                    style={{ color: "var(--muted)" }}>
+                    {dateFilter === "none"
+                        ? "No expenses found."
+                        : `No expenses for ${dateFilter}.`}
+                </div>
+            )}
+
+            {/* table */}
+            {!isLoading && filtered.length > 0 && (
+                <div className="overflow-x-auto rounded-2xl overflow-hidden"
+                    style={{ border: "1px solid var(--border)" }}>
+                    <table className="w-full text-sm text-left">
+                        <thead>
+                            <tr className="text-xs uppercase tracking-wider"
+                                style={{
+                                    background: "var(--surface-muted)",
+                                    borderBottom: "1px solid var(--border)",
+                                    color: "var(--muted)",
+                                }}>
+                                <th className="px-4 py-3 font-semibold">Amount</th>
+                                <th className="px-4 py-3 font-semibold">Date</th>
+                                <th className="px-4 py-3 font-semibold">Category</th>
+                                <th className="px-4 py-3 font-semibold">Notes</th>
+                                <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.map((exp, i) => (
+                                <ExpenseRow
+                                    key={exp._id ?? i}
+                                    expense={exp}
+                                    catSearch={catSearch}
+                                    onEdit={e => { e.stopPropagation(); setModal({ expense: exp }); }}
+                                    onDelete={e => handleDelete(exp._id, e)}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
+    );
+}
+
+function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
+    return (
+        <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+
+            <td className="px-4 py-3 font-bold tabular-nums" style={{ color: "var(--accent-2)" }}>
+                <span className="text-xs mr-1 font-normal" style={{ color: "var(--muted)" }}>Rs</span>
+                {(exp.amount ?? 0).toLocaleString()}
+            </td>
+
+            <td className="px-4 py-3">
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    {new Date(exp.date).toLocaleDateString()}
+                </div>
+            </td>
+
+            <td className="px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: "var(--accent-2)" }} />
+                    <span className="text-xs font-semibold uppercase tracking-tight"
+                        style={{ color: "var(--ink)" }}>
+                        {highlightMatch(exp.category || "General", catSearch)}
+                    </span>
+                </div>
+            </td>
+
+            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>
+                {exp.notes
+                    ? <span className="italic truncate max-w-xs block">"{highlightMatch(exp.notes, catSearch)}"</span>
+                    : "—"}
+            </td>
+
+            <td className="px-4 py-3">
+                <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                    <button onClick={onEdit}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition"
+                        style={{ color: "var(--muted)" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={onDelete}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition"
+                        style={{ color: "var(--muted)" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "#dc2626"; e.currentTarget.style.background = "rgba(220,38,38,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </td>
+        </tr>
     );
 }

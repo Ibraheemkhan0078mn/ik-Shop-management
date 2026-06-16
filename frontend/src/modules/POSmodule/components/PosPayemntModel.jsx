@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus } from "lucide-react";
 import { FormField, Input, SearchableSelect } from "../../../components/common/FormFields.jsx";
-import { useGetQarzaAccountsQuery } from "../../qarza/services/qarza.service.js";
+import { useAccountPayments } from "../../qarza/services/qarza.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Online payment platform options
@@ -45,7 +45,7 @@ const PAYMENT_TABS = [
 export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onClose, onCreateQarza, language = "en" }) {
 
     // Fetch qarza accounts (credit accounts) from the API
-    const { data: qarzaAccounts = [] } = useGetQarzaAccountsQuery();
+    const { data: qarzaAccounts = [] } = useAccountPayments();
 
     // ── Shared form fields ─────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState("cash");

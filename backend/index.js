@@ -9,11 +9,11 @@ import errorHandler from "./common/middlewares/error.middleware.js";
 
 import AuthRouter from "./modules/auth/routes/auth.router.js";
 import ProductRouter from "./modules/product/routes/product.router.js";
-import BatchRouter from "./modules/stock/routes/batch.router.js";
+import BatchRouter from "./modules/productPurchases/routes/batch.router.js";
 import CategoryRouter from "./modules/product/routes/category.router.js";
 import SubCategoryRouter from "./modules/product/routes/subCategory.router.js";
-import SupplierRouter from "./modules/stock/routes/supplier.router.js";
-import PurchaseRouter from "./modules/stock/routes/purchase.router.js";
+import SupplierRouter from "./modules/suppliers/routes/supplier.router.js";
+import PurchaseRouter from "./modules/productPurchases/routes/purchase.router.js";
 import OrderRouter from "./modules/pos/routes/order.router.js";
 import HoldOrderRouter from "./modules/pos/routes/holdOrder.router.js";
 
@@ -22,8 +22,8 @@ import memberRoutes from './modules/member/routes/member.route.js'
 import inventoryRoutes from './modules/assets/routes/assets.route.js'
 import permissionRoutes from './modules/permission/route/permission.route.js'
 import qarzaRoutes from './modules/qarza/routes/qarza.route.js'
-import wastageRoutes from './modules/stock/routes/wastage.router.js'
-import returnRoutes from './modules/stock/routes/return.router.js'
+import wastageRoutes from './modules/wastage/routes/wastage.router.js'
+import returnRoutes from './modules/returns/routes/return.router.js'
 
 dontenv.config();
 const app = express();
@@ -70,6 +70,7 @@ app.use("/api/hold-orders", HoldOrderRouter);
 
 app.use("/api/expenseRoutes", expensesRouter)
 app.use("/api/memberRoutes", memberRoutes)
+app.use("/api/memberRoute", memberRoutes)  // RTK API uses /memberRoute (no 's')
 app.use("/api/invetoryRoutes", inventoryRoutes)
 app.use("/api/permissionRoutes", permissionRoutes)
 app.use("/api/qarzaRoutes", qarzaRoutes)
