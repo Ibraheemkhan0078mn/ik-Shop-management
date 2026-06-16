@@ -4,7 +4,9 @@ import { createWastageSchema, updateWastageSchema } from "../schemas/wastage.sch
 import {
     getLocalWastageModel,
     getLocalProductModel,
+    getLocalBatchModel,
 } from "../../../configs/connect.db.js";
+import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
 // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
 export const getWastages = asyncHandler(async (req, res, next) => {
@@ -188,6 +190,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
 export const approveWastage = asyncHandler(async (req, res, next) => {
     const WastageModel   = getLocalWastageModel();
     const ProductModel   = getLocalProductModel();
+    const BatchModel     = getLocalBatchModel();
     const { id }         = req.params;
 
     const wastage = await WastageModel.findById(id);
@@ -199,11 +202,25 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Only pending wastages can be approved. Current status: ${wastage.status}`, 400));
     }
 
-    // Deduct stock for each item
+    // Deduct stock for each item: batch stock first, then product stock
     for (const item of wastage.items) {
-        await ProductModel.findByIdAndUpdate(item.product, {
-            $inc: { currentStock: -item.quantity },
+        // Find batch by batchNumber and product
+        const batch = await BatchModel.findOne({
+            batchNumber: item.batchNumber,
+            product: item.product
         });
+
+        if (batch) {
+            // Deduct from batch stock first
+            batch.quantity -= item.quantity;
+            if (batch.quantity <= 0) {
+                batch.isActive = false;
+            }
+            await batch.save();
+        }
+
+        // Then deduct from product stock
+        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     const approved = await WastageModel.findByIdAndUpdate(

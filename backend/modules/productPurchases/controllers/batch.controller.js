@@ -8,6 +8,7 @@ import {
     getLocalBatchModel,
     getLocalProductModel,
 } from "../../../configs/connect.db.js";
+import { handleProductStockQuantity } from "../services/ChangeProductStockQuantity.js";
 
 export const getBatches = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
@@ -50,10 +51,13 @@ export const createBatch = asyncHandler(async (req, res, next) => {
 
     const batch = await BatchModel.create(validatedData);
 
-    // add batch id to the related product.batches array
+    // Add batch id to the related product.batches array
     await ProductModel.findByIdAndUpdate(validatedData.product, {
         $push: { batches: batch._id },
     });
+
+    // Update product stock after batch creation
+    await handleProductStockQuantity(validatedData.product, "create", validatedData.quantity);
 
     res.status(201).json({
         success: true,
@@ -64,6 +68,7 @@ export const createBatch = asyncHandler(async (req, res, next) => {
 
 export const updateBatch = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
     const { id } = req.params;
 
     let batch = await BatchModel.findById(id);
@@ -89,6 +94,12 @@ export const updateBatch = asyncHandler(async (req, res, next) => {
         }
     }
 
+    // If quantity is being updated, adjust product stock accordingly
+    if (validatedData.quantity !== undefined && validatedData.quantity !== batch.quantity) {
+        const quantityDiff = validatedData.quantity - batch.quantity;
+        await handleProductStockQuantity(batch.product, "create", quantityDiff);
+    }
+
     batch = await BatchModel.findByIdAndUpdate(id, validatedData, {
         new: true,
         runValidators: true,
@@ -103,6 +114,7 @@ export const updateBatch = asyncHandler(async (req, res, next) => {
 
 export const deleteBatch = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
     const { id } = req.params;
 
     const batch = await BatchModel.findById(id);
@@ -110,6 +122,14 @@ export const deleteBatch = asyncHandler(async (req, res, next) => {
     if (!batch) {
         return next(new ErrorResponse("Batch not found", 404));
     }
+
+    // Remove batch reference from product
+    await ProductModel.findByIdAndUpdate(batch.product, {
+        $pull: { batches: batch._id },
+    });
+
+    // Deduct batch quantity from product stock
+    await handleProductStockQuantity(batch.product, "delete", batch.quantity);
 
     await batch.deleteOne();
 

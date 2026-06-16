@@ -153,14 +153,8 @@ export const createPurchase = asyncHandler(async (req, res, next) => {
             await batch.save();
         }
 
-
-        // await ProductModel.findOneAndUpdate(
-        //     { _id: item?.product },
-        //     { $inc: { currentStockLevel: item?.quantity } }
-        // );
-
-
-        await handleProductStockQuantity(item?.product,"create", item?.quantity)
+        // Update product stock after batch stock is updated
+        await handleProductStockQuantity(item.product, "create", item.quantity);
 
         purchaseItems.push({
             product: item.product,
@@ -358,10 +352,8 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
 
     const data = await updatePurchaseSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
 
-    // Step 1: Purana stock reverse karo
+    // Step 1: Reverse old batch quantities first, then product stock
     for (const old of existing.items) {
-        await ProductModel.findByIdAndUpdate(old.product, { $inc: { currentStockLevel: -old.quantity } });
-
         const oldBatch = await BatchModel.findById(old.batch);
         if (oldBatch) {
             oldBatch.quantity -= old.quantity;
@@ -372,9 +364,12 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
                 await oldBatch.save();
             }
         }
+        
+        // Update product stock after batch stock
+        await handleProductStockQuantity(old.product, "delete", old.quantity);
     }
 
-    // Step 2: Naye items process karo
+    // Step 2: Process new items - update batch first, then product stock
     const purchaseItems = [];
     for (const item of data.items) {
         let batch = await BatchModel.findOne({ batchNumber: item.batchNumber, product: item.product });
@@ -396,7 +391,8 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
             await batch.save();
         }
 
-        await ProductModel.findByIdAndUpdate(item.product, { $inc: { currentStockLevel: item.quantity } });
+        // Update product stock after batch stock
+        await handleProductStockQuantity(item.product, "create", item.quantity);
 
         purchaseItems.push({
             product: item.product, batch: batch._id,
@@ -407,7 +403,7 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
         });
     }
 
-    // Step 3: Purchase save karo
+    // Step 3: Save purchase
     const updated = await PurchaseModel.findByIdAndUpdate(
         req.params.id,
         {
@@ -440,10 +436,8 @@ export const deletePurchase = asyncHandler(async (req, res) => {
     const existing = await PurchaseModel.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: "Purchase not found" });
 
-    // Reverse stock and batch quantities
+    // Reverse batch quantities first, then product stock
     for (const item of existing.items) {
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
-
         const batch = await BatchModel.findById(item.batch);
         if (batch) {
             batch.quantity -= item.quantity;
@@ -454,6 +448,9 @@ export const deletePurchase = asyncHandler(async (req, res) => {
                 await batch.save();
             }
         }
+        
+        // Update product stock after batch stock
+        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     await existing.deleteOne();

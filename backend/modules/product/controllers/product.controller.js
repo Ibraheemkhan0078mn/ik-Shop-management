@@ -8,12 +8,13 @@ import {
     createSubCategorySchema,
     updateSubCategorySchema,
 } from "../schema/subCategory.schema.js";
-import { getLocalProductModel, getLocalSubCategoryModel } from "../../../configs/connect.db.js";
+import { getLocalProductModel, getLocalSubCategoryModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
 import { filterEmptyValues } from "../../../common/services/filterEmptyFromObject.js";
 
 export const getProducts = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
+    const BatchModel = getLocalBatchModel();
 
     const products = await ProductModel.find()
         .populate("batches")
@@ -21,10 +22,51 @@ export const getProducts = asyncHandler(async (req, res, next) => {
         .populate("subCategory")
         .sort({ createdAt: -1 });
 
+    // Calculate batch-derived selling price for each product
+    const productsWithPrice = await Promise.all(
+        products.map(async (product) => {
+            if (!product.batches || product.batches.length === 0) {
+                return {
+                    ...product.toObject(),
+                    batchSellingPrice: product.defaultSalePrice || 0
+                };
+            }
+
+            // Fetch active batches for this product
+            const activeBatches = await BatchModel.find({
+                product: product._id,
+                quantity: { $gt: 0 },
+                isActive: true
+            });
+
+            if (activeBatches.length === 0) {
+                return {
+                    ...product.toObject(),
+                    batchSellingPrice: product.defaultSalePrice || 0
+                };
+            }
+
+            // Sort by nearest expiry date
+            const sortedBatches = activeBatches
+                .filter(b => b.expiryDate)
+                .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            // Use nearest expiry batch price, or newest batch if no expiry dates
+            const selectedBatch = sortedBatches.length > 0
+                ? sortedBatches[0]
+                : activeBatches.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+            return {
+                ...product.toObject(),
+                batchSellingPrice: selectedBatch.sellingPrice || product.defaultSalePrice || 0
+            };
+        })
+    );
+
     res.status(200).json({
         success: true,
         message: "Products retrieved successfully",
-        data: products,
+        data: productsWithPrice,
     });
 });
 
@@ -32,6 +74,7 @@ export const getProducts = asyncHandler(async (req, res, next) => {
 
 export const getPaginationProduct = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
+    const BatchModel = getLocalBatchModel();
     const { page = 1, limit = 20 } = req.query;
 
     const result = await paginateModel({
@@ -42,10 +85,55 @@ export const getPaginationProduct = asyncHandler(async (req, res, next) => {
         sort: { createdAt: -1 }
     });
 
+    // Calculate batch-derived selling price for each product
+    const productsWithPrice = await Promise.all(
+        result.data.map(async (product) => {
+            if (!product.batches || product.batches.length === 0) {
+                return {
+                    ...product.toObject(),
+                    batchSellingPrice: product.defaultSalePrice || 0
+                };
+            }
+
+            // Fetch active batches for this product
+            const activeBatches = await BatchModel.find({
+                product: product._id,
+                quantity: { $gt: 0 },
+                isActive: true
+            });
+
+            if (activeBatches.length === 0) {
+                return {
+                    ...product.toObject(),
+                    batchSellingPrice: product.defaultSalePrice || 0
+                };
+            }
+
+            // Sort by nearest expiry date
+            const sortedBatches = activeBatches
+                .filter(b => b.expiryDate)
+                .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            // Use nearest expiry batch price, or newest batch if no expiry dates
+            const selectedBatch = sortedBatches.length > 0
+                ? sortedBatches[0]
+                : activeBatches.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+            return {
+                ...product.toObject(),
+                batchSellingPrice: selectedBatch.sellingPrice || product.defaultSalePrice || 0
+            };
+        })
+    );
+
     res.status(200).json({
         success: true,
         message: "Products retrieved successfully",
-        ...result
+        data: productsWithPrice,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages
     });
 });
 
@@ -55,7 +143,8 @@ export const getProductById = asyncHandler(async (req, res, next) => {
 
     const product = await ProductModel.findById(id)
         .populate("category", "name")
-        .populate("subCategory", "name");
+        .populate("subCategory", "name")
+        .populate("batches");
 
     if (!product) {
         return next(new ErrorResponse("Product not found", 404));
@@ -164,12 +253,19 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
 
 export const deleteProduct = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
+    const BatchModel = getLocalBatchModel();
     const { id } = req.params;
 
     const product = await ProductModel.findById(id);
 
     if (!product) {
         return next(new ErrorResponse("Product not found", 404));
+    }
+
+    // Check if product has associated batches
+    const batches = await BatchModel.find({ product: id });
+    if (batches.length > 0) {
+        return next(new ErrorResponse("Cannot delete product with existing batches. Please delete or transfer batches first.", 400));
     }
 
     await product.deleteOne();

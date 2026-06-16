@@ -1,7 +1,8 @@
 import asyncHandler   from "express-async-handler";
 import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
 import { createOrderSchema } from "../schemas/order.schema.js";
-import { getLocalOrderModel, getLocalHoldOrderModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
@@ -45,6 +46,8 @@ export const getOrders = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
     const Order = getLocalOrderModel();
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
 
     // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
     const normalizedItems = req.body.items.map((item) => {
@@ -76,6 +79,35 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     const duplicate = await Order.findOne({ orderNumber: validatedData.orderNumber });
     if (duplicate) return next(new ErrorResponse("Order number already exists", 400));
 
+    // Deduct inventory: batch stock first, then product stock
+    for (const item of validatedData.items) {
+        if (!item.batchId) {
+            return next(new ErrorResponse(`Batch is required for product: ${item.name}`, 400));
+        }
+
+        const batch = await BatchModel.findById(item.batchId);
+        if (!batch) {
+            return next(new ErrorResponse(`Batch not found for product: ${item.name}`, 400));
+        }
+
+        // Check if batch has enough quantity
+        if (batch.quantity < item.quantity) {
+            return next(new ErrorResponse(`Insufficient stock in batch ${batch.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}`, 400));
+        }
+
+        // Check if batch is expired
+        if (batch.expiryDate && new Date(batch.expiryDate) < new Date()) {
+            return next(new ErrorResponse(`Batch ${batch.batchNumber} has expired`, 400));
+        }
+
+        // Deduct from batch stock first
+        batch.quantity -= item.quantity;
+        await batch.save();
+
+        // Then deduct from product stock
+        await handleProductStockQuantity(item.product, "delete", item.quantity);
+    }
+
     const order = await Order.create(validatedData);
 
     res.status(201).json({ success: true, message: "Order created successfully", order });
@@ -87,9 +119,25 @@ export const addOrder = asyncHandler(async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteOrder = asyncHandler(async (req, res, next) => {
     const Order = getLocalOrderModel();
+    const BatchModel = getLocalBatchModel();
     const order = await Order.findById(req.params.id);
 
     if (!order) return next(new ErrorResponse("Order not found", 404));
+
+    // Restore inventory: add back to batch stock first, then product stock
+    for (const item of order.items) {
+        if (!item.batchId) continue;
+
+        const batch = await BatchModel.findById(item.batchId);
+        if (batch) {
+            // Add back to batch stock first
+            batch.quantity += item.quantity;
+            await batch.save();
+
+            // Then add back to product stock
+            await handleProductStockQuantity(item.product, "create", item.quantity);
+        }
+    }
 
     await order.deleteOne();
 

@@ -11,6 +11,7 @@ import ReturnPage      from "../modules/returns/pages/ReturnPage.jsx";
 import WastagePage     from "../modules/wastage/pages/WastagePage.jsx";
 import ProductPurchase  from "../modules/productPurchases/pages/ProductPurchase.jsx";
 import SupplierPage     from "../modules/suppliers/pages/SupplierPage.jsx";
+import PurchaseReturnPage from "../modules/purchaseReturn/pages/PurchaseReturnPage.jsx";
 import ViewProductPage from "../modules/productsModule/pages/Products.jsx";
 import QuickActions from "../modules/dashbaord/pages/QuickActions.jsx"
 import QarzaAccounts from "../modules/qarza/pages/QarzaAccounts.jsx";
@@ -44,6 +45,7 @@ function AppRoutes() {
             <Route path="/purchases" element={<ProductPurchase />} />
             <Route path="/suppliers" element={<SupplierPage />} />
             <Route path="/returns"   element={<ReturnPage />} />
+            <Route path="/purchase-returns" element={<PurchaseReturnPage />} />
             <Route path="/wastage"   element={<WastagePage />} />
 
 

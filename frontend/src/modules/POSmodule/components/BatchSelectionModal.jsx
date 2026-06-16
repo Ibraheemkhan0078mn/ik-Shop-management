@@ -31,12 +31,22 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
     const handleConfirm = () => {
         if (!selectedBatchId) return;
         const batch = batches.find((b) => b._id === selectedBatchId);
+        
+        // Validate batch is not out of stock
+        if (batch.quantity <= 0) {
+            alert(language === "en" ? "This batch is out of stock." : "یہ بیچ ختم ہو چکا ہے۔");
+            return;
+        }
+        
+        // Validate batch is not expired
+        if (batch.expiryDate && new Date(batch.expiryDate) < new Date()) {
+            alert(language === "en" ? "This batch has expired." : "یہ بیچ کی مدت ختم ہو چکی ہے۔");
+            return;
+        }
+        
         onConfirm(product, batch, isSticky);
         onClose();
     };
-
-    // Fallback: sell without a batch (uses product's static price)
-    const handleSellWithoutBatch = () => { onConfirm(product, null, false); onClose(); };
 
     // A batch is expiring soon if its expiry is within the next 30 days
     const isExpiringSoon = (expiryDate) =>
@@ -77,28 +87,25 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
                             </h3>
                             <p className="text-sm text-gray-500 mb-6">
                                 {language === "en"
-                                    ? "No batches tracked for this product. Selling at its default price."
-                                    : "اس پروڈکٹ کا کوئی بیچ نہیں۔ ڈیفالٹ قیمت پر بیچیں۔"}
+                                    ? "No active batches available for this product. Please create a purchase first."
+                                    : "اس پروڈکٹ کے لیے کوئی فعال بیچ دستیاب نہیں ہے۔ پہلے خریداری کریں۔"}
                             </p>
-                            <button onClick={handleSellWithoutBatch}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl shadow-sm transition">
-                                {language === "en" ? `Sell (Rs ${product.price})` : `بیچیں (Rs ${product.price})`}
-                            </button>
                         </div>
                     ) : (
                         <div className="grid gap-4">
                             {sortedBatches.map((batch) => {
                                 const isSelected    = selectedBatchId === batch._id;
                                 const outOfStock    = batch.quantity <= 0;
+                                const isExpired     = batch.expiryDate && new Date(batch.expiryDate) < new Date();
                                 const nearExpiry    = isExpiringSoon(batch.expiryDate);
 
                                 return (
                                     <div
                                         key={batch._id}
-                                        onClick={() => setSelectedBatchId(batch._id)}
-                                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all
+                                        onClick={() => !outOfStock && !isExpired && setSelectedBatchId(batch._id)}
+                                        className={`relative p-4 rounded-xl border-2 transition-all
                                             ${isSelected ? "border-indigo-500 bg-indigo-50/50" : "border-gray-200 bg-white hover:border-indigo-300"}
-                                            ${outOfStock ? "opacity-75" : ""}`}
+                                            ${(outOfStock || isExpired) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div>
@@ -109,6 +116,11 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
                                                     {outOfStock && (
                                                         <span className="px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
                                                             Out of Stock
+                                                        </span>
+                                                    )}
+                                                    {isExpired && (
+                                                        <span className="px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                                                            Expired
                                                         </span>
                                                     )}
                                                 </div>

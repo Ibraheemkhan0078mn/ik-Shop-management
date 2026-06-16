@@ -189,7 +189,7 @@ export default function PosPage() {
     // Called when a product row is clicked in the table
     // → If a sticky batch exists for this product, use it directly
     // → If product has batches, show the batch selection modal
-    // → If no batches, add directly
+    // → If no batches, show error (batch is required)
     const handleProductClick = useCallback(async (product) => {
         // 1. Sticky batch check
         const sticky = stickyBatches[product._id];
@@ -201,18 +201,19 @@ export default function PosPage() {
             const batches = data?.data || data || [];
 
             if (batches.length === 0) {
-                // No batches tracked → add with product's base price
-                addItemToCart(product, "full", null, null);
+                // No batches tracked → show error
+                showError(language === "en" ? "No batches available. Please create a purchase first." : "کوئی بیچ دستیاب نہیں۔ پہلے خریداری کریں۔");
+                return;
             } else {
                 // Batches exist → let cashier choose one
                 setBatchProduct(product);
                 setShowBatchModal(true);
             }
         } catch {
-            // API error → fall back to direct add
-            addItemToCart(product, "full", null, null);
+            // API error → show error
+            showError(language === "en" ? "Failed to load batches." : "بیچ لوڈ کرنے میں ناکام۔");
         }
-    }, [stickyBatches]);
+    }, [stickyBatches, language]);
 
     // Called from BatchSelectionModal after cashier picks a batch
     const handleBatchConfirm = (product, batch, makeSticky) => {

@@ -24,6 +24,8 @@ import permissionRoutes from './modules/permission/route/permission.route.js'
 import qarzaRoutes from './modules/qarza/routes/qarza.route.js'
 import wastageRoutes from './modules/wastage/routes/wastage.router.js'
 import returnRoutes from './modules/returns/routes/return.router.js'
+import purchaseReturnRoutes from './modules/purchaseReturn/routes/purchaseReturn.route.js'
+import inventoryReconciliationRoutes from './modules/inventory/routes/reconciliation.route.js'
 
 dontenv.config();
 const app = express();
@@ -32,7 +34,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(
     cors(
         {
-            origin: ["http://localhost:5173"],
+            origin: ["http://localhost:5174"],
             credentials: true,
             methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
         }
@@ -76,6 +78,8 @@ app.use("/api/permissionRoutes", permissionRoutes)
 app.use("/api/qarzaRoutes", qarzaRoutes)
 app.use("/api/wastages", wastageRoutes)
 app.use("/api/returns", returnRoutes)
+app.use("/api/purchase-returns", purchaseReturnRoutes)
+app.use("/api/inventory", inventoryReconciliationRoutes)
 
 app.use(errorHandler);
 

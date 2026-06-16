@@ -48,11 +48,12 @@ export const sidebarData = (language = "en") => ({
             title: "Purchases",
             url: "/purchases",
             icon: CreditCard,
-            allowedUrls: ["/purchases", "/wastage", "/returns", "/suppliers"],
+            allowedUrls: ["/purchases", "/wastage", "/returns", "/purchase-returns", "/suppliers"],
             items: [
                 { title: "Product Purchases", url: "/purchases" },
                 { title: "Wastage",           url: "/wastage"   },
                 { title: "Returns",           url: "/returns"   },
+                { title: "Purchase Returns",  url: "/purchase-returns" },
                 { title: "Suppliers",         url: "/suppliers" },
             ],
         },

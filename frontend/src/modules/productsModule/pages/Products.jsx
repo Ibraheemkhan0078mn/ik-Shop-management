@@ -45,6 +45,7 @@ export default function Products() {
     const columns = {
         "Product Name": "name",
         "Stock": "currentStockLevel",
+        "Price": "batchSellingPrice",
         "Product Code": "productCode",
         "Barcode": "barcode",
         "Category": "category.name",
