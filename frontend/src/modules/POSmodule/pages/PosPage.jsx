@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
-import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder } from "../services/holdOrders.service.js";
+import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
 import api from "../../../lib/api";
 
@@ -48,6 +48,7 @@ export default function PosPage() {
 
     const holdOrdersQuery = useHoldOrders();
     const createHoldMutation = useCreateHoldOrder();
+    const updateHoldMutation = useUpdateHoldOrder();
     const deleteHoldMutation = useDeleteHoldOrder();
     const holdOrders = holdOrdersQuery.data?.data || holdOrdersQuery.data || [];
 
@@ -62,6 +63,11 @@ export default function PosPage() {
     // When a held order is resumed, we store its DB _id here.
     // We delete it from the DB only after checkout succeeds — not on resume.
     const [resumedHoldId, setResumedHoldId] = useState(null);
+
+    // Issue 2: hold-order metadata restored on resume so the payment modal
+    // can pre-fill customer name, waiter and discount when the cashier
+    // re-opens it for a resumed order.
+    const [resumedHoldMeta, setResumedHoldMeta] = useState({ customerName: "", waiter: "", discountAmount: 0 });
 
     // ── Sticky batches (per product) ───────────────────────────────────────
     // If a cashier picks a batch and ticks "Save as default", that batch is
@@ -301,22 +307,29 @@ export default function PosPage() {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
         try {
-            const { data } = await api.get("/orders/generate-number");
             const discountAmt = Math.max(0, Number(orderDiscount) || 0);
             const total = Math.max(0, subtotal - discountAmt);
-
-            await createHoldMutation.mutateAsync({
-                orderNumber: data.orderNumber,
+            const holdBody = {
                 items: buildOrderItems(),
                 subtotal,
                 discountAmount: discountAmt,
                 totalAmount: total,
                 customerName: customerName || "",
                 waiter: selectedWaiter || "",
-            });
+            };
+
+            if (resumedHoldId) {
+                // Issue 1 & 5: update the existing hold, preserve its original order number
+                await updateHoldMutation.mutateAsync({ id: resumedHoldId, body: holdBody });
+            } else {
+                // New hold — generate a fresh order number
+                const { data } = await api.get("/orders/generate-number");
+                await createHoldMutation.mutateAsync({ orderNumber: data.orderNumber, ...holdBody });
+            }
 
             clearCart();
             setResumedHoldId(null);
+            setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
             showSuccess(language === "en" ? "Order held!" : "آرڈر روک دیا گیا!");
             setShowPaymentModal(false);
         } catch {
@@ -330,6 +343,16 @@ export default function PosPage() {
         if (!holdOrder.items?.length) {
             showError(language === "en" ? "No items in this order!" : "اس آرڈر میں آئٹمز نہیں ہیں!");
             return;
+        }
+
+        // Issue 3: guard against silently overwriting an active cart
+        if (cart.length > 0) {
+            const confirmed = window.confirm(
+                language === "en"
+                    ? "Your current cart has items. Resuming will replace them. Continue?"
+                    : "آپ کے موجودہ کارٹ میں آئٹمز ہیں۔ جاری رکھنے سے وہ ہٹ جائیں گے۔ جاری رکھیں؟"
+            );
+            if (!confirmed) return;
         }
 
         const restoredCart = holdOrder.items.map((item) => {
@@ -348,7 +371,13 @@ export default function PosPage() {
         });
 
         setCart(restoredCart);
-        setResumedHoldId(holdOrder._id);  // track so we can delete it after checkout
+        setResumedHoldId(holdOrder._id);                      // track for delete-after-checkout
+        // Issue 2: restore customer/waiter/discount so payment modal can pre-fill them
+        setResumedHoldMeta({
+            customerName:   holdOrder.customerName   || "",
+            waiter:         holdOrder.waiter         || "",
+            discountAmount: holdOrder.discountAmount || 0,
+        });
         setShowHeldOrders(false);
     };
 
@@ -426,6 +455,7 @@ export default function PosPage() {
             if (resumedHoldId) {
                 try { await deleteHoldMutation.mutateAsync(resumedHoldId); } catch { }
                 setResumedHoldId(null);
+                setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
             }
 
             clearCart();
@@ -501,6 +531,13 @@ export default function PosPage() {
 
             const res = await addOrderMutation.mutateAsync(orderBody);
             printOrder({ ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber }, "Free Food");
+
+            // Issue 4: delete the resumed hold if this was a free-food completion
+            if (resumedHoldId) {
+                try { await deleteHoldMutation.mutateAsync(resumedHoldId); } catch { }
+                setResumedHoldId(null);
+                setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
+            }
 
             clearCart();
             setShowFreeFoodModal(false);
@@ -608,6 +645,9 @@ export default function PosPage() {
                     onClose={() => setShowPaymentModal(false)}
                     onCreateQarza={() => setShowQarzaModal(true)}
                     language={language}
+                    initialCustomerName={resumedHoldMeta.customerName}
+                    initialWaiter={resumedHoldMeta.waiter}
+                    initialDiscount={resumedHoldMeta.discountAmount}
                 />
             )}
 

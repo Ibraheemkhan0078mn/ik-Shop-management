@@ -204,9 +204,9 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
 
     if (!product) {
         return next(new ErrorResponse("Product not found", 404));
-    } 
+    }
 
-    const validatedData =req.body
+    const validatedData = req.body
 
     if (
         validatedData.hotKeySku ||

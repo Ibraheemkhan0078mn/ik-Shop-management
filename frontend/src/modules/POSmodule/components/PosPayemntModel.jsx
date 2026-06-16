@@ -42,15 +42,16 @@ const PAYMENT_TABS = [
 //    onCreateQarza  — opens the Qarza account creation popup
 //    language       — "en" or "ur"
 // ─────────────────────────────────────────────────────────────────────────────
-export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onClose, onCreateQarza, language = "en" }) {
+export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onClose, onCreateQarza, language = "en",
+    initialCustomerName = "", initialWaiter = "", initialDiscount = 0 }) {
 
     // Fetch qarza accounts (credit accounts) from the API
     const { data: qarzaAccounts = [] } = useAccountPayments();
 
     // ── Shared form fields ─────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState("cash");
-    const [orderDiscount, setOrderDiscount] = useState("");
-    const [customerName, setCustomerName] = useState("");
+    const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
+    const [customerName, setCustomerName] = useState(initialCustomerName);
 
     // ── Cash ───────────────────────────────────────────────────────────────
     const [cashReceived, setCashReceived] = useState("");
@@ -97,7 +98,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onCl
     // ── Build payload sent to PosPage ──────────────────────────────────────
     const buildPayload = () => ({
         customerName,
-        selectedWaiter: "",            // waiter field removed for simplicity — can add back
+        selectedWaiter: initialWaiter,     // Issue 2: waiter restored from held order
         orderDiscount: discountAmt,
         paymentMethod: activeTab,
         cashReceived: activeTab === "cash" ? cashReceived : "",

@@ -12,9 +12,10 @@ export const HOLD_ORDER_KEYS = {
 //  Raw API calls — plain async functions, no hooks
 // ─────────────────────────────────────────────────────────────────────────────
 export const HoldOrderService = {
-    getAll: async ()     => (await api.get("/hold-orders")).data,
-    create: async (body) => (await api.post("/hold-orders", body)).data,
-    delete: async (id)   => (await api.delete(`/hold-orders/${id}`)).data,
+    getAll:  async ()          => (await api.get("/hold-orders")).data,
+    create:  async (body)      => (await api.post("/hold-orders", body)).data,
+    update:  async ({ id, body }) => (await api.put(`/hold-orders/${id}`, body)).data,
+    delete:  async (id)        => (await api.delete(`/hold-orders/${id}`)).data,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,6 +40,15 @@ export const useDeleteHoldOrder = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: HoldOrderService.delete,
+        onSuccess:  () => queryClient.invalidateQueries({ queryKey: HOLD_ORDER_KEYS.all }),
+    });
+};
+
+// Updates an existing held order (resume → edit → hold again), then refreshes the list
+export const useUpdateHoldOrder = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: HoldOrderService.update,
         onSuccess:  () => queryClient.invalidateQueries({ queryKey: HOLD_ORDER_KEYS.all }),
     });
 };
