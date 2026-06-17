@@ -1,8 +1,8 @@
 import { X, Eye, EyeOff, Edit, ScanBarcodeIcon, RefreshCw } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import api from "../../../lib/api";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
-import { getItem, setItem } from "../../../utils/localStorage";
+import api from "@shared/services/api";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { getItem, setItem } from "@shared/utilities/localStorage";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { useUser } from "../../auth/services/auth.service.js";
 

@@ -3,7 +3,7 @@ import { useState, useCallback }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
 import { useDeleteWastage }        from "../services/wastage.service.js";
-import PaginatedList               from "../../../components/common/PaginatedList.jsx";
+import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import WastageModal                from "../components/WastageModal.jsx";
 
 const STATUS_STYLE = {
@@ -152,3 +152,4 @@ function WastageRow({ wastage, onEdit, onDelete }) {
         </tr>
     );
 }
+

@@ -1,5 +1,5 @@
 // src/modules/productPurchases/components/PurchaseModal.jsx
-import { showError, showSuccess }       from "../../../utils/toastHelpers";
+import { showError, showSuccess }       from "@shared/utilities/toastHelpers";
 import { Plus, Upload, Download, TrendingUp, Package, Calendar, FileText,
          DollarSign, Truck, File, X, ChevronDown }  from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -9,7 +9,7 @@ import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase }
 import { useProducts }                  from "../../productsModule/services/product.service";
 import { useBatchesByProduct }          from "../services/batch.service";
 import { useSelector }                  from "react-redux";
-import { SearchableSelect }             from "../../../components/common/FormFields";
+import { SearchableSelect }             from "@shared/components/FormFields";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const toInputDate  = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
@@ -880,3 +880,4 @@ export default function PurchaseModal({ mode = "create", purchaseId, onClose, on
         </div>
     );
 }
+

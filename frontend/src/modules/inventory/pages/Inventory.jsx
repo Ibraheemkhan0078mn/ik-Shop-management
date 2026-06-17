@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import InventoryCreation from "../parts/InventoryCreate.jsx";
-import InventoryUpdate from "../parts/InventoryUpdate.jsx";
+import InventoryCreation from "../components/InventoryCreate.jsx";
+import InventoryUpdate from "../components/InventoryUpdate.jsx";
 import { PlusCircle, Search, Pencil, Trash2, Package, AlertTriangle, CassetteTape } from "lucide-react";
-import api from "../../../services/axiosInstance.js";
-import ScreenTabButton from "../../../common/components/ScreenTabButton.jsx";
-import InventoryCategory from "../parts/InventoryCategory.jsx";
-import ConfirmDialog from "../../../common/components/ConfirmationDialog.jsx";
+import api from "@shared/services/axiosInstance.js";
+import ScreenTabButton from "@shared/components/ScreenTabButton.jsx";
+import InventoryCategory from "../components/InventoryCategory.jsx";
+import ConfirmDialog from "@shared/components/ConfirmationDialog.jsx";
 
 const CATEGORIES = ["all", "furniture", "electronics", "stationery", "sports", "lab-equipment", "books", "other"];
 const STATUSES = ["all", "active", "in-repair", "disposed", "lost"];
@@ -354,3 +354,4 @@ export default function Inventory() {
         </div>
     );
 }
+

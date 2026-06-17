@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, Truck } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import { useCreateSupplier, useUpdateSupplier, useSupplier, useAllSuppliers } from "../services/suppliers.service.js";
 import { useSelector } from "react-redux";
 
@@ -276,3 +276,4 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
         </div>
     );
 }
+

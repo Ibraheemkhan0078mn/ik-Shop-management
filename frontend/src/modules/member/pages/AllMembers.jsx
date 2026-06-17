@@ -1,11 +1,11 @@
-﻿import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import AdminSideMemberFilteration from '../parts/AdminSideMemberFilteration'
 import { CalendarCheck, CirclePlus, Filter } from 'lucide-react'
 import ScreenTabButton from '../../../common/components/ScreenTabButton'
 import EachMemberDataComp from '../parts/EachMemberDataComp'
 import { MemberMakingAttendenceComp } from '../parts/MemberMakingAttendanceComp'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '../../../common/components/PermissionGaurd'
+import { PermissionGuard } from '../../../common/components/PermissionGuard'
 import { useGetAllMembersQuery } from '../api/member.rtk.api'
 import MemberCrudModel from '../parts/MemberCrudMode'
 const AllMembers = () => {
@@ -318,3 +318,4 @@ const AllMembers = () => {
 }
 
 export default AllMembers
+

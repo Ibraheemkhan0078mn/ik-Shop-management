@@ -1,29 +1,29 @@
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import Login from "../modules/auth/pages/Login.jsx";
-import Signup from "../modules/auth/pages/Signup";
-import Products from "../modules/productsModule/pages/Products.jsx";
-import StaffPage from "../modules/teacher/pages/AllTeachers.jsx";
-import BusinessExpenses from "../modules/expense/pages/AllExpense.jsx";
-import Analytics from "../modules/dashbaord/pages/Analytics";
-import Generals from "../modules/setting/pages/Generals.jsx";
-import ReturnPage      from "../modules/returns/pages/ReturnPage.jsx";
-import WastagePage     from "../modules/wastage/pages/WastagePage.jsx";
-import ProductPurchase  from "../modules/productPurchases/pages/ProductPurchase.jsx";
-import SupplierPage     from "../modules/suppliers/pages/SupplierPage.jsx";
-import PurchaseReturnPage from "../modules/purchaseReturn/pages/PurchaseReturnPage.jsx";
-import ViewProductPage from "../modules/productsModule/pages/Products.jsx";
-import QuickActions from "../modules/dashbaord/pages/QuickActions.jsx"
-import QarzaAccounts from "../modules/qarza/pages/QarzaAccounts.jsx";
-import EachQarzaAccountRecords from "../modules/qarza/pages/EachQarzaAccountRecords.jsx";
-import AllTeachers from "../modules/teacher/pages/AllTeachers.jsx";
-import AllInvestors from "../modules/Investor/pages/AllInvestors.jsx";
-import AllMembers from "../modules/member/pages/AllMembers.jsx";
-import Inventory from "../modules/Inventory/pages/Inventory.jsx";
-import AllExpenses from "../modules/expense/pages/AllExpense.jsx";
-import PosPage from "../modules/POSmodule/pages/PosPage.jsx";
-import Categories from "../modules/productsModule/components/Categories.jsx";
-import SubCategories from "../modules/productsModule/components/SubCategories.jsx";
+import Login from "@modules/auth/pages/Login.jsx";
+import Signup from "@modules/auth/pages/Signup.jsx";
+import Products from "@modules/productsModule/pages/Products.jsx";
+import StaffPage from "@modules/teacher/pages/AllTeachers.jsx";
+import BusinessExpenses from "@modules/expense/pages/AllExpense.jsx";
+import Analytics from "@modules/dashbaord/pages/Analytics.jsx";
+import Generals from "@modules/setting/pages/Generals.jsx";
+import ReturnPage      from "@modules/returns/pages/ReturnPage.jsx";
+import WastagePage     from "@modules/wastage/pages/WastagePage.jsx";
+import ProductPurchase  from "@modules/productPurchases/pages/ProductPurchase.jsx";
+import SupplierPage     from "@modules/suppliers/pages/SupplierPage.jsx";
+import PurchaseReturnPage from "@modules/purchaseReturn/pages/PurchaseReturnPage.jsx";
+import ViewProductPage from "@modules/productsModule/pages/Products.jsx";
+import QuickActions from "@modules/dashbaord/pages/QuickActions.jsx";
+import QarzaAccounts from "@modules/qarza/pages/QarzaAccounts.jsx";
+import EachQarzaAccountRecords from "@modules/qarza/pages/EachQarzaAccountRecords.jsx";
+import AllTeachers from "@modules/teacher/pages/AllTeachers.jsx";
+import AllInvestors from "@modules/Investor/pages/AllInvestors.jsx";
+import AllMembers from "@modules/member/pages/AllMembers.jsx";
+import Inventory from "@modules/inventory/pages/Inventory.jsx";
+import AllExpenses from "@modules/expense/pages/AllExpense.jsx";
+import PosPage from "@modules/POSmodule/pages/PosPage.jsx";
+import Categories from "@modules/productsModule/components/Categories.jsx";
+import SubCategories from "@modules/productsModule/components/SubCategories.jsx";
 
 
 function AppRoutes() {
@@ -68,3 +68,6 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
+
+
+

@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Plus, CheckCircle, Pencil, Trash2, Trash } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import { useCreateWastage, useUpdateWastage, useWastage } from "../services/wastage.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
 import { useSelector } from "react-redux";
@@ -480,3 +480,4 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
         </div>
     );
 }
+

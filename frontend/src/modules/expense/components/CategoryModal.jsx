@@ -2,7 +2,7 @@
 // Manages expense categories: list + create + delete
 import { useState } from "react";
 import { X, Plus, Trash2, Tag } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import { useExpenseCategories, useCreateExpenseCategory, useDeleteExpenseCategory } from "../services/expense.service.js";
 
 const Btn = ({ children, variant = "primary", size = "md", className = "", ...p }) => {
@@ -118,3 +118,4 @@ export default function CategoryModal({ onClose }) {
         </div>
     );
 }
+

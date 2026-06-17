@@ -10,7 +10,7 @@ import TeacherCreate from '../parts/TeacherCreate'
 import { TeacherAttendenceComp } from '../parts/TeacherAttendanceComp'
 import { useGetAllTeacherData } from '../api/teacher.api'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '../../../common/components/PermissionGaurd'
+import { PermissionGuard } from '@shared/components/PermissionGuard'
 const AllTeachers = () => {
     let { data: allTeachersDataQuery } = useGetAllTeacherData()
 
@@ -320,3 +320,4 @@ const AllTeachers = () => {
 }
 
 export default AllTeachers
+

@@ -3,7 +3,7 @@ import { useState, useCallback }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
 import { useDeleteReturn }         from "../services/return.service.js";
-import PaginatedList               from "../../../components/common/PaginatedList.jsx";
+import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import ReturnModal                 from "../components/ReturnModal.jsx";
 
 // status badge colors
@@ -155,3 +155,4 @@ function ReturnRow({ ret, onEdit, onDelete }) {
         </tr>
     );
 }
+

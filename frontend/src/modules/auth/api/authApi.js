@@ -1,4 +1,4 @@
-import api from "../../../lib/api.js";
+import api from "@shared/services/api.js";
 
 export const AuthService = {
     login: async (data) => {

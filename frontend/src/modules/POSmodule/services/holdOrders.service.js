@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../lib/api.js";
+import api from "@shared/services/api.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Query key — used by React Query to cache and invalidate hold-order data

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import api from "../../../services/axiosInstance.js"
+import api from "@shared/services/axiosInstance.js"
 
 // Get All Partner Investments
 // async function getAllPartnerInvestments() {

@@ -1,7 +1,7 @@
 import { Mail, Shield, Minus, Square, X } from "lucide-react";
 import React from "react";
-import logo from "../../assets/Chai-Fi.png";
-import logoCup from "../../assets/Chai_fi_cup.png";
+import logo from "@shared/assets/Chai-Fi.png";
+import logoCup from "@shared/assets/Chai_fi_cup.png";
 
 export default function CopyrightDesktop() {
     const companyName = "Chai Fi System";
@@ -92,3 +92,4 @@ export default function CopyrightDesktop() {
         </main>
     );
 }
+

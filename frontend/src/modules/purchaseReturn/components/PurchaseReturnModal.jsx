@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { X, Plus, CheckCircle, Pencil, Trash2 } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import {
     useCreatePurchaseReturnMutation,
     useUpdatePurchaseReturnMutation,
@@ -19,7 +19,7 @@ import {
 } from "../services/purchaseReturn.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
 import { useSelector } from "react-redux";
-import api from "../../../lib/api";
+import api from "@shared/services/api.js";
 
 const REASONS = [
     { label: "Damaged", value: "damaged" },
@@ -576,3 +576,4 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         </div>
     );
 }
+

@@ -1,4 +1,4 @@
-import api from "../../lib/api";
+import api from "@shared/services/api";
 
 const ordersApi = {
   fetchOrders: (type = "other") => api.get(`/orders?orderType=${type}`),
@@ -8,3 +8,4 @@ const ordersApi = {
 };
 
 export default ordersApi;
+

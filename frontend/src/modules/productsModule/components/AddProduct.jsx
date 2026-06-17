@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Scan, Sparkles, Plus } from "lucide-react";
 import { useCreateProduct } from "../services/product.service";
-import { Scanner } from "../../../utils/Scanner";
-import FormLayout from "../../../components/common/FormLayout";
+import { Scanner } from "@shared/utilities/Scanner";
+import FormLayout from "@shared/components/FormLayout";
 import CategoriesFormModel from "./SubCategoriesFormModel.jsx"
 import AddSubCategories from "./SubCategoryCrudModel.jsx";
 import { useGetCategoriesQuery } from "../services/category.service.js";

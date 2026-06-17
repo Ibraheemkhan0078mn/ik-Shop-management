@@ -1,5 +1,5 @@
 // src/modules/returns/services/return.service.js
-import { baseApi } from "../../../app/rtkBaseApi.js";
+import { baseApi } from "@app/rtkBaseApi.js";
 
 export const returnApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

@@ -5,7 +5,7 @@ import { Clock, DollarSign, Edit2, Home, NotebookTabs, PlusCircle, Trash2, UserC
 import PaymentUpdateOfQarzaWithoutAccount from '../parts/PaymentUpdateOfQarzaWithoutAccount'
 import { useSelector } from 'react-redux'
 import ScreenTabButton from '../../../common/components/ScreenTabButton.jsx'
-import api from '../../../services/axiosInstance.js'
+import api from "@shared/services/axiosInstance.js"
 
 const QarzaWithoutAccount = () => {
 

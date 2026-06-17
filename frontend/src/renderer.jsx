@@ -8,8 +8,8 @@ import { HashRouter } from "react-router-dom";
 import { presistor, store } from "./app/store.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PersistGate } from "redux-persist/integration/react";
-import { MyContextProvider } from "./context/MyContext.jsx";
-import { AppPermissionContextProvider } from "./context/Permission.context.jsx";
+import { MyContextProvider } from "@shared/context/MyContext.jsx";
+import { AppPermissionContextProvider } from "@shared/context/Permission.context.jsx";
 // Get the root element from HTML
 const container = document.getElementById("root");
 
@@ -40,3 +40,4 @@ root.render(
         </Provider>
     </HashRouter>,
 );
+

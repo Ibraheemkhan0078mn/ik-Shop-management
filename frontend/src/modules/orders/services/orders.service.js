@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../lib/api.js";
+import api from "@shared/services/api.js";
 
 // 1. Query Keys
 export const ORDER_QUERY_KEYS = {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "@/lib/api";
+import api from "@shared/services/api";
 import {
     Pencil,
     Trash2,
@@ -11,7 +11,7 @@ import {
     X,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { showError } from "../../utils/toastHelpers";
+import { showError } from "@shared/utilities/toastHelpers";
 
 export default function UsersPage() {
     const [users, setUsers] = useState([]);
@@ -669,3 +669,4 @@ function UserModal({
         </div>
     );
 }
+

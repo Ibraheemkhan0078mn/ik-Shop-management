@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Search, Plus, CheckCircle, Pencil, Trash2, RotateCcw } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import { useCreateReturn, useUpdateReturn, useReturn } from "../services/return.service.js";
 import { usePurchaseByInvoiceNumber } from "../../productPurchases/services/purchases.service.js";
 import { useSelector } from "react-redux";
@@ -616,3 +616,4 @@ export default function ReturnModal({ mode = "create", returnId, onClose, onSucc
         </div>
     );
 }
+

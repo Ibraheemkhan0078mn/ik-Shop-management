@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import LoadingBar from "react-top-loading-bar";
 import { Toaster } from "sonner"
-import Sidebar from "./common/components/Sidebar";
+import Sidebar from "@shared/components/SideBar";
 import { useLocation } from "react-router-dom";
 
 function App() {
@@ -44,3 +44,4 @@ useEffect(()=>{
 }
 
 export default App;
+

@@ -2,7 +2,7 @@
 // Props: mode "create"|"update", qarzaAccountId, payment (for update), onClose, onSuccess
 import { useState, useEffect } from "react";
 import { X, ArrowDownLeft, ArrowUpRight } from "lucide-react";
-import { showError, showSuccess } from "../../../utils/toastHelpers";
+import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import { useCreateQarzaPayment, useUpdateQarzaPayment } from "../services/qarza.service.js";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -150,3 +150,4 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
         </div>
     );
 }
+

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus } from "lucide-react";
-import { FormField, Input, SearchableSelect } from "../../../components/common/FormFields.jsx";
+import { FormField, Input, SearchableSelect } from "@shared/components/FormFields.jsx";
 import { useAccountPayments } from "../../qarza/services/qarza.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -319,3 +319,4 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onCl
         </div>
     );
 }
+

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PaginatedTable from "../../../components/common/PaginatedTable";
+import PaginatedTable from "@shared/components/PaginatedTable";
 import { useDeleteCategoryMutation, useGetCategoriesQuery } from "../services/category.service";
 import AddCategories from "./AddCategories";
 import UpdateCategory from "./UpdateCategory"; // Apna actual path use karo

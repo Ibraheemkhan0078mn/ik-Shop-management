@@ -1,6 +1,6 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import api from "../../../services/axiosInstance.js";
+import api from "@shared/services/axiosInstance.js";
 
 
 

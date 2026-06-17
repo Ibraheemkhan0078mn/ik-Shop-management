@@ -1,4 +1,4 @@
-import api from "../../../services/axiosInstance.js"
+import api from "@shared/services/axiosInstance.js"
 
 
 

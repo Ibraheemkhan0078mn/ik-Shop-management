@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Navbar from "../../../shared/components/Navbar.jsx";
 import { RefreshCw, Search, User, Bot, FileEdit, Trash2, PlusCircle, Clock, ChevronDown, X } from "lucide-react";
-import api from "../../../services/axiosInstance.js";
+import api from "@shared/services/axiosInstance.js";
 
 // ── All model names ──────────────────────────────────────────────────────────
 const ALL_MODELS = [

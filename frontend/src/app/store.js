@@ -52,8 +52,8 @@
 // ============================================================
 
 import { configureStore } from "@reduxjs/toolkit";
-import authReducer from "../modules/auth/slices/authSlice.js";
-import memberReducer from "../modules/member/member.slice.js";
+import authReducer from "@modules/auth/slices/authSlice.js";
+import memberReducer from "@modules/member/slices/member.slice.js";
 
 import storage from "redux-persist/lib/storage";
 import { persistReducer, persistStore } from "redux-persist";

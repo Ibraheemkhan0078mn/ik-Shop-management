@@ -1,5 +1,5 @@
 ﻿// src/modules/member/api/member.rtk.api.js
-import { baseApi } from "../../../app/rtkBaseApi.js";
+import { baseApi } from "@app/rtkBaseApi.js";
 
 export const memberApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

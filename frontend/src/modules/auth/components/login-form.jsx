@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useLogin } from "../services/auth.service";
-import NetworkStatusSpan from "../../../components/common/NetworkChecker";
-import imgLogo from "../../../assets/Chai_fi_cup.png";
+import NetworkStatusSpan from "@shared/components/NetworkChecker";
+import imgLogo from "@shared/assets/Chai_fi_cup.png";
 export function LoginForm() {
     const [formData, setFormData] = useState({ email: "", password: "" });
     const login = useLogin();
@@ -110,3 +110,5 @@ export function LoginForm() {
         </div>
     );
 }
+
+

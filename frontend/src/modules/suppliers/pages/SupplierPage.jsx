@@ -3,7 +3,7 @@ import { useState, useCallback }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
 import { useDeleteSupplier }       from "../services/suppliers.service.js";
-import PaginatedList               from "../../../components/common/PaginatedList.jsx";
+import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import SupplierModal               from "../components/SupplierModal.jsx";
 
 export default function SupplierPage() {
@@ -138,3 +138,4 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
         </tr>
     );
 }
+

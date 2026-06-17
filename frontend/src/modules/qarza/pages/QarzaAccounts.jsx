@@ -5,9 +5,9 @@ import { Plus, Edit2, Trash2, Phone, MapPin, Wallet } from "lucide-react";
 import { useSelector }           from "react-redux";
 import { useQarzaAccounts, useDeleteQarzaAccount } from "../services/qarza.service.js";
 import QarzaAccountModal         from "../components/QarzaAccountModal.jsx";
-import { showSuccess, showError } from "../../../utils/toastHelpers";
-import emptyImage                from "../../../assets/images/boy-user.jpg";
-import { backendBaseUrl }        from "../../../common/constants/constants.js";
+import { showSuccess, showError } from "@shared/utilities/toastHelpers";
+import emptyImage                from "@shared/assets/images/boy-user.jpg";
+import { backendBaseUrl }        from "@shared/constants/constants.js";
 
 export default function QarzaAccounts() {
     const navigate   = useNavigate();
@@ -155,3 +155,5 @@ export default function QarzaAccounts() {
         </div>
     );
 }
+
+

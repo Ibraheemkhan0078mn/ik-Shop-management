@@ -4,7 +4,7 @@ import { Plus }                           from "lucide-react";
 import { useSelector }                    from "react-redux";
 import { useNavigate }                    from "react-router-dom";
 import { useDeletePurchase }              from "../services/purchases.service.js";
-import PaginatedList                      from "../../../components/common/PaginatedList.jsx";
+import PaginatedList                      from "@shared/components/PaginatedList.jsx";
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
 
@@ -153,3 +153,4 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete }) {
         </tr>
     );
 }
+

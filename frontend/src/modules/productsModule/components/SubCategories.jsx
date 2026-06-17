@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PaginatedTable from "../../../components/common/PaginatedTable";
+import PaginatedTable from "@shared/components/PaginatedTable";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryCrudModel from "./SubCategoryCrudModel";
 

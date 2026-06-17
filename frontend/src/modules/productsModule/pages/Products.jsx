@@ -20,7 +20,7 @@ import { Plus } from "lucide-react";
 import { useDeleteProduct, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import { useGetCategoriesQuery } from "../services/category.service.js";
-import PaginatedTable from "../../../components/common/PaginatedTable.jsx";
+import PaginatedTable from "@shared/components/PaginatedTable.jsx";
 import AddProduct from "../components/AddProduct.jsx";
 import UpdateProduct from "../components/UpdateProduct.jsx";
 import Categories from "../components/Categories.jsx";

@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api from "@shared/services/api";
 
 export const ProductService = {
     getAll: async () => {

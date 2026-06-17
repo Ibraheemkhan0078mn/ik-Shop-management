@@ -6,7 +6,7 @@ import EachMemberDataComp from '../parts/EachInvestorDataComp'
 import MemberCreate from '../parts/InvestorCreate'
 import { useGetAllMembersQuery } from '../../member/api/member.rtk.api.js'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '../../../common/components/PermissionGaurd'
+import { PermissionGuard } from '@shared/components/PermissionGuard'
 
 
 
