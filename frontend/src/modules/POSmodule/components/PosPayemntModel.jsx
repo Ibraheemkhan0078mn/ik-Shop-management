@@ -32,17 +32,15 @@ const PAYMENT_TABS = [
 //  Shows: Grand Total, optional discount, customer name, payment method tabs.
 //
 //  Calls onCheckout(payload) when payment is complete.
-//  Calls onHold(payload) when the cashier wants to pause the order.
 //
 //  Props:
 //    subtotal       — cart subtotal (number)
 //    onCheckout     — function called with payment payload
-//    onHold         — function called to hold/pause the order
 //    onClose        — closes the modal
 //    onCreateQarza  — opens the Qarza account creation popup
 //    language       — "en" or "ur"
 // ─────────────────────────────────────────────────────────────────────────────
-export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onClose, onCreateQarza, language = "en",
+export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onCreateQarza, language = "en",
     initialCustomerName = "", initialWaiter = "", initialDiscount = 0 }) {
 
     // Fetch qarza accounts (credit accounts) from the API
@@ -111,7 +109,6 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onCl
     });
 
     const handleCheckout = () => { if (canCheckout) onCheckout(buildPayload()); };
-    const handleHold = () => onHold(buildPayload());
 
     // ── Auto-fill remainder helpers for Hybrid tab ─────────────────────────
     const fillHybridQarza = () => { const r = total - (Number(hybridCash) || 0); if (r > 0) setHybridQarza(String(r.toFixed(0))); };
@@ -304,13 +301,9 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onHold, onCl
                 </div>
 
                 {/* Action buttons */}
-                <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
-                    <button onClick={handleHold}
-                        className="flex-1 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-semibold rounded-xl transition text-sm">
-                        Hold Order
-                    </button>
+                <div className="px-6 py-4 border-t border-gray-100">
                     <button onClick={handleCheckout} disabled={!canCheckout}
-                        className="flex-2 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-200 disabled:text-gray-400
+                        className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-200 disabled:text-gray-400
                                    text-white font-bold rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-sm">
                         Complete Payment <ChevronRight size={16} />
                     </button>

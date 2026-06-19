@@ -1,5 +1,5 @@
 import { useState }           from "react";
-import { ShoppingCart, Trash2, RotateCcw } from "lucide-react";
+import { ShoppingCart, Trash2, RotateCcw, Pause } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PosCartSidebar
@@ -14,7 +14,7 @@ import { ShoppingCart, Trash2, RotateCcw } from "lucide-react";
 //    holdOrders, orderHistory, showHeldOrders, setShowHeldOrders
 //    user
 //    incQty, decQty, removeFromCart, setCartItemQty, openPortionModal
-//    onCheckout, handleResumeOrder, handleDeleteHeldOrder
+//    onCheckout, onHold, handleResumeOrder, handleDeleteHeldOrder
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PosCartSidebar({
     cart = [],
@@ -31,6 +31,7 @@ export default function PosCartSidebar({
     setCartItemQty,
     openPortionModal,
     onCheckout,
+    onHold,
     handleResumeOrder,
     handleDeleteHeldOrder,
 }) {
@@ -99,14 +100,24 @@ export default function PosCartSidebar({
                         <span>Subtotal</span>
                         <span>Rs {subtotal.toLocaleString()}</span>
                     </div>
-                    <button
-                        onClick={onCheckout}
-                        disabled={cart.length === 0}
-                        className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-200 disabled:text-gray-400
-                                   text-white font-bold rounded-xl transition-all active:scale-95 text-sm shadow-sm"
-                    >
-                        {cart.length === 0 ? "Add items to checkout" : "Proceed to Payment  ⇧↵"}
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={onHold}
+                            disabled={cart.length === 0}
+                            className="flex-1 py-3 bg-amber-50 hover:bg-amber-100 disabled:bg-gray-200 disabled:text-gray-400
+                                       text-amber-700 border border-amber-200 font-semibold rounded-xl transition text-sm flex items-center justify-center gap-2"
+                        >
+                            <Pause size={16} /> Hold
+                        </button>
+                        <button
+                            onClick={onCheckout}
+                            disabled={cart.length === 0}
+                            className="flex-2 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-200 disabled:text-gray-400
+                                       text-white font-bold rounded-xl transition-all active:scale-95 text-sm shadow-sm"
+                        >
+                            {cart.length === 0 ? "Add items" : "Complete  ⇧↵"}
+                        </button>
+                    </div>
                 </div>
             </aside>
 

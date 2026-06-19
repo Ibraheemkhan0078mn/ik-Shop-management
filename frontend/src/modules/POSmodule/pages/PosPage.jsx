@@ -194,7 +194,7 @@ export default function PosPage() {
 
     // Called when a product row is clicked in the table
     // → If a sticky batch exists for this product, use it directly
-    // → If product has batches, show the batch selection modal
+    // → If product has batches: one batch → auto-add, multiple → show modal
     // → If no batches, show error (batch is required)
     const handleProductClick = useCallback(async (product) => {
         // 1. Sticky batch check
@@ -210,8 +210,11 @@ export default function PosPage() {
                 // No batches tracked → show error
                 showError(language === "en" ? "No batches available. Please create a purchase first." : "کوئی بیچ دستیاب نہیں۔ پہلے خریداری کریں۔");
                 return;
+            } else if (batches.length === 1) {
+                // Only one batch → auto-add to cart
+                addItemToCart(product, "full", null, batches[0]);
             } else {
-                // Batches exist → let cashier choose one
+                // Multiple batches → let cashier choose one
                 setBatchProduct(product);
                 setShowBatchModal(true);
             }
@@ -303,37 +306,42 @@ export default function PosPage() {
 
     // Saves the current cart to the hold-orders DB, then clears the cart.
     // Note: does NOT create a real order — just pauses it.
-    const handleHoldOrder = async ({ customerName, selectedWaiter, orderDiscount }) => {
+    const handleHoldOrder = async () => {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
         try {
-            const discountAmt = Math.max(0, Number(orderDiscount) || 0);
+            const discountAmt = Math.max(0, Number(resumedHoldMeta.discountAmount) || 0);
             const total = Math.max(0, subtotal - discountAmt);
             const holdBody = {
                 items: buildOrderItems(),
                 subtotal,
                 discountAmount: discountAmt,
                 totalAmount: total,
-                customerName: customerName || "",
-                waiter: selectedWaiter || "",
+                customerName: resumedHoldMeta.customerName || "",
+                waiter: resumedHoldMeta.waiter || "",
             };
+
+            console.log("Holding order with body:", holdBody);
 
             if (resumedHoldId) {
                 // Issue 1 & 5: update the existing hold, preserve its original order number
+                console.log("Updating existing hold:", resumedHoldId);
                 await updateHoldMutation.mutateAsync({ id: resumedHoldId, body: holdBody });
             } else {
                 // New hold — generate a fresh order number
                 const { data } = await api.get("/orders/generate-number");
+                console.log("Creating new hold with order number:", data.orderNumber);
                 await createHoldMutation.mutateAsync({ orderNumber: data.orderNumber, ...holdBody });
             }
 
+            console.log("Hold order successful");
             clearCart();
             setResumedHoldId(null);
             setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
             showSuccess(language === "en" ? "Order held!" : "آرڈر روک دیا گیا!");
-            setShowPaymentModal(false);
-        } catch {
-            showError("Failed to hold order.");
+        } catch (err) {
+            console.error("Hold order error:", err);
+            showError(err?.message || "Failed to hold order.");
         }
     };
 
@@ -436,7 +444,9 @@ export default function PosPage() {
                 hybridQarzaAccount: paymentMethod === "hybrid" ? hybridQarzaAccountId : null,
             };
 
+            console.log("Creating order with body:", orderBody);
             const res = await addOrderMutation.mutateAsync(orderBody);
+            console.log("Order created successfully:", res);
 
             // Print the receipt
             const selectedAccount = qarzaAccounts.find((a) => a._id === selectedQarzaAccountId);
@@ -463,6 +473,7 @@ export default function PosPage() {
             refetchQarza();
             refetchProducts();
         } catch (err) {
+            console.error("Checkout error:", err);
             showError(err?.message || "Failed to create order.");
         }
     };
@@ -631,6 +642,7 @@ export default function PosPage() {
                 setCartItemQty={setCartItemQty}
                 openPortionModal={openPortionModal}
                 onCheckout={() => setShowPaymentModal(true)}
+                onHold={handleHoldOrder}
                 handleResumeOrder={handleResumeOrder}
                 handleDeleteHeldOrder={handleDeleteHeldOrder}
             />
@@ -641,7 +653,6 @@ export default function PosPage() {
                 <PosPaymentModal
                     subtotal={subtotal}
                     onCheckout={handleCheckout}
-                    onHold={handleHoldOrder}
                     onClose={() => setShowPaymentModal(false)}
                     onCreateQarza={() => setShowQarzaModal(true)}
                     language={language}
