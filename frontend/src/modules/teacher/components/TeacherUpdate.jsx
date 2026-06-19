@@ -1,12 +1,12 @@
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MyContext } from '../../../context/MyContext';
+import { MyContext } from '@shared/context/MyContext';
 import { toast } from 'react-toastify';
 import api from "@shared/services/axiosInstance.js";
 import { useGetTeacherDataById, useUpdateTeacher } from '../api/teacher.api';
 import { useHotkeys } from 'react-hotkeys-hook';
-import ImageCropper from '../../../common/components/ImageCropper';
+import ImageCropper from '@shared/components/ImageCropper';
 
 const TeacherUpdate = ({ teacherId, setVisibility, setData }) => {
     const { data: teacherData } = useGetTeacherDataById(teacherId);

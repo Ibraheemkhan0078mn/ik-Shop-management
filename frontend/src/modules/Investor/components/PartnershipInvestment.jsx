@@ -3,7 +3,7 @@ import { useDeletePartnerInvestmentMutation, useGetInvestmentsByPartnerIdQuery }
 import PartnerInvestmentCreation from './PartnerInvestmentCreation'
 import PartnerInvestmentUpdate from './PartnerInvestmentUpdate'
 import { PermissionGuard } from '@shared/components/PermissionGuard'
-import { toInputDateFormat } from '../../../common/utilities/date.utility'
+import { toInputDateFormat } from '@shared/utilities/date.utility'
 import { Receipt } from 'lucide-react'
 
 const PartnershipInvestment = ({ memberId, memberData }) => {

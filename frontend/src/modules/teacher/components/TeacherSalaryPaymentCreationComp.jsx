@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCreateTeacherSalary } from "../api/teacherFinance.api.js";
-import { toInputDateFormat } from '../../../common/utilities/date.utility.js'
+import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 import axios from "axios";
 import api from "@shared/services/axiosInstance.js";
 

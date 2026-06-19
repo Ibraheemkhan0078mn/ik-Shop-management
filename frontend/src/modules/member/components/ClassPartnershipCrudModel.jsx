@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { toInputDateFormat } from '../../../common/utilities/date.utility';
+import { toInputDateFormat } from '@shared/utilities/date.utility';
 import {
     useCreateClassPartnershipMutation,
     useUpdateClassPartnershipMutation,

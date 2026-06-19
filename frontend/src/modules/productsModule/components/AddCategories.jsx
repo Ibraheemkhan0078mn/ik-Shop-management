@@ -1,7 +1,7 @@
 import React from 'react'
 import { useCreateCategoryMutation } from '../services/category.service';
 import { useState } from 'react';
-import FormLayout from '../../../components/common/FormLayout';
+import FormLayout from '@shared/components/FormLayout';
 
 const AddCategories = ({ setVisibility }) => {
     let [createCategoryMutation] = useCreateCategoryMutation()

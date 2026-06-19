@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useDispatch, useSelector } from 'react-redux'
-import { setTeacherSalaryPayment } from "../teacher.slice.js";
+import { setTeacherSalaryPayment } from "../slices/teacher.slice.js";
 import api from "@shared/services/axiosInstance.js";
 
 export default function SeeAllTeacherPayments({ teacherId, setVisibility, setTeacherSalaryPaymentCreationFormVisible }) {

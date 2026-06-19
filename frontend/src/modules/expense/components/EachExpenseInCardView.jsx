@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { Calendar, DollarSign, DollarSignIcon, Edit2, Grid, LucideDollarSign, StickyNote, Trash2 } from 'lucide-react';
 import React from 'react'
-import { PermissionGuard } from '../../../common/components/PermissionGaurd';
-import ConfirmDialog from '../../../common/components/ConfirmationDialog';
+import { PermissionGuard } from '@shared/components/PermissionGuard';
+import ConfirmDialog from '@shared/components/ConfirmationDialog';
 
 const EachExpenseInCardView = ({ getExpensesFunc, exp, setExpenseUpdateVisibility, setCurrentToUpdateExpenseData, setExpensesData }) => {
     const firstLetter = exp.type?.slice(0, 1)?.toUpperCase();

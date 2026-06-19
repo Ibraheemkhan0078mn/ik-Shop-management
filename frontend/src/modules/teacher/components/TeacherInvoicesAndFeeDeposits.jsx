@@ -4,7 +4,7 @@ import api from "@shared/services/axiosInstance.js"; // Apne api service ka path
 import { FileText, IndianRupee, ArrowLeft, Eye, Receipt, History, Trash2, Edit2, DollarSign } from 'lucide-react';
 import { useDeleteSalaryPayment, useGetTeacherFinancialRecord } from '../api/teacherFinance.api';
 import TeacherInvoiceUpdate from './TeacherInvoiceUpdate';
-import ScreenTabButton from '../../../common/components/ScreenTabButton.jsx';
+import ScreenTabButton from '@shared/components/ScreenTabButton.jsx';
 import TeacherSalaryPaymentCreationComp from './TeacherSalaryPaymentCreationComp';
 
 const TeacherInvoicesAndFeeDeposits = ({ teacherId, setVisibility, responseData }) => {

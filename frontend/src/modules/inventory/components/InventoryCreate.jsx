@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { X, Package } from "lucide-react";
 import api from "@shared/services/axiosInstance.js";
 import { toast } from "react-toastify";
-import { toInputDateFormat } from '../../../common/utilities/date.utility.js'
+import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 const CATEGORIES = ["furniture", "electronics", "stationery", "sports", "lab-equipment", "books", "other"];
 // const CONDITIONS = ["new", "good", "fair", "poor", "damaged"];
 // const STATUSES = ["active", "in-repair", "disposed", "lost"];

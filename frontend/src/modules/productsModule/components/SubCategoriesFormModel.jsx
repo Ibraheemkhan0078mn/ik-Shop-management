@@ -1,7 +1,7 @@
 import React from 'react'
 import { useCreateSubCategoryMutation, useUpdateSubCategoryMutation } from '../services/subCategories.service.js';
 import { useState } from 'react';
-import FormLayout from '../../../components/common/FormLayout.jsx';
+import FormLayout from '@shared/components/FormLayout.jsx';
 import { useGetCategoriesQuery } from '../services/category.service.js';
 
 const CategoriesFormModel = ({ setVisibility, operation = "create", defaultValues = {} }) => {

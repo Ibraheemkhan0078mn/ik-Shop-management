@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
 import { useCreateSalaryPaymentMutation } from "../../member/api/member.rtk.api.js";
-import { toInputDateFormat } from '../../../common/utilities/date.utility.js'
+import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 import api from "@shared/services/api.js";
 
 const InvestorPaymentCreate = ({ setVisible, memberId, getInvesterPayments }) => {

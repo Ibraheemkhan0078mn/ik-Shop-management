@@ -1,6 +1,6 @@
-import Table from "../../../ui/Table";
+import Table from "@shared/ui/Table";
 import { useParams, useSearchParams } from "react-router-dom";
-import Button from "../../../ui/Button";
+import Button from "@shared/ui/Button";
 import { REPORT_MODULE_REGISTRY } from "./REPORT_MODULE_REGISTRY";
 import { REPORT_COLUMNS_REGISTRY } from "./REPORT_COLUMNS_REGISTRY";
 

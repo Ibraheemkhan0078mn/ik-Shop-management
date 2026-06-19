@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react'
-import Navbar from '../../../shared/components/Navbar'
 import { useParams } from 'react-router-dom'
 import api from "@shared/services/axiosInstance.js"
 

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useTeacherCreate } from '../api/teacher.api.js';
 import { useHotkeys } from 'react-hotkeys-hook';
-import ImageCropper from '../../../common/components/ImageCropper.jsx'
-import boy_user from '../../../assets/images/boy-user.jpg'
+import ImageCropper from '@shared/components/ImageCropper.jsx'
+import boy_user from '@shared/assets/images/boy-user.jpg'
 const TeacherCreate = ({ setVisibility, setData }) => {
     let teacherCreationMutate = useTeacherCreate()
 

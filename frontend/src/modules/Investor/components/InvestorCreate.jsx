@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 import { useCreateMemberMutation } from '../../member/api/member.rtk.api.js';
 import { useHotkeys } from 'react-hotkeys-hook';
-import ImageCropper from '../../../common/components/ImageCropper.jsx';
+import ImageCropper from '@shared/components/ImageCropper.jsx';
 import api from "@shared/services/api.js";
 
 const MemberCreate = ({ setVisibility, setData }) => {

@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useState } from 'react'
 import { X } from 'lucide-react';
 import { useDispatch } from 'react-redux';
-import { setAllExpenseCatags } from '../expense.slice';
+import { setAllExpenseCatags } from '../slices/expense.slice';
 import api from '@shared/services/axiosInstance.js';
 
 const ExpenseCatagCreation = ({ setVisibility }) => {

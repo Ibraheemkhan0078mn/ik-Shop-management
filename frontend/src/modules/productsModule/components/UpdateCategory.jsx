@@ -1,7 +1,7 @@
 import React from 'react'
 import { useGetCategoryByIdQuery, useUpdateCategoryMutation } from '../services/category.service';
 import { useState } from 'react';
-import FormLayout from '../../../components/common/FormLayout';
+import FormLayout from '@shared/components/FormLayout';
 import { useEffect } from 'react';
 
 const UpdateCategory = ({ setVisibility, id }) => {

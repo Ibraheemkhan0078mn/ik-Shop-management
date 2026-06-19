@@ -14,7 +14,7 @@ import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
 import SplitBillModal from "../components/SplitBillModal.jsx";
 import FreeFoodModal from "../components/FreeFoodModal.jsx";
-import QarzaAccountCreation from "../../qarza/parts/QarzaCreation.jsx";
+import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 
 import { showError, showSuccess } from "@shared/utilities/toastHelpers.js";
 import { printOrder } from "@shared/utilities/printOrder.js";

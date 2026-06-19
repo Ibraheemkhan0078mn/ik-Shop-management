@@ -1,13 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import AdminSideMemberFilteration from '../parts/AdminSideMemberFilteration'
+import AdminSideMemberFilteration from '../components/AdminSideMemberFilteration'
 import { CalendarCheck, CirclePlus, Filter } from 'lucide-react'
-import ScreenTabButton from '../../../common/components/ScreenTabButton'
-import EachMemberDataComp from '../parts/EachMemberDataComp'
-import { MemberMakingAttendenceComp } from '../parts/MemberMakingAttendanceComp'
+import ScreenTabButton from '@shared/components/ScreenTabButton'
+import EachMemberDataComp from '../components/EachMemberDataComp'
+import { MemberMakingAttendenceComp } from '../components/MemberMakingAttendanceComp'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '../../../common/components/PermissionGuard'
-import { useGetAllMembersQuery } from '../api/member.rtk.api'
-import MemberCrudModel from '../parts/MemberCrudMode'
+import { useGetAllMembersQuery } from '../api/member.rtk.api.js'
+import MemberCrudModel from '../components/MemberCrudMode.jsx'
 const AllMembers = () => {
 
     
@@ -116,24 +115,20 @@ const AllMembers = () => {
 
 
 
-                    <PermissionGuard permission={"member-create"}>
                         <div onClick={() => {
                             setMemberCreationCompVisibility(true)
                         }}>
                             <ScreenTabButton text={"Add Member"} lucideIcon={CirclePlus} />
                         </div>
-                    </PermissionGuard>
 
 
 
 
 
-                    <PermissionGuard permission={"member-attendance-view"}>
                         <div onClick={() => { setMemberAttendanceVisibility(true) }}
                         >
                             <ScreenTabButton text={"Attendance"} lucideIcon={CalendarCheck} />
                         </div>
-                    </PermissionGuard>
 
 
                     <div
@@ -157,7 +152,6 @@ const AllMembers = () => {
 
 
 
-                <PermissionGuard permission={"member-view"}>
                     <div className="h-max w-full overflow-x-hidden flex flex-wrap gap-5 p-10 pt-10  justify-center items-center">
                         {
                             allMembersData?.length > 0
@@ -280,7 +274,6 @@ const AllMembers = () => {
                         }
                     </div>
 
-                </PermissionGuard>
 
 
 

@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useGetAllMembersQuery } from '../../member/api/member.rtk.api.js';
 import { useCreatePartnerInvestmentMutation, useUpdatePartnerInvestmentMutation } from '../../member/api/member.rtk.api.js';
-import { toInputDateFormat } from '../../../common/utilities/date.utility.js'
+import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 
 const PartnerInvestmentUpdate = ({ setVisibility, investmentToUpdateData }) => {
     let { data: allMemberData } = useGetAllMembersQuery()

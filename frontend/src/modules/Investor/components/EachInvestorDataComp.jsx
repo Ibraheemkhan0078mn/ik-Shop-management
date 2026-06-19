@@ -1,7 +1,7 @@
 ﻿
 
 import React, { useEffect, useState } from 'react';
-import boy_empty_user from '../../../assets/images/boy-user.jpg'
+import boy_empty_user from '@shared/assets/images/boy-user.jpg'
 
 import MemberUpdate from './InvestorUpdate.jsx';
 import { Edit, Trash2 } from 'lucide-react';
@@ -11,9 +11,9 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import PartnershipInvestment from './PartnershipInvestment.jsx';
 import ClassPartnership from './ClassPartnerShip.jsx';
 import { PermissionGuard } from '@shared/components/PermissionGuard.jsx';
-import ConfirmDialog from '../../../common/components/ConfirmationDialog.jsx';
+import ConfirmDialog from '@shared/components/ConfirmationDialog.jsx';
 import InvestorFinancialHub from './InvestorFinancialHub.jsx';
-import { backendBaseUrl } from '../../../common/constants/constants.js';
+import { backendBaseUrl } from '@shared/constants/constants.js';
 
 export default function EachMemberDataComp({ memberId, setVisibility }) {
 

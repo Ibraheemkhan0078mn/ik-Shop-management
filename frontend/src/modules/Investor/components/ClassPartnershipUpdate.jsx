@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 
 import { useUpdateClassPartnershipMutation } from '../../member/api/member.rtk.api.js';
-import { toInputDateFormat } from '../../../common/utilities/date.utility';
+import { toInputDateFormat } from '@shared/utilities/date.utility';
 
 const ClassPartnershipUpdate = ({ setVisibility, data }) => {
     let [updateClassPartnership] = useUpdateClassPartnershipMutation()

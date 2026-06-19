@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 
 import { useGetMemberByIdQuery, useUpdateMemberMutation } from '../../member/api/member.rtk.api.js';
 import { useHotkeys } from 'react-hotkeys-hook';
-import ImageCropper from '../../../common/components/ImageCropper';
+import ImageCropper from '@shared/components/ImageCropper';
 
 const MemberUpdate = ({ memberId, setVisibility, setData }) => {
     console.log("Member id is hee. *&^*&^*&^", memberId)

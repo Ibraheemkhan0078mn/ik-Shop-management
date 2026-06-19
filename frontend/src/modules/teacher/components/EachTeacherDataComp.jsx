@@ -4,7 +4,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import boy_empty_user from '../../../assets/images/boy-user.jpg'
+import boy_empty_user from '@shared/assets/images/boy-user.jpg'
 
 import TeacherSalaryPaymentCreationComp from './TeacherSalaryPaymentCreationComp.jsx';
 import SeeAllTeacherPayments from './SeeAllTeacherPayments.jsx';
@@ -21,7 +21,7 @@ import PartnershipInvestment from './PartnershipInvestment.jsx';
 
 import TeacherFinancialHub from './TeacherFinancialHub.jsx';
 import { PermissionGuard } from '@shared/components/PermissionGuard.jsx';
-import ConfirmDialog from '../../../common/components/ConfirmationDialog.jsx';
+import ConfirmDialog from '@shared/components/ConfirmationDialog.jsx';
 
 export default function EachTeacherDataComp({ teacherId, setVisibility }) {
 

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from 'react'
-import { MyContext } from '../../../context/MyContext'
+import { MyContext } from '@shared/context/MyContext'
 
 const AdminSideTeacherFilteration = ({ setTeacherFilterationPanelVisibility, teacherFilterationPanelVisibility }) => {
 

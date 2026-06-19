@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PaymentCreationOfQarzaWithoutAccount from '../parts/PaymentCreationOfQarzaWithoutAccount'
+import PaymentCreationOfQarzaWithoutAccount from '../components/PaymentCreationOfQarzaWithoutAccount'
 import { Clock, DollarSign, Edit2, Home, NotebookTabs, PlusCircle, Trash2, UserCheck } from 'lucide-react'
-import PaymentUpdateOfQarzaWithoutAccount from '../parts/PaymentUpdateOfQarzaWithoutAccount'
+import PaymentUpdateOfQarzaWithoutAccount from '../components/PaymentUpdateOfQarzaWithoutAccount'
 import { useSelector } from 'react-redux'
-import ScreenTabButton from '../../../common/components/ScreenTabButton.jsx'
+import ScreenTabButton from '@shared/components/ScreenTabButton.jsx'
 import api from "@shared/services/axiosInstance.js"
 
 const QarzaWithoutAccount = () => {

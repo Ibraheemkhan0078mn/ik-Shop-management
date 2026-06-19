@@ -1,12 +1,11 @@
 ﻿import React, {  useEffect, useRef, useState } from 'react'
-import AdminSideMemberFilteration from '../parts/AdminSideMemberFilteration'
+import AdminSideMemberFilteration from '../components/AdminSideMemberFilteration'
 import { CirclePlus, Filter } from 'lucide-react'
-import ScreenTabButton from '../../../common/components/ScreenTabButton'
-import EachMemberDataComp from '../parts/EachInvestorDataComp'
-import MemberCreate from '../parts/InvestorCreate'
+import ScreenTabButton from '@shared/components/ScreenTabButton'
+import EachMemberDataComp from '../components/EachInvestorDataComp'
+import MemberCreate from '../components/InvestorCreate'
 import { useGetAllMembersQuery } from '../../member/api/member.rtk.api.js'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { PermissionGuard } from '@shared/components/PermissionGuard'
 
 
 
@@ -104,24 +103,16 @@ const AllInvestors = () => {
 
 
 
-                    <PermissionGuard permission={"investor-create"}>
                         <div onClick={() => {
                             setMemberCreationCompVisibility(true)
                         }}>
                             <ScreenTabButton text={"Add Investor"} lucideIcon={CirclePlus} />
                         </div>
-                    </PermissionGuard>
 
 
 
 
-                    {/* 
-                    <PermissionGuard permission={"member-attendance-view"}>
-                        <div onClick={() => { setMemberAttendanceVisibility(true) }}
-                        >
-                            <ScreenTabButton text={"Attendance"} lucideIcon={CalendarCheck} />
-                        </div>
-                    </PermissionGuard> */}
+                
 
 
                     <div
@@ -145,7 +136,6 @@ const AllInvestors = () => {
 
 
 
-                <PermissionGuard permission={"investor-view"}>
                     <div className="h-max w-full overflow-x-hidden flex flex-wrap gap-5 p-10 pt-10  justify-center items-center">
                         {
                             allInvestorData?.length > 0
@@ -260,7 +250,6 @@ const AllInvestors = () => {
                         }
                     </div>
 
-                </PermissionGuard>
 
 
 

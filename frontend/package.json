@@ -31,6 +31,7 @@
         "@vitejs/plugin-react": "^5.1.0",
         "@zxing/browser": "^0.1.5",
         "axios": "^1.11.0",
+        "html5-qrcode": "^2.3.8",
         "jspdf": "^3.0.3",
         "jspdf-autotable": "^5.0.2",
         "lucide-react": "^0.539.0",

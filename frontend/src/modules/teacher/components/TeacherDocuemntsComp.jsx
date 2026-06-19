@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDeleteTeacherDocument, useUploadTeacherDocument } from '../api/teacherDocuments.api';
-import { PermissionGuard } from '@shared/components/PermissionGuard';
+import  PermissionGuard  from '../../../shared/components/PermissionGuard.jsx';
 
 const TeacherDocumentsComp = ({ teacherData, setAllTeachers }) => {
     const deleteTeacherDocsMutaion = useDeleteTeacherDocument();

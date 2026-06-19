@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDeleteMemberDocumentMutation, useUploadMemberDocumentMutation } from '../../member/api/member.rtk.api.js';
 import { PermissionGuard } from '@shared/components/PermissionGuard';
-import { backendBaseUrl } from '../../../common/constants/constants';
+import { backendBaseUrl } from '@shared/constants/constants';
 
 const MemberDocumentsComp = ({ memberData, setAllMembers }) => {
     const [deleteMemberDocument] = useDeleteMemberDocumentMutation();

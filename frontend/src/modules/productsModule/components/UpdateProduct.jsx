@@ -20,7 +20,7 @@ import { Scan, Sparkles, Plus } from "lucide-react";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetSubCategoriesQuery } from "../services/subCategories.service.js";
 import { useProduct, useUpdateProduct } from "../services/product.service.js";
-import { Scanner } from "@shared/utilities/Scanner.jsx";
+import  Scanner  from "@shared/components/Scanner.jsx";
 import FormLayout from "@shared/components/FormLayout.jsx";
 import SubCategoryCrudModel from "./SubCategoryCrudModel.jsx";
 import AddCategories from "./AddCategories.jsx";

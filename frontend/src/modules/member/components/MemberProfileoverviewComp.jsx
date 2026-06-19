@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react'
 import { useGetMemberByIdQuery } from '../api/member.rtk.api.js';
-import ScreenTabButton from '../../../common/components/ScreenTabButton.jsx';
+import ScreenTabButton from '@shared/components/ScreenTabButton.jsx';
 import { Edit, Edit2 } from 'lucide-react';
 import { PermissionGuard } from '@shared/components/PermissionGuard.jsx';
 import MemberCrudModel from './MemberCrudMode.jsx';

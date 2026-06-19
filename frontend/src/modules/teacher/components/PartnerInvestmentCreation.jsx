@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGetAllTeacherData } from '../api/teacher.api';
 import { usePartnerInvestmentCreate } from '../api/partnerInvestment.api';
-import { toInputDateFormat } from '../../../common/utilities/date.utility';
+import { toInputDateFormat } from '@shared/utilities/date.utility';
 
 const PartnerInvestmentCreation = ({ setVisibility }) => {
     let { data: allTeacherData } = useGetAllTeacherData()

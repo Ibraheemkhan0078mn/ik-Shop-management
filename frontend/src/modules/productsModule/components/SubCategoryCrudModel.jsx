@@ -1,7 +1,7 @@
 import React from 'react'
 import { useCreateSubCategoryMutation, useGetSubCategoryByIdQuery, useUpdateSubCategoryMutation } from '../services/subCategories.service';
 import { useState } from 'react';
-import FormLayout from '../../../components/common/FormLayout';
+import FormLayout from '@shared/components/FormLayout';
 import { useEffect } from 'react';
 import { useGetCategoriesQuery } from '../services/category.service';
 

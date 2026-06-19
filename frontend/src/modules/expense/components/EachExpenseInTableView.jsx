@@ -2,7 +2,7 @@ import React from "react";
 import { Calendar, Edit2, Trash2 } from "lucide-react";
 import axios from "axios";
 import api from "@shared/services/axiosInstance.js";
-import { PermissionGuard } from "@shared/components/PermissionGaurd";
+import { PermissionGuard } from "@shared/components/PermissionGuard";
 import ConfirmDialog from "@shared/components/ConfirmationDialog";
 
 // Improved table-row component with proper column alignment

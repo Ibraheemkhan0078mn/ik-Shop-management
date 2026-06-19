@@ -2,7 +2,7 @@
 import { toast } from 'react-toastify';
 
 import { useHotkeys } from 'react-hotkeys-hook';
-import ImageCropper from '../../../common/components/ImageCropper';
+import ImageCropper from '@shared/components/ImageCropper';
 import {
     useGetMemberByIdQuery,
     useCreateMemberMutation,

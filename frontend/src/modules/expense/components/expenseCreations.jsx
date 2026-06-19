@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
-import { setAllExpenseCatags } from "../expense.slice";
+import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "@shared/services/axiosInstance.js";
 import { toInputDateFormat } from "@shared/utilities/date.utility";
 import { useGetAllTeacherData } from "../../teacher/api/teacher.api";
