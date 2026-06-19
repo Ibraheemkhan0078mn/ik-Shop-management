@@ -1,20 +1,25 @@
-import api from "@shared/services/api.js";
+import { baseApi } from "@app/rtkBaseApi.js";
 
-export const AuthService = {
-    login: async (data) => {
-        const { data: response } = await api.post("/auth/login", data);
-        return response;
-    },
-    signup: async (data) => {
-        const { data: response } = await api.post("/auth/register", data);
-        return response;
-    },
-    logout: async () => {
-        const { data: response } = await api.post("/auth/logout");
-        return response;
-    },
-    getUser: async () => {
-        const { data: response } = await api.get("/auth/me");
-        return response;
-    },
-};
+export const authApi = baseApi.injectEndpoints({
+    endpoints: (build) => ({
+        login: build.mutation({
+            query: (data) => ({ url: "/auth/login", method: "POST", body }),
+        }),
+        signup: build.mutation({
+            query: (data) => ({ url: "/auth/register", method: "POST", body }),
+        }),
+        logout: build.mutation({
+            query: () => ({ url: "/auth/logout", method: "POST" }),
+        }),
+        getUser: build.query({
+            query: () => ({ url: "/auth/me" }),
+        }),
+    }),
+});
+
+export const {
+    useLoginMutation,
+    useSignupMutation,
+    useLogoutMutation,
+    useGetUserQuery,
+} = authApi;

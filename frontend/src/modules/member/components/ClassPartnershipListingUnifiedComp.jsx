@@ -13,7 +13,7 @@ import { PermissionGuard } from '@shared/components/PermissionGuard';
 import { ClassPartnershipPaymentModel } from './ClassPartnershipPaymentModel';
 import ClassPartnershipCrudModal from './ClassPartnershipCrudModel';
 import { useDeleteClassPartnershipMutation, useDeleteClassPartnershipPaymentMutation, useGetClassPartnershipsByPartnerIdQuery } from '../api/member.rtk.api';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const ClassPartnershipListingUnifiedComp = ({ memberId, mode = 'active' }) => {
     const isNonActive = mode === 'nonActive';

@@ -81,7 +81,7 @@ export const SearchableSelect = ({
     }, []);
 
     return (
-        <div ref={ref} className="relative w-full" {...props}>
+        <div ref={ref} className="relative w-full z-50" {...props}>
             {/* Selected Box */}
             <div
                 onClick={() => setOpen((prev) => !prev)}

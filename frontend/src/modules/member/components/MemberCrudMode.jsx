@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 import { useHotkeys } from 'react-hotkeys-hook';
 import ImageCropper from '@shared/components/ImageCropper';
@@ -55,8 +55,6 @@ const MemberCrudModel = ({ operation, memberId, setVisibility }) => {
     const { data: memberData } = useGetMemberByIdQuery(memberId, { skip: !isUpdate || !memberId });
     const [createMember] = useCreateMemberMutation();
     const [updateMember] = useUpdateMemberMutation();
-
-    const { data: allClassesData } = useGetAllClassesQuery();
 
     // ── Local State ──────────────────────────────────────────────────────────
     const [imagePreview, setImagePreview] = useState(null);

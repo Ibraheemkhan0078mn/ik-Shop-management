@@ -44,11 +44,6 @@ const MemberDocumentsComp = ({ memberId }) => {
 
 
 
-            for (let [key, val] of formData.entries()) {
-                console.log(key, val);
-            }
-
-
             // await api.post("/memberRoute/uploadMemberDocuments", formData, { headers: { "Content-Type": "multipart/form-data" } })
             await uploadMemberDocument(formData).unwrap()
 

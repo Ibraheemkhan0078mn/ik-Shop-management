@@ -25,7 +25,7 @@ export default function DashboardStats({
     onCustomDateSelect,
     onFilterChange,
 }) {
-    const language = useSelector((state) => state.auth.user.language || "en");
+    const language = useSelector((state) => state.auth?.language || "en");
 
     const [selected, setSelected] = useState("Today");
     const [open, setOpen] = useState(false);

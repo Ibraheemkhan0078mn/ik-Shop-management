@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import AdminSideMemberFilteration from '../components/AdminSideMemberFilteration'
 import { CalendarCheck, CirclePlus, Filter } from 'lucide-react'
 import ScreenTabButton from '@shared/components/ScreenTabButton'
@@ -18,8 +18,8 @@ const AllMembers = () => {
     })
 
 
-    let { data: allMembersDataQuery } = useGetAllMembersQuery({filter: {}})
-    const [allMembersData, setAllMembersData] = useState([])
+    const { data: allMembersDataQuery } = useGetAllMembersQuery()
+    const allMembersData = allMembersDataQuery?.filter(t => t.post !== 'investor') ?? []
 
 
 

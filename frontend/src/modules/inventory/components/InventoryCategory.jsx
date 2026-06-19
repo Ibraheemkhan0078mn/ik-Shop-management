@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { X, PlusCircle, Pencil, Trash2, Tag, Check } from "lucide-react";
-import api from "@shared/services/axiosInstance.js";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+import {
+    useCreateInventoryCategoryMutation,
+    useDeleteInventoryCategoryMutation,
+    useGetInventoryCategoriesQuery,
+    useUpdateInventoryCategoryMutation,
+} from "../services/inventory.service.js";
 
 // ── Small inline create/edit form ────────────────────────────────────────────
 function CategoryForm({ initialValue = "", onSubmit, onCancel, loading }) {
@@ -36,7 +41,7 @@ function CategoryForm({ initialValue = "", onSubmit, onCancel, loading }) {
 }
 
 // ── Each category row ────────────────────────────────────────────────────────
-function EachCategoryRow({ category, onDeleteDone, onUpdateDone }) {
+function EachCategoryRow({ category, onDeleteDone, onUpdateDone, updateInventoryCategory, deleteInventoryCategory }) {
     const [editMode, setEditMode] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -45,8 +50,8 @@ function EachCategoryRow({ category, onDeleteDone, onUpdateDone }) {
         try {
             if (!name?.trim()) return;
             setUpdateLoading(true);
-            const res = await api.put(`/inventoryRoutes/inventoryCatagUpdate/${category._id}`, { name });
-            if (res.data?.success) {
+            const res = await updateInventoryCategory({ id: category._id, name: name.trim() }).unwrap();
+            if (res?.success) {
                 onUpdateDone(category._id, name.trim());
                 setEditMode(false);
             }
@@ -60,8 +65,8 @@ function EachCategoryRow({ category, onDeleteDone, onUpdateDone }) {
     async function handleDelete() {
         try {
             setDeleteLoading(true);
-            const res = await api.delete(`/inventoryRoutes/inventoryCatagDelete/${category._id}`);
-            if (res.data?.success) onDeleteDone(category._id);
+            const res = await deleteInventoryCategory(category._id).unwrap();
+            if (res?.success) onDeleteDone(category._id);
         } catch (error) {
             console.error(error);
         } finally {
@@ -111,48 +116,35 @@ function EachCategoryRow({ category, onDeleteDone, onUpdateDone }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function InventoryCategory({ setVisibility }) {
+    const { data: categoriesResponse, isLoading: loading } = useGetInventoryCategoriesQuery();
+    const [createInventoryCategory, { isLoading: createLoading }] = useCreateInventoryCategoryMutation();
+    const [updateInventoryCategory] = useUpdateInventoryCategoryMutation();
+    const [deleteInventoryCategory] = useDeleteInventoryCategoryMutation();
     const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [createFormOpen, setCreateFormOpen] = useState(false);
-    const [createLoading, setCreateLoading] = useState(false);
 
-    async function getCategories() {
-        try {
-            setLoading(true);
-            const res = await api.get("/inventoryRoutes/getAllInventoryCatagory");
-            if (res.data?.success) setCategories(res.data.categories || []);
-            else setCategories([]);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => { getCategories(); }, []);
+    useEffect(() => {
+        const nextCategories = categoriesResponse?.data?.categories || categoriesResponse?.categories || [];
+        setCategories(nextCategories);
+    }, [categoriesResponse]);
 
     async function handleCreate(name) {
         try {
             if (!name?.trim()) return;
-            setCreateLoading(true);
-            const res = await api.post("/inventoryRoutes/inventoryCatagCreate", { name });
-            if (res.data?.success) {
-                setCategories(prev => [res.data.category, ...prev]);
+            const res = await createInventoryCategory(name.trim()).unwrap();
+            if (res?.success) {
                 setCreateFormOpen(false);
             } else {
-                toast.error(res?.data?.reason || res?.data?.msg)
+                toast.error(res?.reason || res?.msg || "Category creation failed");
             }
         } catch (error) {
             console.error(error);
-        } finally {
-            setCreateLoading(false);
+            toast.error(error?.data?.reason || "Category creation failed");
         }
     }
 
     function handleUpdateDone(id, newName) {
-        setCategories(prev =>
-            prev.map(c => c._id === id ? { ...c, name: newName } : c)
-        );
+        setCategories(prev => prev.map(c => c._id === id ? { ...c, name: newName } : c));
     }
 
     function handleDeleteDone(id) {
@@ -216,6 +208,8 @@ export default function InventoryCategory({ setVisibility }) {
                                 category={category}
                                 onUpdateDone={handleUpdateDone}
                                 onDeleteDone={handleDeleteDone}
+                                updateInventoryCategory={updateInventoryCategory}
+                                deleteInventoryCategory={deleteInventoryCategory}
                             />
                         ))
                     )}

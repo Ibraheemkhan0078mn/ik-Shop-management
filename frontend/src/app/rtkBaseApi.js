@@ -54,6 +54,8 @@ export const baseApi = createApi({
         "Return",
         "Expense",
         "ExpenseCategory",
+        "Inventory",
+        "InventoryCategory",
         "Member",
         "MemberFinance",
         "MemberAttendance",

@@ -39,7 +39,6 @@ const MemberFinancialHub = ({ memberId }) => {
     const partnershipEarned = useMemo(() => safe(data?.classPartnership?.totalEarned), [data]);
 
 
-    console.log(remaining>0, "the remaining", responseData?.currentSalary?.success)
     if (isLoading) {
         return (
             <div className="w-full min-h-[400px] flex items-center justify-center">

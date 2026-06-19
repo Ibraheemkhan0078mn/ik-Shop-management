@@ -2,7 +2,7 @@
 
 
 import React, { useState } from 'react'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { CirclePlus, CalendarDays, Search, X, Sparkles, Calendar, QrCode } from 'lucide-react'
 // import Scanner from '../../../common/components/Scanner.jsx'
 import {

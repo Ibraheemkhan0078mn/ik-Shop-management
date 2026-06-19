@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import api from "@shared/services/axiosInstance.js";
 import { PlusCircle } from "lucide-react";
 import ImageCropper from "@shared/components/ImageCropper.jsx";

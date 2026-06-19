@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "@shared/services/axiosInstance.js";
 import { toInputDateFormat } from "@shared/utilities/date.utility";
-import { useGetAllTeacherData } from "../../teacher/api/teacher.api";
 import { useHotkeys } from "react-hotkeys-hook";
 
 const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) => {
-    let { data: allTeacherData } = useGetAllTeacherData()
 
 
     let dispatch = useDispatch()
@@ -27,9 +25,7 @@ const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) =>
     useHotkeys("enter", (e) => { handleSubmit(e) })
 
 
-    useEffect(() => {
-        setPartners(allTeacherData?.filter((t) => { return (t?.isPartner) }) || [])
-    }, [allTeacherData])
+
 
 
 

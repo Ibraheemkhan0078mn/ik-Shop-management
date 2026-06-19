@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { X, Package } from "lucide-react";
-import { toast } from "sonner";
-import { toInputDateFormat } from '@shared/utilities/date.utility.js';
+import { toast } from "react-toastify";
+import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 import { useCreateInventoryMutation, useGetInventoryCategoriesQuery } from "../services/inventory.service.js";
+const CATEGORIES = ["furniture", "electronics", "stationery", "sports", "lab-equipment", "books", "other"];
 
 function Field({ label, children }) {
     return (
@@ -91,16 +92,14 @@ export default function InventoryCreation({ setVisibility, getInventoryFunc }) {
                                 <input name="description" value={form.description} onChange={handleChange} className={inputCls} placeholder="Short description..." />
                             </Field>
                             <div className="flex flex-wrap gap-4">
-                                {["totalQuantity"].map((name) => (
-                                    <Field key={name} label="Total Qty">
-                                        <input type="number"
-                                            onWheel={(e) => e.target.blur()} name={name} value={form[name]} onChange={handleChange} className={inputCls} placeholder="0" min="0" />
+                                {[["totalQuantity", "Total Qty"]].map(([name, label]) => (
+                                    <Field key={name} label={label}>
+                                        <input type="number" onWheel={(e) => e.target.blur()} name={name} value={form[name]} onChange={handleChange} className={inputCls} placeholder="0" min="0" />
                                     </Field>
                                 ))}
                             </div>
                         </div>
                     </div>
-
                     <div className="col-span-2">
                         <p className="text-xs font-bold text-cyan-600 uppercase tracking-widest mb-3">Purchase Info</p>
                         <div className="grid grid-cols-3 gap-4">
@@ -111,12 +110,10 @@ export default function InventoryCreation({ setVisibility, getInventoryFunc }) {
                                 <input name="vendor" value={form.vendor} onChange={handleChange} className={inputCls} placeholder="Supplier name" />
                             </Field>
                             <Field label="Purchase Price">
-                                <input type="number"
-                                    onWheel={(e) => e.target.blur()} name="purchasePrice" value={form.purchasePrice} onChange={handleChange} className={inputCls} placeholder="0" />
+                                <input type="number" onWheel={(e) => e.target.blur()} name="purchasePrice" value={form.purchasePrice} onChange={handleChange} className={inputCls} placeholder="0" />
                             </Field>
                             <Field label="Total Cost">
-                                <input type="number"
-                                    onWheel={(e) => e.target.blur()} name="totalCost" value={form.totalCost} onChange={handleChange} className={inputCls} placeholder="0" />
+                                <input type="number" onWheel={(e) => e.target.blur()} name="totalCost" value={form.totalCost} onChange={handleChange} className={inputCls} placeholder="0" />
                             </Field>
                             <Field label="Invoice Number">
                                 <input name="invoiceNumber" value={form.invoiceNumber} onChange={handleChange} className={inputCls} placeholder="INV-0001" />
@@ -132,11 +129,7 @@ export default function InventoryCreation({ setVisibility, getInventoryFunc }) {
                     <button onClick={() => setVisibility(false)} className="px-6 py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
-                    <button
-                        onClick={handleCreate}
-                        disabled={loading}
-                        className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-semibold text-sm shadow hover:opacity-90 transition-opacity disabled:opacity-60"
-                    >
+                    <button onClick={handleCreate} disabled={loading} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold text-sm shadow hover:opacity-90 transition-opacity disabled:opacity-60">
                         {loading ? "Creating..." : "Create Item"}
                     </button>
                 </div>

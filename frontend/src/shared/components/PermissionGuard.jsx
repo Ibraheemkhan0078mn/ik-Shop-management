@@ -1,12 +1,12 @@
 import React from 'react'
 
-const PermissionGuard = ({children}) => {
-  return (
-    <div>
-        {children}
-      
-    </div>
-  )
-}
+const PermissionGuard = ({ permission, children, fallback = null }) => {
+  if (permission) {
+    return <>{children ?? fallback}</>;
+  }
 
-export default PermissionGuard
+  return <>{children ?? fallback}</>;
+};
+
+export { PermissionGuard };
+export default PermissionGuard;

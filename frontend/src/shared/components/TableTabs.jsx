@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 
 export default function TabsMenu({ tabs, matchPrefix }) {
     const { pathname } = useLocation();
-    const currentUser = useSelector((state) => state.auth.user);
+    const currentUser = useSelector((state) => state.auth);
     const permissions = currentUser?.permissions || {};
 
     const filteredTabs = tabs.filter(

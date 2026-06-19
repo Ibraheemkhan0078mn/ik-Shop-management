@@ -293,3 +293,36 @@ body {
     color: var(--accent);
     border-color: rgba(180, 83, 9, 0.45);
 }
+
+/* ── Missing classes used across components ── */
+.app-overlay {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+}
+
+.app-enter {
+    animation: fadeSlideIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.app-gradient-vertical {
+    background: linear-gradient(180deg, var(--surface), var(--surface-muted));
+}
+
+.bg-primary        { background-color: var(--accent-2); }
+.bg-primary-hover  { background-color: rgba(15, 118, 110, 0.12); }
+.bg-inverse        { background-color: var(--ink); }
+.bg-danger         { background-color: #dc2626; }
+.text-primary      { color: var(--accent-2); }
+.text-primary-foreground { color: #ffffff; }
+.text-ink          { color: var(--ink); }
+.text-ink-subtle   { color: var(--muted); }
+.text-ink-muted    { color: var(--muted); }
+.border-edge       { border-color: var(--border); }
+.border-edge-brand { border-color: var(--accent-2); }
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }

@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 export default function TopSellingChart({ topSelling = {} }) {
-    const language = useSelector((state) => state.auth.user.language || "en");
+    const language = useSelector((state) => state.auth?.language || "en");
 
     // Filters: today, 3 Days, 7 Days, 30 Days
     const filters = ["today", "threeDays", "sevenDays", "thirtyDays"];

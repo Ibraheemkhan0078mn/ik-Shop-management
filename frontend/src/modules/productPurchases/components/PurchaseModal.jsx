@@ -581,7 +581,7 @@ export default function PurchaseModal({ mode = "create", purchaseId, onClose, on
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <Label>{t("Supplier", "سپلائر")} *</Label>
-                                    <div className="flex gap-2 relative z-40">
+                                    <div className="flex gap-2 relative z-50">
                                         <SearchableSelect
                                             options={suppliersList.map(s => ({ label: s.name, value: s._id }))}
                                             value={bill.supplier}

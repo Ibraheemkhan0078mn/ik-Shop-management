@@ -1,72 +1,66 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { login, logout } from "../slices/authSlice.js";
-import { AuthService } from "../api/authApi.js";
+import { useLoginMutation, useSignupMutation, useLogoutMutation, useGetUserQuery } from "../api/authApi.js";
 import { toast } from "sonner";
 
-export const AUTH_QUERY_KEYS = {
-    user: ["authUser"],
-};
-
 export const useUser = () => {
-    return useQuery({
-        queryKey: AUTH_QUERY_KEYS.user,
-        queryFn: AuthService.getUser,
-        retry: false,
-        staleTime: 1000 * 60 * 10,
-    });
+    return useGetUserQuery();
 };
 
 export const useLogin = () => {
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [loginMutation] = useLoginMutation();
 
-    return useMutation({
-        mutationFn: AuthService.login,
-        onSuccess: (data) => {
-            queryClient.setQueryData(AUTH_QUERY_KEYS.user, data);
-            dispatch(login(data.data));
+    const handleLogin = async (data) => {
+        try {
+            const result = await loginMutation(data).unwrap();
+            dispatch(login(result.data));
             toast.success("Login Successful");
             navigate("/dashboard/analytics");
-        },
-        onError: (error) => {
-            toast.error(error.response.data.message);
-        },
-    });
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Login Failed");
+        }
+    };
+
+    return handleLogin;
 };
 
 export const useSignup = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    return useMutation({
-        mutationFn: AuthService.signup,
-        onSuccess: (data) => {
+    const [signupMutation] = useSignupMutation();
+
+    const handleSignup = async (data) => {
+        try {
+            const result = await signupMutation(data).unwrap();
+            dispatch(login(result.data));
             toast.success("Signup Successful");
-            dispatch(login(data.data));
             navigate("/dashboard/analytics");
-        },
-        onError: (error) => {
-            toast.error(error.response.data.message);
-        },
-    });
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Signup Failed");
+        }
+    };
+
+    return handleSignup;
 };
 
 export const useLogout = () => {
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    return useMutation({
-        mutationFn: AuthService.logout,
-        onSuccess: () => {
-            queryClient.removeQueries({ queryKey: AUTH_QUERY_KEYS.user });
+    const [logoutMutation] = useLogoutMutation();
+
+    const handleLogout = async () => {
+        try {
+            await logoutMutation().unwrap();
             dispatch(logout());
             navigate("/login");
             toast.success("Logout Successful");
-        },
-        onError: (error) => {
-            toast.error(error.response.data.message);
-        },
-    });
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Logout Failed");
+        }
+    };
+
+    return handleLogout;
 };

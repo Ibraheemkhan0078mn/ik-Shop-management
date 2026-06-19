@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, PackageOpen } from "lucide-react";
-import api from "@shared/services/axiosInstance.js";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+import { useGetInventoryCategoriesQuery, useUpdateInventoryMutation } from "../services/inventory.service.js";
 
 const CATEGORIES = ["furniture", "electronics", "stationery", "sports", "lab-equipment", "books", "other"];
 const CONDITIONS = ["new", "good", "fair", "poor", "damaged"];
@@ -25,7 +25,9 @@ function fmt(date) {
 }
 
 export default function InventoryUpdate({ setVisibility, itemData, getInventoryFunc }) {
-    const [loading, setLoading] = useState(false);
+    const [updateInventory, { isLoading: loading }] = useUpdateInventoryMutation();
+    const { data: categoriesResponse } = useGetInventoryCategoriesQuery();
+    const inventoryCategories = categoriesResponse?.data?.categories || categoriesResponse?.categories || [];
     const [form, setForm] = useState({
         name: "", itemCode: "", category: "furniture", type: "non-consumable",
         description: "", totalQuantity: "", availableQuantity: "", inUseQuantity: "",
@@ -72,36 +74,6 @@ export default function InventoryUpdate({ setVisibility, itemData, getInventoryF
     }, [itemData]);
 
 
-
-
-
-    const [inventoryCategories, setInventoryCategories] = useState([]);
-
-
-
-
-    async function getCategories() {
-        try {
-            setLoading(true);
-            const res = await api.get("/inventoryRoutes/getAllInventoryCatagory");
-            if (res.data?.success) setInventoryCategories(res.data.categories || []);
-            else setInventoryCategories([]);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-
-
-    useEffect(() => { getCategories() }, [])
-
-
-
-
-
-
     function handleChange(e) {
         const { name, value } = e.target;
         if (name === "room" || name === "building") {
@@ -114,18 +86,16 @@ export default function InventoryUpdate({ setVisibility, itemData, getInventoryF
     async function handleUpdate() {
         try {
             if (!form.name || !form.category) return toast.error("Name and category are required");
-            setLoading(true);
-            const res = await api.put(`/inventoryRoutes/inventoryUpdate/${itemData._id}`, form);
-            if (res.data?.success) {
+            const result = await updateInventory({ id: itemData._id, ...form }).unwrap();
+            if (result?.success) {
                 await getInventoryFunc("reset");
                 setVisibility(false);
             } else {
-                toast.error(res.data?.reason || "Update failed");
+                toast.error(result?.reason || "Update failed");
             }
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
+            toast.error(error?.data?.reason || "Update failed");
         }
     }
 

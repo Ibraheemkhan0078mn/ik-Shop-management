@@ -7,20 +7,14 @@ import { useLocation } from "react-router-dom";
 
 function App() {
 
-  let [sideBarShow, setSidebarShow] = useState(true)
+  const [sideBarShow, setSidebarShow] = useState(true)
   const location = useLocation();
-  let notAllowedSideRoutes = ["login", 'register', "pos"]
+  const notAllowedSideRoutes = ["login", 'register', "pos"]
 
-useEffect(()=>{
-    notAllowedSideRoutes.forEach((item) => {
-    if (location.pathname.includes(item)) {
-      setSidebarShow(false)
-    } else {
-      setSidebarShow(true)
-    }
-  })
-
-},[location.pathname])
+  useEffect(() => {
+    const shouldShowSidebar = !notAllowedSideRoutes.some((item) => location.pathname.includes(item));
+    setSidebarShow(shouldShowSidebar);
+  }, [location.pathname])
 
 
 

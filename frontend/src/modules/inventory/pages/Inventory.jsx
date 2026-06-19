@@ -1,11 +1,16 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import InventoryCreation from "../components/InventoryCreate.jsx";
 import InventoryUpdate from "../components/InventoryUpdate.jsx";
 import { PlusCircle, Search, Pencil, Trash2, Package, AlertTriangle, CassetteTape } from "lucide-react";
-import api from "@shared/services/axiosInstance.js";
 import ScreenTabButton from "@shared/components/ScreenTabButton.jsx";
 import InventoryCategory from "../components/InventoryCategory.jsx";
 import ConfirmDialog from "@shared/components/ConfirmationDialog.jsx";
+import api from "@shared/services/api.js";
+import {
+    useDeleteInventoryMutation,
+    useGetInventoryCategoriesQuery,
+    useLazyGetInventoryListQuery,
+} from "../services/inventory.service.js";
 
 const CATEGORIES = ["all", "furniture", "electronics", "stationery", "sports", "lab-equipment", "books", "other"];
 const STATUSES = ["all", "active", "in-repair", "disposed", "lost"];
@@ -106,6 +111,7 @@ export default function Inventory() {
 
     const [inventoryData, setInventoryData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [deleteInventory] = useDeleteInventoryMutation();
     const [hasMore, setHasMore] = useState(true);
     const [totalInventory, setTotalInventory] = useState(0);
     const [creationVisibility, setCreationVisibility] = useState(false);
@@ -207,8 +213,8 @@ export default function Inventory() {
 
     async function handleDelete(id) {
         try {
-            const res = await api.delete(`/inventoryRoutes/inventoryDelete/${id}`);
-            if (res.data?.success) getInventory("reset");
+            const res = await deleteInventory(id).unwrap();
+            if (res?.success) getInventory("reset");
         } catch (error) { console.error(error); }
     }
 

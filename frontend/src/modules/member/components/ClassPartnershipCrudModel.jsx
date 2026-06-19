@@ -34,7 +34,6 @@ const ClassPartnershipCrudModal = ({ operation, setVisibility, partnerId, data }
     const [createClassPartnership] = useCreateClassPartnershipMutation();
     const [updateClassPartnership] = useUpdateClassPartnershipMutation();
 
-    const { data: classes } = useGetAllClassesQuery();
     const [formData, setFormData] = useState(DEFAULT_FORM);
 
     // ── Hydration ────────────────────────────────────────────────────────────
@@ -86,7 +85,7 @@ const ClassPartnershipCrudModal = ({ operation, setVisibility, partnerId, data }
             }
             setVisibility(false);
         } catch (error) {
-            console.log(error?.message);
+            console.error(error?.message);
         }
     }
 

@@ -20,8 +20,8 @@ export default function UsersPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
 
-    const loggedInUser = useSelector((state) => state.auth.user);
-    const language = useSelector((state) => state.auth.user?.language || "en");
+    const loggedInUser = useSelector((state) => state.auth);
+    const language = useSelector((state) => state.auth?.language || "en");
 
     const permsList = [
         "dashboard",

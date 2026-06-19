@@ -57,7 +57,6 @@ const SubCategories = ({ setVisibility }) => {
 
                 {/* Table */}
                 <PaginatedTable
-                    endpoint="/categories/getPaginationCategories"
                     columns={columns}
                     limit={10}
                     isUpdate={true}

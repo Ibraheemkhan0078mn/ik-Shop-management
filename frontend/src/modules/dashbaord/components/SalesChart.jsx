@@ -14,7 +14,7 @@ export default function SalesChart({
     title = "Sales",
     theme = "other",
 }) {
-    const language = useSelector((state) => state.auth.user.language || "en");
+    const language = useSelector((state) => state.auth?.language || "en");
 
     const [timeRange, setTimeRange] = useState("today");
 
