@@ -25,6 +25,7 @@ import AddProduct from "../components/AddProduct.jsx";
 import UpdateProduct from "../components/UpdateProduct.jsx";
 import Categories from "../components/Categories.jsx";
 import SubCategories from "../components/SubCategories.jsx";
+import PageHeading from "@shared/components/PageHeading.jsx";
 
 export default function Products() {
     const { data: userQuery } = useUser();
@@ -56,7 +57,7 @@ export default function Products() {
 
 
     return (
-        <div className="">
+        <div className="h-screen flex flex-col">
 
             {/* Create modal — PaginatedTable se bahar hai, page level par */}
             {isAddOpen && (
@@ -69,19 +70,23 @@ export default function Products() {
             {isSubCategoryOpen && <SubCategories setVisibility={setIsSubCategoryOpen} />}
 
 
-
-            <div className="">
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <button onClick={() => setIsAddOpen(true)} className="btn-add">
-                        {language === "en" ? "+ Add Product" : "+ مصنوعات شامل کریں"}
-                    </button>
-                    <button onClick={() => setIsCategoryOpen(true)} className="btn-add">
-                        {language === "en" ? "Categories" : "زمرہ جات"}
-                    </button>
-                    <button onClick={() => setIsSubCategoryOpen(true)} className="btn-add">
-                        {language === "en" ? "SubCategories" : "زمرہ جات"}
-                    </button>
-                </div>
+            <div className="flex-none">
+                <PageHeading
+                    heading={language === "en" ? "Products" : "مصنوعات"}
+                    subheading={language === "en" ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}
+                >
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button onClick={() => setIsAddOpen(true)} className="btn-add">
+                            {language === "en" ? "+ Add Product" : "+ مصنوعات شامل کریں"}
+                        </button>
+                        <button onClick={() => setIsCategoryOpen(true)} className="btn-add">
+                            {language === "en" ? "Categories" : "زمرہ جات"}
+                        </button>
+                        <button onClick={() => setIsSubCategoryOpen(true)} className="btn-add">
+                            {language === "en" ? "SubCategories" : "زمرہ جات"}
+                        </button>
+                    </div>
+                </PageHeading>
             </div>
 
             {/*
@@ -94,17 +99,18 @@ export default function Products() {
 
                 Baaki sab — pagination, filter, table, modal — khud handle hoga.
             */}
-            <PaginatedTable
-                endpoint="/products/pagination"
-                columns={columns}
-                limit={20}
-                isUpdate={true}
-                isDelete={true}
-                UpdateComp={UpdateProduct}
-                onDelete={(id) => deleteProduct(id)}
-                rtkGetDataQuery={useProducts}
-           
-            />
+            <div className="flex-1 overflow-hidden">
+                <PaginatedTable
+                    endpoint="/products/pagination"
+                    columns={columns}
+                    limit={20}
+                    isUpdate={true}
+                    isDelete={true}
+                    UpdateComp={UpdateProduct}
+                    onDelete={(id) => deleteProduct(id)}
+                    rtkGetDataQuery={useProducts}
+                />
+            </div>
         </div>
     );
 }

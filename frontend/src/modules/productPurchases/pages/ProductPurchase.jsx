@@ -7,6 +7,7 @@ import { useDeletePurchase }              from "../services/purchases.service.js
 import PaginatedList                      from "@shared/components/PaginatedList.jsx";
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
+import PageHeading                        from "@shared/components/PageHeading.jsx";
 
 export default function ProductPurchasePage() {
     const language         = useSelector(s => s.auth?.user?.language ?? "en");
@@ -29,7 +30,7 @@ export default function ProductPurchasePage() {
     };
 
     return (
-        <div>
+        <div className="h-screen flex flex-col">
             {/* ── modals ── */}
             {modal && (
                 <PurchaseModal
@@ -47,16 +48,22 @@ export default function ProductPurchasePage() {
                 />
             )}
 
-            {/* ── toolbar ── */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Purchase" : "خرید شامل کریں"}
-                </button>
-                <button className="btn-add" onClick={() => navigate("/suppliers")}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Suppliers" : "سپلائر"}
-                </button>
+            <div className="flex-none">
+                <PageHeading
+                    heading={language === "en" ? "Purchases" : "خریداری"}
+                    subheading={language === "en" ? "Manage your purchases" : "اپنی خریداری کا انتظام کریں"}
+                >
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
+                            <Plus className="w-4 h-4" />
+                            {language === "en" ? "Add Purchase" : "خرید شامل کریں"}
+                        </button>
+                        <button className="btn-add" onClick={() => navigate("/suppliers")}>
+                            <Plus className="w-4 h-4" />
+                            {language === "en" ? "Suppliers" : "سپلائر"}
+                        </button>
+                    </div>
+                </PageHeading>
             </div>
 
             {/* ── list — refreshKey forces re-mount → new fetch ── */}
@@ -65,7 +72,7 @@ export default function ProductPurchasePage() {
                 endpoint="/purchases/pagination"
                 limit={20}
                 dataKey="data"
-                wrapperClassName="min-h-0"
+                wrapperClassName="flex-1"
                 renderItems={(purchases) => (
                     <div className="overflow-x-auto rounded-2xl overflow-hidden"
                         style={{ border: "1px solid var(--border)" }}>

@@ -5,6 +5,7 @@ import { useSelector }             from "react-redux";
 import { useDeleteSupplier }       from "../services/suppliers.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import SupplierModal               from "../components/SupplierModal.jsx";
+import PageHeading                 from "@shared/components/PageHeading.jsx";
 
 export default function SupplierPage() {
     const language           = useSelector(s => s.auth?.user?.language ?? "en");
@@ -23,7 +24,7 @@ export default function SupplierPage() {
     };
 
     return (
-        <div>
+        <div className="h-screen flex flex-col">
             {modal && (
                 <SupplierModal
                     mode={modal.mode}
@@ -33,11 +34,18 @@ export default function SupplierPage() {
                 />
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Supplier" : "سپلائر شامل کریں"}
-                </button>
+            <div className="flex-none">
+                <PageHeading
+                    heading={language === "en" ? "Suppliers" : "سپلائرز"}
+                    subheading={language === "en" ? "Manage your suppliers" : "اپنے سپلائرز کا انتظام کریں"}
+                >
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
+                            <Plus className="w-4 h-4" />
+                            {language === "en" ? "Add Supplier" : "سپلائر شامل کریں"}
+                        </button>
+                    </div>
+                </PageHeading>
             </div>
 
             <PaginatedList
@@ -45,7 +53,7 @@ export default function SupplierPage() {
                 endpoint="/suppliers/pagination"
                 limit={20}
                 dataKey="data"
-                wrapperClassName="min-h-0"
+                wrapperClassName="flex-1"
                 renderItems={(suppliers) => (
                     <div className="overflow-x-auto rounded-2xl overflow-hidden"
                         style={{ border: "1px solid var(--border)" }}>

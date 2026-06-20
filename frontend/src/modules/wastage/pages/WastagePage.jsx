@@ -5,6 +5,7 @@ import { useSelector }             from "react-redux";
 import { useDeleteWastage }        from "../services/wastage.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import WastageModal                from "../components/WastageModal.jsx";
+import PageHeading                 from "@shared/components/PageHeading.jsx";
 
 const STATUS_STYLE = {
     draft:    { background: "rgba(107,114,128,0.1)", color: "#6b7280"  },
@@ -30,7 +31,7 @@ export default function WastagePage() {
     };
 
     return (
-        <div>
+        <div className="h-screen flex flex-col">
             {modal && (
                 <WastageModal
                     mode={modal.mode}
@@ -40,11 +41,18 @@ export default function WastagePage() {
                 />
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Wastage" : "ضیاع شامل کریں"}
-                </button>
+            <div className="flex-none">
+                <PageHeading
+                    heading={language === "en" ? "Wastage" : "ضیاع"}
+                    subheading={language === "en" ? "Manage wastage records" : "ضیاع ریکارڈز کا انتظام کریں"}
+                >
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
+                            <Plus className="w-4 h-4" />
+                            {language === "en" ? "Add Wastage" : "ضیاع شامل کریں"}
+                        </button>
+                    </div>
+                </PageHeading>
             </div>
 
             <PaginatedList
@@ -52,7 +60,7 @@ export default function WastagePage() {
                 endpoint="/wastages/paginate"
                 limit={20}
                 dataKey="data"
-                wrapperClassName="min-h-0"
+                wrapperClassName="flex-1"
                 renderItems={(wastages) => (
                     <div className="overflow-x-auto rounded-2xl overflow-hidden"
                         style={{ border: "1px solid var(--border)" }}>

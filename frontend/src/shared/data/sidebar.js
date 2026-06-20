@@ -20,7 +20,14 @@ export const sidebarData = (language = "en") => ({
             title: language === "en" ? "Dashboard" : "ڈیش بورڈ",
             url: "/dashboard",
             icon: BarChart3,
-            allowedUrls: ["/dashboard", "/dashboard/analytics", "/dashboard/quick-actions"],
+            allowedUrls: ["/dashboard", "/dashboard/analytics"],
+        },
+        {
+            id: "Quick List",
+            title: language === "en" ? "Quick List" : "فوری لسٹ",
+            url: "/quick-list",
+            icon: Package,
+            allowedUrls: ["/quick-list"],
         },
         {
             id: "Sale",

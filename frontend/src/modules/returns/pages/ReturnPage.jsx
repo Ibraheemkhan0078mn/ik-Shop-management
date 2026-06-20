@@ -5,6 +5,7 @@ import { useSelector }             from "react-redux";
 import { useDeleteReturn }         from "../services/return.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import ReturnModal                 from "../components/ReturnModal.jsx";
+import PageHeading                 from "@shared/components/PageHeading.jsx";
 
 // status badge colors
 const STATUS_STYLE = {
@@ -31,7 +32,7 @@ export default function ReturnPage() {
     };
 
     return (
-        <div>
+        <div className="h-screen flex flex-col">
             {modal && (
                 <ReturnModal
                     mode={modal.mode}
@@ -41,12 +42,18 @@ export default function ReturnPage() {
                 />
             )}
 
-            {/* toolbar */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Return" : "واپسی شامل کریں"}
-                </button>
+            <div className="flex-none">
+                <PageHeading
+                    heading={language === "en" ? "Purchase Return" : "خریداری واپسی"}
+                    subheading={language === "en" ? "Manage purchase returns" : "خریداری واپسی کا انتظام کریں"}
+                >
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
+                            <Plus className="w-4 h-4" />
+                            {language === "en" ? "Add Return" : "واپسی شامل کریں"}
+                        </button>
+                    </div>
+                </PageHeading>
             </div>
 
             <PaginatedList
@@ -54,7 +61,7 @@ export default function ReturnPage() {
                 endpoint="/returns/paginate"
                 limit={20}
                 dataKey="data"
-                wrapperClassName="min-h-0"
+                wrapperClassName="flex-1"
                 renderItems={(returns) => (
                     <div className="overflow-x-auto rounded-2xl overflow-hidden"
                         style={{ border: "1px solid var(--border)" }}>

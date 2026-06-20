@@ -8,6 +8,7 @@ import {
     updateProductReturnData,
     deleteProductReturnData,
     updateReturnStatusData,
+    getPaginatedProductReturnsCont,
 } from "../controllers/productReturn.controller.js";
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.get("/order/:orderNumber", getOrderForReturn);
 // CRUD operations
 router.post("/", createProductReturnData);
 router.get("/", getAllProductReturnsData);
+router.get("/pagination", getPaginatedProductReturnsCont);
 router.get("/:id", getProductReturnData);
 router.put("/:id", updateProductReturnData);
 router.delete("/:id", deleteProductReturnData);

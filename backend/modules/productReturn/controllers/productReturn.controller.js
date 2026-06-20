@@ -9,6 +9,7 @@ import {
     updateProductReturn,
     deleteProductReturn,
     updateReturnStatus,
+    getPaginatedProductReturns,
 } from "../services/productReturn.service.js";
 
 // Generate return number
@@ -50,6 +51,18 @@ export const createProductReturnData = asyncHandler(async (req, res, next) => {
 export const getAllProductReturnsData = asyncHandler(async (req, res, next) => {
     const filters = req.query;
     const result = await getAllProductReturns(filters);
+    
+    res.status(200).json({
+        success: true,
+        message: "Product returns retrieved successfully",
+        ...result,
+    });
+});
+
+// Get paginated product returns
+export const getPaginatedProductReturnsCont = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const result = await getPaginatedProductReturns(filters);
     
     res.status(200).json({
         success: true,

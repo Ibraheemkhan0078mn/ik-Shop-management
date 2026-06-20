@@ -41,7 +41,7 @@ function AppRoutes() {
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/analytics" element={<Analytics />} />
-            <Route path="/dashboard/quick-actions" element={<QuickActions />} />
+            <Route path="/quick-list" element={<QuickActions />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/categories" element={<Categories />} />
             <Route path="/products/sub-categories" element={<SubCategories />} />

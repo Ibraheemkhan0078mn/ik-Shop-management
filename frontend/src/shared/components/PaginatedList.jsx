@@ -117,15 +117,15 @@ const PaginatedList = ({
     const isEmpty = !isLoading && data.length === 0
 
     return (
-        <div className={`flex flex-col min-h-0 ${wrapperClassName}`}>
+        <div className={`flex flex-col h-full ${wrapperClassName}`}>
 
             {/* ── Content area ── */}
             <div className={`flex-1 overflow-y-auto relative ${className}`}>
                 {/* Loading overlay — sits on top of old data so layout doesn't jump */}
                 {isLoading && (
-                    <div className="absolute inset-0 z-10 bg-surface/60 backdrop-blur-[1px] flex items-center justify-center">
-                        <div className="flex items-center gap-3 text-primary bg-surface border border-edge rounded-2xl px-6 py-3 shadow-md">
-                            <div className="w-5 h-5 border-2 border-edge-brand border-t-cyan-600 rounded-full animate-spin" />
+                    <div className="absolute inset-0 z-10 bg-(--surface)/60 backdrop-blur-[1px] flex items-center justify-center">
+                        <div className="flex items-center gap-3 text-(--accent-2) bg-(--surface) border border-(--border) rounded-2xl px-6 py-3 shadow-md">
+                            <div className="w-5 h-5 border-2 border-(--border) border-t-(--accent-2) rounded-full animate-spin" />
                             <span className="text-xs font-black uppercase tracking-widest">Loading…</span>
                         </div>
                     </div>
@@ -195,12 +195,12 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
     const rangeEnd   = Math.min(currentPage * limit, total)
 
     return (
-        <div className="shrink-0 border-t border-edge bg-surface px-6 py-3 flex items-center justify-between gap-4">
+        <div className="shrink-0 border-t border-(--border) bg-(--surface) px-6 py-3 flex items-center justify-between gap-4">
 
             {/* Left: record range */}
-            <span className="text-[11px] font-black text-ink-subtle uppercase tracking-widest whitespace-nowrap">
+            <span className="text-[11px] font-black text-(--muted) uppercase tracking-widest whitespace-nowrap">
                 {total > 0
-                    ? <>{rangeStart}–{rangeEnd} <span className="text-ink-subtle/60">of</span> {total}</>
+                    ? <>{rangeStart}–{rangeEnd} <span className="text-(--muted)/60">of</span> {total}</>
                     : "No records"
                 }
             </span>
@@ -211,7 +211,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
                 <button
                     onClick={() => onGoToPage(currentPage - 1)}
                     disabled={currentPage <= 1 || isLoading}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-edge bg-surface text-ink-subtle hover:border-edge-brand hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-(--border) bg-(--surface) text-(--muted) hover:border-(--accent-2) hover:text-(--accent-2) disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
                 >
                     <ChevronLeft size={15} />
                 </button>
@@ -226,17 +226,17 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
                         onBlur={commitInput}
                         onKeyDown={handleKeyDown}
                         disabled={isLoading}
-                        className="w-12 h-8 text-center text-sm font-black text-ink bg-surface-muted border-2 border-edge rounded-lg outline-none focus:border-edge-brand transition-all duration-150 disabled:opacity-50"
+                        className="w-12 h-8 text-center text-sm font-black text-(--ink) bg-(--surface-muted) border-2 border-(--border) rounded-lg outline-none focus:border-(--accent-2) transition-all duration-150 disabled:opacity-50"
                     />
-                    <span className="text-[11px] font-black text-ink-subtle uppercase tracking-widest">/</span>
-                    <span className="text-sm font-black text-ink min-w-[1.5rem] text-center">{totalPages}</span>
+                    <span className="text-[11px] font-black text-(--muted) uppercase tracking-widest">/</span>
+                    <span className="text-sm font-black text-(--ink) min-w-[1.5rem] text-center">{totalPages}</span>
                 </div>
 
                 {/* Next */}
                 <button
                     onClick={() => onGoToPage(currentPage + 1)}
                     disabled={currentPage >= totalPages || isLoading}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-edge bg-surface text-ink-subtle hover:border-edge-brand hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-(--border) bg-(--surface) text-(--muted) hover:border-(--accent-2) hover:text-(--accent-2) disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
                 >
                     <ChevronRight size={15} />
                 </button>
@@ -245,8 +245,8 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
             {/* Right: loading indicator */}
             <div className="w-20 flex justify-end">
                 {isLoading
-                    ? <div className="w-4 h-4 border-2 border-edge-brand border-t-cyan-600 rounded-full animate-spin" />
-                    : <span className="text-[11px] font-black text-ink-subtle/50 uppercase tracking-widest">
+                    ? <div className="w-4 h-4 border-2 border-(--accent-2) border-t-(--accent-2) rounded-full animate-spin" />
+                    : <span className="text-[11px] font-black text-(--muted)/50 uppercase tracking-widest">
                         pg {currentPage}
                       </span>
                 }
@@ -256,7 +256,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
 }
 
 const DefaultEmpty = () => (
-    <div className="h-[40vh] w-full flex justify-center items-center text-center text-ink-muted">
+    <div className="h-[40vh] w-full flex justify-center items-center text-center text-(--muted)">
         No records found
     </div>
 )

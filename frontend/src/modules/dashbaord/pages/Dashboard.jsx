@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     TrendingUp,
     DollarSign,
@@ -14,6 +15,7 @@ import {
     Users,
     Truck,
     RefreshCw,
+    Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -73,6 +75,7 @@ function StatCard({ title, value, icon: Icon, change, changeType, color }) {
 }
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Dashboard Summary
@@ -133,13 +136,22 @@ export default function Dashboard() {
                     <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
                     <p className="text-sm text-gray-500">Overview of your business performance</p>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
-                >
-                    <RefreshCw size={16} />
-                    Refresh
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => navigate("/quick-list")}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        <Zap size={16} />
+                        Quick List
+                    </button>
+                    <button
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                    >
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Top Section - 8 Summary Cards */}

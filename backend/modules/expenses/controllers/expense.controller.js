@@ -109,6 +109,64 @@ export const getExpenses = async (req, res) => {
     }
 }
 
+export const getPaginatedExpenses = async (req, res) => {
+    try {
+        let expenseModel = getLocalExpensesModel();
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let skip = (page - 1) * limit;
+        let date = req.query.date || "none";
+        let category = req.query.category || "";
+
+        let query = {};
+        
+        if (category) {
+            query.category = { $regex: category, $options: "i" };
+        }
+
+        let expenses = [];
+        let total = 0;
+
+        if (date == "none") {
+            // Default: createdOn ke basis pe latest first
+            expenses = await expenseModel
+                .find(query)
+                .sort({ date: -1 })
+                .limit(limit)
+                .skip(skip);
+            total = await expenseModel.countDocuments(query);
+        } else {
+            // Month select karne pe: createdOn ke basis pe filter aur sort
+            let dateObj = new Date(date);
+            let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
+
+            query.date = {
+                $gte: startDateFormat,
+                $lte: endDateFormat
+            };
+
+            expenses = await expenseModel
+                .find(query)
+                .sort({ createdOn: -1 }) // Latest first
+                .limit(limit)
+                .skip(skip);
+            total = await expenseModel.countDocuments(query);
+        }
+
+        return res.json({ 
+            success: true, 
+            data: expenses || [],
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting expenses" });
+    }
+}
+
 
 
 

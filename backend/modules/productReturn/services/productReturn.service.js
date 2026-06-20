@@ -68,6 +68,38 @@ const getAllProductReturns = async (filters = {}) => {
     };
 };
 
+// Get paginated product returns (for PaginatedList component)
+const getPaginatedProductReturns = async (filters = {}) => {
+    const { page = 1, limit = 10, status, search } = filters;
+    const query = {};
+    
+    if (status) query.returnStatus = status;
+    if (search) {
+        query.$or = [
+            { returnNumber: { $regex: search, $options: "i" } },
+            { referenceOrderNumber: { $regex: search, $options: "i" } },
+            { customerName: { $regex: search, $options: "i" } },
+        ];
+    }
+    
+    const productReturns = await ProductReturn.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .populate("referenceOrderId")
+        .populate("items.productId");
+    
+    const total = await ProductReturn.countDocuments(query);
+    
+    return {
+        data: productReturns,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+    };
+};
+
 // Get product return by ID
 const getProductReturnById = async (id) => {
     const productReturn = await ProductReturn.findById(id)
@@ -107,6 +139,7 @@ export {
     getOrderByNumber,
     createProductReturn,
     getAllProductReturns,
+    getPaginatedProductReturns,
     getProductReturnById,
     updateProductReturn,
     deleteProductReturn,

@@ -94,6 +94,43 @@ export const getAllQarzaAccount = async (req, res) => {
     }
 }
 
+export const getPaginatedQarzaAccounts = async (req, res) => {
+    try {
+        let QarzaAccountModel = getLocalQarzaAccountModel();
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let skip = (page - 1) * limit;
+        let search = req.query.search || "";
+
+        let query = {};
+        
+        if (search) {
+            query.name = { $regex: search, $options: "i" };
+        }
+
+        let accounts = await QarzaAccountModel
+            .find(query)
+            .populate("payments")
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .skip(skip);
+
+        let total = await QarzaAccountModel.countDocuments(query);
+
+        return res.json({ 
+            success: true, 
+            data: accounts,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting accounts" });
+    }
+}
+
 
 
 
