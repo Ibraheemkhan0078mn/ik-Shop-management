@@ -13,7 +13,6 @@ import {
     Tags,
 } from "lucide-react";
 
-import { PURCHASE_REGISTRY } from "./Purchases/Registry";
 import { Link } from "react-router-dom";
 
 const App = () => {
@@ -39,7 +38,35 @@ const App = () => {
         },
     ];
 
-    const purchaseReportItems = Object.values(PURCHASE_REGISTRY);
+    const purchaseReportItems = [
+        {
+            key: "purchase-summary",
+            module: "purchases",
+            title: {
+                en: "Purchase Summary",
+                ur: "خریداری کا خلاصہ",
+            },
+            description: "Overview of all purchases with totals and statistics",
+        },
+        {
+            key: "purchase-by-supplier",
+            module: "purchases",
+            title: {
+                en: "Purchase by Supplier",
+                ur: "سپلائر کے لحاظ سے خریداری",
+            },
+            description: "Purchase breakdown by supplier",
+        },
+        {
+            key: "purchase-by-category",
+            module: "purchases",
+            title: {
+                en: "Purchase by Category",
+                ur: "زمرہ کے لحاظ سے خریداری",
+            },
+            description: "Purchase breakdown by product category",
+        },
+    ];
 
     return (
         <div

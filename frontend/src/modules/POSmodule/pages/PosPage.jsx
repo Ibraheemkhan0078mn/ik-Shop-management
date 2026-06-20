@@ -410,7 +410,13 @@ export default function PosPage() {
         if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
         try {
+            console.log("Starting checkout process...");
+            
+            // Generate order number
+            console.log("Generating order number...");
             const { data } = await api.get("/orders/generate-number");
+            console.log("Order number generated:", data.orderNumber);
+            
             const discountAmt = Math.max(0, Number(orderDiscount) || 0);
             const total = Math.max(0, subtotal - discountAmt);
             const change = Math.max(0, (Number(cashReceived) || 0) - total);
@@ -445,6 +451,7 @@ export default function PosPage() {
             };
 
             console.log("Creating order with body:", orderBody);
+            console.log("Calling addOrderMutation...");
             const res = await addOrderMutation.mutateAsync(orderBody);
             console.log("Order created successfully:", res);
 
@@ -472,9 +479,11 @@ export default function PosPage() {
             setShowPaymentModal(false);
             refetchQarza();
             refetchProducts();
+            showSuccess(language === "en" ? "Order completed successfully!" : "آرڈر مکمل ہو گیا!");
         } catch (err) {
             console.error("Checkout error:", err);
-            showError(err?.message || "Failed to create order.");
+            console.error("Error details:", err?.response?.data || err?.message);
+            showError(err?.response?.data?.message || err?.message || "Failed to create order.");
         }
     };
 

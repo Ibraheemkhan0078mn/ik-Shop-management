@@ -12,7 +12,6 @@ import {
     Calculator,
     Percent,
 } from "lucide-react";
-import { PNL_REGISTRY } from "./Registry";
 import { Link } from "react-router-dom";
 
 const App = () => {
@@ -38,8 +37,35 @@ const App = () => {
         },
     ];
 
-    // P&L Report Categories
-    const profitLossReportItems = Object.values(PNL_REGISTRY);
+    const profitLossReportItems = [
+        {
+            key: "standard-pl-mtd-ytd",
+            module: "profitLoss",
+            title: {
+                en: "Standard P&L (MTD/YTD)",
+                ur: "معیاری نفع و نقصان",
+            },
+            description: "Standard view comparing month-to-date and year-to-date performance",
+        },
+        {
+            key: "pl-by-category",
+            module: "profitLoss",
+            title: {
+                en: "P&L by Category",
+                ur: "زمرہ کے لحاظ سے نفع و نقصان",
+            },
+            description: "Breakdown of profitability across different product categories",
+        },
+        {
+            key: "pl-by-customer",
+            module: "profitLoss",
+            title: {
+                en: "P&L by Customer",
+                ur: "گاہک کے لحاظ سے نفع و نقصان",
+            },
+            description: "Analysis of profit margins generated from individual clients",
+        },
+    ];
 
     return (
         <div

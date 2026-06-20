@@ -14,7 +14,6 @@ import {
     BarChart3,
     ClipboardCheck,
 } from "lucide-react";
-import { INVENTORY_REGISTRY } from "./Registry";
 import { Link } from "react-router-dom";
 
 const App = () => {
@@ -40,8 +39,35 @@ const App = () => {
         },
     ];
 
-    // Inventory Report Categories
-    const inventoryReportItems = Object.values(INVENTORY_REGISTRY);
+    const inventoryReportItems = [
+        {
+            key: "inventory-summary",
+            module: "inventory",
+            title: {
+                en: "Inventory Summary",
+                ur: "انوینٹری کا خلاصہ",
+            },
+            description: "Overview of all inventory items with stock levels",
+        },
+        {
+            key: "low-stock",
+            module: "inventory",
+            title: {
+                en: "Low Stock Report",
+                ur: "کم اسٹاک رپورٹ",
+            },
+            description: "Products with low stock levels",
+        },
+        {
+            key: "near-expiry",
+            module: "inventory",
+            title: {
+                en: "Near Expiry Report",
+                ur: "قریب ختم رپورٹ",
+            },
+            description: "Products nearing expiration date",
+        },
+    ];
 
     return (
         <div

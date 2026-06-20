@@ -15,7 +15,6 @@ import {
     FileSpreadsheet,
     ArrowRightLeft,
 } from "lucide-react";
-import { FINANCE_REGISTRY } from "./Registry";
 import { Link } from "react-router-dom";
 
 const App = () => {
@@ -41,8 +40,35 @@ const App = () => {
         },
     ];
 
-    // Financial Report Categories (Profit & Loss removed as per user request)
-    const financeReportItems = Object.values(FINANCE_REGISTRY);
+    const financeReportItems = [
+        {
+            key: "financial-summary",
+            module: "finance",
+            title: {
+                en: "Financial Summary",
+                ur: "مالیاتی خلاصہ",
+            },
+            description: "Overview of financial performance and metrics",
+        },
+        {
+            key: "cash-flow",
+            module: "finance",
+            title: {
+                en: "Cash Flow Statement",
+                ur: "نقدی بہاؤ کا بیان",
+            },
+            description: "Analysis of cash inflows and outflows",
+        },
+        {
+            key: "balance-sheet",
+            module: "finance",
+            title: {
+                en: "Balance Sheet",
+                ur: "بیلنس شیٹ",
+            },
+            description: "Assets, liabilities, and equity overview",
+        },
+    ];
 
     return (
         <div

@@ -17,9 +17,9 @@ export const sidebarData = (language = "en") => ({
         {
             id: "Dashboard",
             title: language === "en" ? "Dashboard" : "ڈیش بورڈ",
-            url: "/dashboard/quick-actions",
+            url: "/dashboard",
             icon: BarChart3,
-            allowedUrls: ["/dashboard/analytics", "/dashboard/quick-actions"],
+            allowedUrls: ["/dashboard", "/dashboard/analytics", "/dashboard/quick-actions"],
         },
         {
             id: "Sale",
@@ -30,22 +30,15 @@ export const sidebarData = (language = "en") => ({
         {
             id: "Stock & Expenses",
             title: "Products",
-            url: "/products/",
+            url: "/products",
             icon: Package,
             allowedUrls: [
-                "/products/",
+                "/products",
                 "/products/batches",
                 "/products/categories",
                 "/products/sub-categories",
             ],
         },
-        // {
-        //     id: "Business Expenses",
-        //     title: "Business Expenses",
-        //     url: "/expenses/business",
-        //     icon: DollarSign,
-        //     allowedUrls: ["/expenses/business"],
-        // },
         {
             id: "Purchases",
             title: language === "en" ? "Purchases" : "خریداری",
@@ -77,16 +70,15 @@ export const sidebarData = (language = "en") => ({
         {
             id: "Reports",
             title: "Reports",
-            url: "/reports/sales",
+            url: "/reports",
             icon: TrendingUp,
             allowedUrls: [
+                "/reports",
                 "/reports/sales",
                 "/reports/purchases",
                 "/reports/inventory",
                 "/reports/accounts-and-financials",
                 "/reports/profit-and-loss",
-
-                // details of each modules
                 "/reports/sales/details",
                 "/reports/purchases/details",
                 "/reports/inventory/details",
@@ -94,31 +86,12 @@ export const sidebarData = (language = "en") => ({
                 "/reports/profitLoss/details",
             ],
         },
-        // {
-        //     id: "Accounts",
-        //     title: "Accounts",
-        //     url: "/accounts/customers",
-        //     icon: Wallet,
-        //     allowedUrls: [
-        //         "/accounts/customers",
-        //         "/accounts/staff",
-        //         "/accounts/suppliers",
-        //     ],
-        // },
-
-        // {
-        //     id: "Staff",
-        //     title: language === "en" ? "Staff" : "ملازمین",
-        //     url: "/staff",
-        //     icon: Users,
-        //     allowedUrls: ["/staff"],
-        // },
         {
             id: "Credit & Debits",
             title: language === "en" ? "Credit & Debits" : "کریڈٹ اور ڈیبٹس",
             url: "/qarzaAccount",
             icon: Wallet,
-            allowedUrls: ["/qarzaAccount"],
+            allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"],
         },
         {
             id: "Investors",
@@ -132,7 +105,7 @@ export const sidebarData = (language = "en") => ({
             title: "Members",
             url: "/member",
             icon: Users,
-            allowedUrls: ["/members"],
+            allowedUrls: ["/member", "/members"],
         },
         {
             id: "Expenses",
@@ -140,6 +113,13 @@ export const sidebarData = (language = "en") => ({
             url: "/expenses",
             icon: DollarSign,
             allowedUrls: ["/expenses"],
-        }
+        },
+        {
+            id: "Assets",
+            title: "Assets",
+            url: "/assets",
+            icon: Package,
+            allowedUrls: ["/assets"],
+        },
     ],
 });

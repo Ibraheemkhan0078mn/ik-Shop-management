@@ -61,7 +61,8 @@ export const baseApi = createApi({
         "MemberAttendance",
         "MemberSalaryChange",
         "PartnerInvestment",
-        "ClassPartnership"],
+        "ClassPartnership",
+        "Reports"],
 
     // Endpoints blank — har module injectEndpoints se khud add karega
     endpoints: () => ({}),

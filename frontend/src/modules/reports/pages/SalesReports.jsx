@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { StickyNote, List, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SALES_REGISTRY } from "./Sales/Registry";
 
 const App = () => {
     const [language, setLanguage] = useState("en"); // 'en' or 'ur'
@@ -26,7 +25,35 @@ const App = () => {
         },
     ];
 
-    const salesReportItems = Object.values(SALES_REGISTRY);
+    const salesReportItems = [
+        {
+            key: "sales-summary",
+            module: "sales",
+            title: {
+                en: "Sales Summary",
+                ur: "سیلز کا خلاصہ",
+            },
+            description: "Overview of all sales with totals and statistics",
+        },
+        {
+            key: "sales-by-category",
+            module: "sales",
+            title: {
+                en: "Sales by Category",
+                ur: "زمرہ کے لحاظ سے سیلز",
+            },
+            description: "Sales breakdown by product category",
+        },
+        {
+            key: "sales-by-customer",
+            module: "sales",
+            title: {
+                en: "Sales by Customer",
+                ur: "گاہک کے لحاظ سے سیلز",
+            },
+            description: "Sales breakdown by customer",
+        },
+    ];
 
     return (
         <div
