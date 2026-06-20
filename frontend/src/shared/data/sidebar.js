@@ -10,6 +10,7 @@ import {
     Trash2,
     RotateCcw,
     Truck,
+    ArrowLeftRight,
 } from "lucide-react";
 
 export const sidebarData = (language = "en") => ({
@@ -48,10 +49,17 @@ export const sidebarData = (language = "en") => ({
         },
         {
             id: "Returns",
-            title: language === "en" ? "Returns" : "واپسی",
+            title: language === "en" ? "Purchase Return" : "خریداری واپسی",
             url: "/returns",
             icon: RotateCcw,
             allowedUrls: ["/returns"],
+        },
+        {
+            id: "Product Return",
+            title: language === "en" ? "Product Return" : "پروڈکٹ واپسی",
+            url: "/product-return",
+            icon: ArrowLeftRight,
+            allowedUrls: ["/product-return"],
         },
         {
             id: "Wastage",

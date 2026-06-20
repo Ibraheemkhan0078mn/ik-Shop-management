@@ -15,6 +15,7 @@ import PortionModal from "../components/PortionModal.jsx";
 import SplitBillModal from "../components/SplitBillModal.jsx";
 import FreeFoodModal from "../components/FreeFoodModal.jsx";
 import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
+import ProductReturnModal from "../../productReturn/components/ProductReturnModal.jsx";
 
 import { showError, showSuccess } from "@shared/utilities/toastHelpers.js";
 import { printOrder } from "@shared/utilities/printOrder.js";
@@ -82,6 +83,7 @@ export default function PosPage() {
     const [showFreeFoodModal, setShowFreeFoodModal] = useState(false);
     const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showHeldOrders, setShowHeldOrders] = useState(false);
+    const [showProductReturnModal, setShowProductReturnModal] = useState(false);
 
     // ── Batch modal — which product was clicked ────────────────────────────
     const [batchProduct, setBatchProduct] = useState(null);
@@ -601,6 +603,10 @@ export default function PosPage() {
                             className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg border border-amber-200 hover:bg-amber-200 transition font-medium">
                             Held Orders ({holdOrders.length})
                         </button>
+                        <button onClick={() => setShowProductReturnModal(true)}
+                            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg border border-red-200 hover:bg-red-200 transition font-medium">
+                            Product Return
+                        </button>
                         <button onClick={() => setShowFreeFoodModal(true)}
                             className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg border border-green-200 hover:bg-green-200 transition font-medium">
                             Free Food
@@ -718,6 +724,13 @@ export default function PosPage() {
                         setLocalQarza((prev) => [...prev, newAccount]);
                         refetchQarza();
                     }}
+                />
+            )}
+
+            {showProductReturnModal && (
+                <ProductReturnModal
+                    isOpen={showProductReturnModal}
+                    onClose={() => setShowProductReturnModal(false)}
                 />
             )}
 

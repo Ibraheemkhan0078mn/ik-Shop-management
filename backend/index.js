@@ -27,6 +27,7 @@ import returnRoutes from './modules/returns/routes/return.router.js'
 import purchaseReturnRoutes from './modules/purchaseReturn/routes/purchaseReturn.route.js'
 import inventoryReconciliationRoutes from './modules/inventory/routes/reconciliation.route.js'
 import ReportsRouter from './modules/reports/routes/reports.routes.js'
+import ProductReturnRouter from './modules/productReturn/routes/productReturn.routes.js'
 
 dontenv.config();
 const app = express();
@@ -82,6 +83,7 @@ app.use("/api/returns", returnRoutes)
 app.use("/api/purchase-returns", purchaseReturnRoutes)
 app.use("/api/inventory", inventoryReconciliationRoutes)
 app.use("/api/reports", ReportsRouter)
+app.use("/api/product-returns", ProductReturnRouter)
 
 app.use(errorHandler);
 

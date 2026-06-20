@@ -28,6 +28,7 @@ import InventoryReports from "@modules/reports/pages/InventoryReports.jsx";
 import ProfitLossReports from "@modules/reports/pages/ProfitLossReports.jsx";
 import AccountsReports from "@modules/reports/pages/AccountsReports.jsx";
 import ReportDetailsPage from "@modules/reports/pages/ReportDetailsPage.jsx";
+import ProductReturnList from "@modules/productReturn/pages/ProductReturnList.jsx";
 
 
 function AppRoutes() {
@@ -54,6 +55,7 @@ function AppRoutes() {
             <Route path="/suppliers" element={<SupplierPage />} />
             <Route path="/returns" element={<ReturnPage />} />
             <Route path="/purchase-returns" element={<PurchaseReturnPage />} />
+            <Route path="/product-return" element={<ProductReturnList />} />
             <Route path="/wastage" element={<WastagePage />} />
 
 
