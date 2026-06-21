@@ -42,7 +42,6 @@ export const createProductSchema = yup.object({
     storageCondition:       yup.string().nullable(),
 
     // ─── Medical Info ─────────────────────────────────────────────
-    substitutes:            yup.array().of(yup.string()).default([]),
     drugInteractionWarning: yup.string().nullable(),
 
     // ─── Status ───────────────────────────────────────────────────
@@ -91,7 +90,6 @@ export const updateProductSchema = yup.object({
     storageCondition:       yup.string().nullable(),
 
     // ─── Medical Info ─────────────────────────────────────────────
-    substitutes:            yup.array().of(yup.string()).nullable(),
     drugInteractionWarning: yup.string().nullable(),
 
     // ─── Status ───────────────────────────────────────────────────

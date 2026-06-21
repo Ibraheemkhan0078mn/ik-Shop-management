@@ -1,24 +1,96 @@
 import { useState } from "react";
-import PaginatedTable from "@shared/components/PaginatedTable";
+import { Edit, Trash2 } from "lucide-react";
+import PaginatedList from "@shared/components/PaginatedList";
 import { useDeleteCategoryMutation, useGetCategoriesQuery } from "../services/category.service";
-import AddCategories from "./AddCategories";
-import UpdateCategory from "./UpdateCategory"; // Apna actual path use karo
+import CategoryCRUDModal from "./CategoryCRUDModal";
 
 const Categories = ({ setVisibility }) => {
     const [deleteCategory] = useDeleteCategoryMutation();
-    const [showAdd, setShowAdd] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState("create");
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
     const handleDelete = async (id) => {
         await deleteCategory(id);
     };
 
-    const handleUpdate = (row) => {
-        // update logic ya modal open karo
-    };
+    const renderItems = (items) => {
+        if (!items || items.length === 0) return null;
 
-    const columns = {
-        "Category Name": "name",
-        "Notes": "description",
+        return (
+            <div className="flex flex-col">
+                {/* Header - Desktop */}
+                <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface-muted) rounded-t-xl border-b border-(--border) text-xs font-semibold text-(--muted)">
+                    <div className="col-span-8">Name</div>
+                    <div className="col-span-2">Description</div>
+                    <div className="col-span-2">Actions</div>
+                </div>
+
+                {/* Rows - Desktop */}
+                {items.map((item) => (
+                    <div
+                        key={item._id}
+                        className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface) border-b border-(--border) hover:bg-(--surface-muted) transition-all items-center"
+                    >
+                        <div className="col-span-8">
+                            <h3 className="font-medium text-(--ink) truncate">{item.name}</h3>
+                        </div>
+                        <div className="col-span-2 text-sm text-(--muted) truncate">{item.description || "No description"}</div>
+                        <div className="col-span-2 flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    setSelectedCategoryId(item._id);
+                                    setModalMode("update");
+                                    setIsModalOpen(true);
+                                }}
+                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all"
+                            >
+                                <Edit size={16} />
+                            </button>
+                            <button
+                                onClick={() => handleDelete(item._id)}
+                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+
+                {/* Mobile Card View */}
+                {items.map((item) => (
+                    <div
+                        key={`mobile-${item._id}`}
+                        className="md:hidden bg-(--surface) rounded-xl p-4 border border-(--border) mb-3"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-(--ink) truncate">{item.name}</h3>
+                                <div className="text-sm text-(--muted) mt-1">{item.description || "No description"}</div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-3">
+                                <button
+                                    onClick={() => {
+                                        setSelectedCategoryId(item._id);
+                                        setModalMode("update");
+                                        setIsModalOpen(true);
+                                    }}
+                                    className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all"
+                                >
+                                    <Edit size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(item._id)}
+                                    className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
     };
 
     return (
@@ -26,9 +98,18 @@ const Categories = ({ setVisibility }) => {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
             onClick={() => setVisibility(false)}
         >
-            {/* Add Category Modal */}
-            {showAdd && (
-                <AddCategories setVisibility={setShowAdd} />
+            {/* CRUD Modal */}
+            {isModalOpen && (
+                <CategoryCRUDModal
+                    mode={modalMode}
+                    categoryId={selectedCategoryId}
+                    open={isModalOpen}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setModalMode("create");
+                        setSelectedCategoryId(null);
+                    }}
+                />
             )}
 
             {/* Main Modal */}
@@ -41,7 +122,10 @@ const Categories = ({ setVisibility }) => {
                     <h2 className="text-lg font-semibold text-(--ink)">Categories</h2>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setShowAdd(true)}
+                            onClick={() => {
+                                setModalMode("create");
+                                setIsModalOpen(true);
+                            }}
                             className="btn-add"
                         >
                             + Create Category
@@ -55,18 +139,17 @@ const Categories = ({ setVisibility }) => {
                     </div>
                 </div>
 
-                {/* Table */}
-                <PaginatedTable
-                    endpoint="/categories/getPaginationCategories"
-                    columns={columns}
-                    limit={10}
-                    isUpdate={true}
-                    isDelete={true}
-                    UpdateComp={UpdateCategory}
-                    onDelete={handleDelete}
-                    onUpdate={handleUpdate}
-                    rtkGetDataQuery={useGetCategoriesQuery}
-                />
+                {/* List */}
+                <div className="h-[60vh] overflow-hidden">
+                    <PaginatedList
+                        endpoint="/categories/getPaginationCategories"
+                        limit={10}
+                        dataKey="data"
+                        wrapperClassName="h-full"
+                        renderItems={renderItems}
+                        rtkGetDataQuery={useGetCategoriesQuery}
+                    />
+                </div>
             </div>
         </div>
     );

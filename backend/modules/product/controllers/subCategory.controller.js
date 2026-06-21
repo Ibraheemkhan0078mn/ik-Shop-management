@@ -23,13 +23,12 @@ export const getSubCategories = asyncHandler(async (req, res, next) => {
 export const createSubCategory = asyncHandler(async (req, res, next) => {
     const SubCategoryModel = getLocalSubCategoryModel();
 
-    console.log(req.body)
-    // const validatedData = await createSubCategorySchema.validate(req.body, {
-    //     abortEarly: false,
-    //     stripUnknown: true,
-    // });
+    const validatedData = await createSubCategorySchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+    });
 
-    const { name, category } = req.body;
+    const { name, category } = validatedData;
 
     const subCategoryExists = await SubCategoryModel.findOne({
         name,

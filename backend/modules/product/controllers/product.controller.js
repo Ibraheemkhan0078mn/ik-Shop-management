@@ -26,6 +26,9 @@ import {
     getSubCategoriesById,
     getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 export const getProductsData = asyncHandler(async (req, res, next) => {
     const products = await getProducts();
@@ -65,7 +68,7 @@ export const createProductData = asyncHandler(async (req, res, next) => {
             abortEarly: true,
             stripUnknown: true,
         });
-        const product = await createProduct(validatedData);
+        const product = await createProduct({ ...req.body, image: req.file?.filename });
         res.status(201).json({
             success: true,
             message: "Product created successfully",
@@ -79,7 +82,11 @@ export const createProductData = asyncHandler(async (req, res, next) => {
 export const updateProductData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
-        const product = await updateProduct(id, req.body);
+        const updateData = { ...req.body };
+        if (req.file?.filename) {
+            updateData.image = req.file.filename;
+        }
+        const product = await updateProduct(id, updateData);
         res.status(200).json({
             success: true,
             message: "Product updated successfully",
@@ -245,4 +252,16 @@ export const getSubCategoriesDataByCatagId = asyncHandler(async (req, res, next)
     } catch (error) {
         return next(new ErrorResponse("Subcategory not found", 404));
     }
+});
+
+export const uploadProductImage = asyncHandler(async (req, res, next) => {
+    if (!req.file) {
+        return next(new ErrorResponse("No image file provided", 400));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Image uploaded successfully",
+        filename: req.file.filename,
+    });
 });

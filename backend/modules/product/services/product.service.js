@@ -99,6 +99,7 @@ const createProduct = async (productData) => {
     if (existingProduct) {
         throw new Error("Product with this SKU or Product Code already exists");
     }
+    console.log("The image", productData.image)
     return await createProductService(validatedData);
 };
 

@@ -13,8 +13,10 @@ import {
     getPaginationSubCategoriesData,
     getSubCategoriesDataById,
     getSubCategoriesDataByCatagId,
+    uploadProductImage,
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
+import { upload } from "../../../common/middlewares/multer.middleware.js";
 
 const router = Router();
 
@@ -23,9 +25,10 @@ router.use(protect);
 router.get("/", getProductsData);
 router.get("/pagination", getPaginationProductData);
 router.get("/:id", getProductDataById);
-router.post("/", authorize("admin"), createProductData);
-router.put("/:id", authorize("admin"), updateProductData);
+router.post("/", authorize("admin"), upload.single("image"), createProductData);
+router.put("/:id", authorize("admin"), upload.single("image"), updateProductData);
 router.delete("/:id", authorize("admin"), deleteProductData);
+router.post("/upload-image", upload.single("image"), uploadProductImage);
 
 
 

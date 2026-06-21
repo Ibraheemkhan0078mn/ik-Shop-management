@@ -51,6 +51,16 @@ export const productApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/products/${id}`, method: "DELETE" }),
             invalidatesTags: ["Product"],
         }),
+
+        // Upload image
+        uploadProductImage: build.mutation({
+            query: (formData) => ({
+                url: "/products/upload-image",
+                method: "POST",
+                body: formData,
+                formData: true,
+            }),
+        }),
     }),
 });
 
@@ -60,4 +70,5 @@ export const {
     useCreateProductMutation: useCreateProduct,
     useUpdateProductMutation: useUpdateProduct,
     useDeleteProductMutation: useDeleteProduct,
+    useUploadProductImageMutation: useUploadProductImage,
 } = productApi;

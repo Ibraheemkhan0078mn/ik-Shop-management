@@ -11,8 +11,8 @@ const AttachedButton = ({ btn }) => (
         onClick={btn.onClick}
         disabled={btn.disabled}
         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium
-                   rounded-lg border border-gray-200 bg-white text-gray-700
-                   hover:bg-gray-50 active:scale-95 transition-all cursor-pointer
+                   rounded-lg border border-(--border) bg-(--surface) text-(--ink)
+                   hover:bg-(--surface-muted) active:scale-95 transition-all cursor-pointer
                    shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
     >
         {btn.icon && <span className="w-4 h-4 flex items-center justify-center">{btn.icon}</span>}
@@ -35,7 +35,7 @@ const WithButtons = ({ buttons, children }) => {
 
 // ─── Shared option item style (radio / checkbox) ─────────────
 const OptionItem = ({ type, name, value, checked, label, disabled, onChange }) => (
-    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+    <label className="flex items-center gap-2 text-sm text-(--ink) cursor-pointer select-none">
         <input
             type={type}
             name={name}
@@ -43,7 +43,7 @@ const OptionItem = ({ type, name, value, checked, label, disabled, onChange }) =
             checked={checked}
             disabled={disabled}
             onChange={onChange}
-            className="w-4 h-4 accent-teal-500 cursor-pointer shrink-0"
+            className="w-4 h-4 accent-(--accent-2) cursor-pointer shrink-0"
         />
         {label}
     </label>
@@ -64,28 +64,28 @@ const UploadBox = ({ field, val, update }) => {
                 onClick={() => ref.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); pick(Array.from(e.dataTransfer.files)); }}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center
-                           cursor-pointer bg-gray-50 hover:border-teal-400 hover:bg-teal-50 transition-colors"
+                className="border-2 border-dashed border-(--border) rounded-xl p-5 text-center
+                           cursor-pointer bg-(--surface-muted) hover:border-(--accent-2) hover:bg-(--surface) transition-colors"
             >
                 {isImage ? (
-                    <svg className="mx-auto text-gray-300 mb-1" width="24" height="24" viewBox="0 0 24 24"
+                    <svg className="mx-auto text-(--muted) mb-1" width="24" height="24" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" strokeWidth="1.5">
                         <rect x="3" y="3" width="18" height="18" rx="2" />
                         <circle cx="8.5" cy="8.5" r="1.5" />
                         <polyline points="21 15 16 10 5 21" />
                     </svg>
                 ) : (
-                    <svg className="mx-auto text-gray-300 mb-1" width="24" height="24" viewBox="0 0 24 24"
+                    <svg className="mx-auto text-(--muted) mb-1" width="24" height="24" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
                             strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 )}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-(--muted)">
                     {field.placeholder || (isImage ? "Image chunein ya drag karein" : "File chunein ya drag karein")}
                 </span>
                 {field.accept && (
-                    <span className="block text-xs text-gray-300 mt-0.5">{field.accept}</span>
+                    <span className="block text-xs text-(--muted)/60 mt-0.5">{field.accept}</span>
                 )}
                 <input
                     ref={ref}
@@ -105,23 +105,23 @@ const UploadBox = ({ field, val, update }) => {
                                 <img
                                     src={URL.createObjectURL(f)}
                                     alt={f.name}
-                                    className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                                    className="w-14 h-14 object-cover rounded-lg border border-(--border)"
                                 />
                                 <button
                                     onClick={() => update(files.filter((_, idx) => idx !== i))}
                                     className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center
-                                               bg-white border border-gray-200 rounded-full text-gray-400
-                                               hover:text-gray-600 text-xs transition-colors"
+                                               bg-(--surface) border border-(--border) rounded-full text-(--muted)
+                                               hover:text-(--ink) text-xs transition-colors"
                                 >✕</button>
                             </div>
                         ) : (
                             <div key={i}
-                                className="flex items-center gap-1.5 text-xs bg-gray-100 border
-                                           border-gray-200 rounded-md px-2 py-1 text-gray-600">
+                                className="flex items-center gap-1.5 text-xs bg-(--surface-muted) border
+                                           border-(--border) rounded-md px-2 py-1 text-(--ink)">
                                 {f.name}
                                 <button
                                     onClick={() => update(files.filter((_, idx) => idx !== i))}
-                                    className="text-gray-300 hover:text-gray-500 transition-colors"
+                                    className="text-(--muted) hover:text-(--ink) transition-colors"
                                 >✕</button>
                             </div>
                         )
@@ -153,7 +153,7 @@ function Field({ field, formData, setFormData }) {
                         onChange={(e) => update(e.target.value)}
                     />
                 </WithButtons>
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -170,7 +170,7 @@ function Field({ field, formData, setFormData }) {
                         onChange={update}
                     />
                 </WithButtons>
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -197,7 +197,7 @@ function Field({ field, formData, setFormData }) {
                         {btns.map((btn, i) => <AttachedButton key={i} btn={btn} />)}
                     </div>
                 )}
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -216,14 +216,14 @@ function Field({ field, formData, setFormData }) {
                             disabled={field.disabled}
                             onChange={(e) => update(e.target.checked)}
                         />
-                        <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-teal-500 transition-colors duration-200" />
-                        <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 peer-checked:translate-x-4" />
+                        <div className="w-10 h-6 bg-(--surface-muted) rounded-full peer-checked:bg-(--accent-2) transition-colors duration-200" />
+                        <div className="absolute top-1 left-1 w-4 h-4 bg-(--surface) rounded-full shadow transition-transform duration-200 peer-checked:translate-x-4" />
                     </div>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-(--ink)">
                         {val ? (field.onLabel || "Yes") : (field.offLabel || "No")}
                     </span>
                 </label>
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -244,7 +244,7 @@ function Field({ field, formData, setFormData }) {
                         onChange={(e) => update(e.target.value)}
                     />
                 </WithButtons>
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -258,7 +258,7 @@ function Field({ field, formData, setFormData }) {
                         {btns.map((btn, i) => <AttachedButton key={i} btn={btn} />)}
                     </div>
                 )}
-                {field.hint && <span className="text-xs text-gray-400">{field.hint}</span>}
+                {field.hint && <span className="text-xs text-(--muted)">{field.hint}</span>}
             </FormField>
         );
     }
@@ -283,11 +283,11 @@ function FormBody({ config, formData, setFormData, onSubmit }) {
                     if (field.visible === false) return null;
 
                     if (field.type === "divider")
-                        return <hr key={i} className="col-span-full border-gray-100 my-1" />;
+                        return <hr key={i} className="col-span-full border-(--border) my-1" />;
 
                     if (field.type === "section")
                         return (
-                            <p key={i} className="col-span-full text-xs font-semibold text-gray-400 uppercase tracking-widest pt-2">
+                            <p key={i} className="col-span-full text-xs font-semibold text-(--muted) uppercase tracking-widest pt-2">
                                 {field.label}
                             </p>
                         );
@@ -305,7 +305,7 @@ function FormBody({ config, formData, setFormData, onSubmit }) {
                     <button
                         onClick={() => onSubmit?.(formData)}
                         className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium
-                                   rounded-lg bg-gray-900 text-white hover:bg-gray-700
+                                   rounded-lg bg-(--accent-2) text-(--surface) hover:bg-(--accent-2)/80
                                    active:scale-95 transition-all cursor-pointer"
                     >
                         {config.submitLabel || "Submit"} →
@@ -326,13 +326,13 @@ export default function FormLayout({zIndex=50, config, formData, setFormData, on
             onClick={() => setVisibility(false)}
         >
             <div
-                className="rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20 bg-white"
+                className="rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-(--border) bg-(--surface)"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 shrink-0 bg-slate-50/50">
+                <div className="flex items-center justify-between px-8 py-5 border-b border-(--border) shrink-0 bg-(--surface-muted)">
                     {config.title ? (
-                        <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+                        <h2 className="text-xl font-bold text-(--ink) tracking-tight">
                             {config.title}
                         </h2>
                     ) : (
@@ -341,7 +341,7 @@ export default function FormLayout({zIndex=50, config, formData, setFormData, on
                     <button
                         type="button"
                         onClick={() => setVisibility(false)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 transition-colors duration-200"
+                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-(--surface) text-(--muted) transition-colors duration-200"
                     >
                         ✕
                     </button>

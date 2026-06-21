@@ -11,25 +11,20 @@ let appDataDir;
 
 switch (process.platform) {
   case "win32":
-    appDataDir = path.join(homeDir, "AppData", "Local", "SSIB");
+    appDataDir = path.join(homeDir, "AppData", "Local");
     break;
   case "darwin": // macOS
-    appDataDir = path.join(
-      homeDir,
-      "Library",
-      "Application Support",
-      "SSIB"
-    );
+    appDataDir = path.join(homeDir, "Library", "Application Support");
     break;
   case "linux":
-    appDataDir = path.join(homeDir, ".local", "share", "SSIB");
+    appDataDir = path.join(homeDir, ".local", "share");
     break;
   default:
-    appDataDir = path.join(homeDir, "SSIB");
+    appDataDir = homeDir;
 }
 
-// Uploads folder inside app data
-const uploadDir = path.join(appDataDir, "uploads");
+// ik-shop-desktop folder inside app data
+const uploadDir = path.join(appDataDir, "ik-shop-desktop");
 
 // Ensure the folder exists
 fs.mkdirSync(uploadDir, { recursive: true });

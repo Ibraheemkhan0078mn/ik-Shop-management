@@ -150,8 +150,8 @@ const SSelect = ({ options = [], value, onChange, placeholder = "Select..." }) =
 };
 
 // Section card
-const Card = ({ title, icon: Icon, children, className = "" }) => (
-    <div className={`rounded-2xl overflow-hidden ${className}`}
+const Card = ({ title, icon: Icon, children, className = "", noOverflow = false }) => (
+    <div className={`rounded-2xl ${noOverflow ? "" : "overflow-hidden"} ${className}`}
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
         {title && (
             <div className="flex items-center gap-2 px-5 py-3"
@@ -577,7 +577,7 @@ export default function PurchaseModal({ mode = "create", purchaseId, onClose, on
                     <div className="flex-1 space-y-4 min-w-0">
 
                         {/* supplier row */}
-                        <Card>
+                        <Card noOverflow={true}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <Label>{t("Supplier", "سپلائر")} *</Label>
