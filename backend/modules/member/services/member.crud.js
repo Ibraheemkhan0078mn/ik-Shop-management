@@ -1,19 +1,38 @@
 import { getLocalMemberModel } from "../../../configs/connect.db.js";
 
-const MemberModel = getLocalMemberModel();
+const createMemberService = (data) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.create(data);
+};
 
-const create = (data) => MemberModel.create(data);
+const findMemberService = (query = {}) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.find(query);
+};
 
-const find = (query = {}) => MemberModel.find(query);
+const findOneMemberService = (query) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.findOne(query);
+};
 
-const findOne = (query) => MemberModel.findOne(query);
+const findByIdMemberService = (id) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.findById(id);
+};
 
-const findById = (id) => MemberModel.findById(id);
+const updateMemberService = (id, data) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => MemberModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneMemberService = (id) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => MemberModel.findByIdAndDelete(id);
+const countMemberService = (query) => {
+    const MemberModel = getLocalMemberModel();
+    return MemberModel.countDocuments(query);
+};
 
-const count = (query) => MemberModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createMemberService, findMemberService, findOneMemberService, findByIdMemberService, updateMemberService, deleteOneMemberService, countMemberService };

@@ -1,48 +1,48 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./qarzaAccount.crud.js";
-import { create as createPayment, find as findPayment, update as updatePayment, deleteOne as deletePayment } from "./qarzaPayment.crud.js";
+import { createQarzaAccountService, findQarzaAccountService, findOneQarzaAccountService, findByIdQarzaAccountService, updateQarzaAccountService, deleteOneQarzaAccountService, countQarzaAccountService } from "./qarzaAccount.crud.js";
+import { createQarzaPaymentService, findQarzaPaymentService, updateQarzaPaymentService, deleteOneQarzaPaymentService } from "./qarzaPayment.crud.js";
 
 const qarzaAccountCreate = async (data) => {
-    return await create(data);
+    return await createQarzaAccountService(data);
 };
 
 const getAllQarzaAccounts = async (query = {}) => {
-    return await find(query).populate("payments").sort({ createdAt: -1 });
+    return await findQarzaAccountService(query).populate("payments").sort({ createdAt: -1 });
 };
 
 const getQarzaAccountById = async (id) => {
-    return await findById(id).populate("payments");
+    return await findByIdQarzaAccountService(id).populate("payments");
 };
 
 const findQarzaAccountById = async (id) => {
-    return await findOne({ _id: id });
+    return await findOneQarzaAccountService({ _id: id });
 };
 
 const qarzaAccountUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateQarzaAccountService(id, data);
 };
 
 const qarzaAccountDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneQarzaAccountService(id);
 };
 
 const countQarzaAccounts = async (query = {}) => {
-    return await count(query);
+    return await countQarzaAccountService(query);
 };
 
 const qarzaPaymentCreate = async (data) => {
-    return await createPayment(data);
+    return await createQarzaPaymentService(data);
 };
 
 const getAllQarzaPayments = async (query = {}) => {
-    return await findPayment(query).sort({ date: -1 });
+    return await findQarzaPaymentService(query).sort({ date: -1 });
 };
 
 const qarzaPaymentUpdate = async (id, data) => {
-    return await updatePayment(id, data);
+    return await updateQarzaPaymentService(id, data);
 };
 
 const qarzaPaymentDelete = async (id) => {
-    return await deletePayment(id);
+    return await deleteOneQarzaPaymentService(id);
 };
 
 export {

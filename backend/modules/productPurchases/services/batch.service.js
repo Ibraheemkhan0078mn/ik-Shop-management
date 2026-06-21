@@ -1,4 +1,4 @@
-import { create, find, findOne, findById, update, deleteOne } from "./batch.crud.js";
+import { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService } from "./batch.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 const getBatches = async (productId = null) => {
@@ -6,14 +6,14 @@ const getBatches = async (productId = null) => {
     if (productId) {
         query.product = productId;
     }
-    return await find(query)
+    return await findBatchService(query)
         .populate("product")
         .populate("supplier")
         .sort({ createdAt: -1 });
 };
 
 const createBatch = async (batchData, ProductModel) => {
-    const existingBatch = await findOne({
+    const existingBatch = await findOneBatchService({
         batchNumber: batchData.batchNumber,
     });
 
@@ -21,7 +21,7 @@ const createBatch = async (batchData, ProductModel) => {
         throw new Error("Batch number already exists");
     }
 
-    const batch = await create(batchData);
+    const batch = await createBatchService(batchData);
 
     await ProductModel.findByIdAndUpdate(batchData.product, {
         $push: { batches: batch._id },
@@ -33,7 +33,7 @@ const createBatch = async (batchData, ProductModel) => {
 };
 
 const updateBatch = async (id, updateData, ProductModel) => {
-    const batch = await findById(id);
+    const batch = await findByIdBatchService(id);
 
     if (!batch) {
         throw new Error("Batch not found");
@@ -43,7 +43,7 @@ const updateBatch = async (id, updateData, ProductModel) => {
         updateData.batchNumber &&
         updateData.batchNumber !== batch.batchNumber
     ) {
-        const batchExists = await findOne({
+        const batchExists = await findOneBatchService({
             batchNumber: updateData.batchNumber,
         });
         if (batchExists) {
@@ -56,11 +56,11 @@ const updateBatch = async (id, updateData, ProductModel) => {
         await handleProductStockQuantity(batch.product, "create", quantityDiff);
     }
 
-    return await update(id, updateData);
+    return await updateBatchService(id, updateData);
 };
 
 const deleteBatch = async (id, ProductModel) => {
-    const batch = await findById(id);
+    const batch = await findByIdBatchService(id);
 
     if (!batch) {
         throw new Error("Batch not found");
@@ -72,7 +72,7 @@ const deleteBatch = async (id, ProductModel) => {
 
     await handleProductStockQuantity(batch.product, "delete", batch.quantity);
 
-    return await deleteOne(id);
+    return await deleteOneBatchService(id);
 };
 
 export { getBatches, createBatch, updateBatch, deleteBatch };

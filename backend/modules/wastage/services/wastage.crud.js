@@ -1,19 +1,38 @@
 import { getLocalWastageModel } from "../../../configs/connect.db.js";
 
-const WastageModel = getLocalWastageModel();
+const createWastageService = (data) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.create(data);
+};
 
-const create = (data) => WastageModel.create(data);
+const findWastageService = (query = {}) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.find(query);
+};
 
-const find = (query = {}) => WastageModel.find(query);
+const findOneWastageService = (query) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.findOne(query);
+};
 
-const findOne = (query) => WastageModel.findOne(query);
+const findByIdWastageService = (id) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.findById(id);
+};
 
-const findById = (id) => WastageModel.findById(id);
+const updateWastageService = (id, data) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => WastageModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneWastageService = (id) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => WastageModel.findByIdAndDelete(id);
+const countWastageService = (query) => {
+    const WastageModel = getLocalWastageModel();
+    return WastageModel.countDocuments(query);
+};
 
-const count = (query) => WastageModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createWastageService, findWastageService, findOneWastageService, findByIdWastageService, updateWastageService, deleteOneWastageService, countWastageService };

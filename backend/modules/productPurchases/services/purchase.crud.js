@@ -1,19 +1,38 @@
 import { getLocalPurchaseModel } from "../../../configs/connect.db.js";
 
-const PurchaseModel = getLocalPurchaseModel();
+const createPurchaseService = (data) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.create(data);
+};
 
-const create = (data) => PurchaseModel.create(data);
+const findPurchaseService = (query = {}) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.find(query);
+};
 
-const find = (query = {}) => PurchaseModel.find(query);
+const findOnePurchaseService = (query) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.findOne(query);
+};
 
-const findOne = (query) => PurchaseModel.findOne(query);
+const findByIdPurchaseService = (id) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.findById(id);
+};
 
-const findById = (id) => PurchaseModel.findById(id);
+const updatePurchaseService = (id, data) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => PurchaseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOnePurchaseService = (id) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => PurchaseModel.findByIdAndDelete(id);
+const countPurchaseService = (query) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    return PurchaseModel.countDocuments(query);
+};
 
-const count = (query) => PurchaseModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService };

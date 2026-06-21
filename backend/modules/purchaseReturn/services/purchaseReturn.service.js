@@ -1,4 +1,4 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./purchaseReturn.crud.js";
+import { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService } from "./purchaseReturn.crud.js";
 import { getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
@@ -13,7 +13,7 @@ const getPurchaseReturns = async (filters = {}) => {
         if (endDate) query.returnDate.$lte = new Date(endDate);
     }
 
-    return await find(query)
+    return await findPurchaseReturnService(query)
         .populate("purchase", "invoiceNumber")
         .populate("supplier", "name")
         .populate("items.product", "name")
@@ -27,7 +27,7 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
     if (status) query.status = status;
     if (supplier) query.supplier = supplier;
 
-    const purchaseReturns = await find(query)
+    const purchaseReturns = await findPurchaseReturnService(query)
         .populate("purchase", "invoiceNumber")
         .populate("supplier", "name")
         .populate("items.product", "name")
@@ -36,7 +36,7 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
         .skip((page - 1) * limit)
         .limit(parseInt(limit));
 
-    const total = await count(query);
+    const total = await countPurchaseReturnService(query);
 
     return {
         data: purchaseReturns,
@@ -48,7 +48,7 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
 };
 
 const getPurchaseReturnById = async (id) => {
-    return await findById(id)
+    return await findByIdPurchaseReturnService(id)
         .populate("purchase")
         .populate("supplier")
         .populate("items.product")
@@ -65,7 +65,7 @@ const createPurchaseReturn = async (data, userId) => {
     const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
     const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
 
-    const countValue = await count(dateRange);
+    const countValue = await countPurchaseReturnService(dateRange);
     const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
     const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
 
@@ -86,7 +86,7 @@ const createPurchaseReturn = async (data, userId) => {
         }
     }
 
-    return await create({
+    return await createPurchaseReturnService({
         ...data,
         purchaseReturnNumber,
         createdBy: userId,
@@ -95,7 +95,7 @@ const createPurchaseReturn = async (data, userId) => {
 
 const updatePurchaseReturn = async (id, data) => {
     const BatchModel = getLocalBatchModel();
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
     }
@@ -117,11 +117,11 @@ const updatePurchaseReturn = async (id, data) => {
         }
     }
 
-    return await update(id, { ...data, updatedAt: new Date() });
+    return await updatePurchaseReturnService(id, { ...data, updatedAt: new Date() });
 };
 
 const deletePurchaseReturn = async (id) => {
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
     }
@@ -130,11 +130,11 @@ const deletePurchaseReturn = async (id) => {
         throw new Error("Only draft purchase returns can be deleted");
     }
 
-    return await deleteOne(id);
+    return await deleteOnePurchaseReturnService(id);
 };
 
 const submitPurchaseReturn = async (id) => {
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
     }
@@ -143,12 +143,12 @@ const submitPurchaseReturn = async (id) => {
         throw new Error("Only draft purchase returns can be submitted for approval");
     }
 
-    return await update(id, { status: "pending" });
+    return await updatePurchaseReturnService(id, { status: "pending" });
 };
 
 const approvePurchaseReturn = async (id, userId) => {
     const BatchModel = getLocalBatchModel();
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
     }
@@ -173,7 +173,7 @@ const approvePurchaseReturn = async (id, userId) => {
         await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
-    return await update(id, {
+    return await updatePurchaseReturnService(id, {
         status: "approved",
         approvedBy: userId,
         approvedAt: new Date(),
@@ -181,7 +181,7 @@ const approvePurchaseReturn = async (id, userId) => {
 };
 
 const rejectPurchaseReturn = async (id, rejectionReason) => {
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
     }
@@ -194,7 +194,7 @@ const rejectPurchaseReturn = async (id, rejectionReason) => {
         throw new Error("Rejection reason is required");
     }
 
-    return await update(id, { status: "rejected", rejectionReason });
+    return await updatePurchaseReturnService(id, { status: "rejected", rejectionReason });
 };
 
 const generatePurchaseReturnNumber = async () => {
@@ -202,7 +202,7 @@ const generatePurchaseReturnNumber = async () => {
     const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
     const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
 
-    const countValue = await count(dateRange);
+    const countValue = await countPurchaseReturnService(dateRange);
     const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
     const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
 

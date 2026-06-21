@@ -69,7 +69,7 @@ export default function ProductPurchasePage() {
             {/* ── list — refreshKey forces re-mount → new fetch ── */}
             <PaginatedList
                 key={refreshKey}
-                endpoint="/api/purchases/pagination"
+                endpoint="/purchases/pagination"
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

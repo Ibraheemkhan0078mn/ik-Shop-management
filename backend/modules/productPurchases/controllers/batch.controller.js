@@ -14,7 +14,7 @@ import {
     deleteBatch,
 } from "../services/batch.service.js";
 
-export const getBatches = asyncHandler(async (req, res, next) => {
+export const getBatchesData = asyncHandler(async (req, res, next) => {
     const { productId } = req.params;
     const batches = await getBatches(productId);
     res.status(200).json({
@@ -24,7 +24,7 @@ export const getBatches = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const createBatch = asyncHandler(async (req, res, next) => {
+export const createBatchData = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
 
     const validatedData = await createBatchSchema.validate(req.body, {
@@ -44,7 +44,7 @@ export const createBatch = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const updateBatch = asyncHandler(async (req, res, next) => {
+export const updateBatchData = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
     const { id } = req.params;
 
@@ -65,7 +65,7 @@ export const updateBatch = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const deleteBatch = asyncHandler(async (req, res, next) => {
+export const deleteBatchData = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
     const { id } = req.params;
 

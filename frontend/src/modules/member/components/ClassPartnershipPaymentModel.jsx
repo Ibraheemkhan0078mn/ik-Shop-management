@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
     useCreateClassPartnershipPaymentMutation,
     useUpdateClassPartnershipPaymentMutation,
-} from '../api/member.rtk.api';
+} from '../member.rtk.api';
 
 export function ClassPartnershipPaymentModel({ classPartnershipId, operation = "create", paymentData = null, setVisibility }) {
     const [amount, setAmount] = useState("");

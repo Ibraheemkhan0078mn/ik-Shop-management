@@ -1,5 +1,5 @@
 ﻿import React, {useState } from "react";
-import { useCreateSalaryPaymentMutation } from "../api/member.rtk.api.js";
+import { useCreateSalaryPaymentMutation } from "../member.rtk.api.js";
 import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 
 

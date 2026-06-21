@@ -1,27 +1,27 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./wastage.crud.js";
+import { createWastageService, findWastageService, findOneWastageService, findByIdWastageService, updateWastageService, deleteOneWastageService, countWastageService } from "./wastage.crud.js";
 
 const wastageCreate = async (data) => {
-    return await create(data);
+    return await createWastageService(data);
 };
 
-const getAllWastages = async (query = {}) => {
-    return await find(query).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email").sort({ createdAt: -1 });
+const getAllWastages = (query = {}) => {
+    return findWastageService(query).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email").sort({ createdAt: -1 });
 };
 
 const getWastageById = async (id) => {
-    return await findById(id).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email");
+    return await findByIdWastageService(id).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email");
 };
 
 const wastageUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateWastageService(id, data);
 };
 
 const wastageDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneWastageService(id);
 };
 
 const countWastages = async (query = {}) => {
-    return await count(query);
+    return await countWastageService(query);
 };
 
 export {

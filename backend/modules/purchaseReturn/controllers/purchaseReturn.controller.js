@@ -15,7 +15,7 @@ import {
 } from "../services/purchaseReturn.service.js";
 
 // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
-export const getPurchaseReturns = asyncHandler(async (req, res, next) => {
+export const getPurchaseReturnsData = asyncHandler(async (req, res, next) => {
     const purchaseReturns = await getPurchaseReturns(req.query);
     res.status(200).json({
         success: true,
@@ -25,7 +25,7 @@ export const getPurchaseReturns = asyncHandler(async (req, res, next) => {
 });
 
 // ─── GET PAGINATED ───────────────────────────────────────────────────────────
-export const getPaginatedPurchaseReturns = asyncHandler(async (req, res, next) => {
+export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res, next) => {
     const result = await getPaginatedPurchaseReturns(req.query);
     res.status(200).json({
         success: true,
@@ -35,7 +35,7 @@ export const getPaginatedPurchaseReturns = asyncHandler(async (req, res, next) =
 });
 
 // ─── GET BY ID ───────────────────────────────────────────────────────────────
-export const getPurchaseReturnById = asyncHandler(async (req, res, next) => {
+export const getPurchaseReturnDataById = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const purchaseReturn = await getPurchaseReturnById(id);
@@ -50,7 +50,7 @@ export const getPurchaseReturnById = asyncHandler(async (req, res, next) => {
 });
 
 // ─── CREATE ─────────────────────────────────────────────────────────────────
-export const createPurchaseReturn = asyncHandler(async (req, res, next) => {
+export const createPurchaseReturnData = asyncHandler(async (req, res, next) => {
     const validatedData = await createPurchaseReturnSchema.validate(req.body, {
         abortEarly: false,
         stripUnknown: true,
@@ -69,7 +69,7 @@ export const createPurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── UPDATE ─────────────────────────────────────────────────────────────────
-export const updatePurchaseReturn = asyncHandler(async (req, res, next) => {
+export const updatePurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const validatedData = await updatePurchaseReturnSchema.validate(req.body, {
         abortEarly: false,
@@ -89,7 +89,7 @@ export const updatePurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── DELETE ─────────────────────────────────────────────────────────────────
-export const deletePurchaseReturn = asyncHandler(async (req, res, next) => {
+export const deletePurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         await deletePurchaseReturn(id);
@@ -104,7 +104,7 @@ export const deletePurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── SUBMIT FOR APPROVAL (draft → pending) ───────────────────────────────────
-export const submitPurchaseReturn = asyncHandler(async (req, res, next) => {
+export const submitPurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const submitted = await submitPurchaseReturn(id);
@@ -119,7 +119,7 @@ export const submitPurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── APPROVE ─────────────────────────────────────────────────────────────────
-export const approvePurchaseReturn = asyncHandler(async (req, res, next) => {
+export const approvePurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const approved = await approvePurchaseReturn(id, req.user._id);
@@ -134,7 +134,7 @@ export const approvePurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── REJECT ─────────────────────────────────────────────────────────────────
-export const rejectPurchaseReturn = asyncHandler(async (req, res, next) => {
+export const rejectPurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const { rejectionReason } = req.body;
     if (!rejectionReason) {
@@ -153,7 +153,7 @@ export const rejectPurchaseReturn = asyncHandler(async (req, res, next) => {
 });
 
 // ─── GENERATE NUMBER ─────────────────────────────────────────────────────────
-export const generatePurchaseReturnNumber = asyncHandler(async (req, res) => {
+export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
     const purchaseReturnNumber = await generatePurchaseReturnNumber();
     res.status(200).json({ success: true, purchaseReturnNumber });
 });

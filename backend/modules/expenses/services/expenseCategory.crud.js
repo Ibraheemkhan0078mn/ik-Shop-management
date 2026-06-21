@@ -1,19 +1,38 @@
 import { getLocalExpenseCategoryModel } from "../../../configs/connect.db.js";
 
-const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+const createExpenseCategoryService = (data) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.create(data);
+};
 
-const create = (data) => ExpenseCategoryModel.create(data);
+const findExpenseCategoryService = (query = {}) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.find(query);
+};
 
-const find = (query = {}) => ExpenseCategoryModel.find(query);
+const findOneExpenseCategoryService = (query) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.findOne(query);
+};
 
-const findOne = (query) => ExpenseCategoryModel.findOne(query);
+const findByIdExpenseCategoryService = (id) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.findById(id);
+};
 
-const findById = (id) => ExpenseCategoryModel.findById(id);
+const updateExpenseCategoryService = (id, data) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => ExpenseCategoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneExpenseCategoryService = (id) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => ExpenseCategoryModel.findByIdAndDelete(id);
+const countExpenseCategoryService = (query) => {
+    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    return ExpenseCategoryModel.countDocuments(query);
+};
 
-const count = (query) => ExpenseCategoryModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createExpenseCategoryService, findExpenseCategoryService, findOneExpenseCategoryService, findByIdExpenseCategoryService, updateExpenseCategoryService, deleteOneExpenseCategoryService, countExpenseCategoryService };

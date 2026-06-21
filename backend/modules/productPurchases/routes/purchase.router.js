@@ -1,12 +1,12 @@
 import { Router } from "express";
 import {
-    getPurchases,
-    createPurchase,
-    getPaginatedPurchases,
-    getPurchaseById,
-    updatePurchase,
-    deletePurchase,
-    getPurchaseByInvoiceNumber,
+    getPurchasesData,
+    createPurchaseData,
+    getPaginatedPurchasesData,
+    getPurchaseDataById,
+    updatePurchaseData,
+    deletePurchaseData,
+    getPurchaseDataByInvoiceNumber,
 } from "../controllers/purchase.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -14,11 +14,11 @@ const router = Router();
  
 router.use(protect);
 
-router.get("/", getPurchases);
-router.get("/getPurchaseById/:id", getPurchaseById);
-router.post("/getPurchaseByInvoiceNumber", getPurchaseByInvoiceNumber);
-router.get("/pagination", getPaginatedPurchases);
-router.post("/", authorize("admin"), createPurchase);
-router.put("/updatePurchase/:id", authorize("admin"), updatePurchase);
-router.delete("/:id", authorize("admin"), deletePurchase);
+router.get("/", getPurchasesData);
+router.get("/getPurchaseById/:id", getPurchaseDataById);
+router.post("/getPurchaseByInvoiceNumber", getPurchaseDataByInvoiceNumber);
+router.get("/pagination", getPaginatedPurchasesData);
+router.post("/", authorize("admin"), createPurchaseData);
+router.put("/updatePurchase/:id", authorize("admin"), updatePurchaseData);
+router.delete("/:id", authorize("admin"), deletePurchaseData);
 export default router;

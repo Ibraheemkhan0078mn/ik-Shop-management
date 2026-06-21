@@ -49,7 +49,7 @@ export default function PurchaseReturnPage() {
 
             <PaginatedList
                 key={refreshKey}
-                endpoint="/api/purchase-returns/paginate"
+                endpoint="/purchase-returns/paginate"
                 limit={20}
                 dataKey="data"
                 wrapperClassName="min-h-0"

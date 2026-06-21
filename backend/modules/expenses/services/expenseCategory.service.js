@@ -1,15 +1,15 @@
-import { create, find, findOne, findById, update, deleteOne } from "./expenseCategory.crud.js";
+import { createExpenseCategoryService, findExpenseCategoryService, findOneExpenseCategoryService, findByIdExpenseCategoryService, updateExpenseCategoryService, deleteOneExpenseCategoryService } from "./expenseCategory.crud.js";
 
 const expenseCatagCreate = async (catagName) => {
-    return await create({ name: catagName });
+    return await createExpenseCategoryService({ name: catagName });
 };
 
 const expenseCatagGetAll = async () => {
-    return await find();
+    return await findExpenseCategoryService();
 };
 
 const expenseCatagDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneExpenseCategoryService(id);
 };
 
 export {

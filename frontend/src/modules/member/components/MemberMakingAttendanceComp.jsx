@@ -10,7 +10,7 @@ import {
     useMarkScannerAttendanceMutation,
     useCreateDayAttendanceMutation,
     useUpdateMemberAttendanceStatusMutation
-} from '../api/member.rtk.api.js'
+} from '../member.rtk.api.js'
 import { toInputDateFormat } from '@shared/utilities/date.utility.js'
 
 export const MemberMakingAttendenceComp = ({ setVisibility }) => {

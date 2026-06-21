@@ -1,19 +1,38 @@
 import { getLocalSupplierModel } from "../../../configs/connect.db.js";
 
-const SupplierModel = getLocalSupplierModel();
+const createSupplierService = (data) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.create(data);
+};
 
-const create = (data) => SupplierModel.create(data);
+const findSupplierService = (query = {}) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.find(query);
+};
 
-const find = (query = {}) => SupplierModel.find(query);
+const findOneSupplierService = (query) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.findOne(query);
+};
 
-const findOne = (query) => SupplierModel.findOne(query);
+const findByIdSupplierService = (id) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.findById(id);
+};
 
-const findById = (id) => SupplierModel.findById(id);
+const updateSupplierService = (id, data) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => SupplierModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneSupplierService = (id) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => SupplierModel.findByIdAndDelete(id);
+const countSupplierService = (query) => {
+    const SupplierModel = getLocalSupplierModel();
+    return SupplierModel.countDocuments(query);
+};
 
-const count = (query) => SupplierModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createSupplierService, findSupplierService, findOneSupplierService, findByIdSupplierService, updateSupplierService, deleteOneSupplierService, countSupplierService };

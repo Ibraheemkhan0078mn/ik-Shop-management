@@ -1,19 +1,38 @@
 import { getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 
-const QarzaPaymentModel = getLocalQarzaPaymentModel();
+const createQarzaPaymentService = (data) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.create(data);
+};
 
-const create = (data) => QarzaPaymentModel.create(data);
+const findQarzaPaymentService = (query = {}) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.find(query);
+};
 
-const find = (query = {}) => QarzaPaymentModel.find(query);
+const findOneQarzaPaymentService = (query) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.findOne(query);
+};
 
-const findOne = (query) => QarzaPaymentModel.findOne(query);
+const findByIdQarzaPaymentService = (id) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.findById(id);
+};
 
-const findById = (id) => QarzaPaymentModel.findById(id);
+const updateQarzaPaymentService = (id, data) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => QarzaPaymentModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneQarzaPaymentService = (id) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => QarzaPaymentModel.findByIdAndDelete(id);
+const countQarzaPaymentService = (query) => {
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    return QarzaPaymentModel.countDocuments(query);
+};
 
-const count = (query) => QarzaPaymentModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createQarzaPaymentService, findQarzaPaymentService, findOneQarzaPaymentService, findByIdQarzaPaymentService, updateQarzaPaymentService, deleteOneQarzaPaymentService, countQarzaPaymentService };

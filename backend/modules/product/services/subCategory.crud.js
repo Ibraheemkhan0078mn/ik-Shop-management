@@ -1,19 +1,38 @@
 import { getLocalSubCategoryModel } from "../../../configs/connect.db.js";
 
-const SubCategoryModel = getLocalSubCategoryModel();
+const create = (data) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.create(data);
+};
 
-const create = (data) => SubCategoryModel.create(data);
+const find = (query = {}) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.find(query);
+};
 
-const find = (query = {}) => SubCategoryModel.find(query);
+const findOne = (query) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.findOne(query);
+};
 
-const findOne = (query) => SubCategoryModel.findOne(query);
+const findById = (id) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.findById(id);
+};
 
-const findById = (id) => SubCategoryModel.findById(id);
+const update = (id, data) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => SubCategoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOne = (id) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => SubCategoryModel.findByIdAndDelete(id);
-
-const count = (query) => SubCategoryModel.countDocuments(query);
+const count = (query) => {
+    const SubCategoryModel = getLocalSubCategoryModel();
+    return SubCategoryModel.countDocuments(query);
+};
 
 export { create, find, findOne, findById, update, deleteOne, count };

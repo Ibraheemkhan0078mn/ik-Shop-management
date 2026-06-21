@@ -1,23 +1,23 @@
-import { create, find, findById, update, deleteOne } from "./holdOrder.crud.js";
+import { createHoldOrderService, findHoldOrderService, findByIdHoldOrderService, updateHoldOrderService, deleteOneHoldOrderService } from "./holdOrder.crud.js";
 
 const holdOrderCreate = async (data) => {
-    return await create(data);
+    return await createHoldOrderService(data);
 };
 
 const getAllHoldOrders = async (query = {}) => {
-    return await find(query).sort({ createdAt: -1 });
+    return await findHoldOrderService(query).sort({ createdAt: -1 });
 };
 
 const getHoldOrderById = async (id) => {
-    return await findById(id);
+    return await findByIdHoldOrderService(id);
 };
 
 const holdOrderUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateHoldOrderService(id, data);
 };
 
 const holdOrderDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneHoldOrderService(id);
 };
 
 export {

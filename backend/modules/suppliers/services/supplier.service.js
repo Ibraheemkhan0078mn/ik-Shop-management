@@ -1,31 +1,31 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./supplier.crud.js";
+import { createSupplierService, findSupplierService, findOneSupplierService, findByIdSupplierService, updateSupplierService, deleteOneSupplierService, countSupplierService } from "./supplier.crud.js";
 
 const supplierCreate = async (data) => {
-    return await create(data);
+    return await createSupplierService(data);
 };
 
 const getAllSuppliers = async (query = {}) => {
-    return await find(query).sort({ createdAt: -1 });
+    return await findSupplierService(query).sort({ createdAt: -1 });
 };
 
 const getSupplierById = async (id) => {
-    return await findById(id);
+    return await findByIdSupplierService(id);
 };
 
 const findSupplierByName = async (name) => {
-    return await findOne({ name });
+    return await findOneSupplierService({ name });
 };
 
 const supplierUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateSupplierService(id, data);
 };
 
 const supplierDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneSupplierService(id);
 };
 
 const countSuppliers = async (query = {}) => {
-    return await count(query);
+    return await countSupplierService(query);
 };
 
 export {

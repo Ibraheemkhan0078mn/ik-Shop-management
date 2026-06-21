@@ -1,27 +1,27 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./inventory.crud.js";
+import { createInventoryService, findInventoryService, findOneInventoryService, findByIdInventoryService, updateInventoryService, deleteOneInventoryService, countInventoryService } from "./inventory.crud.js";
 
 const inventoryCreate = async (data) => {
-    return await create(data);
+    return await createInventoryService(data);
 };
 
 const inventoryUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateInventoryService(id, data);
 };
 
 const inventoryDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneInventoryService(id);
 };
 
 const getAllInventory = async (query = {}) => {
-    return await find(query).populate("addedBy", "name email").sort({ createdAt: -1 });
+    return await findInventoryService(query).populate("addedBy", "name email").sort({ createdAt: -1 });
 };
 
 const getInventoryById = async (id) => {
-    return await findById(id);
+    return await findByIdInventoryService(id);
 };
 
 const countInventory = async (query = {}) => {
-    return await count(query);
+    return await countInventoryService(query);
 };
 
 export {

@@ -5,7 +5,7 @@ import ScreenTabButton from '@shared/components/ScreenTabButton'
 import EachMemberDataComp from '../components/EachMemberDataComp'
 import { MemberMakingAttendenceComp } from '../components/MemberMakingAttendanceComp'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { useGetAllMembersQuery } from '../api/member.rtk.api.js'
+import { useGetAllMembersQuery } from '../member.rtk.api.js'
 import MemberCrudModel from '../components/MemberCrudMode.jsx'
 const AllMembers = () => {
 

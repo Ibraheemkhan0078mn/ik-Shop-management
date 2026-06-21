@@ -64,7 +64,7 @@ const ProductReturnList = () => {
 
             <PaginatedList
                 key={refreshKey}
-                endpoint="/api/product-returns/pagination"
+                endpoint="/product-returns/pagination"
                 limit={10}
                 dataKey="data"
                 wrapperClassName="flex-1"

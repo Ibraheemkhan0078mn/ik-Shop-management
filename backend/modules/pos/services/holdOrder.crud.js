@@ -1,19 +1,38 @@
 import { getLocalHoldOrderModel } from "../../../configs/connect.db.js";
 
-const HoldOrderModel = getLocalHoldOrderModel();
+const createHoldOrderService = (data) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.create(data);
+};
 
-const create = (data) => HoldOrderModel.create(data);
+const findHoldOrderService = (query = {}) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.find(query);
+};
 
-const find = (query = {}) => HoldOrderModel.find(query);
+const findOneHoldOrderService = (query) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.findOne(query);
+};
 
-const findOne = (query) => HoldOrderModel.findOne(query);
+const findByIdHoldOrderService = (id) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.findById(id);
+};
 
-const findById = (id) => HoldOrderModel.findById(id);
+const updateHoldOrderService = (id, data) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => HoldOrderModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneHoldOrderService = (id) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => HoldOrderModel.findByIdAndDelete(id);
+const countHoldOrderService = (query) => {
+    const HoldOrderModel = getLocalHoldOrderModel();
+    return HoldOrderModel.countDocuments(query);
+};
 
-const count = (query) => HoldOrderModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createHoldOrderService, findHoldOrderService, findOneHoldOrderService, findByIdHoldOrderService, updateHoldOrderService, deleteOneHoldOrderService, countHoldOrderService };

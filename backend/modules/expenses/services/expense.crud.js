@@ -1,19 +1,38 @@
 import { getLocalExpensesModel } from "../../../configs/connect.db.js";
 
-const ExpenseModel = getLocalExpensesModel();
+const createExpenseService = (data) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.create(data);
+};
 
-const create = (data) => ExpenseModel.create(data);
+const findExpenseService = (query = {}) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.find(query);
+};
 
-const find = (query = {}) => ExpenseModel.find(query);
+const findOneExpenseService = (query) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.findOne(query);
+};
 
-const findOne = (query) => ExpenseModel.findOne(query);
+const findByIdExpenseService = (id) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.findById(id);
+};
 
-const findById = (id) => ExpenseModel.findById(id);
+const updateExpenseService = (id, data) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => ExpenseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneExpenseService = (id) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => ExpenseModel.findByIdAndDelete(id);
+const countExpenseService = (query) => {
+    const ExpenseModel = getLocalExpensesModel();
+    return ExpenseModel.countDocuments(query);
+};
 
-const count = (query) => ExpenseModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createExpenseService, findExpenseService, findOneExpenseService, findByIdExpenseService, updateExpenseService, deleteOneExpenseService, countExpenseService };

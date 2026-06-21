@@ -1,7 +1,7 @@
 ﻿import React, { useMemo, useState } from 'react';
 import MemberSalaryPaymentCreationComp from './MemberSalaryPaymentCreationComp';
 import MemberFeeDepositsAndDetails from './MemberFeeDepositsAndDetails';
-import { useGetMemberFinanceQuery } from '../api/member.rtk.api.js';
+import { useGetMemberFinanceQuery } from '../member.rtk.api.js';
 import { PermissionGuard } from '@shared/components/PermissionGuard';
 import SalaryHistory from './SalaryChangeRecord';
 import ClassPartnership from './ClassPartnerShip.jsx';

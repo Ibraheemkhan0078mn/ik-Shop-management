@@ -7,41 +7,41 @@ export const expenseApi = baseApi.injectEndpoints({
         // paginated list — /getExpense/:skip/:limit/:date
         getExpenses: build.query({
             query: ({ skip = 0, limit = 20, date = "none" } = {}) => ({
-                url: `/api/expenseRoutes/getExpense/${skip}/${limit}/${date}`,
+                url: `/expenseRoutes/getExpense/${skip}/${limit}/${date}`,
             }),
             transformResponse: (raw) => raw.expenses ?? raw.data ?? [],
             providesTags: ["Expense"],
         }),
 
         createExpense: build.mutation({
-            query: (body) => ({ url: "/api/expenseRoutes/expense", method: "POST", body }),
+            query: (body) => ({ url: "/expenseRoutes/expense", method: "POST", body }),
             invalidatesTags: ["Expense"],
         }),
 
         updateExpense: build.mutation({
-            query: (body) => ({ url: "/api/expenseRoutes/expense", method: "PUT", body }),
+            query: (body) => ({ url: "/expenseRoutes/expense", method: "PUT", body }),
             invalidatesTags: ["Expense"],
         }),
 
         deleteExpense: build.mutation({
-            query: (id) => ({ url: "/api/expenseRoutes/expense", method: "DELETE", body: { _id: id } }),
+            query: (id) => ({ url: "/expenseRoutes/expense", method: "DELETE", body: { _id: id } }),
             invalidatesTags: ["Expense"],
         }),
 
         // categories
         getExpenseCategories: build.query({
-            query: () => ({ url: "/api/expenseRoutes/expenseCatagGetAll" }),
+            query: () => ({ url: "/expenseRoutes/expenseCatagGetAll" }),
             transformResponse: (raw) => raw.expenseCatags ?? raw.data ?? [],
             providesTags: ["ExpenseCategory"],
         }),
 
         createExpenseCategory: build.mutation({
-            query: (catagName) => ({ url: "/api/expenseRoutes/expenseCatagCreate", method: "POST", body: { catagName } }),
+            query: (catagName) => ({ url: "/expenseRoutes/expenseCatagCreate", method: "POST", body: { catagName } }),
             invalidatesTags: ["ExpenseCategory"],
         }),
 
         deleteExpenseCategory: build.mutation({
-            query: (id) => ({ url: `/api/expenseRoutes/expenseCatagDelete/${id}`, method: "DELETE" }),
+            query: (id) => ({ url: `/expenseRoutes/expenseCatagDelete/${id}`, method: "DELETE" }),
             invalidatesTags: ["ExpenseCategory"],
         }),
     }),

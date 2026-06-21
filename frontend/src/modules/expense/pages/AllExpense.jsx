@@ -56,7 +56,7 @@ export default function AllExpense() {
 
             <PaginatedList
                 key={refreshKey}
-                endpoint="/api/expenses/pagination"
+                endpoint="/expenses/pagination"
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

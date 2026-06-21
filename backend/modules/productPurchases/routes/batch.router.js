@@ -1,9 +1,9 @@
 import { Router } from "express";
 import {
-    getBatches,
-    createBatch,
-    updateBatch,
-    deleteBatch,
+    getBatchesData,
+    createBatchData,
+    updateBatchData,
+    deleteBatchData,
 } from "../controllers/batch.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -11,10 +11,10 @@ const router = Router();
 
 router.use(protect);
 
-router.post("/", authorize("admin"), createBatch);
-router.put("/:id", authorize("admin"), updateBatch);
-router.delete("/:id", authorize("admin"), deleteBatch);
-router.get("/:productId", getBatches);
+router.post("/", authorize("admin"), createBatchData);
+router.put("/:id", authorize("admin"), updateBatchData);
+router.delete("/:id", authorize("admin"), deleteBatchData);
+router.get("/:productId", getBatchesData);
 
 
 export default router;

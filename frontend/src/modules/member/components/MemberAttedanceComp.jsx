@@ -1,7 +1,7 @@
 ﻿
 
 import React from 'react'
-import { useGetMemberAttendanceQuery } from '../api/member.rtk.api'
+import { useGetMemberAttendanceQuery } from '../member.rtk.api'
 
 
 

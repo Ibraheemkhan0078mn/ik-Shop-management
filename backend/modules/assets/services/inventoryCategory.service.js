@@ -1,27 +1,27 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./inventoryCategory.crud.js";
+import { createInventoryCategoryService, findInventoryCategoryService, findOneInventoryCategoryService, findByIdInventoryCategoryService, updateInventoryCategoryService, deleteOneInventoryCategoryService, countInventoryCategoryService } from "./inventoryCategory.crud.js";
 
 const inventoryCategoryCreate = async (data) => {
-    return await create(data);
+    return await createInventoryCategoryService(data);
 };
 
 const inventoryCategoryUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateInventoryCategoryService(id, data);
 };
 
 const inventoryCategoryDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneInventoryCategoryService(id);
 };
 
 const getAllInventoryCategories = async (query = {}) => {
-    return await find(query).sort({ createdAt: -1 });
+    return await findInventoryCategoryService(query).sort({ createdAt: -1 });
 };
 
 const getInventoryCategoryById = async (id) => {
-    return await findById(id);
+    return await findByIdInventoryCategoryService(id);
 };
 
 const checkDuplicateCategoryName = async (name) => {
-    return await findOne({ name: { $regex: `^${name.trim()}$`, $options: "i" } });
+    return await findOneInventoryCategoryService({ name: { $regex: `^${name.trim()}$`, $options: "i" } });
 };
 
 export {

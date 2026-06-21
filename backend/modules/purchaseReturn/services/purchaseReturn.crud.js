@@ -1,19 +1,38 @@
 import { getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
 
-const PurchaseReturnModel = getLocalPurchaseReturnModel();
+const createPurchaseReturnService = (data) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.create(data);
+};
 
-const create = (data) => PurchaseReturnModel.create(data);
+const findPurchaseReturnService = (query = {}) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.find(query);
+};
 
-const find = (query = {}) => PurchaseReturnModel.find(query);
+const findOnePurchaseReturnService = (query) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.findOne(query);
+};
 
-const findOne = (query) => PurchaseReturnModel.findOne(query);
+const findByIdPurchaseReturnService = (id) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.findById(id);
+};
 
-const findById = (id) => PurchaseReturnModel.findById(id);
+const updatePurchaseReturnService = (id, data) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => PurchaseReturnModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOnePurchaseReturnService = (id) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => PurchaseReturnModel.findByIdAndDelete(id);
+const countPurchaseReturnService = (query) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    return PurchaseReturnModel.countDocuments(query);
+};
 
-const count = (query) => PurchaseReturnModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService };

@@ -15,7 +15,7 @@ import {
     deletePurchase,
 } from "../services/purchase.service.js";
 
-export const getPurchases = asyncHandler(async (req, res, next) => {
+export const getPurchasesData = asyncHandler(async (req, res, next) => {
     const purchases = await getPurchases();
     res.status(200).json({
         success: true,
@@ -27,7 +27,7 @@ export const getPurchases = asyncHandler(async (req, res, next) => {
 
 
 
-export const getPurchaseById = asyncHandler(async (req, res, next) => {
+export const getPurchaseDataById = asyncHandler(async (req, res, next) => {
     const purchase = await getPurchaseById(req.params.id);
     res.status(200).json({
         success: true,
@@ -38,7 +38,7 @@ export const getPurchaseById = asyncHandler(async (req, res, next) => {
 
 
 
-export const getPurchaseByInvoiceNumber = asyncHandler(async (req, res) => {
+export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
     const { invoiceNumber } = req.body;
     if (!invoiceNumber)
         return res.status(400).json({ success: false, message: "Invoice number is required" });
@@ -52,7 +52,7 @@ export const getPurchaseByInvoiceNumber = asyncHandler(async (req, res) => {
 
 
 
-export const getPaginatedPurchases = asyncHandler(async (req, res) => {
+export const getPaginatedPurchasesData = asyncHandler(async (req, res) => {
     const result = await getPaginatedPurchases(req.query);
     res.status(200).json({
         success: true,
@@ -61,7 +61,7 @@ export const getPaginatedPurchases = asyncHandler(async (req, res) => {
     });
 });
 
-export const createPurchase = asyncHandler(async (req, res, next) => {
+export const createPurchaseData = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
@@ -230,7 +230,7 @@ export const createPurchase = asyncHandler(async (req, res, next) => {
 
 
 
-export const updatePurchase = asyncHandler(async (req, res, next) => {
+export const updatePurchaseData = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
@@ -252,7 +252,7 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
 
 
 
-export const deletePurchase = asyncHandler(async (req, res) => {
+export const deletePurchaseData = asyncHandler(async (req, res) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 

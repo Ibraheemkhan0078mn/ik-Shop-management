@@ -1,19 +1,38 @@
 import { getLocalBatchModel } from "../../../configs/connect.db.js";
 
-const BatchModel = getLocalBatchModel();
+const createBatchService = (data) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.create(data);
+};
 
-const create = (data) => BatchModel.create(data);
+const findBatchService = (query = {}) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.find(query);
+};
 
-const find = (query = {}) => BatchModel.find(query);
+const findOneBatchService = (query) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.findOne(query);
+};
 
-const findOne = (query) => BatchModel.findOne(query);
+const findByIdBatchService = (id) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.findById(id);
+};
 
-const findById = (id) => BatchModel.findById(id);
+const updateBatchService = (id, data) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => BatchModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneBatchService = (id) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => BatchModel.findByIdAndDelete(id);
+const countBatchService = (query) => {
+    const BatchModel = getLocalBatchModel();
+    return BatchModel.countDocuments(query);
+};
 
-const count = (query) => BatchModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, countBatchService };

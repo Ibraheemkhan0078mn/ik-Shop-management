@@ -9,7 +9,7 @@ export const categoryApi = baseApi.injectEndpoints({
         // List — paginated
         getCategories: build.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
-                url: "/api/categories/getPaginationCategories",
+                url: "/categories/getPaginationCategories",
                 params: { page, limit, ...filters },
             }),
             transformResponse: (raw) => { return raw.data },
@@ -18,26 +18,26 @@ export const categoryApi = baseApi.injectEndpoints({
 
         // Single product
         getCategoryById: build.query({
-            query: (id) => ({ url: `/api/categories/getCategoryById/${id}` }),
+            query: (id) => ({ url: `/categories/getCategoryById/${id}` }),
             transformResponse: (raw) => { return raw.data },
             providesTags: (result, error, id) => [{ type: "Category", id }],
         }),
 
         // Create
         createCategory: build.mutation({
-            query: (body) => ({ url: "/api/categories", method: "POST", body }),
+            query: (body) => ({ url: "/categories", method: "POST", body }),
             invalidatesTags: ["Category"],
         }),
 
         // Update
         updateCategory: build.mutation({
-            query: ({ id, ...body }) => ({ url: `/api/categories/${id}`, method: "PUT", body }),
+            query: ({ id, ...body }) => ({ url: `/categories/${id}`, method: "PUT", body }),
             invalidatesTags: (result, error, { id }) => [{ type: "Category", id }, "Category"],
         }),
 
         // Delete
         deleteCategory: build.mutation({
-            query: (id) => ({ url: `/api/categories/${id}`, method: "DELETE" }),
+            query: (id) => ({ url: `/categories/${id}`, method: "DELETE" }),
             invalidatesTags: ["Category"],
         }),
     }),

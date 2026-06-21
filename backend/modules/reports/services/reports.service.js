@@ -792,6 +792,7 @@ export const getActivityReport = async (filters = {}) => {
 export const getTopSellingProducts = async (filters = {}) => {
     const OrderModel = getLocalOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
+    const limitNum = parseInt(limit) || 10;
 
     const matchQuery = { status: "completed" };
     if (fromDate || toDate) {
@@ -820,7 +821,7 @@ export const getTopSellingProducts = async (filters = {}) => {
         },
         { $unwind: "$product" },
         { $sort: { totalRevenue: -1 } },
-        { $limit: limit }
+        { $limit: limitNum }
     ]);
 
     return topProducts;
@@ -830,6 +831,7 @@ export const getTopSellingProducts = async (filters = {}) => {
 export const getTopCustomers = async (filters = {}) => {
     const OrderModel = getLocalOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
+    const limitNum = parseInt(limit) || 10;
 
     const matchQuery = { status: "completed" };
     if (fromDate || toDate) {
@@ -849,7 +851,7 @@ export const getTopCustomers = async (filters = {}) => {
         },
         { $match: { _id: { $ne: "" } } },
         { $sort: { totalSpent: -1 } },
-        { $limit: limit }
+        { $limit: limitNum }
     ]);
 
     return topCustomers;
@@ -860,6 +862,7 @@ export const getLowStockProducts = async (filters = {}) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
     const { limit = 10 } = filters;
+    const limitNum = parseInt(limit) || 10;
 
     const lowStockBatches = await BatchModel.find({
         quantity: { $gt: 0, $lte: 10 },
@@ -867,7 +870,7 @@ export const getLowStockProducts = async (filters = {}) => {
     })
         .populate("product", "name defaultSalePrice")
         .sort({ quantity: 1 })
-        .limit(limit);
+        .limit(limitNum);
 
     return lowStockBatches;
 };
@@ -876,6 +879,7 @@ export const getLowStockProducts = async (filters = {}) => {
 export const getNearExpiryProducts = async (filters = {}) => {
     const BatchModel = getLocalBatchModel();
     const { limit = 10 } = filters;
+    const limitNum = parseInt(limit) || 10;
 
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -887,7 +891,7 @@ export const getNearExpiryProducts = async (filters = {}) => {
     })
         .populate("product", "name defaultSalePrice")
         .sort({ expiryDate: 1 })
-        .limit(limit);
+        .limit(limitNum);
 
     return nearExpiryBatches;
 };

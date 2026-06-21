@@ -3,7 +3,7 @@ import { toInputDateFormat } from '@shared/utilities/date.utility';
 import {
     useCreateClassPartnershipMutation,
     useUpdateClassPartnershipMutation,
-} from '../api/member.rtk.api';
+} from '../member.rtk.api';
 
 // filterActiveClasses: no class module in this project — pass-through
 const filterActiveClasses = (classes) => classes ?? [];

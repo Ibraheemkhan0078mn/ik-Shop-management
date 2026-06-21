@@ -27,7 +27,7 @@ import {
     getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
 
-export const getProducts = asyncHandler(async (req, res, next) => {
+export const getProductsData = asyncHandler(async (req, res, next) => {
     const products = await getProducts();
     res.status(200).json({
         success: true,
@@ -36,7 +36,7 @@ export const getProducts = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const getPaginationProduct = asyncHandler(async (req, res, next) => {
+export const getPaginationProductData = asyncHandler(async (req, res, next) => {
     const result = await getPaginationProduct(req.query);
     res.status(200).json({
         success: true,
@@ -45,7 +45,7 @@ export const getPaginationProduct = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const getProductById = asyncHandler(async (req, res, next) => {
+export const getProductDataById = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const product = await getProductById(id);
@@ -59,7 +59,7 @@ export const getProductById = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const createProduct = asyncHandler(async (req, res, next) => {
+export const createProductData = asyncHandler(async (req, res, next) => {
     try {
         const validatedData = await createProductSchema.validate(req.body, {
             abortEarly: true,
@@ -76,7 +76,7 @@ export const createProduct = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const updateProduct = asyncHandler(async (req, res, next) => {
+export const updateProductData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const product = await updateProduct(id, req.body);
@@ -90,7 +90,7 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const deleteProduct = asyncHandler(async (req, res, next) => {
+export const deleteProductData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         await deleteProduct(id);
@@ -147,7 +147,7 @@ export const deleteProduct = asyncHandler(async (req, res, next) => {
 
 
 
-export const getSubCategories = asyncHandler(async (req, res, next) => {
+export const getSubCategoriesData = asyncHandler(async (req, res, next) => {
     const subcategories = await getSubCategories();
     res.status(200).json({
         success: true,
@@ -159,7 +159,7 @@ export const getSubCategories = asyncHandler(async (req, res, next) => {
 
 
 
-export const getPaginationSubCategories = asyncHandler(async (req, res, next) => {
+export const getPaginationSubCategoriesData = asyncHandler(async (req, res, next) => {
     const result = await getPaginationSubCategories(req.query);
     res.status(200).json({
         success: true,
@@ -170,7 +170,7 @@ export const getPaginationSubCategories = asyncHandler(async (req, res, next) =>
 
 
 
-export const createSubCategory = asyncHandler(async (req, res, next) => {
+export const createSubCategoryData = asyncHandler(async (req, res, next) => {
     try {
         const subcategory = await createSubCategory(req.body);
         res.status(201).json({
@@ -183,7 +183,7 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const updateSubCategory = asyncHandler(async (req, res, next) => {
+export const updateSubCategoryData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const subcategory = await updateSubCategory(id, req.body);
@@ -197,7 +197,7 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const deleteSubCategory = asyncHandler(async (req, res, next) => {
+export const deleteSubCategoryData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         await deleteSubCategory(id);
@@ -211,7 +211,7 @@ export const deleteSubCategory = asyncHandler(async (req, res, next) => {
     }
 });
 
-export const getSubCategoriesById = asyncHandler(async (req, res, next) => {
+export const getSubCategoriesDataById = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const subcategory = await getSubCategoriesById(id);
@@ -233,7 +233,7 @@ export const getSubCategoriesById = asyncHandler(async (req, res, next) => {
 
 
 
-export const getSubCategoriesByCatagId = asyncHandler(async (req, res, next) => {
+export const getSubCategoriesDataByCatagId = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
         const subcategory = await getSubCategoriesByCatagId(id);

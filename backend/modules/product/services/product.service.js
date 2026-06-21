@@ -1,10 +1,10 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./product.crud.js";
+import { createProductService, findProductService, findOneProductService, findByIdProductService, updateProductService, deleteOneProductService, countProductService } from "./product.crud.js";
 import { getLocalBatchModel } from "../../../configs/connect.db.js";
 import { filterEmptyValues } from "../../../common/services/filterEmptyFromObject.js";
 
 const getProducts = async () => {
     const BatchModel = getLocalBatchModel();
-    const products = await find()
+    const products = await findProductService()
         .populate("batches")
         .populate("category")
         .populate("subCategory")
@@ -39,14 +39,14 @@ const getPaginationProduct = async (filters = {}) => {
     const BatchModel = getLocalBatchModel();
     const { page = 1, limit = 20 } = filters;
     const query = {};
-    const products = await find(query)
+    const products = await findProductService(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
         .populate("batches")
         .populate("category")
         .populate("subCategory");
-    const total = await count(query);
+    const total = await countProductService(query);
 
     const productsWithPrice = await Promise.all(
         products.map(async (product) => {
@@ -81,7 +81,7 @@ const getPaginationProduct = async (filters = {}) => {
 };
 
 const getProductById = async (id) => {
-    return await findById(id)
+    return await findByIdProductService(id)
         .populate("category", "name")
         .populate("subCategory", "name")
         .populate("batches");
@@ -90,7 +90,7 @@ const getProductById = async (id) => {
 const createProduct = async (productData) => {
     const validatedData = filterEmptyValues(productData);
     const { hotKeySku, productCode } = validatedData;
-    const existingProduct = await findOne({
+    const existingProduct = await findOneProductService({
         $or: [
             { hotKeySku },
             { productCode: { $ne: null, $eq: productCode } },
@@ -99,11 +99,11 @@ const createProduct = async (productData) => {
     if (existingProduct) {
         throw new Error("Product with this SKU or Product Code already exists");
     }
-    return await create(validatedData);
+    return await createProductService(validatedData);
 };
 
 const updateProduct = async (id, updateData) => {
-    const product = await findById(id);
+    const product = await findByIdProductService(id);
     if (!product) {
         throw new Error("Product not found");
     }
@@ -113,18 +113,18 @@ const updateProduct = async (id, updateData) => {
         if (updateData.productCode) query.$or.push({ productCode: updateData.productCode });
         if (updateData.barcode) query.$or.push({ barcode: updateData.barcode });
         if (query.$or.length > 0) {
-            const duplicateCheck = await findOne(query);
+            const duplicateCheck = await findOneProductService(query);
             if (duplicateCheck) {
                 throw new Error("SKU, Product Code, or Barcode is already in use by another product");
             }
         }
     }
-    return await update(id, { ...updateData, updated: Date.now() });
+    return await updateProductService(id, { ...updateData, updated: Date.now() });
 };
 
 const deleteProduct = async (id) => {
     const BatchModel = getLocalBatchModel();
-    const product = await findById(id);
+    const product = await findByIdProductService(id);
     if (!product) {
         throw new Error("Product not found");
     }
@@ -132,7 +132,7 @@ const deleteProduct = async (id) => {
     if (batches.length > 0) {
         throw new Error("Cannot delete product with existing batches");
     }
-    return await deleteOne(id);
+    return await deleteOneProductService(id);
 };
 
 export { getProducts, getPaginationProduct, getProductById, createProduct, updateProduct, deleteProduct };

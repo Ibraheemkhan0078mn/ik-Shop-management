@@ -1,18 +1,18 @@
 import { Router } from "express";
 import {
-    getProducts,
-    getProductById,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    getPaginationProduct,
-    getSubCategories,
-    createSubCategory,
-    updateSubCategory,
-    deleteSubCategory,
-    getPaginationSubCategories,
-    getSubCategoriesById,
-    getSubCategoriesByCatagId,
+    getProductsData,
+    getProductDataById,
+    createProductData,
+    updateProductData,
+    deleteProductData,
+    getPaginationProductData,
+    getSubCategoriesData,
+    createSubCategoryData,
+    updateSubCategoryData,
+    deleteSubCategoryData,
+    getPaginationSubCategoriesData,
+    getSubCategoriesDataById,
+    getSubCategoriesDataByCatagId,
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -20,24 +20,24 @@ const router = Router();
 
 router.use(protect);
 
-router.get("/", getProducts);
-router.get("/pagination", getPaginationProduct);
-router.get("/:id", getProductById);
-router.post("/", authorize("admin"), createProduct);
-router.put("/:id", authorize("admin"), updateProduct);
-router.delete("/:id", authorize("admin"), deleteProduct);
+router.get("/", getProductsData);
+router.get("/pagination", getPaginationProductData);
+router.get("/:id", getProductDataById);
+router.post("/", authorize("admin"), createProductData);
+router.put("/:id", authorize("admin"), updateProductData);
+router.delete("/:id", authorize("admin"), deleteProductData);
 
 
 
 
 
-router.get("/subCategories", getSubCategories);
-router.post("/subCategories", authorize("admin"), createSubCategory);
-router.get("/subCategories/getPaginationSubCategories", getPaginationSubCategories);
-router.put("/subCategories/:id", updateSubCategory);
-router.delete("/subCategories/:id", authorize("admin"), deleteSubCategory);
-router.get("/subCategories/getSubCategoriesById/:id", getSubCategoriesById);
-router.get("/subCategories/getSubCategoriesByCatagId/:id", getSubCategoriesByCatagId);
+router.get("/subCategories", getSubCategoriesData);
+router.post("/subCategories", authorize("admin"), createSubCategoryData);
+router.get("/subCategories/getPaginationSubCategories", getPaginationSubCategoriesData);
+router.put("/subCategories/:id", updateSubCategoryData);
+router.delete("/subCategories/:id", authorize("admin"), deleteSubCategoryData);
+router.get("/subCategories/getSubCategoriesById/:id", getSubCategoriesDataById);
+router.get("/subCategories/getSubCategoriesByCatagId/:id", getSubCategoriesDataByCatagId);
 
 
 

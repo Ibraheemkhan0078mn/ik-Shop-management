@@ -1,15 +1,15 @@
-import { create, findOne } from "./user.crud.js";
+import { createUserService, findOneUserService } from "./user.crud.js";
 
 const userCreate = async (data) => {
-    return await create(data);
+    return await createUserService(data);
 };
 
 const findUserByEmail = async (email) => {
-    return await findOne({ email });
+    return await findOneUserService({ email });
 };
 
 const findUserById = async (id) => {
-    return await findOne({ _id: id });
+    return await findOneUserService({ _id: id });
 };
 
 export {

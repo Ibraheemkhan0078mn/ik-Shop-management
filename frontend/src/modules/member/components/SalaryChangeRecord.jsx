@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, X, Loader2, AlertCircle
 } from 'lucide-react';
 import SalaryChangeForm from './SalaryChangeForm.jsx';
-import { useDeleteSalaryChangeMutation, useGetSalaryChangeByMemberIdQuery } from '../api/member.rtk.api.js';
+import { useDeleteSalaryChangeMutation, useGetSalaryChangeByMemberIdQuery } from '../member.rtk.api.js';
 
 const SalaryHistory = ({ memberId, onClose, setVisibility }) => {
   let [deleteSalaryChange] = useDeleteSalaryChangeMutation()

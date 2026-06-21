@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react'
-import { useGetMemberByIdQuery } from '../api/member.rtk.api.js';
+import { useGetMemberByIdQuery } from '../member.rtk.api.js';
 import ScreenTabButton from '@shared/components/ScreenTabButton.jsx';
 import { Edit, Edit2 } from 'lucide-react';
 import { PermissionGuard } from '@shared/components/PermissionGuard.jsx';

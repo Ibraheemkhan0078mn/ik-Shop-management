@@ -9,7 +9,7 @@ export const subCategoryApi = baseApi.injectEndpoints({
         // List — paginated
         getSubCategories: build.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
-                url: "/api/products/subCategories/getPaginationSubCategories",
+                url: "/products/subCategories/getPaginationSubCategories",
                 params: { page, limit, ...filters },
             }),
             transformResponse: (r) => r.data,
@@ -18,32 +18,32 @@ export const subCategoryApi = baseApi.injectEndpoints({
 
         // Single product
         getSubCategoryById: build.query({
-            query: (id) => ({ url: `/api/products/subCategories/getSubCategoriesById/${id}` }),
+            query: (id) => ({ url: `/products/subCategories/getSubCategoriesById/${id}` }),
             transformResponse: (raw) => { return raw.data },
             providesTags: (result, error, id) => [{ type: "SubCategory", id }],
         }),
         getSubCategoriesByCatagId: build.query({
             query: (categoryId) => ({
-                url: `/api/products/subCategories/getSubCategoriesByCatagId/${categoryId}`,
+                url: `/products/subCategories/getSubCategoriesByCatagId/${categoryId}`,
             }),
             transformResponse: (raw) => raw.data || [],
             providesTags: (result, error, id) => [{ type: "SubCategory", id }, "SubCategory"],
         }),
         // Create
         createSubCategory: build.mutation({
-            query: (body) => ({ url: "/api/products/subCategories", method: "POST", body }),
+            query: (body) => ({ url: "/products/subCategories", method: "POST", body }),
             invalidatesTags: ["SubCategory"],
         }),
 
         // Update
         updateSubCategory: build.mutation({
-            query: ({ id, ...body }) => ({ url: `/api/products/subCategories/${id}`, method: "PUT", body }),
+            query: ({ id, ...body }) => ({ url: `/products/subCategories/${id}`, method: "PUT", body }),
             invalidatesTags: (result, error, { id }) => [{ type: "SubCategory", id }, "SubCategory", "SubCategoryCategory"],
         }),
 
         // Delete
         deleteSubCategory: build.mutation({
-            query: (id) => ({ url: `/api/products/subCategories/${id}`, method: "DELETE" }),
+            query: (id) => ({ url: `/products/subCategories/${id}`, method: "DELETE" }),
             invalidatesTags: ["SubCategory"],
         }),
     }),

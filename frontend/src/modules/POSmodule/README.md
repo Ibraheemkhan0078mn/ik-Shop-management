@@ -80,7 +80,7 @@ PaymentModal opens with 4 tabs:
 ### 4. Hold Order (optional)
 
 If the cashier needs to pause, they click "Hold Order" in the payment modal.
-- The cart is saved to `/api/hold-orders` in the database
+- The cart is saved to `/hold-orders` in the database
 - The cart is cleared on screen
 - Later: open "Held Orders" panel → click resume → items return to cart
 - The held order stays in DB until the order is successfully completed
@@ -88,8 +88,8 @@ If the cashier needs to pause, they click "Hold Order" in the payment modal.
 ### 5. Complete Payment
 
 Clicking "Complete Payment":
-1. Sends order to `/api/orders` → saved permanently
-2. If the cart was resumed from a hold → deletes that hold from `/api/hold-orders`
+1. Sends order to `/orders` → saved permanently
+2. If the cart was resumed from a hold → deletes that hold from `/hold-orders`
 3. Prints the receipt
 4. Clears the cart
 

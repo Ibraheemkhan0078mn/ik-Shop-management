@@ -1,19 +1,38 @@
 import { getLocalQarzaAccountModel } from "../../../configs/connect.db.js";
 
-const QarzaAccountModel = getLocalQarzaAccountModel();
+const createQarzaAccountService = (data) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.create(data);
+};
 
-const create = (data) => QarzaAccountModel.create(data);
+const findQarzaAccountService = (query = {}) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.find(query);
+};
 
-const find = (query = {}) => QarzaAccountModel.find(query);
+const findOneQarzaAccountService = (query) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.findOne(query);
+};
 
-const findOne = (query) => QarzaAccountModel.findOne(query);
+const findByIdQarzaAccountService = (id) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.findById(id);
+};
 
-const findById = (id) => QarzaAccountModel.findById(id);
+const updateQarzaAccountService = (id, data) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => QarzaAccountModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneQarzaAccountService = (id) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => QarzaAccountModel.findByIdAndDelete(id);
+const countQarzaAccountService = (query) => {
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    return QarzaAccountModel.countDocuments(query);
+};
 
-const count = (query) => QarzaAccountModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createQarzaAccountService, findQarzaAccountService, findOneQarzaAccountService, findByIdQarzaAccountService, updateQarzaAccountService, deleteOneQarzaAccountService, countQarzaAccountService };

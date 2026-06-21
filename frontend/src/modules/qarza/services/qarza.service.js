@@ -6,14 +6,14 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // ── Accounts ─────────────────────────────────────────────
         getQarzaAccounts: build.query({
-            query: () => ({ url: "/api/qarzaRoutes/getqarzaAccount" }),
+            query: () => ({ url: "/qarzaRoutes/getqarzaAccount" }),
             transformResponse: (raw) => raw.accounts ?? raw.data ?? raw,
             providesTags: ["Qarza"],
         }),
 
         createQarzaAccount: build.mutation({
             query: (formData) => ({
-                url: "/api/qarzaRoutes/qarzaAccountCreate",
+                url: "/qarzaRoutes/qarzaAccountCreate",
                 method: "POST",
                 body: formData,
             }),
@@ -22,7 +22,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         updateQarzaAccount: build.mutation({
             query: (formData) => ({
-                url: "/api/qarzaRoutes/qarzaAccountUpdate",
+                url: "/qarzaRoutes/qarzaAccountUpdate",
                 method: "PUT",
                 body: formData,
             }),
@@ -31,7 +31,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         deleteQarzaAccount: build.mutation({
             query: (id) => ({
-                url: "/api/qarzaRoutes/qarzaAccountDelete",
+                url: "/qarzaRoutes/qarzaAccountDelete",
                 method: "DELETE",
                 body: { _id: id },
             }),
@@ -41,7 +41,7 @@ export const qarzaApi = baseApi.injectEndpoints({
         // ── Payments ─────────────────────────────────────────────
         getAccountPayments: build.query({
             query: (qarzaAccountId) => ({
-                url: "/api/qarzaRoutes/getQarzaAccountRelatedPayments",
+                url: "/qarzaRoutes/getQarzaAccountRelatedPayments",
                 method: "POST",
                 body: { qarzaAccountId },
             }),
@@ -51,7 +51,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         createQarzaPayment: build.mutation({
             query: (body) => ({
-                url: "/api/qarzaRoutes/createQarzaPayment",
+                url: "/qarzaRoutes/createQarzaPayment",
                 method: "POST",
                 body,
             }),
@@ -60,7 +60,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         updateQarzaPayment: build.mutation({
             query: (body) => ({
-                url: "/api/qarzaRoutes/updateQarzaPayment",
+                url: "/qarzaRoutes/updateQarzaPayment",
                 method: "PUT",
                 body,
             }),
@@ -69,7 +69,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         deleteQarzaPayment: build.mutation({
             query: ({ paymentId, qarzaAccountId }) => ({
-                url: "/api/qarzaRoutes/deleteQarzaPayment",
+                url: "/qarzaRoutes/deleteQarzaPayment",
                 method: "DELETE",
                 body: { paymentId, qarzaAccountId },
             }),

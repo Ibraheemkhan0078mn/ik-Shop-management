@@ -23,7 +23,7 @@ import ClassPartnership from './ClassPartnerShip.jsx'
 import ConfirmDialog from '@shared/components/ConfirmationDialog.jsx'
 import { PermissionGuard } from '@shared/components/PermissionGuard.jsx'
 
-import { useGetMemberByIdQuery, useDeleteMemberMutation } from '../api/member.rtk.api.js'
+import { useGetMemberByIdQuery, useDeleteMemberMutation } from '../member.rtk.api.js'
 import MemberProfileOverviewComp from './MemberProfileoverviewComp.jsx'
 import MemberAttedanceComp from './MemberAttedanceComp.jsx'
 import MemberCrudModel from './MemberCrudMode.jsx'

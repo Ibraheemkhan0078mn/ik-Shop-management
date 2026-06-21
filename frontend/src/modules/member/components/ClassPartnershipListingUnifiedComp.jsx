@@ -12,7 +12,7 @@ import { Edit2, Trash, ChevronDown, ChevronUp, Plus, Clock } from 'lucide-react'
 import { PermissionGuard } from '@shared/components/PermissionGuard';
 import { ClassPartnershipPaymentModel } from './ClassPartnershipPaymentModel';
 import ClassPartnershipCrudModal from './ClassPartnershipCrudModel';
-import { useDeleteClassPartnershipMutation, useDeleteClassPartnershipPaymentMutation, useGetClassPartnershipsByPartnerIdQuery } from '../api/member.rtk.api';
+import { useDeleteClassPartnershipMutation, useDeleteClassPartnershipPaymentMutation, useGetClassPartnershipsByPartnerIdQuery } from '../member.rtk.api';
 import { toast } from 'sonner';
 
 const ClassPartnershipListingUnifiedComp = ({ memberId, mode = 'active' }) => {

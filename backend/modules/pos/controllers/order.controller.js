@@ -11,7 +11,7 @@ import {
     countOrders as countOrdersService,
 } from "../services/order.service.js";
 import {
-    count as countHoldOrderService,
+    countHoldOrderService,
 } from "../services/holdOrder.crud.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,19 +1,38 @@
 import { getLocalInventoryModel } from "../../../configs/connect.db.js";
 
-const InventoryModel = getLocalInventoryModel();
+const createInventoryService = (data) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.create(data);
+};
 
-const create = (data) => InventoryModel.create(data);
+const findInventoryService = (query = {}) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.find(query);
+};
 
-const find = (query = {}) => InventoryModel.find(query);
+const findOneInventoryService = (query) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.findOne(query);
+};
 
-const findOne = (query) => InventoryModel.findOne(query);
+const findByIdInventoryService = (id) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.findById(id);
+};
 
-const findById = (id) => InventoryModel.findById(id);
+const updateInventoryService = (id, data) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+};
 
-const update = (id, data) => InventoryModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteOneInventoryService = (id) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.findByIdAndDelete(id);
+};
 
-const deleteOne = (id) => InventoryModel.findByIdAndDelete(id);
+const countInventoryService = (query) => {
+    const InventoryModel = getLocalInventoryModel();
+    return InventoryModel.countDocuments(query);
+};
 
-const count = (query) => InventoryModel.countDocuments(query);
-
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createInventoryService, findInventoryService, findOneInventoryService, findByIdInventoryService, updateInventoryService, deleteOneInventoryService, countInventoryService };

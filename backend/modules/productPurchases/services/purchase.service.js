@@ -1,8 +1,8 @@
-import { create, find, findOne, findById, update, deleteOne } from "./purchase.crud.js";
+import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 const getPurchases = async () => {
-    return await find()
+    return await findPurchaseService()
         .populate("supplier", "name")
         .populate({
             path: "items.product",
@@ -16,7 +16,7 @@ const getPurchases = async () => {
 };
 
 const getPurchaseById = async (id) => {
-    return await findById(id)
+    return await findByIdPurchaseService(id)
         .populate("supplier", "name")
         .populate({
             path: "items.product",
@@ -29,7 +29,7 @@ const getPurchaseById = async (id) => {
 };
 
 const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
-    return await findOne({ invoiceNumber })
+    return await findOnePurchaseService({ invoiceNumber })
         .populate("supplier", "name")
         .populate({ path: "items.product", select: "name productCode" })
         .populate({ path: "items.batch", select: "batchNumber expiryDate" });
@@ -38,7 +38,7 @@ const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
 const getPaginatedPurchases = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const query = {};
-    const purchases = await find(query)
+    const purchases = await findPurchaseService(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
@@ -47,7 +47,7 @@ const getPaginatedPurchases = async (filters = {}) => {
             { path: "items.product", select: "name productCode" },
             { path: "items.batch", select: "batchNumber" },
         ]);
-    const total = await require("./purchase.crud.js").count(query);
+    const total = await countPurchaseService(query);
     return {
         data: purchases,
         total,
@@ -112,7 +112,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         });
     }
 
-    return await create({
+    return await createPurchaseService({
         supplier: purchaseData.supplier,
         date: purchaseData.date,
         invoiceNumber: purchaseData.invoiceNumber,
@@ -128,7 +128,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
 };
 
 const updatePurchase = async (id, data, BatchModel, ProductModel) => {
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseService(id);
     if (!existing) {
         throw new Error("Purchase not found");
     }
@@ -180,7 +180,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         });
     }
 
-    return await update(id, {
+    return await updatePurchaseService(id, {
         supplier: data.supplier, date: data.date,
         invoiceNumber: data.invoiceNumber, items: purchaseItems,
         subtotal: data.subtotal, discount: data.discount,
@@ -191,7 +191,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
 };
 
 const deletePurchase = async (id, BatchModel, ProductModel) => {
-    const existing = await findById(id);
+    const existing = await findByIdPurchaseService(id);
     if (!existing) {
         throw new Error("Purchase not found");
     }
@@ -211,7 +211,7 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
         await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
-    return await deleteOne(id);
+    return await deleteOnePurchaseService(id);
 };
 
 export {

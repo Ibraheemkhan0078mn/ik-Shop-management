@@ -1,17 +1,17 @@
 import ProductReturn from "../models/productReturn.model.js";
 
-const create = (data) => ProductReturn.create(data);
+const createProductReturnService = (data) => ProductReturn.create(data);
 
-const find = (query = {}) => ProductReturn.find(query);
+const findProductReturnService = (query = {}) => ProductReturn.find(query);
 
-const findOne = (query) => ProductReturn.findOne(query);
+const findOneProductReturnService = (query) => ProductReturn.findOne(query);
 
-const findById = (id) => ProductReturn.findById(id);
+const findByIdProductReturnService = (id) => ProductReturn.findById(id);
 
-const update = (id, data) => ProductReturn.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const updateProductReturnService = (id, data) => ProductReturn.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 
-const deleteOne = (id) => ProductReturn.findByIdAndDelete(id);
+const deleteOneProductReturnService = (id) => ProductReturn.findByIdAndDelete(id);
 
-const count = (query) => ProductReturn.countDocuments(query);
+const countProductReturnService = (query) => ProductReturn.countDocuments(query);
 
-export { create, find, findOne, findById, update, deleteOne, count };
+export { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService };

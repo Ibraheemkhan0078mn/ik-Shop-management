@@ -1,15 +1,15 @@
-import { create, find, findOne, findById, update, deleteOne, count } from "./expense.crud.js";
+import { createExpenseService, findExpenseService, findOneExpenseService, findByIdExpenseService, updateExpenseService, deleteOneExpenseService, countExpenseService } from "./expense.crud.js";
 import { getCustomStartEndMonthRanges } from "../../../common/services/date.js";
 
 const expenseCreate = async (data) => {
-    return await create(data);
+    return await createExpenseService(data);
 };
 
 const getExpenses = async (skip = 0, limit = 20, date = "none") => {
     let expenses = [];
 
     if (date == "none") {
-        expenses = await find()
+        expenses = await findExpenseService()
             .sort({ date: -1 })
             .limit(limit)
             .skip(skip);
@@ -17,7 +17,7 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
         let dateObj = new Date(date);
         let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
 
-        expenses = await find({
+        expenses = await findExpenseService({
             date: {
                 $gte: startDateFormat,
                 $lte: endDateFormat
@@ -42,11 +42,11 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
     let total = 0;
 
     if (date == "none") {
-        expenses = await find(query)
+        expenses = await findExpenseService(query)
             .sort({ date: -1 })
             .limit(limit)
             .skip((page - 1) * limit);
-        total = await count(query);
+        total = await countExpenseService(query);
     } else {
         let dateObj = new Date(date);
         let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
@@ -56,11 +56,11 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
             $lte: endDateFormat
         };
 
-        expenses = await find(query)
+        expenses = await findExpenseService(query)
             .sort({ createdOn: -1 })
             .limit(limit)
             .skip((page - 1) * limit);
-        total = await count(query);
+        total = await countExpenseService(query);
     }
 
     return {
@@ -73,15 +73,15 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
 };
 
 const expenseUpdate = async (id, data) => {
-    return await update(id, data);
+    return await updateExpenseService(id, data);
 };
 
 const expenseDelete = async (id) => {
-    return await deleteOne(id);
+    return await deleteOneExpenseService(id);
 };
 
 const getCatagBasedExpense = async (catagName) => {
-    return await find({
+    return await findExpenseService({
         category: { $regex: catagName, $options: "i" }
     });
 };
