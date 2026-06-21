@@ -12,6 +12,14 @@ import { ApiError } from '../../../common/services/apiResponses.js';
 import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js';
 import { imageChangeTrackDocsCreation } from '../../../common/ikSync/imageChangeTrackModelCreation.js';
 import { getCustomStartEndMonthRanges } from '../../../common/services/date.js';
+import {
+    memberCreate as memberCreateService,
+    memberUpdate as memberUpdateService,
+    memberDelete as memberDeleteService,
+    getAllMemberData as getAllMemberDataService,
+    getMemberDataOnId as getMemberDataOnIdService,
+    checkDuplicateMemberInstituteId as checkDuplicateMemberInstituteIdService,
+} from '../services/member.service.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const toBool = (val) => val === true || val === 'true';
@@ -39,7 +47,6 @@ const filterFutureMembers = (members) =>
 export const memberCreation = async (req, res) => {
     try {
         const MemberModel = getLocalMemberModel();
-        const AttendanceModel = getLocalMemberAttendanceModel();
 
         const {
             memberId, name, isPartner, partnerType, overallPartnerShareValue, hiringDate,
@@ -54,7 +61,7 @@ export const memberCreation = async (req, res) => {
         const educationDegrees = parseArr(req.body.educationDegrees);
         const givenClasses = parseArr(req.body.givenClasses);
 
-        const createdMember = await MemberModel.create({
+        const memberData = {
             profileImage: filename ?? '',
             instituteId: memberId, name, fatherName, phoneNo: phone, email, address,
             isSalary: toBool(isSalary),
@@ -70,22 +77,9 @@ export const memberCreation = async (req, res) => {
             hiringDate: hiringDate && new Date(hiringDate),
             isActive: toBool(isActive),
             notes, cnic: cnicNo,
-        });
+        };
 
-        // Add to today's attendance if hiring date is in the past
-        if (createdMember && new Date(createdMember.hiringDate) < new Date()) {
-            const { startOfDay, endOfDay } = todayRange();
-            const attendanceDoc = await AttendanceModel.findOne({ date: { $gte: startOfDay, $lte: endOfDay } });
-            if (attendanceDoc) {
-                attendanceDoc.members = [...(attendanceDoc.members || []), {
-                    id: createdMember._id,
-                    instituteId: createdMember.instituteId,
-                    name: createdMember.name,
-                    presenceStatus: 'notFilled',
-                }];
-                await attendanceDoc.save();
-            }
-        }
+        const createdMember = await memberCreateService(memberData);
 
         await changeTrackDocsCreationFunc('create', MemberModel.modelName, createdMember?._id);
         if (filename) await imageChangeTrackDocsCreation('create', MemberModel.modelName, createdMember._id);
@@ -99,7 +93,6 @@ export const memberCreation = async (req, res) => {
 export const memberUpdate = async (req, res) => {
     try {
         const MemberModel = getLocalMemberModel();
-        const AttendanceModel = getLocalMemberAttendanceModel();
 
         const {
             memberDocId, memberId, name, fatherName, phone, isPartner, partnerType,
@@ -118,34 +111,26 @@ export const memberUpdate = async (req, res) => {
         const existingMember = await MemberModel.findOne({ _id: memberDocId });
         if (!existingMember) return res.json({ success: false, msg: 'The member is not found' });
 
-        const updatedMember = await MemberModel.findOneAndUpdate(
-            { _id: memberDocId },
-            {
-                profileImage: memberProfileImage || existingMember.profileImage,
-                instituteId: memberId, name, fatherName, phoneNo: phone, email, address,
-                isSalary: toBool(isSalary),
-                salary: !toBool(isSalary) ? 0 : salary,
-                education, givenClasses,
-                isAbsenceCutEnabled: toBool(isAbsenceCutEnabled),
-                perAttendenceCut, post, skills, languages, experiences, educationDegrees,
-                isPartner: toBool(isPartner),
-                partnerType: isPartner && partnerType,
-                overallPartnerShareValue: (isPartner && partnerType) && overallPartnerShareValue,
-                bankName, accountNumber,
-                hiringDate: new Date(hiringDate),
-                notes, cnic: cnicNo,
-                isActive: toBool(isActive),
-            },
-            { new: true }
-        );
+        const memberData = {
+            profileImage: memberProfileImage || existingMember.profileImage,
+            instituteId: memberId, name, fatherName, phoneNo: phone, email, address,
+            isSalary: toBool(isSalary),
+            salary: !toBool(isSalary) ? 0 : salary,
+            education, givenClasses,
+            isAbsenceCutEnabled: toBool(isAbsenceCutEnabled),
+            perAttendenceCut, post, skills, languages, experiences, educationDegrees,
+            isPartner: toBool(isPartner),
+            partnerType: isPartner && partnerType,
+            overallPartnerShareValue: (isPartner && partnerType) && overallPartnerShareValue,
+            bankName, accountNumber,
+            hiringDate: new Date(hiringDate),
+            notes, cnic: cnicNo,
+            isActive: toBool(isActive),
+        };
+
+        const updatedMember = await memberUpdateService(memberDocId, memberData);
 
         if (!updatedMember) return res.json({ success: false, msg: 'Member is not updated' });
-
-        // Sync name in attendance docs
-        await AttendanceModel.updateMany(
-            { 'members.id': updatedMember._id },
-            { $set: { 'members.$.name': updatedMember.name, 'members.$.instituteId': updatedMember.instituteId } }
-        );
 
         await changeTrackDocsCreationFunc('update', MemberModel.modelName, updatedMember._id);
 
@@ -166,7 +151,7 @@ export const memberDelete = async (req, res) => {
         const { memberDocId } = req.body;
         if (!memberDocId) return res.json({ success: false, msg: 'Member id is not found' });
 
-        await MemberModel.findOneAndDelete({ _id: memberDocId });
+        await memberDeleteService(memberDocId);
         const stillExists = await MemberModel.findOne({ _id: memberDocId });
         if (stillExists) return res.json({ success: false, msg: 'The member is not deleted' });
 
@@ -181,7 +166,7 @@ export const memberDelete = async (req, res) => {
 
 export const getAllMemberData = async (req, res) => {
     try {
-        const allMemberData = await getLocalMemberModel().find().sort({ createdAt: -1 }).lean();
+        const allMemberData = await getAllMemberDataService();
         return res.status(200).json({ success: true, msg: 'Members retrieved successfully', allMemberData });
     } catch (error) {
         return res.status(500).json({ success: false, msg: 'Internal server error', error: error.message });
@@ -191,7 +176,7 @@ export const getAllMemberData = async (req, res) => {
 export const getMemberDataOnId = async (req, res) => {
     try {
         const { memberId } = req.body;
-        const memberdata = await getLocalMemberModel().findOne({ _id: memberId }).lean();
+        const memberdata = await getMemberDataOnIdService(memberId);
         if (!memberdata) return res.json({ success: false, msg: 'No Members are found' });
         return res.json({ success: true, msg: 'Member data found', memberdata });
     } catch (error) {
@@ -202,7 +187,7 @@ export const getMemberDataOnId = async (req, res) => {
 export const checkDublicateMemberInstituteId = async (req, res) => {
     try {
         const { memberId } = req.params;
-        const existing = await getLocalMemberModel().findOne({ instituteId: memberId });
+        const existing = await checkDuplicateMemberInstituteIdService(memberId);
         return res.json({
             success: true,
             duplicate: !!existing,

@@ -7,11 +7,17 @@ import {
     getLocalBatchModel,
 } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
+import {
+    wastageCreate as wastageCreateService,
+    getAllWastages as getAllWastagesService,
+    getWastageById as getWastageByIdService,
+    wastageUpdate as wastageUpdateService,
+    wastageDelete as wastageDeleteService,
+    countWastages as countWastagesService,
+} from "../services/wastage.service.js";
 
 // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
 export const getWastages = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
-
     const { status, reason, startDate, endDate } = req.query;
 
     let query = {};
@@ -23,11 +29,7 @@ export const getWastages = asyncHandler(async (req, res, next) => {
         if (endDate)   query.wastageDate.$lte = new Date(endDate);
     }
 
-    const wastages = await WastageModel.find(query)
-        .populate("items.product")
-        .populate("createdBy", "name email")
-        .populate("approvedBy", "name email")
-        .sort({ createdAt: -1 });
+    const wastages = await getAllWastagesService(query);
 
     res.status(200).json({
         success: true,
@@ -38,8 +40,6 @@ export const getWastages = asyncHandler(async (req, res, next) => {
 
 // ─── GET PAGINATED ───────────────────────────────────────────────────────────
 export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
-
     const { status, reason, startDate, endDate } = req.query;
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 10);
@@ -55,14 +55,8 @@ export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
     }
 
     const [wastages, total] = await Promise.all([
-        WastageModel.find(query)
-            .populate("items.product")
-            // .populate("createdBy", "name email")
-            // .populate("approvedBy", "name email")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        WastageModel.countDocuments(query),
+        getAllWastagesService(query).skip(skip).limit(limit),
+        countWastagesService(query),
     ]);
 
     res.status(200).json({
@@ -78,13 +72,9 @@ export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
 
 // ─── GET SINGLE ──────────────────────────────────────────────────────────────
 export const getWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
     const { id } = req.params;
 
-    const wastage = await WastageModel.findById(id)
-        .populate("items.product")
-        // .populate("createdBy", "name email")
-        // .populate("approvedBy", "name email");
+    const wastage = await getWastageByIdService(id);
 
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
@@ -99,8 +89,6 @@ export const getWastage = asyncHandler(async (req, res, next) => {
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
 export const createWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
-
     const validatedData = await createWastageSchema.validate(req.body, {
         abortEarly: false,
         stripUnknown: true,
@@ -123,10 +111,10 @@ export const createWastage = asyncHandler(async (req, res, next) => {
     validatedData.createdBy       = req.user._id;
 
     // Auto-generate wastage number  e.g. WST-00042
-    const count          = await WastageModel.countDocuments();
+    const count          = await countWastagesService();
     validatedData.wastageNumber = `WST-${String(count + 1).padStart(5, "0")}`;
 
-    const wastage = await WastageModel.create(validatedData);
+    const wastage = await wastageCreateService(validatedData);
 
     res.status(201).json({
         success: true,
@@ -137,10 +125,9 @@ export const createWastage = asyncHandler(async (req, res, next) => {
 
 // ─── UPDATE ──────────────────────────────────────────────────────────────────
 export const updateWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
     const { id } = req.params;
 
-    let wastage = await WastageModel.findById(id);
+    let wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
@@ -174,10 +161,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
 
     validatedData.updatedBy = req.user._id;
 
-    wastage = await WastageModel.findByIdAndUpdate(id, validatedData, {
-        new: true,
-        runValidators: true,
-    });
+    wastage = await wastageUpdateService(id, validatedData);
 
     res.status(200).json({
         success: true,
@@ -188,12 +172,11 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
 
 // ─── APPROVE ─────────────────────────────────────────────────────────────────
 export const approveWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel   = getLocalWastageModel();
     const ProductModel   = getLocalProductModel();
     const BatchModel     = getLocalBatchModel();
     const { id }         = req.params;
 
-    const wastage = await WastageModel.findById(id);
+    const wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
@@ -223,15 +206,11 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
         await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
-    const approved = await WastageModel.findByIdAndUpdate(
-        id,
-        {
-            status:     "approved",
-            approvedBy: req.user._id,
-            approvedAt: new Date(),
-        },
-        { new: true }
-    );
+    const approved = await wastageUpdateService(id, {
+        status:     "approved",
+        approvedBy: req.user._id,
+        approvedAt: new Date(),
+    });
 
     res.status(200).json({
         success: true,
@@ -242,10 +221,9 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
 
 // ─── REJECT ──────────────────────────────────────────────────────────────────
 export const rejectWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
     const { id }       = req.params;
 
-    const wastage = await WastageModel.findById(id);
+    const wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
@@ -259,11 +237,7 @@ export const rejectWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Rejection reason is required", 400));
     }
 
-    const rejected = await WastageModel.findByIdAndUpdate(
-        id,
-        { status: "rejected", rejectionReason },
-        { new: true }
-    );
+    const rejected = await wastageUpdateService(id, { status: "rejected", rejectionReason });
 
     res.status(200).json({
         success: true,
@@ -274,10 +248,9 @@ export const rejectWastage = asyncHandler(async (req, res, next) => {
 
 // ─── SUBMIT FOR APPROVAL (draft → pending) ───────────────────────────────────
 export const submitWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
     const { id }       = req.params;
 
-    const wastage = await WastageModel.findById(id);
+    const wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
@@ -286,11 +259,7 @@ export const submitWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Only draft wastages can be submitted for approval", 400));
     }
 
-    const submitted = await WastageModel.findByIdAndUpdate(
-        id,
-        { status: "pending" },
-        { new: true }
-    );
+    const submitted = await wastageUpdateService(id, { status: "pending" });
 
     res.status(200).json({
         success: true,
@@ -301,10 +270,9 @@ export const submitWastage = asyncHandler(async (req, res, next) => {
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 export const deleteWastage = asyncHandler(async (req, res, next) => {
-    const WastageModel = getLocalWastageModel();
     const { id }       = req.params;
 
-    const wastage = await WastageModel.findById(id);
+    const wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
@@ -314,7 +282,7 @@ export const deleteWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Cannot delete a wastage with status: ${wastage.status}. Only drafts can be deleted.`, 400));
     }
 
-    await wastage.deleteOne();
+    await wastageDeleteService(id);
 
     res.status(200).json({
         success: true,

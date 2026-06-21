@@ -8,273 +8,100 @@ import {
     createSubCategorySchema,
     updateSubCategorySchema,
 } from "../schema/subCategory.schema.js";
-import { getLocalProductModel, getLocalSubCategoryModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
-import { filterEmptyValues } from "../../../common/services/filterEmptyFromObject.js";
+import {
+    getProducts,
+    getPaginationProduct,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+} from "../services/product.service.js";
+import {
+    getSubCategories,
+    getPaginationSubCategories,
+    createSubCategory,
+    updateSubCategory,
+    deleteSubCategory,
+    getSubCategoriesById,
+    getSubCategoriesByCatagId,
+} from "../services/subCategory.service.js";
 
 export const getProducts = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    const BatchModel = getLocalBatchModel();
-
-    const products = await ProductModel.find()
-        .populate("batches")
-        .populate("category")
-        .populate("subCategory")
-        .sort({ createdAt: -1 });
-
-    // Calculate batch-derived selling price for each product
-    const productsWithPrice = await Promise.all(
-        products.map(async (product) => {
-            if (!product.batches || product.batches.length === 0) {
-                return {
-                    ...product.toObject(),
-                    batchSellingPrice: product.defaultSalePrice || 0
-                };
-            }
-
-            // Fetch active batches for this product
-            const activeBatches = await BatchModel.find({
-                product: product._id,
-                quantity: { $gt: 0 },
-                isActive: true
-            });
-
-            if (activeBatches.length === 0) {
-                return {
-                    ...product.toObject(),
-                    batchSellingPrice: product.defaultSalePrice || 0
-                };
-            }
-
-            // Sort by nearest expiry date
-            const sortedBatches = activeBatches
-                .filter(b => b.expiryDate)
-                .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
-            // Use nearest expiry batch price, or newest batch if no expiry dates
-            const selectedBatch = sortedBatches.length > 0
-                ? sortedBatches[0]
-                : activeBatches.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-
-            return {
-                ...product.toObject(),
-                batchSellingPrice: selectedBatch.sellingPrice || product.defaultSalePrice || 0
-            };
-        })
-    );
-
+    const products = await getProducts();
     res.status(200).json({
         success: true,
         message: "Products retrieved successfully",
-        data: productsWithPrice,
+        data: products,
     });
 });
 
-
-
 export const getPaginationProduct = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    const BatchModel = getLocalBatchModel();
-    const { page = 1, limit = 20 } = req.query;
-
-    const result = await paginateModel({
-        model: ProductModel,
-        page,
-        limit,
-        populate: ["batches", "category", "subCategory"],
-        sort: { createdAt: -1 }
-    });
-
-    // Calculate batch-derived selling price for each product
-    const productsWithPrice = await Promise.all(
-        result.data.map(async (product) => {
-            if (!product.batches || product.batches.length === 0) {
-                return {
-                    ...product.toObject(),
-                    batchSellingPrice: product.defaultSalePrice || 0
-                };
-            }
-
-            // Fetch active batches for this product
-            const activeBatches = await BatchModel.find({
-                product: product._id,
-                quantity: { $gt: 0 },
-                isActive: true
-            });
-
-            if (activeBatches.length === 0) {
-                return {
-                    ...product.toObject(),
-                    batchSellingPrice: product.defaultSalePrice || 0
-                };
-            }
-
-            // Sort by nearest expiry date
-            const sortedBatches = activeBatches
-                .filter(b => b.expiryDate)
-                .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
-            // Use nearest expiry batch price, or newest batch if no expiry dates
-            const selectedBatch = sortedBatches.length > 0
-                ? sortedBatches[0]
-                : activeBatches.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-
-            return {
-                ...product.toObject(),
-                batchSellingPrice: selectedBatch.sellingPrice || product.defaultSalePrice || 0
-            };
-        })
-    );
-
+    const result = await getPaginationProduct(req.query);
     res.status(200).json({
         success: true,
         message: "Products retrieved successfully",
-        data: productsWithPrice,
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: result.totalPages
+        ...result
     });
 });
 
 export const getProductById = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
     const { id } = req.params;
-
-    const product = await ProductModel.findById(id)
-        .populate("category", "name")
-        .populate("subCategory", "name")
-        .populate("batches");
-
-    if (!product) {
+    try {
+        const product = await getProductById(id);
+        res.status(200).json({
+            success: true,
+            message: "Product retrieved successfully",
+            data: product,
+        });
+    } catch (error) {
         return next(new ErrorResponse("Product not found", 404));
     }
-
-    res.status(200).json({
-        success: true,
-        message: "Product retrieved successfully",
-        data: product,
-    });
 });
 
 export const createProduct = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    console.log(req.body, "The create product body ")
-
-    let validatedData = await createProductSchema.validate(req.body, {
-        abortEarly: true,
-        stripUnknown: true,
-    });
-
-
-    validatedData = filterEmptyValues(validatedData);
-    const { hotKeySku, productCode, barcode } = validatedData;
-
-    const existingProduct = await ProductModel.findOne({
-        $or: [
-            { hotKeySku },
-            { productCode: { $ne: null, $eq: productCode } },
-            // { barcode: { $ne: null, $eq: barcode } },
-        ],
-    });
-
-    if (existingProduct) {
-        return next(
-            new ErrorResponse(
-                "Product with this SKU, Product Code, or Barcode already exists",
-                400,
-            ),
-        );
+    try {
+        const validatedData = await createProductSchema.validate(req.body, {
+            abortEarly: true,
+            stripUnknown: true,
+        });
+        const product = await createProduct(validatedData);
+        res.status(201).json({
+            success: true,
+            message: "Product created successfully",
+            data: product,
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    const product = await ProductModel.create(validatedData);
-
-    res.status(201).json({
-        success: true,
-        message: "Product created successfully",
-        data: product,
-    });
 });
 
 export const updateProduct = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
     const { id } = req.params;
-
-    let product = await ProductModel.findById(id);
-
-    if (!product) {
-        return next(new ErrorResponse("Product not found", 404));
+    try {
+        const product = await updateProduct(id, req.body);
+        res.status(200).json({
+            success: true,
+            message: "Product updated successfully",
+            data: product,
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    const validatedData = req.body
-
-    if (
-        validatedData.hotKeySku ||
-        validatedData.productCode ||
-        validatedData.barcode
-    ) {
-        const query = { _id: { $ne: id }, $or: [] };
-
-        if (validatedData.hotKeySku)
-            query.$or.push({ hotKeySku: validatedData.hotKeySku });
-        if (validatedData.productCode)
-            query.$or.push({ productCode: validatedData.productCode });
-        if (validatedData.barcode)
-            query.$or.push({ barcode: validatedData.barcode });
-
-        if (query.$or.length > 0) {
-            const duplicateCheck = await ProductModel.findOne(query);
-            if (duplicateCheck) {
-                return next(
-                    new ErrorResponse(
-                        "SKU, Product Code, or Barcode is already in use by another product",
-                        400,
-                    ),
-                );
-            }
-        }
-    }
-
-    product = await ProductModel.findByIdAndUpdate(
-        id,
-        { ...validatedData, updated: Date.now() },
-        {
-            new: true,
-            runValidators: true,
-        },
-    );
-
-    res.status(200).json({
-        success: true,
-        message: "Product updated successfully",
-        data: product,
-    });
 });
 
 export const deleteProduct = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    const BatchModel = getLocalBatchModel();
     const { id } = req.params;
-
-    const product = await ProductModel.findById(id);
-
-    if (!product) {
-        return next(new ErrorResponse("Product not found", 404));
+    try {
+        await deleteProduct(id);
+        res.status(200).json({
+            success: true,
+            message: "Product deleted successfully",
+            data: {},
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    // Check if product has associated batches
-    const batches = await BatchModel.find({ product: id });
-    if (batches.length > 0) {
-        return next(new ErrorResponse("Cannot delete product with existing batches. Please delete or transfer batches first.", 400));
-    }
-
-    await product.deleteOne();
-
-    res.status(200).json({
-        success: true,
-        message: "Product deleted successfully",
-        data: {},
-    });
 });
 
 
@@ -321,12 +148,7 @@ export const deleteProduct = asyncHandler(async (req, res, next) => {
 
 
 export const getSubCategories = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
-
-    const subcategories = await SubCategoryModel.find()
-        .populate("category", "name")
-        .sort({ createdAt: -1 });
-
+    const subcategories = await getSubCategories();
     res.status(200).json({
         success: true,
         message: "Subcategories retrieved successfully",
@@ -338,17 +160,7 @@ export const getSubCategories = asyncHandler(async (req, res, next) => {
 
 
 export const getPaginationSubCategories = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
-    const { page = 1, limit = 20 } = req.query;
-
-    const result = await paginateModel({
-        model: SubCategoryModel,
-        page,
-        limit,
-        populate: ["category"],
-        sort: { createdAt: -1 }
-    });
-
+    const result = await getPaginationSubCategories(req.query);
     res.status(200).json({
         success: true,
         message: "Subcategories retrieved successfully",
@@ -359,103 +171,59 @@ export const getPaginationSubCategories = asyncHandler(async (req, res, next) =>
 
 
 export const createSubCategory = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
-
-    // const validatedData = await createSubCategorySchema.validate(req.body, {
-    //     abortEarly: false,
-    //     stripUnknown: true,
-    // });
-
-    console.log(req.body)
-    const { name, category } = req.body;
-
-    const subCategoryExists = await SubCategoryModel.findOne({
-        name,
-        category,
-    });
-
-    if (subCategoryExists) {
-        return next(
-            new ErrorResponse(
-                "Subcategory with this name already exists in this category",
-                400,
-            ),
-        );
+    try {
+        const subcategory = await createSubCategory(req.body);
+        res.status(201).json({
+            success: true,
+            message: "Subcategory created successfully",
+            data: subcategory,
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    const subcategory = await SubCategoryModel.create(req.body);
-
-    res.status(201).json({
-        success: true,
-        message: "Subcategory created successfully",
-        data: subcategory,
-    });
 });
 
 export const updateSubCategory = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
-
-    console.log(req.body)
-
-    let subcategory = await SubCategoryModel.findById(id);
-
-    if (!subcategory) {
-        return next(new ErrorResponse("Subcategory not found", 404));
+    try {
+        const subcategory = await updateSubCategory(id, req.body);
+        res.status(200).json({
+            success: true,
+            message: "Subcategory updated successfully",
+            data: subcategory,
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    const validatedData = req.body;
-
-
-
-
-    subcategory = await SubCategoryModel.findByIdAndUpdate(id, validatedData, {
-        new: true,
-        runValidators: true,
-    });
-
-    res.status(200).json({
-        success: true,
-        message: "Subcategory updated successfully",
-        data: subcategory,
-    });
 });
 
 export const deleteSubCategory = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
-
-    const subcategory = await SubCategoryModel.findById(id);
-
-    if (!subcategory) {
-        return next(new ErrorResponse("Subcategory not found", 404));
+    try {
+        await deleteSubCategory(id);
+        res.status(200).json({
+            success: true,
+            message: "Subcategory deleted successfully",
+            data: {},
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    await subcategory.deleteOne();
-
-    res.status(200).json({
-        success: true,
-        message: "Subcategory deleted successfully",
-        data: {},
-    });
 });
 
 export const getSubCategoriesById = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
-
-    const subcategory = await SubCategoryModel.findById(id);
-
-    if (!subcategory) {
+    try {
+        const subcategory = await getSubCategoriesById(id);
+        res.status(200).json({
+            success: true,
+            message: "Subcategory retrieved successfully",
+            data: subcategory,
+        });
+    } catch (error) {
         return next(new ErrorResponse("Subcategory not found", 404));
     }
-
-    res.status(200).json({
-        success: true,
-        message: "Subcategory retrieved successfully",
-        data: subcategory,
-    });
-})
+});
 
 
 
@@ -466,18 +234,15 @@ export const getSubCategoriesById = asyncHandler(async (req, res, next) => {
 
 
 export const getSubCategoriesByCatagId = asyncHandler(async (req, res, next) => {
-    const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
-
-    const subcategory = await SubCategoryModel.find({ category: id }).populate("category", "name");
-
-    if (!subcategory) {
+    try {
+        const subcategory = await getSubCategoriesByCatagId(id);
+        res.status(200).json({
+            success: true,
+            message: "Subcategory retrieved successfully",
+            data: subcategory,
+        });
+    } catch (error) {
         return next(new ErrorResponse("Subcategory not found", 404));
     }
-
-    res.status(200).json({
-        success: true,
-        message: "Subcategory retrieved successfully",
-        data: subcategory,
-    });
-})
+});

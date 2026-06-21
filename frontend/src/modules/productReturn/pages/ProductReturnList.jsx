@@ -1,24 +1,26 @@
 import React, { useState } from "react";
 import { Plus, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
-import api from "@shared/services/api.js";
 import PaginatedList from "@shared/components/PaginatedList.jsx";
 import ProductReturnModal from "../components/ProductReturnModal.jsx";
 import PageHeading from "@shared/components/PageHeading.jsx";
+import { useDeleteProductReturnMutation } from "../services/productReturn.service.js";
 
 const ProductReturnList = () => {
     const [language, setLanguage] = useState("en");
     const [showModal, setShowModal] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [selectedReturn, setSelectedReturn] = useState(null);
+    const [deleteProductReturn] = useDeleteProductReturnMutation();
 
     const handleDelete = async (id) => {
         if (window.confirm(language === "en" ? "Are you sure you want to delete this return?" : "کیا آپ واقعی یہ واپسی حذف کرنا چاہتے ہیں؟")) {
             try {
-                await api.delete(`/api/product-returns/${id}`);
+                await deleteProductReturn(id).unwrap();
                 toast.success(language === "en" ? "Return deleted successfully" : "واپسی کامیابی سے حذف ہو گئی");
                 setRefreshKey(prev => prev + 1);
             } catch (error) {
-                toast.error(error?.response?.data?.message || "Failed to delete return");
+                toast.error(error?.data?.message || "Failed to delete return");
             }
         }
     };
@@ -52,7 +54,7 @@ const ProductReturnList = () => {
                 >
                     <button
                         onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-(--accent-2) text-white rounded-lg hover:bg-(--accent-2)/90 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                     >
                         <Plus className="w-5 h-5" />
                         {language === "en" ? "New Return" : "نیا واپسی"}
@@ -62,17 +64,15 @@ const ProductReturnList = () => {
 
             <PaginatedList
                 key={refreshKey}
-                endpoint="/product-returns/pagination"
+                endpoint="/api/product-returns/pagination"
                 limit={10}
                 dataKey="data"
                 wrapperClassName="flex-1"
                 renderItems={(returns) => (
-                    <div className="overflow-x-auto rounded-2xl overflow-hidden"
-                        style={{ border: "1px solid var(--border)" }}>
+                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                         <table className="w-full text-sm text-left">
                             <thead>
-                                <tr className="text-xs uppercase tracking-wider"
-                                    style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
+                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-edge text-ink-muted">
                                     <th className="px-4 py-3 font-semibold">Return #</th>
                                     <th className="px-4 py-3 font-semibold">Order #</th>
                                     <th className="px-4 py-3 font-semibold">Customer</th>
@@ -85,22 +85,20 @@ const ProductReturnList = () => {
                             </thead>
                             <tbody>
                                 {returns.map((returnItem) => (
-                                    <tr key={returnItem._id} className="transition" style={{ borderBottom: "1px solid var(--border)" }}
-                                        onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
-                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                        <td className="px-4 py-3 font-medium" style={{ color: "var(--ink)" }}>
+                                    <tr key={returnItem._id} className="transition border-edge hover:bg-surface-muted">
+                                        <td className="px-4 py-3 font-medium text-ink">
                                             {returnItem.returnNumber}
                                         </td>
-                                        <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
+                                        <td className="px-4 py-3 text-sm text-ink-muted">
                                             {returnItem.referenceOrderNumber}
                                         </td>
-                                        <td className="px-4 py-3 text-sm" style={{ color: "var(--ink)" }}>
+                                        <td className="px-4 py-3 text-sm text-ink">
                                             {returnItem.customerName || "-"}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-center" style={{ color: "var(--muted)" }}>
+                                        <td className="px-4 py-3 text-sm text-center text-ink-muted">
                                             {returnItem.items?.length || 0}
                                         </td>
-                                        <td className="px-4 py-3 text-sm font-medium text-right" style={{ color: "var(--accent-2)" }}>
+                                        <td className="px-4 py-3 text-sm font-medium text-right text-primary">
                                             ${returnItem.totalRefundAmount?.toFixed(2) || "0.00"}
                                         </td>
                                         <td className="px-4 py-3">
@@ -108,17 +106,17 @@ const ProductReturnList = () => {
                                                 {returnItem.returnStatus}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
+                                        <td className="px-4 py-3 text-sm text-ink-muted">
                                             {new Date(returnItem.returnDate || returnItem.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-2 justify-center">
                                                 <button
                                                     onClick={() => setSelectedReturn(returnItem)}
-                                                    className="p-2 hover:bg-(--surface) rounded-lg transition-colors"
+                                                    className="p-2 hover:bg-surface rounded-lg transition-colors"
                                                     title={language === "en" ? "View Details" : "تفصیلات دیکھیں"}
                                                 >
-                                                    <Eye className="w-4 h-4 text-(--muted)" />
+                                                    <Eye className="w-4 h-4 text-ink-muted" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(returnItem._id)}
@@ -136,7 +134,7 @@ const ProductReturnList = () => {
                     </div>
                 )}
                 renderEmpty={() => (
-                    <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>
+                    <p className="text-center py-12 text-sm text-ink-muted">
                         No returns found.
                     </p>
                 )}

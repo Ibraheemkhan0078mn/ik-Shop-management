@@ -101,7 +101,7 @@ export default function Products() {
             */}
             <div className="flex-1 overflow-hidden">
                 <PaginatedTable
-                    endpoint="/products/pagination"
+                    endpoint="/api/products/pagination"
                     columns={columns}
                     limit={20}
                     isUpdate={true}

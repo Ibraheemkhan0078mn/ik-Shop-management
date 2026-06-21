@@ -1,30 +1,22 @@
 import asyncHandler from "express-async-handler";
 import { createPurchaseSchema, updatePurchaseSchema } from "../schemas/purchase.schema.js";
 import {
-    getLocalPurchaseModel,
     getLocalBatchModel,
     getLocalProductModel,
 } from "../../../configs/connect.db.js";
-import { paginateModel } from "../../../common/services/common.service.js";
 import mongoose from "mongoose";
-import { handleProductStockQuantity } from "../services/ChangeProductStockQuantity.js";
+import {
+    getPurchases,
+    getPurchaseById,
+    getPurchaseByInvoiceNumber,
+    getPaginatedPurchases,
+    createPurchase,
+    updatePurchase,
+    deletePurchase,
+} from "../services/purchase.service.js";
 
 export const getPurchases = asyncHandler(async (req, res, next) => {
-    console.log("THe get purchase is hitted")
-    const PurchaseModel = getLocalPurchaseModel();
-
-    const purchases = await PurchaseModel.find()
-        .populate("supplier", "name")
-        .populate({
-            path: "items.product",
-            select: "name productCode",
-        })
-        .populate({
-            path: "items.batch",
-            select: "batchNumber",
-        })
-        .sort({ createdAt: -1 });
-
+    const purchases = await getPurchases();
     res.status(200).json({
         success: true,
         message: "Purchases retrieved successfully",
@@ -36,18 +28,7 @@ export const getPurchases = asyncHandler(async (req, res, next) => {
 
 
 export const getPurchaseById = asyncHandler(async (req, res, next) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    console.log("The purchase id is ", req.params.id)
-    const purchase = await PurchaseModel.findById(new mongoose.Types.ObjectId(req.params.id))
-        .populate("supplier", "name")
-        .populate({
-            path: "items.product",
-            select: "name productCode",
-        })
-        .populate({
-            path: "items.batch",
-            select: "batchNumber",
-        });
+    const purchase = await getPurchaseById(req.params.id);
     res.status(200).json({
         success: true,
         message: "Purchase retrieved successfully",
@@ -62,12 +43,7 @@ export const getPurchaseByInvoiceNumber = asyncHandler(async (req, res) => {
     if (!invoiceNumber)
         return res.status(400).json({ success: false, message: "Invoice number is required" });
 
-    const PurchaseModel = getLocalPurchaseModel();
-    const purchase = await PurchaseModel.findOne({ invoiceNumber })
-        .populate("supplier", "name")
-        .populate({ path: "items.product", select: "name productCode" })
-        .populate({ path: "items.batch",   select: "batchNumber expiryDate" });
-
+    const purchase = await getPurchaseByInvoiceNumber(invoiceNumber);
     if (!purchase)
         return res.status(404).json({ success: false, message: "Purchase not found" });
 
@@ -77,36 +53,15 @@ export const getPurchaseByInvoiceNumber = asyncHandler(async (req, res) => {
 
 
 export const getPaginatedPurchases = asyncHandler(async (req, res) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    const page  = parseInt(req.query.page)  || 1;
-    const limit = parseInt(req.query.limit) || 20;
-
-    const result = await paginateModel({
-        model: PurchaseModel,
-        page,
-        limit,
-        populate: [
-            { path: "supplier",      select: "name" },
-            { path: "items.product", select: "name productCode" },
-            { path: "items.batch",   select: "batchNumber" },
-        ],
-        sort: { createdAt: -1 },
-    });
-
-    // Spread result so PaginatedList can read res.data (array) and res.total directly
+    const result = await getPaginatedPurchases(req.query);
     res.status(200).json({
         success: true,
         message: "Purchases retrieved successfully",
-        data:       result.data,
-        total:      result.total,
-        page:       result.page,
-        limit:      result.limit,
-        totalPages: result.totalPages,
+        ...result,
     });
 });
 
 export const createPurchase = asyncHandler(async (req, res, next) => {
-    const PurchaseModel = getLocalPurchaseModel();
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
@@ -115,74 +70,7 @@ export const createPurchase = asyncHandler(async (req, res, next) => {
         stripUnknown: true,
     });
 
-    const purchaseItems = [];
-
-    for (const item of validatedData.items) {
-        let batch = await BatchModel.findOne({
-            batchNumber: item.batchNumber,
-            product: item.product,
-        });
-
-        if (!batch) {
-            batch = await BatchModel.create({
-                product: item.product,
-                batchNumber: item.batchNumber,
-                supplier: validatedData.supplier,
-                quantity: item.quantity,
-                purchasePrice: item.price,
-                sellingPrice: item.price,
-                mfgDate: item.mfgDate,
-                expiryDate: item.expiryDate,
-            });
-
-            await ProductModel.findByIdAndUpdate(item.product, {
-                $push: { batches: batch._id },
-            });
-        } else {
-            batch.quantity += item.quantity;
-            batch.purchasePrice = item.price;
-            if (item.mfgDate) {
-                batch.mfgDate = item.mfgDate;
-            }
-            if (item.expiryDate) {
-                batch.expiryDate = item.expiryDate;
-            }
-            if (validatedData.supplier) {
-                batch.supplier = validatedData.supplier;
-            }
-            await batch.save();
-        }
-
-        // Update product stock after batch stock is updated
-        await handleProductStockQuantity(item.product, "create", item.quantity);
-
-        purchaseItems.push({
-            product: item.product,
-            batch: batch._id,
-            quantity: item.quantity,
-            price: item.price,
-            discount: item.discount,
-            discountType: item.discountType,
-            tax: item.tax,
-            taxType: item.taxType,
-            mfgDate: item.mfgDate,
-            expiryDate: item.expiryDate,
-        });
-    }
-
-    const purchase = await PurchaseModel.create({
-        supplier: validatedData.supplier,
-        date: validatedData.date,
-        invoiceNumber: validatedData.invoiceNumber,
-        items: purchaseItems,
-        subtotal: validatedData.subtotal,
-        discount: validatedData.discount,
-        discountType: validatedData.discountType,
-        gst: validatedData.gst,
-        shippingCost: validatedData.shippingCost,
-        totalAmount: validatedData.totalAmount,
-        notes: validatedData.notes,
-    });
+    const purchase = await createPurchase(validatedData, BatchModel, ProductModel);
 
     res.status(201).json({
         success: true,
@@ -343,81 +231,17 @@ export const createPurchase = asyncHandler(async (req, res, next) => {
 
 
 export const updatePurchase = asyncHandler(async (req, res, next) => {
-    const PurchaseModel = getLocalPurchaseModel();
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
-    const existing = await PurchaseModel.findById(req.params.id);
-    if (!existing) return res.status(404).json({ success: false, message: "Purchase not found" });
-
     const data = await updatePurchaseSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
 
-    // Step 1: Reverse old batch quantities first, then product stock
-    for (const old of existing.items) {
-        const oldBatch = await BatchModel.findById(old.batch);
-        if (oldBatch) {
-            oldBatch.quantity -= old.quantity;
-            if (oldBatch.quantity <= 0) {
-                await oldBatch.deleteOne();
-                await ProductModel.findByIdAndUpdate(old.product, { $pull: { batches: oldBatch._id } });
-            } else {
-                await oldBatch.save();
-            }
-        }
-        
-        // Update product stock after batch stock
-        await handleProductStockQuantity(old.product, "delete", old.quantity);
+    try {
+        const updated = await updatePurchase(req.params.id, data, BatchModel, ProductModel);
+        res.status(200).json({ success: true, message: "Purchase updated successfully", data: updated });
+    } catch (error) {
+        return res.status(404).json({ success: false, message: error.message });
     }
-
-    // Step 2: Process new items - update batch first, then product stock
-    const purchaseItems = [];
-    for (const item of data.items) {
-        let batch = await BatchModel.findOne({ batchNumber: item.batchNumber, product: item.product });
-
-        if (!batch) {
-            batch = await BatchModel.create({
-                product: item.product, batchNumber: item.batchNumber,
-                supplier: data.supplier, quantity: item.quantity,
-                purchasePrice: item.price, sellingPrice: item.price,
-                mfgDate: item.mfgDate, expiryDate: item.expiryDate,
-            });
-            await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
-        } else {
-            batch.quantity += item.quantity;
-            batch.purchasePrice = item.price;
-            if (item.mfgDate) batch.mfgDate = item.mfgDate;
-            if (item.expiryDate) batch.expiryDate = item.expiryDate;
-            if (data.supplier) batch.supplier = data.supplier;
-            await batch.save();
-        }
-
-        // Update product stock after batch stock
-        await handleProductStockQuantity(item.product, "create", item.quantity);
-
-        purchaseItems.push({
-            product: item.product, batch: batch._id,
-            quantity: item.quantity, price: item.price,
-            discount: item.discount, discountType: item.discountType,
-            tax: item.tax, taxType: item.taxType,
-            mfgDate: item.mfgDate, expiryDate: item.expiryDate,
-        });
-    }
-
-    // Step 3: Save purchase
-    const updated = await PurchaseModel.findByIdAndUpdate(
-        req.params.id,
-        {
-            supplier: data.supplier, date: data.date,
-            invoiceNumber: data.invoiceNumber, items: purchaseItems,
-            subtotal: data.subtotal, discount: data.discount,
-            discountType: data.discountType, gst: data.gst,
-            shippingCost: data.shippingCost, totalAmount: data.totalAmount,
-            notes: data.notes,
-        },
-        { new: true }
-    );
-
-    res.status(200).json({ success: true, message: "Purchase updated successfully", data: updated });
 });
 
 
@@ -429,32 +253,15 @@ export const updatePurchase = asyncHandler(async (req, res, next) => {
 
 
 export const deletePurchase = asyncHandler(async (req, res) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    const BatchModel    = getLocalBatchModel();
-    const ProductModel  = getLocalProductModel();
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
 
-    const existing = await PurchaseModel.findById(req.params.id);
-    if (!existing) return res.status(404).json({ success: false, message: "Purchase not found" });
-
-    // Reverse batch quantities first, then product stock
-    for (const item of existing.items) {
-        const batch = await BatchModel.findById(item.batch);
-        if (batch) {
-            batch.quantity -= item.quantity;
-            if (batch.quantity <= 0) {
-                await batch.deleteOne();
-                await ProductModel.findByIdAndUpdate(item.product, { $pull: { batches: batch._id } });
-            } else {
-                await batch.save();
-            }
-        }
-        
-        // Update product stock after batch stock
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
+    try {
+        await deletePurchase(req.params.id, BatchModel, ProductModel);
+        res.status(200).json({ success: true, message: "Purchase deleted successfully" });
+    } catch (error) {
+        return res.status(404).json({ success: false, message: error.message });
     }
-
-    await existing.deleteOne();
-    res.status(200).json({ success: true, message: "Purchase deleted successfully" });
 });
 
 

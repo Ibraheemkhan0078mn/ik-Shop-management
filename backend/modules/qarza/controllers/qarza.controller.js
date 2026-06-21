@@ -1,6 +1,19 @@
 import { getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import {
+    qarzaAccountCreate as qarzaAccountCreateService,
+    getAllQarzaAccounts as getAllQarzaAccountsService,
+    getQarzaAccountById as getQarzaAccountByIdService,
+    findQarzaAccountById as findQarzaAccountByIdService,
+    qarzaAccountUpdate as qarzaAccountUpdateService,
+    qarzaAccountDelete as qarzaAccountDeleteService,
+    countQarzaAccounts as countQarzaAccountsService,
+    qarzaPaymentCreate as qarzaPaymentCreateService,
+    getAllQarzaPayments as getAllQarzaPaymentsService,
+    qarzaPaymentUpdate as qarzaPaymentUpdateService,
+    qarzaPaymentDelete as qarzaPaymentDeleteService,
+} from "../services/qarza.service.js";
 
 
 
@@ -16,7 +29,6 @@ export const qarzaAccountCreate = async (req, res) => {
             file = req.file.filename
         }
 
-
         let QarzaAccountModel = getLocalQarzaAccountModel();
 
         // VALIDATION
@@ -24,7 +36,7 @@ export const qarzaAccountCreate = async (req, res) => {
             return res.json({ success: false, msg: "Name is required" });
         }
 
-        let createdAccount = await QarzaAccountModel.create({
+        let createdAccount = await qarzaAccountCreateService({
             qarzaProfileImage: file,
             name,
             type,
@@ -36,7 +48,7 @@ export const qarzaAccountCreate = async (req, res) => {
         await changeTrackDocsCreationFunc("create", QarzaAccountModel.modelName, createdAccount?._id)
         req?.file?.filename && await imageChangeTrackDocsCreation("create", QarzaAccountModel.modelName, createdAccount._id)
 
-        let accounts = await QarzaAccountModel.find().sort({ createdAt: -1 });
+        let accounts = await getAllQarzaAccountsService();
 
         return res.json({ success: true, msg: "Account created", accounts });
     } catch (err) {
@@ -62,9 +74,7 @@ export const qarzaAccountCreate = async (req, res) => {
 
 export const getqarzaAccount = async (req, res) => {
     try {
-        let QarzaAccountModel = getLocalQarzaAccountModel();
-
-        let accounts = await QarzaAccountModel.find().populate("payments").sort({ createdAt: -1 });
+        let accounts = await getAllQarzaAccountsService();
 
         return res.json({ success: true, accounts });
     } catch (err) {
@@ -83,9 +93,7 @@ export const getqarzaAccount = async (req, res) => {
 export const getAllQarzaAccount = async (req, res) => {
     try {
         console.log("The qarza route is hitted.")
-        let QarzaAccountModel = getLocalQarzaAccountModel();
-
-        let accounts = await QarzaAccountModel.find().populate("payments").sort({ createdAt: -1 });
+        let accounts = await getAllQarzaAccountsService();
 
         return res.json({ success: true, data: accounts });
     } catch (err) {
@@ -96,7 +104,6 @@ export const getAllQarzaAccount = async (req, res) => {
 
 export const getPaginatedQarzaAccounts = async (req, res) => {
     try {
-        let QarzaAccountModel = getLocalQarzaAccountModel();
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
@@ -108,14 +115,11 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
             query.name = { $regex: search, $options: "i" };
         }
 
-        let accounts = await QarzaAccountModel
-            .find(query)
-            .populate("payments")
-            .sort({ createdAt: -1 })
+        let accounts = await getAllQarzaAccountsService(query)
             .limit(limit)
             .skip(skip);
 
-        let total = await QarzaAccountModel.countDocuments(query);
+        let total = await countQarzaAccountsService(query);
 
         return res.json({ 
             success: true, 
@@ -147,40 +151,32 @@ export const qarzaAccountUpdate = async (req, res) => {
             file = req?.file?.filename
         }
 
-
-
-
         let QarzaAccountModel = getLocalQarzaAccountModel();
 
         if (!_id) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
 
-        let existingAcc = await QarzaAccountModel.findOne({ _id: _id })
+        let existingAcc = await findQarzaAccountByIdService(_id)
         if (!existingAcc) {
             return res.json({ success: false, msg: "The account is not found" })
         }
 
-        let updated = await QarzaAccountModel.findOneAndUpdate(
-            { _id: _id },
-            {
-                qarzaProfileImage: file,
-                name, type, phoneNo, address, notes, isActive
-            },
-            { new: true }
-        );
+        let updated = await qarzaAccountUpdateService(_id, {
+            qarzaProfileImage: file,
+            name, type, phoneNo, address, notes, isActive
+        });
 
         if (!updated) {
             return res.json({ success: false, msg: "Account not found" });
         }
-
 
         await changeTrackDocsCreationFunc("update", QarzaAccountModel.modelName, updated?._id)
         // console.log(req.file.filename)
         existingAcc?.qarzaProfileImage && await imageChangeTrackDocsCreation("delete", QarzaAccountModel.modelName, existingAcc?._id, existingAcc?.cloudinaryPublicId)
         req?.file?.filename && await imageChangeTrackDocsCreation("create", QarzaAccountModel.modelName, updated._id)
 
-        let accounts = await QarzaAccountModel.find().sort({ createdAt: -1 });
+        let accounts = await getAllQarzaAccountsService();
 
         return res.json({ success: true, msg: "Account updated", accounts });
     } catch (err) {
@@ -210,22 +206,20 @@ export const qarzaAccountDelete = async (req, res) => {
             return res.json({ success: false, msg: "Account ID is required" });
         }
 
-        let existingAcc = await QarzaAccountModel.findOne({ _id: _id })
+        let existingAcc = await findQarzaAccountByIdService(_id)
         if (!existingAcc) {
             return res.json({ success: false, msg: "The Qarza Account is not deleted." })
         }
-        let deleted = await QarzaAccountModel.findOneAndDelete({ _id });
+        let deleted = await qarzaAccountDeleteService(_id);
 
         if (!deleted) {
             return res.json({ success: false, msg: "Account not found" });
         }
 
-
         await changeTrackDocsCreationFunc("delete", QarzaAccountModel.modelName, deleted?._id)
         await imageChangeTrackDocsCreation("delete", QarzaAccountModel.modelName, existingAcc._id, existingAcc.cloudinaryPublicId)
 
-
-        let accounts = await QarzaAccountModel.find().sort({ createdAt: -1 });
+        let accounts = await getAllQarzaAccountsService();
 
         return res.json({ success: true, msg: "Account deleted", accounts });
     } catch (err) {
@@ -248,15 +242,12 @@ export const createQarzaPayment = async (req, res) => {
         let QarzaPayment = getLocalQarzaPaymentModel()
         let QarzaAccountModel = getLocalQarzaAccountModel()
 
-
-        let existingQarzaAccount = await QarzaAccountModel.findOne({ _id: qarzaAccountId })
+        let existingQarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
         if (!existingQarzaAccount) {
             return res.json({ success: false, msg: "The qarza account is not found" })
         }
 
-
-
-        let createdQarzaPayment = await QarzaPayment.create({
+        let createdQarzaPayment = await qarzaPaymentCreateService({
             qarzaAccountId,
             amount,
             type,
@@ -270,19 +261,12 @@ export const createQarzaPayment = async (req, res) => {
         existingQarzaAccount.payments = [...existingQarzaAccount.payments, createdQarzaPayment?._id]
         await existingQarzaAccount.save()
 
-
-
-
         await existingQarzaAccount.populate("payments")
-
-
 
         await changeTrackDocsCreationFunc("update", QarzaAccountModel.modelName, existingQarzaAccount._id)
         await changeTrackDocsCreationFunc("create", QarzaPayment.modelName, createdQarzaPayment?._id)
 
-
-
-        const allPayments = await QarzaPayment.find({ qarzaAccountId: qarzaAccountId }).sort({ date: -1 });
+        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
 
         return res.json({ success: true, qarzaPaymentData: allPayments });
     } catch (err) {
@@ -302,34 +286,23 @@ export const updateQarzaPayment = async (req, res) => {
         let QarzaPayment = getLocalQarzaPaymentModel()
         let localQarzaAccountModel = getLocalQarzaAccountModel()
 
-
-
-
-        let existingQarzaAccount = await localQarzaAccountModel.findOne({ _id: qarzaAccountId })
+        let existingQarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
         if (!existingQarzaAccount) {
             return res.json({ success: false, msg: "THe qarza account is not found" })
         }
 
-        await QarzaPayment.findOneAndUpdate({ _id: _id }, {
+        await qarzaPaymentUpdateService(_id, {
             amount,
             type,
             date: new Date(date),
             notes,
         });
 
-
-
-
-
         await existingQarzaAccount.populate("payments")
-
-
-
 
         await changeTrackDocsCreationFunc("update", QarzaPayment.modelName, _id)
 
-
-        const allPayments = await QarzaPayment.find({ qarzaAccountId: qarzaAccountId }).sort({ date: -1 });
+        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
         res.json({ success: true, data: allPayments });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -349,7 +322,7 @@ export const deleteQarzaPayment = async (req, res) => {
         let QarzaPayment = getLocalQarzaPaymentModel()
         let localQarzaAccountModel = getLocalQarzaAccountModel()
 
-        let qarzaAccount = await localQarzaAccountModel.findOne({ _id: qarzaAccountId })
+        let qarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
         if (!qarzaAccount) {
             return res.json({ success: false, msg: "The qarza account is not found" })
         }
@@ -357,7 +330,7 @@ export const deleteQarzaPayment = async (req, res) => {
 
 
 
-        await QarzaPayment.findOneAndDelete({ _id: paymentId });
+        await qarzaPaymentDeleteService(paymentId);
 
 
         qarzaAccount.payments = qarzaAccount.payments.filter((p) => { return !(p == paymentId) })
@@ -377,7 +350,7 @@ export const deleteQarzaPayment = async (req, res) => {
 
 
 
-        const allPayments = await QarzaPayment.find({ qarzaAccountId: qarzaAccountId }).sort({ date: -1 });
+        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
 
         res.json({ success: true, data: allPayments });
     } catch (err) {
@@ -403,12 +376,11 @@ export const deleteQarzaPayment = async (req, res) => {
 export const getQarzaAccountRelatedPayments = async (req, res) => {
     try {
         const { qarzaAccountId, startDate, endDate } = req.body;
-        let QarzaPayment = getLocalQarzaPaymentModel()
 
-        const results = await QarzaPayment.find({
+        const results = await getAllQarzaPaymentsService({
             qarzaAccountId: qarzaAccountId,
             // date: { $gte: startDate, $lte: endDate },
-        }).sort({ date: -1 });
+        });
 
         res.json({ success: true, data: results });
     } catch (err) {

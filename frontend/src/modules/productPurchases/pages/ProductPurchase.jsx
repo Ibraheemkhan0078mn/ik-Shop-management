@@ -69,21 +69,15 @@ export default function ProductPurchasePage() {
             {/* ── list — refreshKey forces re-mount → new fetch ── */}
             <PaginatedList
                 key={refreshKey}
-                endpoint="/purchases/pagination"
+                endpoint="/api/purchases/pagination"
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"
                 renderItems={(purchases) => (
-                    <div className="overflow-x-auto rounded-2xl overflow-hidden"
-                        style={{ border: "1px solid var(--border)" }}>
+                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                         <table className="w-full text-sm text-left">
                             <thead>
-                                <tr className="text-xs uppercase tracking-wider"
-                                    style={{
-                                        background: "var(--surface-muted)",
-                                        borderBottom: "1px solid var(--border)",
-                                        color: "var(--muted)",
-                                    }}>
+                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
                                     <th className="px-4 py-3 font-semibold">Supplier</th>
                                     <th className="px-4 py-3 font-semibold">Invoice</th>
                                     <th className="px-4 py-3 font-semibold text-center">Items</th>
@@ -107,7 +101,7 @@ export default function ProductPurchasePage() {
                     </div>
                 )}
                 renderEmpty={() => (
-                    <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>
+                    <p className="text-center py-12 text-sm text-ink-muted">
                         No purchases found.
                     </p>
                 )}
@@ -120,39 +114,30 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete }) {
     const date = new Date(purchase?.date ?? purchase?.createdAt).toLocaleDateString();
 
     return (
-        <tr className="cursor-pointer transition"
-            style={{ borderBottom: "1px solid var(--border)" }}
-            onClick={onView}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+        <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
+            onClick={onView}>
 
-            <td className="px-4 py-3 font-medium" style={{ color: "var(--ink)" }}>
+            <td className="px-4 py-3 font-medium text-ink">
                 {purchase?.supplier?.name ?? "—"}
             </td>
-            <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>
+            <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                 {purchase?.invoiceNumber ?? "—"}
             </td>
-            <td className="px-4 py-3 text-center" style={{ color: "var(--ink)" }}>
+            <td className="px-4 py-3 text-center text-ink">
                 {purchase?.items?.length ?? 0}
             </td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: "var(--accent-2)" }}>
+            <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
                 Rs {(purchase?.totalAmount ?? 0).toLocaleString()}
             </td>
-            <td className="px-4 py-3" style={{ color: "var(--muted)" }}>{date}</td>
+            <td className="px-4 py-3 text-ink-muted">{date}</td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
                     <button onClick={onEdit}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
+                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
                         Edit
                     </button>
                     <button onClick={onDelete}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
+                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
                         Delete
                     </button>
                 </div>

@@ -56,21 +56,15 @@ export default function AllExpense() {
 
             <PaginatedList
                 key={refreshKey}
-                endpoint="/expenses/pagination"
+                endpoint="/api/expenses/pagination"
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"
                 renderItems={(expenses) => (
-                    <div className="overflow-x-auto rounded-2xl overflow-hidden"
-                        style={{ border: "1px solid var(--border)" }}>
+                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                         <table className="w-full text-sm text-left">
                             <thead>
-                                <tr className="text-xs uppercase tracking-wider"
-                                    style={{
-                                        background: "var(--surface-muted)",
-                                        borderBottom: "1px solid var(--border)",
-                                        color: "var(--muted)",
-                                    }}>
+                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
                                     <th className="px-4 py-3 font-semibold">Amount</th>
                                     <th className="px-4 py-3 font-semibold">Date</th>
                                     <th className="px-4 py-3 font-semibold">Category</th>
@@ -93,7 +87,7 @@ export default function AllExpense() {
                     </div>
                 )}
                 renderEmpty={() => (
-                    <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>
+                    <p className="text-center py-12 text-sm text-ink-muted">
                         No expenses found.
                     </p>
                 )}
@@ -104,17 +98,15 @@ export default function AllExpense() {
 
 function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
     return (
-        <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+        <tr className="transition border-b border-edge hover:bg-surface-muted">
 
-            <td className="px-4 py-3 font-bold tabular-nums" style={{ color: "var(--accent-2)" }}>
-                <span className="text-xs mr-1 font-normal" style={{ color: "var(--muted)" }}>Rs</span>
+            <td className="px-4 py-3 font-bold tabular-nums text-primary">
+                <span className="text-xs mr-1 font-normal text-ink-muted">Rs</span>
                 {(exp.amount ?? 0).toLocaleString()}
             </td>
 
             <td className="px-4 py-3">
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
+                <div className="flex items-center gap-1.5 text-xs text-ink-muted">
                     <Calendar className="w-3.5 h-3.5 shrink-0" />
                     {new Date(exp.date).toLocaleDateString()}
                 </div>
@@ -122,16 +114,14 @@ function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
 
             <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: "var(--accent-2)" }} />
-                    <span className="text-xs font-semibold uppercase tracking-tight"
-                        style={{ color: "var(--ink)" }}>
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-primary" />
+                    <span className="text-xs font-semibold uppercase tracking-tight text-ink">
                         {highlightMatch(exp.category || "General", catSearch)}
                     </span>
                 </div>
             </td>
 
-            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>
+            <td className="px-4 py-3 text-xs text-ink-muted">
                 {exp.notes
                     ? <span className="italic truncate max-w-xs block">"{highlightMatch(exp.notes, catSearch)}"</span>
                     : "—"}
@@ -140,17 +130,11 @@ function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
                     <button onClick={onEdit}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition"
-                        style={{ color: "var(--muted)" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
                         <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={onDelete}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition"
-                        style={{ color: "var(--muted)" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "#dc2626"; e.currentTarget.style.background = "rgba(220,38,38,0.08)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>
                 </div>

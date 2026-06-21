@@ -121,17 +121,17 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-(--surface) rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-(--border)">
-                    <h2 className="text-xl font-semibold text-(--ink)">
+                <div className="flex items-center justify-between p-6 border-b border-edge">
+                    <h2 className="text-xl font-semibold text-ink">
                         {language === "en" ? "Product Return" : "پروڈکٹ واپسی"}
                     </h2>
                     <button
                         onClick={handleClose}
-                        className="p-2 hover:bg-(--surface-muted) rounded-lg transition-colors"
+                        className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
                     >
-                        <X className="w-5 h-5 text-(--muted)" />
+                        <X className="w-5 h-5 text-ink-muted" />
                     </button>
                 </div>
 
@@ -139,7 +139,7 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                 <div className="flex-1 overflow-y-auto p-6">
                     {/* Order Number Input */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-(--ink) mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {language === "en" ? "Order Number" : "آرڈر نمبر"}
                         </label>
                         <div className="flex gap-2">
@@ -149,12 +149,12 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                 onChange={(e) => setOrderNumber(e.target.value)}
                                 onKeyPress={(e) => e.key === "Enter" && handleOrderSearch()}
                                 placeholder={language === "en" ? "Enter order number..." : "آرڈر نمبر درج کریں..."}
-                                className="flex-1 px-4 py-2 border border-(--border) rounded-lg bg-(--surface-muted) text-(--ink) focus:outline-none focus:ring-2 focus:ring-(--accent-2)"
+                                className="flex-1 px-4 py-2 border border-edge rounded-lg bg-surface-muted text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                             <button
                                 onClick={handleOrderSearch}
                                 disabled={orderNumber.length < 3}
-                                className="px-4 py-2 bg-(--accent-2) text-white rounded-lg hover:bg-(--accent-2)/90 transition-colors disabled:opacity-50"
+                                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
                             >
                                 <Search className="w-5 h-5" />
                             </button>
@@ -169,28 +169,28 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                     {/* Order Items */}
                     {orderData && (
                         <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-(--ink) mb-4">
+                            <h3 className="text-lg font-semibold text-ink mb-4">
                                 {language === "en" ? "Order Items" : "آرڈر آئٹمز"}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {orderData.items?.map((item) => (
                                     <div
                                         key={item._id}
-                                        className="p-4 border border-(--border) rounded-lg hover:border-(--accent-2) transition-colors cursor-pointer"
+                                        className="p-4 border border-edge rounded-lg hover:border-edge-brand transition-colors cursor-pointer"
                                         onClick={() => handleItemSelect(item, item.quantity)}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="font-medium text-(--ink)">
+                                                <p className="font-medium text-ink">
                                                     {item.productName || item.name}
                                                 </p>
-                                                <p className="text-sm text-(--muted)">
+                                                <p className="text-sm text-ink-muted">
                                                     {language === "en" ? "Qty:" : "مقدار:"} {item.quantity} |{" "}
                                                     {language === "en" ? "Price:" : "قیمت:"} $
                                                     {item.price || item.unitPrice}
                                                 </p>
                                             </div>
-                                            <Check className="w-5 h-5 text-(--accent-2)" />
+                                            <Check className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
                                 ))}
@@ -201,19 +201,19 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                     {/* Selected Items */}
                     {selectedItems.length > 0 && (
                         <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-(--ink) mb-4">
+                            <h3 className="text-lg font-semibold text-ink mb-4">
                                 {language === "en" ? "Selected Items for Return" : "واپسی کے لیے منتخب آئٹمز"}
                             </h3>
                             <div className="space-y-4">
                                 {selectedItems.map((item) => (
                                     <div
                                         key={item.productId}
-                                        className="p-4 border border-(--border) rounded-lg bg-(--surface-muted)"
+                                        className="p-4 border border-edge rounded-lg bg-surface-muted"
                                     >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
-                                                <p className="font-medium text-(--ink)">{item.productName}</p>
-                                                <p className="text-sm text-(--muted)">
+                                                <p className="font-medium text-ink">{item.productName}</p>
+                                                <p className="text-sm text-ink-muted">
                                                     {language === "en" ? "Original Price:" : "اصل قیمت:"} $
                                                     {item.originalPrice}
                                                 </p>
@@ -227,7 +227,7 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="block text-xs text-(--muted) mb-1">
+                                                <label className="block text-xs text-ink-muted mb-1">
                                                     {language === "en" ? "Quantity" : "مقدار"}
                                                 </label>
                                                 <input
@@ -241,11 +241,11 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                                             parseInt(e.target.value)
                                                         )
                                                     }
-                                                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                                    className="w-full px-3 py-2 border border-edge rounded-lg bg-surface text-ink text-sm"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-(--muted) mb-1">
+                                                <label className="block text-xs text-ink-muted mb-1">
                                                     {language === "en" ? "Refund Amount" : "واپسی کی رقم"}
                                                 </label>
                                                 <input
@@ -259,11 +259,11 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                                             e.target.value
                                                         )
                                                     }
-                                                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                                    className="w-full px-3 py-2 border border-edge rounded-lg bg-surface text-ink text-sm"
                                                 />
                                             </div>
                                             <div className="col-span-2">
-                                                <label className="block text-xs text-(--muted) mb-1">
+                                                <label className="block text-xs text-ink-muted mb-1">
                                                     {language === "en" ? "Return Reason" : "واپسی کی وجہ"}
                                                 </label>
                                                 <select
@@ -274,7 +274,7 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                                             e.target.value
                                                         )
                                                     }
-                                                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                                    className="w-full px-3 py-2 border border-edge rounded-lg bg-surface text-ink text-sm"
                                                 >
                                                     <option value="damaged">
                                                         {language === "en" ? "Damaged" : "خراب"}
@@ -297,12 +297,12 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-4 p-4 bg-(--accent-2)/10 rounded-lg">
+                            <div className="mt-4 p-4 bg-primary-hover rounded-lg">
                                 <div className="flex justify-between items-center">
-                                    <span className="font-semibold text-(--ink)">
+                                    <span className="font-semibold text-ink">
                                         {language === "en" ? "Total Refund:" : "کل واپسی:"}
                                     </span>
-                                    <span className="text-2xl font-bold text-(--accent-2)">
+                                    <span className="text-2xl font-bold text-primary">
                                         ${totalRefund.toFixed(2)}
                                     </span>
                                 </div>
@@ -312,7 +312,7 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
 
                     {/* Notes */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-(--ink) mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {language === "en" ? "Notes" : "نوٹس"}
                         </label>
                         <textarea
@@ -320,23 +320,23 @@ const ProductReturnModal = ({ isOpen, onClose }) => {
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder={language === "en" ? "Additional notes..." : "اضافی نوٹس..."}
                             rows={3}
-                            className="w-full px-4 py-2 border border-(--border) rounded-lg bg-(--surface-muted) text-(--ink) focus:outline-none focus:ring-2 focus:ring-(--accent-2)"
+                            className="w-full px-4 py-2 border border-edge rounded-lg bg-surface-muted text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-(--border)">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-edge">
                     <button
                         onClick={handleClose}
-                        className="px-4 py-2 border border-(--border) rounded-lg text-(--ink) hover:bg-(--surface-muted) transition-colors"
+                        className="px-4 py-2 border border-edge rounded-lg text-ink hover:bg-surface-muted transition-colors"
                     >
                         {language === "en" ? "Cancel" : "منسوخ کریں"}
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={selectedItems.length === 0}
-                        className="px-6 py-2 bg-(--accent-2) text-white rounded-lg hover:bg-(--accent-2)/90 transition-colors disabled:opacity-50"
+                        className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
                     >
                         {language === "en" ? "Create Return" : "واپسی بنائیں"}
                     </button>

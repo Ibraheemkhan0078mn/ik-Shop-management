@@ -3,23 +3,30 @@ import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
 import { createOrderSchema } from "../schemas/order.schema.js";
 import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
+import {
+    orderCreate as orderCreateService,
+    getAllOrders as getAllOrdersService,
+    findOrderByNumber as findOrderByNumberService,
+    orderDelete as orderDeleteService,
+    countOrders as countOrdersService,
+} from "../services/order.service.js";
+import {
+    count as countHoldOrderService,
+} from "../services/holdOrder.crud.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
 //  Returns a unique order number for today — e.g. ORD-20250613-0001
 // ─────────────────────────────────────────────────────────────────────────────
 export const generateOrderNumber = asyncHandler(async (req, res) => {
-    const Order     = getLocalOrderModel();
-    const HoldOrder = getLocalHoldOrderModel();
-
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
     const endOfDay   = new Date(new Date().setHours(23, 59, 59, 999));
     const dateRange  = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
 
     // Count from BOTH collections so hold numbers and order numbers never clash
     const [orderCount, holdCount] = await Promise.all([
-        Order.countDocuments(dateRange),
-        HoldOrder.countDocuments(dateRange),
+        countOrdersService(dateRange),
+        countHoldOrderService(dateRange),
     ]);
 
     const dateStr     = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
@@ -33,8 +40,7 @@ export const generateOrderNumber = asyncHandler(async (req, res) => {
 //  Returns all completed/cancelled orders, newest first.
 // ─────────────────────────────────────────────────────────────────────────────
 export const getOrders = asyncHandler(async (req, res) => {
-    const Order  = getLocalOrderModel();
-    const orders = await Order.find().sort({ createdAt: -1 });
+    const orders = await getAllOrdersService();
 
     res.status(200).json({ success: true, message: "Orders fetched successfully", data: orders });
 });
@@ -45,7 +51,6 @@ export const getOrders = asyncHandler(async (req, res) => {
 //  Accepts both qty/quantity and price/unitPrice field names from the frontend.
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
-    const Order = getLocalOrderModel();
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
@@ -76,7 +81,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     );
 
     // Prevent duplicate order numbers
-    const duplicate = await Order.findOne({ orderNumber: validatedData.orderNumber });
+    const duplicate = await findOrderByNumberService(validatedData.orderNumber);
     if (duplicate) return next(new ErrorResponse("Order number already exists", 400));
 
     // Deduct inventory: batch stock first, then product stock
@@ -108,7 +113,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
-    const order = await Order.create(validatedData);
+    const order = await orderCreateService(validatedData);
 
     res.status(201).json({ success: true, message: "Order created successfully", order });
 });
@@ -118,9 +123,8 @@ export const addOrder = asyncHandler(async (req, res, next) => {
 //  Permanently deletes a completed/cancelled order.
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteOrder = asyncHandler(async (req, res, next) => {
-    const Order = getLocalOrderModel();
     const BatchModel = getLocalBatchModel();
-    const order = await Order.findById(req.params.id);
+    const order = await getOrderById(req.params.id);
 
     if (!order) return next(new ErrorResponse("Order not found", 404));
 
@@ -139,7 +143,7 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
         }
     }
 
-    await order.deleteOne();
+    await orderDeleteService(req.params.id);
 
     res.status(200).json({ success: true, message: "Order deleted successfully", data: {} });
 });

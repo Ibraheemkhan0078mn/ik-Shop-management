@@ -1,74 +1,71 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { baseApi } from "@app/rtkBaseApi.js";
 
-export const purchaseReturnApi = createApi({
-    reducerPath: "purchaseReturnApi",
-    baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5001/api" }),
-    tagTypes: ["PurchaseReturn"],
-    endpoints: (builder) => ({
-        getPurchaseReturns: builder.query({
-            query: () => "/purchase-returns",
+export const purchaseReturnApi = baseApi.injectEndpoints({
+    endpoints: (build) => ({
+        getPurchaseReturns: build.query({
+            query: () => "/api/purchase-returns",
             providesTags: ["PurchaseReturn"],
         }),
-        getPaginatedPurchaseReturns: builder.query({
+        getPaginatedPurchaseReturns: build.query({
             query: ({ page = 1, limit = 20, status, supplier }) => {
-                let url = `/purchase-returns/paginate?page=${page}&limit=${limit}`;
+                let url = `/api/purchase-returns/paginate?page=${page}&limit=${limit}`;
                 if (status) url += `&status=${status}`;
                 if (supplier) url += `&supplier=${supplier}`;
                 return url;
             },
             providesTags: ["PurchaseReturn"],
         }),
-        getPurchaseReturnById: builder.query({
-            query: (id) => `/purchase-returns/${id}`,
+        getPurchaseReturnById: build.query({
+            query: (id) => `/api/purchase-returns/${id}`,
             providesTags: (result, error, id) => [{ type: "PurchaseReturn", id }],
         }),
-        createPurchaseReturn: builder.mutation({
+        createPurchaseReturn: build.mutation({
             query: (data) => ({
-                url: "/purchase-returns",
+                url: "/api/purchase-returns",
                 method: "POST",
                 body: data,
             }),
             invalidatesTags: ["PurchaseReturn"],
         }),
-        updatePurchaseReturn: builder.mutation({
+        updatePurchaseReturn: build.mutation({
             query: ({ id, ...data }) => ({
-                url: `/purchase-returns/${id}`,
+                url: `/api/purchase-returns/${id}`,
                 method: "PUT",
                 body: data,
             }),
             invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
-        deletePurchaseReturn: builder.mutation({
+        deletePurchaseReturn: build.mutation({
             query: (id) => ({
-                url: `/purchase-returns/${id}`,
+                url: `/api/purchase-returns/${id}`,
                 method: "DELETE",
             }),
             invalidatesTags: ["PurchaseReturn"],
         }),
-        submitPurchaseReturn: builder.mutation({
+        submitPurchaseReturn: build.mutation({
             query: (id) => ({
-                url: `/purchase-returns/${id}/submit`,
+                url: `/api/purchase-returns/${id}/submit`,
                 method: "PUT",
             }),
             invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
-        approvePurchaseReturn: builder.mutation({
+        approvePurchaseReturn: build.mutation({
             query: (id) => ({
-                url: `/purchase-returns/${id}/approve`,
+                url: `/api/purchase-returns/${id}/approve`,
                 method: "PUT",
             }),
             invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
-        rejectPurchaseReturn: builder.mutation({
+        rejectPurchaseReturn: build.mutation({
             query: ({ id, rejectionReason }) => ({
-                url: `/purchase-returns/${id}/reject`,
+                url: `/api/purchase-returns/${id}/reject`,
                 method: "PUT",
                 body: { rejectionReason },
             }),
             invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
-        generatePurchaseReturnNumber: builder.query({
-            query: () => "/purchase-returns/generate-number",
+        generatePurchaseReturnNumber: build.query({
+            query: () => "/api/purchase-returns/generate-number",
         }),
     }),
 });

@@ -2,6 +2,11 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
+import {
+    userCreate as userCreateService,
+    findUserByEmail as findUserByEmailService,
+    findUserById as findUserByIdService,
+} from "../services/auth.service.js";
 
 export const loginUser = asyncHandler(async (req, res, next) => {
     const UserModel = getLocalUserModel();
@@ -10,13 +15,13 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         stripUnknown: true,
     });
 
-    const user = await UserModel.findOne({ email }).select("+password");
-
+    const user = await findUserByEmailService(email);
     if (!user) {
         return next(new ErrorResponse("Invalid credentials", 401));
     }
 
-    const isMatch = await user.comparePassword(password);
+    const userWithPassword = await UserModel.findOne({ email }).select("+password");
+    const isMatch = await userWithPassword.comparePassword(password);
 
     if (!isMatch) {
         return next(new ErrorResponse("Invalid credentials", 401));
@@ -36,19 +41,18 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 });
 
 export const registerUser = asyncHandler(async (req, res, next) => {
-    const UserModel = getLocalUserModel();
     const validatedData = await registerSchema.validate(req.body, {
         abortEarly: true,
         stripUnknown: true,
     });
     const { email } = validatedData;
-    const userExists = await UserModel.findOne({ email });
+    const userExists = await findUserByEmailService(email);
     if (userExists) {
         return next(
             new ErrorResponse("User already exists with this email", 400),
         );
     }
-    const user = await UserModel.create(validatedData);
+    const user = await userCreateService(validatedData);
     req.session.userId = user._id;
     res.status(201).json({
         success: true,

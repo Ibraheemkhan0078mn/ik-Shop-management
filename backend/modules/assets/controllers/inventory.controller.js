@@ -1,12 +1,26 @@
 import { getLocalInventoryModel, getLocalInventoryCategoryModel } from "../../../configs/connect.db.js";
 import { ApiError } from "../../../common/services/apiResponses.js";
 import { changeTrackDocsCreationFunc } from "../../../common/ikSync/changeTrackModelCreation.js";
+import {
+    inventoryCreate as inventoryCreateService,
+    inventoryUpdate as inventoryUpdateService,
+    inventoryDelete as inventoryDeleteService,
+    getAllInventory as getAllInventoryService,
+    getInventoryById as getInventoryByIdService,
+    countInventory as countInventoryService,
+} from "../services/inventory.service.js";
+import {
+    inventoryCategoryCreate as inventoryCategoryCreateService,
+    inventoryCategoryUpdate as inventoryCategoryUpdateService,
+    inventoryCategoryDelete as inventoryCategoryDeleteService,
+    getAllInventoryCategories as getAllInventoryCategoriesService,
+    getInventoryCategoryById as getInventoryCategoryByIdService,
+    checkDuplicateCategoryName as checkDuplicateCategoryNameService,
+} from "../services/inventoryCategory.service.js";
 
 // ── GET ALL — with infinite scroll + optional category/status filter ─────────
 export const getAllInventory = async (req, res) => {
     try {
-        let inventoryModel = getLocalInventoryModel();
-
         const skip = parseInt(req.params.skip) || 0;
         const limit = parseInt(req.params.limit) || 20;
         const { category, status, search } = req.body || {};
@@ -25,14 +39,10 @@ export const getAllInventory = async (req, res) => {
             ];
         }
 
-        const totalInventory = await inventoryModel.countDocuments(query);
+        const totalInventory = await countInventoryService(query);
 
-        let allInventory = await inventoryModel
-            .find(query)
-            .populate("addedBy", "name email")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        let allInventory = await getAllInventoryService(query);
+        allInventory = allInventory.skip(skip).limit(limit);
 
         if (!allInventory || allInventory.length < 1) {
             return res.json({
@@ -58,8 +68,6 @@ export const getAllInventory = async (req, res) => {
 // ── CREATE ───────────────────────────────────────────────────────────────────
 export const createInventory = async (req, res) => {
     try {
-        let inventoryModel = getLocalInventoryModel();
-
         const {
             name, itemCode, category, type, description,
             totalQuantity, availableQuantity, inUseQuantity, damagedQuantity, minimumThreshold,
@@ -73,7 +81,7 @@ export const createInventory = async (req, res) => {
             return res.json({ success: false, reason: "Name and category are required" });
         }
 
-        const newItem = await inventoryModel.create({
+        const itemData = {
             name, itemCode, category, type, description,
             totalQuantity: totalQuantity || 0,
             availableQuantity: availableQuantity || 0,
@@ -90,7 +98,9 @@ export const createInventory = async (req, res) => {
             status: status || "active",
             disposalDate, disposalReason,
             addedBy: req.user?._id || null,
-        });
+        };
+
+        const newItem = await inventoryCreateService(itemData);
 
         await changeTrackDocsCreationFunc("create", "inventory", newItem._id, req.user?._id);
 
@@ -109,16 +119,11 @@ export const createInventory = async (req, res) => {
 // ── UPDATE ───────────────────────────────────────────────────────────────────
 export const updateInventory = async (req, res) => {
     try {
-        let inventoryModel = getLocalInventoryModel();
         const { id } = req.params;
 
         if (!id) return res.json({ success: false, reason: "Item ID is required" });
 
-        const updatedItem = await inventoryModel.findByIdAndUpdate(
-            id,
-            { ...req.body },
-            { new: true, _performedBy: req.user?._id }
-        );
+        const updatedItem = await inventoryUpdateService(id, { ...req.body });
 
         if (!updatedItem) return res.json({ success: false, reason: "Item not found" });
 
@@ -139,12 +144,11 @@ export const updateInventory = async (req, res) => {
 // ── DELETE ───────────────────────────────────────────────────────────────────
 export const deleteInventory = async (req, res) => {
     try {
-        let inventoryModel = getLocalInventoryModel();
         const { id } = req.params;
 
         if (!id) return res.json({ success: false, reason: "Item ID is required" });
 
-        const deletedItem = await inventoryModel.findByIdAndDelete(id);
+        const deletedItem = await inventoryDeleteService(id);
 
         if (!deletedItem) return res.json({ success: false, reason: "Item not found" });
 
@@ -196,11 +200,7 @@ export const deleteInventory = async (req, res) => {
 // ── GET ALL ──────────────────────────────────────────────────────────────────
 export const getAllInventoryCategories = async (req, res) => {
     try {
-        let inventoryCategoryModel = getLocalInventoryCategoryModel();
-
-        let allCategories = await inventoryCategoryModel
-            .find()
-            .sort({ createdAt: -1 });
+        let allCategories = await getAllInventoryCategoriesService();
 
         if (!allCategories || allCategories.length < 1) {
             return res.json({
@@ -224,7 +224,6 @@ export const getAllInventoryCategories = async (req, res) => {
 // ── CREATE ───────────────────────────────────────────────────────────────────
 export const createInventoryCategory = async (req, res) => {
     try {
-        let inventoryCategoryModel = getLocalInventoryCategoryModel();
         const { name } = req.body;
 
         if (!name || !name.trim()) {
@@ -232,17 +231,17 @@ export const createInventoryCategory = async (req, res) => {
         }
 
         // duplicate check
-        const existing = await inventoryCategoryModel.findOne({
-            name: { $regex: `^${name.trim()}$`, $options: "i" }
-        });
+        const existing = await checkDuplicateCategoryNameService(name);
         if (existing) {
             return res.json({ success: false, reason: "Category with this name already exists" });
         }
 
-        const newCategory = await inventoryCategoryModel.create({
+        const categoryData = {
             name: name.trim(),
             createdBy: req.user?._id || null,
-        });
+        };
+
+        const newCategory = await inventoryCategoryCreateService(categoryData);
 
         await changeTrackDocsCreationFunc("create", "inventoryCategory", newCategory._id, req.user?._id);
 
@@ -261,18 +260,13 @@ export const createInventoryCategory = async (req, res) => {
 // ── UPDATE ───────────────────────────────────────────────────────────────────
 export const updateInventoryCategory = async (req, res) => {
     try {
-        let inventoryCategoryModel = getLocalInventoryCategoryModel();
         const { id } = req.params;
         const { name } = req.body;
 
         if (!id) return res.json({ success: false, reason: "Category ID is required" });
         if (!name?.trim()) return res.json({ success: false, reason: "Category name is required" });
 
-        const updatedCategory = await inventoryCategoryModel.findByIdAndUpdate(
-            id,
-            { name: name.trim() },
-            { new: true }
-        );
+        const updatedCategory = await inventoryCategoryUpdateService(id, { name: name.trim() });
 
         if (!updatedCategory) return res.json({ success: false, reason: "Category not found" });
 
@@ -293,12 +287,11 @@ export const updateInventoryCategory = async (req, res) => {
 // ── DELETE ───────────────────────────────────────────────────────────────────
 export const deleteInventoryCategory = async (req, res) => {
     try {
-        let inventoryCategoryModel = getLocalInventoryCategoryModel();
         const { id } = req.params;
 
         if (!id) return res.json({ success: false, reason: "Category ID is required" });
 
-        const deleted = await inventoryCategoryModel.findByIdAndDelete(id);
+        const deleted = await inventoryCategoryDeleteService(id);
 
         if (!deleted) return res.json({ success: false, reason: "Category not found" });
 

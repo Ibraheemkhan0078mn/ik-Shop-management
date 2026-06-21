@@ -4,7 +4,7 @@ export const inventoryApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getInventoryCategories: builder.query({
             query: () => ({
-                url: "/inventoryRoutes/getAllInventoryCatagory",
+                url: "/api/inventoryRoutes/getAllInventoryCatagory",
                 method: "GET",
             }),
             providesTags: [{ type: "InventoryCategory", id: "LIST" }],
@@ -12,7 +12,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         getInventoryList: builder.query({
             query: ({ skip = 0, limit = 20, category = "all", status = "all", search = "" } = {}) => ({
-                url: `/inventoryRoutes/getAllInventory/${skip}/${limit}`,
+                url: `/api/inventoryRoutes/getAllInventory/${skip}/${limit}`,
                 method: "POST",
                 body: { category, status, search },
             }),
@@ -21,7 +21,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         createInventory: builder.mutation({
             query: (body) => ({
-                url: "/inventoryRoutes/inventoryCreate",
+                url: "/api/inventoryRoutes/inventoryCreate",
                 method: "POST",
                 body,
             }),
@@ -30,7 +30,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         updateInventory: builder.mutation({
             query: ({ id, ...body }) => ({
-                url: `/inventoryRoutes/inventoryUpdate/${id}`,
+                url: `/api/inventoryRoutes/inventoryUpdate/${id}`,
                 method: "PUT",
                 body,
             }),
@@ -39,7 +39,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         deleteInventory: builder.mutation({
             query: (id) => ({
-                url: `/inventoryRoutes/inventoryDelete/${id}`,
+                url: `/api/inventoryRoutes/inventoryDelete/${id}`,
                 method: "DELETE",
             }),
             invalidatesTags: [{ type: "Inventory", id: "LIST" }],
@@ -47,7 +47,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         createInventoryCategory: builder.mutation({
             query: (name) => ({
-                url: "/inventoryRoutes/inventoryCatagCreate",
+                url: "/api/inventoryRoutes/inventoryCatagCreate",
                 method: "POST",
                 body: { name },
             }),
@@ -56,7 +56,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         updateInventoryCategory: builder.mutation({
             query: ({ id, name }) => ({
-                url: `/inventoryRoutes/inventoryCatagUpdate/${id}`,
+                url: `/api/inventoryRoutes/inventoryCatagUpdate/${id}`,
                 method: "PUT",
                 body: { name },
             }),
@@ -65,7 +65,7 @@ export const inventoryApi = baseApi.injectEndpoints({
 
         deleteInventoryCategory: builder.mutation({
             query: (id) => ({
-                url: `/inventoryRoutes/inventoryCatagDelete/${id}`,
+                url: `/api/inventoryRoutes/inventoryCatagDelete/${id}`,
                 method: "DELETE",
             }),
             invalidatesTags: [{ type: "InventoryCategory", id: "LIST" }],

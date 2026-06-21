@@ -20,7 +20,7 @@ export const productApi = baseApi.injectEndpoints({
         // List — paginated
         getProducts: build.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
-                url: "/products/pagination",
+                url: "/api/products/pagination",
                 params: { page, limit, ...filters },
             }),
             transformResponse: (raw) => { return raw.data },
@@ -29,26 +29,26 @@ export const productApi = baseApi.injectEndpoints({
 
         // Single product
         getProductById: build.query({
-            query: (id) => ({ url: `/products/${id}` }),
+            query: (id) => ({ url: `/api/products/${id}` }),
             transformResponse: (raw) => { return raw.data },
             providesTags: (result, error, id) => [{ type: "Product", id }],
         }),
 
         // Create
         createProduct: build.mutation({
-            query: (body) => ({ url: "/products", method: "POST", body }),
+            query: (body) => ({ url: "/api/products", method: "POST", body }),
             invalidatesTags: ["Product"],
         }),
 
         // Update
         updateProduct: build.mutation({
-            query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
+            query: ({ id, ...body }) => ({ url: `/api/products/${id}`, method: "PUT", body }),
             invalidatesTags: (result, error, { id }) => [{ type: "Product", id }, "Product"],
         }),
 
         // Delete
         deleteProduct: build.mutation({
-            query: (id) => ({ url: `/products/${id}`, method: "DELETE" }),
+            query: (id) => ({ url: `/api/products/${id}`, method: "DELETE" }),
             invalidatesTags: ["Product"],
         }),
     }),

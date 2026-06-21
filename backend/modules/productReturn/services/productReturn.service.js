@@ -1,29 +1,22 @@
-import ProductReturn from "../models/productReturn.model.js";
+import { create, find, findOne, findById, update, deleteOne, count } from "./productReturn.crud.js";
 import { getLocalOrderModel } from "../../../configs/connect.db.js";
 
-// Generate return number
 const generateReturnNumber = async () => {
-    const lastReturn = await ProductReturn.findOne().sort({ createdAt: -1 });
-    const lastNumber = lastReturn ? parseInt(lastReturn.returnNumber.replace("RET-", "")) : 0;
+    const lastReturn = await find({}).sort({ createdAt: -1 }).limit(1);
+    const lastNumber = lastReturn.length ? parseInt(lastReturn[0].returnNumber.replace("RET-", "")) : 0;
     const newNumber = lastNumber + 1;
     return `RET-${String(newNumber).padStart(6, "0")}`;
 };
 
-// Get order by order number
 const getOrderByNumber = async (orderNumber) => {
     const OrderModel = getLocalOrderModel();
-    const order = await OrderModel.findOne({ orderNumber });
-    return order;
+    return await OrderModel.findOne({ orderNumber });
 };
 
-// Create product return
 const createProductReturn = async (returnData) => {
     const returnNumber = await generateReturnNumber();
-    
-    // Calculate total refund amount
     const totalRefundAmount = returnData.items.reduce((sum, item) => sum + item.refundAmount, 0);
-    
-    const productReturn = await ProductReturn.create({
+    return await create({
         returnNumber,
         referenceOrderId: returnData.referenceOrderId,
         referenceOrderNumber: returnData.referenceOrderNumber,
@@ -32,15 +25,11 @@ const createProductReturn = async (returnData) => {
         customerName: returnData.customerName,
         notes: returnData.notes,
     });
-    
-    return productReturn;
 };
 
-// Get all product returns
 const getAllProductReturns = async (filters = {}) => {
     const { page = 1, limit = 10, status, search } = filters;
     const query = {};
-    
     if (status) query.returnStatus = status;
     if (search) {
         query.$or = [
@@ -49,16 +38,13 @@ const getAllProductReturns = async (filters = {}) => {
             { customerName: { $regex: search, $options: "i" } },
         ];
     }
-    
-    const productReturns = await ProductReturn.find(query)
+    const productReturns = await find(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
         .populate("referenceOrderId")
         .populate("items.productId");
-    
-    const total = await ProductReturn.countDocuments(query);
-    
+    const total = await count(query);
     return {
         data: productReturns,
         page: parseInt(page),
@@ -68,11 +54,9 @@ const getAllProductReturns = async (filters = {}) => {
     };
 };
 
-// Get paginated product returns (for PaginatedList component)
 const getPaginatedProductReturns = async (filters = {}) => {
     const { page = 1, limit = 10, status, search } = filters;
     const query = {};
-    
     if (status) query.returnStatus = status;
     if (search) {
         query.$or = [
@@ -81,16 +65,13 @@ const getPaginatedProductReturns = async (filters = {}) => {
             { customerName: { $regex: search, $options: "i" } },
         ];
     }
-    
-    const productReturns = await ProductReturn.find(query)
+    const productReturns = await find(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
         .populate("referenceOrderId")
         .populate("items.productId");
-    
-    const total = await ProductReturn.countDocuments(query);
-    
+    const total = await count(query);
     return {
         data: productReturns,
         page: parseInt(page),
@@ -100,38 +81,20 @@ const getPaginatedProductReturns = async (filters = {}) => {
     };
 };
 
-// Get product return by ID
 const getProductReturnById = async (id) => {
-    const productReturn = await ProductReturn.findById(id)
-        .populate("referenceOrderId")
-        .populate("items.productId");
-    return productReturn;
+    return await findById(id).populate("referenceOrderId").populate("items.productId");
 };
 
-// Update product return
 const updateProductReturn = async (id, updateData) => {
-    const productReturn = await ProductReturn.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true, runValidators: true }
-    ).populate("referenceOrderId").populate("items.productId");
-    return productReturn;
+    return await update(id, updateData).populate("referenceOrderId").populate("items.productId");
 };
 
-// Delete product return
 const deleteProductReturn = async (id) => {
-    const productReturn = await ProductReturn.findByIdAndDelete(id);
-    return productReturn;
+    return await deleteOne(id);
 };
 
-// Update return status
 const updateReturnStatus = async (id, status) => {
-    const productReturn = await ProductReturn.findByIdAndUpdate(
-        id,
-        { returnStatus: status },
-        { new: true, runValidators: true }
-    ).populate("referenceOrderId").populate("items.productId");
-    return productReturn;
+    return await update(id, { returnStatus: status }).populate("referenceOrderId").populate("items.productId");
 };
 
 export {

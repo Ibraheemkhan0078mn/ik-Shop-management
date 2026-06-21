@@ -6,11 +6,18 @@ import {
 } from "../schemas/supplier.schema.js";
 import { getLocalSupplierModel, getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
+import {
+    supplierCreate as supplierCreateService,
+    getAllSuppliers as getAllSuppliersService,
+    getSupplierById as getSupplierByIdService,
+    findSupplierByName as findSupplierByNameService,
+    supplierUpdate as supplierUpdateService,
+    supplierDelete as supplierDeleteService,
+    countSuppliers as countSuppliersService,
+} from "../services/supplier.service.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
-    const SupplierModel = getLocalSupplierModel();
-
-    const suppliers = await SupplierModel.find().sort({ createdAt: -1 });
+    const suppliers = await getAllSuppliersService();
 
     res.status(200).json({
         success: true,
@@ -46,10 +53,9 @@ export const getPaginatedSuppliers = asyncHandler(async (req, res) => {
 
 
 export const getSupplierById = asyncHandler(async (req, res, next) => {
-    const SupplierModel = getLocalSupplierModel();
     const { id } = req.params;
 
-    const supplier = await SupplierModel.findById(id);
+    const supplier = await getSupplierByIdService(id);
 
     if (!supplier) {
         return next(new ErrorResponse("Supplier not found", 404));
@@ -63,8 +69,6 @@ export const getSupplierById = asyncHandler(async (req, res, next) => {
 })
 
 export const createSupplier = asyncHandler(async (req, res, next) => {
-    const SupplierModel = getLocalSupplierModel();
-
     const validatedData = await createSupplierSchema.validate(req.body, {
         abortEarly: false,
         stripUnknown: true,
@@ -72,7 +76,7 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
 
     const { name } = validatedData;
 
-    const supplierExists = await SupplierModel.findOne({ name });
+    const supplierExists = await findSupplierByNameService(name);
 
     if (supplierExists) {
         return next(
@@ -80,7 +84,7 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
         );
     }
 
-    const supplier = await SupplierModel.create(validatedData);
+    const supplier = await supplierCreateService(validatedData);
 
     res.status(201).json({
         success: true,
@@ -90,10 +94,9 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
 });
 
 export const updateSupplier = asyncHandler(async (req, res, next) => {
-    const SupplierModel = getLocalSupplierModel();
     const { id } = req.params;
 
-    let supplier = await SupplierModel.findById(id);
+    let supplier = await getSupplierByIdService(id);
 
     if (!supplier) {
         return next(new ErrorResponse("Supplier not found", 404));
@@ -105,18 +108,13 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
     });
 
     if (validatedData.name && validatedData.name !== supplier.name) {
-        const nameExists = await SupplierModel.findOne({
-            name: validatedData.name,
-        });
+        const nameExists = await findSupplierByNameService(validatedData.name);
         if (nameExists) {
             return next(new ErrorResponse("Supplier name already in use", 400));
         }
     }
 
-    supplier = await SupplierModel.findByIdAndUpdate(id, validatedData, {
-        new: true,
-        runValidators: true,
-    });
+    supplier = await supplierUpdateService(id, validatedData);
 
     res.status(200).json({
         success: true,
@@ -126,12 +124,11 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
 });
 
 export const deleteSupplier = asyncHandler(async (req, res, next) => {
-    const SupplierModel = getLocalSupplierModel();
     const PurchaseModel = getLocalPurchaseModel();
     const BatchModel = getLocalBatchModel();
     const { id } = req.params;
 
-    const supplier = await SupplierModel.findById(id);
+    const supplier = await getSupplierByIdService(id);
 
     if (!supplier) {
         return next(new ErrorResponse("Supplier not found", 404));
@@ -149,7 +146,7 @@ export const deleteSupplier = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Cannot delete supplier with ${batchCount} associated batch(es). Please delete or transfer batches first.`, 400));
     }
 
-    await supplier.deleteOne();
+    await supplierDeleteService(id);
 
     res.status(200).json({
         success: true,
