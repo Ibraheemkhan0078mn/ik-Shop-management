@@ -1,54 +1,32 @@
 import multer from "multer";
 import fs from "fs";
-import os from "os";
 import path from "path";
+import { uploadDir } from "../services/uploadDirectory.js";
 
-// Get user home directory
-const homeDir = os.homedir();
-
-// Cross-platform app data directory
-let appDataDir;
-
-switch (process.platform) {
-  case "win32":
-    appDataDir = path.join(homeDir, "AppData", "Local");
-    break;
-  case "darwin": // macOS
-    appDataDir = path.join(homeDir, "Library", "Application Support");
-    break;
-  case "linux":
-    appDataDir = path.join(homeDir, ".local", "share");
-    break;
-  default:
-    appDataDir = homeDir;
-}
-
-// ik-shop-desktop folder inside app data
-const uploadDir = path.join(appDataDir, "ik-shop-desktop");
-
-// Ensure the folder exists
+// Ensure the uploads folder exists. `uploadDir` is the single source of
+// truth — same folder is statically served at /uploads in index.js.
 fs.mkdirSync(uploadDir, { recursive: true });
 
-// Multer storage
+// Multer storage — write into the shared uploads directory.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file?.originalname?.trim();
+    const ext = path.extname(file?.originalname || "").toLowerCase();
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
     cb(null, uniqueName);
   },
 });
 
-// File filter
+// Only allow image types.
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only png, jpg, jpeg are allowed!"), false);
+    cb(new Error("Only png, jpg, jpeg, webp are allowed!"), false);
   }
 };
 
-// Export multer upload
 export const upload = multer({ storage, fileFilter });

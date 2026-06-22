@@ -52,6 +52,12 @@ export const productApi = baseApi.injectEndpoints({
             invalidatesTags: ["Product"],
         }),
 
+        // Hard delete — product + all connected batches & history
+        deleteProductWithBatches: build.mutation({
+            query: (id) => ({ url: `/products/${id}/with-batches`, method: "DELETE" }),
+            invalidatesTags: ["Product", "Batch"],
+        }),
+
         // Upload image
         uploadProductImage: build.mutation({
             query: (formData) => ({
@@ -70,5 +76,6 @@ export const {
     useCreateProductMutation: useCreateProduct,
     useUpdateProductMutation: useUpdateProduct,
     useDeleteProductMutation: useDeleteProduct,
+    useDeleteProductWithBatchesMutation: useDeleteProductWithBatches,
     useUploadProductImageMutation: useUploadProductImage,
 } = productApi;

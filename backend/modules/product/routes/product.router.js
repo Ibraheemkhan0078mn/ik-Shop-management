@@ -5,6 +5,7 @@ import {
     createProductData,
     updateProductData,
     deleteProductData,
+    deleteProductWithBatchesData,
     getPaginationProductData,
     getSubCategoriesData,
     createSubCategoryData,
@@ -27,6 +28,8 @@ router.get("/pagination", getPaginationProductData);
 router.get("/:id", getProductDataById);
 router.post("/", authorize("admin"), upload.single("image"), createProductData);
 router.put("/:id", authorize("admin"), upload.single("image"), updateProductData);
+// Hard delete — must sit above the generic /:id delete route.
+router.delete("/:id/with-batches", authorize("admin"), deleteProductWithBatchesData);
 router.delete("/:id", authorize("admin"), deleteProductData);
 router.post("/upload-image", upload.single("image"), uploadProductImage);
 

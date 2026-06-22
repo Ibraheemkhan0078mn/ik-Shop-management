@@ -3,11 +3,10 @@ import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
 import session from "express-session";
 import cors from "cors";
-import path from "path";
-import os from "os";
 
 import { connectDb } from "./configs/connect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
+import { uploadDir } from "./common/services/uploadDirectory.js";
 
 import AuthRouter from "./modules/auth/routes/auth.router.js";
 import ProductRouter from "./modules/product/routes/product.router.js";
@@ -45,23 +44,7 @@ app.use(
     ),
 );
 
-// Serve static files from ik-shop-desktop folder
-const homeDir = os.homedir();
-let appDataDir;
-switch (process.platform) {
-  case "win32":
-    appDataDir = path.join(homeDir, "AppData", "Local");
-    break;
-  case "darwin":
-    appDataDir = path.join(homeDir, "Library", "Application Support");
-    break;
-  case "linux":
-    appDataDir = path.join(homeDir, ".local", "share");
-    break;
-  default:
-    appDataDir = homeDir;
-}
-const uploadDir = path.join(appDataDir, "ik-shop-desktop");
+// Serve uploaded files (product images etc.) from the shared uploads dir.
 app.use("/uploads", express.static(uploadDir));
 
 // app.use(

@@ -9,6 +9,8 @@ import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
 import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
 
+const IMAGE_BASE = "http://localhost:5001/uploads";
+
 const EMPTY_FORM = {
   name: "", genericName: "", brandName: "", hotKeySku: "", productCode: "",
   barcode: "", description: "", image: "", category: "", subCategory: "",
@@ -117,7 +119,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         defaultSupplier: productData.defaultSupplier?._id || productData.defaultSupplier || "",
         substitutes: productData.substitutes || [],
       });
-      setImagePreview(productData.image ? productData.image : null);
+      setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
     }
   }, [isCreate, productData]);
 
@@ -629,7 +631,7 @@ function FieldRenderer({ field, value, error, onChange, onImageChange, imagePrev
 //                 defaultSupplier: productData.defaultSupplier?._id || productData.defaultSupplier || "",
 //                 substitutes: productData.substitutes || [],
 //             });
-//             setImagePreview(productData.image ? productData.image : null);
+//             setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
 //         }
 //     }, [isCreate, productData]);
 

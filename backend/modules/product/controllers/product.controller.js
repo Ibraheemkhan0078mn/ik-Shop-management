@@ -16,6 +16,7 @@ import {
     createProduct,
     updateProduct,
     deleteProduct,
+    deleteProductWithBatches,
 } from "../services/product.service.js";
 import {
     getSubCategories,
@@ -26,9 +27,6 @@ import {
     getSubCategoriesById,
     getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
-import fs from "fs";
-import path from "path";
-import os from "os";
 
 export const getProductsData = asyncHandler(async (req, res, next) => {
     const products = await getProducts();
@@ -62,13 +60,39 @@ export const getProductDataById = asyncHandler(async (req, res, next) => {
     }
 });
 
+/**
+ * Multipart form-data sends everything as strings. This helper casts
+ * boolean and numeric fields back to their real types so yup + Mongoose
+ * don't choke on "true", "false", "500", etc.
+ */
+const coerceMultipartBody = (body, schema) => {
+    const fields = schema.fields;
+    const coerced = { ...body };
+    for (const [key, field] of Object.entries(fields)) {
+        if (coerced[key] === undefined) continue;
+        if (field.type === "boolean" && typeof coerced[key] === "string") {
+            coerced[key] = coerced[key] === "true";
+        }
+        if (field.type === "number" && typeof coerced[key] === "string") {
+            const n = Number(coerced[key]);
+            if (!Number.isNaN(n)) coerced[key] = n;
+        }
+    }
+    return coerced;
+};
+
 export const createProductData = asyncHandler(async (req, res, next) => {
     try {
-        const validatedData = await createProductSchema.validate(req.body, {
+        // Coerce multipart string values to proper types before validation.
+        const body = coerceMultipartBody(req.body, createProductSchema);
+        await createProductSchema.validate(body, {
             abortEarly: true,
             stripUnknown: true,
         });
-        const product = await createProduct({ ...req.body, image: req.file?.filename });
+        const product = await createProduct({
+            ...body,
+            image: req.file?.filename,
+        });
         res.status(201).json({
             success: true,
             message: "Product created successfully",
@@ -82,7 +106,8 @@ export const createProductData = asyncHandler(async (req, res, next) => {
 export const updateProductData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
-        const updateData = { ...req.body };
+        const body = coerceMultipartBody(req.body, updateProductSchema);
+        const updateData = { ...body };
         if (req.file?.filename) {
             updateData.image = req.file.filename;
         }
@@ -105,6 +130,32 @@ export const deleteProductData = asyncHandler(async (req, res, next) => {
             success: true,
             message: "Product deleted successfully",
             data: {},
+        });
+    } catch (error) {
+        // Batch-connected products get a dedicated status + code so the
+        // frontend can offer the "delete with history & batches" flow.
+        if (error.code === "PRODUCT_HAS_BATCHES") {
+            return res.status(409).json({
+                success: false,
+                message: error.message,
+                code: "PRODUCT_HAS_BATCHES",
+                batchCount: error.batchCount,
+            });
+        }
+        return next(new ErrorResponse(error.message, 400));
+    }
+});
+
+// Hard delete — removes the product along with every connected batch and
+// its stored image. Triggered from the confirmation popup.
+export const deleteProductWithBatchesData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    try {
+        const result = await deleteProductWithBatches(id);
+        res.status(200).json({
+            success: true,
+            message: `Product deleted with ${result.deletedBatches} batch(es) and history.`,
+            data: result,
         });
     } catch (error) {
         return next(new ErrorResponse(error.message, 400));
