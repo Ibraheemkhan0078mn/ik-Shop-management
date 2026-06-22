@@ -22,7 +22,7 @@ export const batchApi = baseApi.injectEndpoints({
 
         // Batches by product ID
         getBatchesByProduct: build.query({
-            query: (productId) => ({ url: `/batches/product/${productId}` }),
+            query: (productId) => ({ url: `/batches/${productId}/getBatchesById` }),
             transformResponse: (raw) => raw.data || raw,
             providesTags: (result, error, productId) => [{ type: "Batch", id: productId }],
         }),

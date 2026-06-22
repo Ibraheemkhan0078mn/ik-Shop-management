@@ -718,7 +718,7 @@ export default function PurchaseModal({ mode = "create", purchaseId, onClose, on
                                     {/* price + discount + tax */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <Field>
-                                            <Label>Price *</Label>
+                                            <Label>Per Item Price *</Label>
                                             <Inp name="perItemPrice" type="number" placeholder="0.00"
                                                 value={itemForm.perItemPrice} onChange={handleItemChange} />
                                         </Field>

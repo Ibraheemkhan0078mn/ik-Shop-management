@@ -15,6 +15,7 @@ router.post("/", authorize("admin"), createBatchData);
 router.put("/:id", authorize("admin"), updateBatchData);
 router.delete("/:id", authorize("admin"), deleteBatchData);
 router.get("/:productId", getBatchesData);
+router.get("/:productId/getBatchesById", getBatchesData);
 
 
 export default router;

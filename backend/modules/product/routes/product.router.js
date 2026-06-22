@@ -18,7 +18,7 @@ import {
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 import { upload } from "../../../common/middlewares/multer.middleware.js";
-
+ 
 const router = Router();
 
 router.use(protect);

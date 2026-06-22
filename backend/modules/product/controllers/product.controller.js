@@ -70,6 +70,12 @@ const coerceMultipartBody = (body, schema) => {
     const coerced = { ...body };
     for (const [key, field] of Object.entries(fields)) {
         if (coerced[key] === undefined) continue;
+        if (typeof coerced[key] === "string") {
+            try {
+                const parsed = JSON.parse(coerced[key]);
+                if (Array.isArray(parsed)) coerced[key] = parsed;
+            } catch { }
+        }
         if (field.type === "boolean" && typeof coerced[key] === "string") {
             coerced[key] = coerced[key] === "true";
         }
@@ -85,12 +91,12 @@ export const createProductData = asyncHandler(async (req, res, next) => {
     try {
         // Coerce multipart string values to proper types before validation.
         const body = coerceMultipartBody(req.body, createProductSchema);
-        await createProductSchema.validate(body, {
+        const validatedBody = await createProductSchema.validate(body, {
             abortEarly: true,
             stripUnknown: true,
         });
         const product = await createProduct({
-            ...body,
+            ...validatedBody,
             image: req.file?.filename,
         });
         res.status(201).json({
@@ -101,13 +107,18 @@ export const createProductData = asyncHandler(async (req, res, next) => {
     } catch (error) {
         return next(new ErrorResponse(error.message, 400));
     }
-});
+}); 
 
 export const updateProductData = asyncHandler(async (req, res, next) => {
-    const { id } = req.params;
+    const { id } = req.params; 
+    console.log(req.body, req.params, req.file, req.files, "the update product data. ")
     try {
         const body = coerceMultipartBody(req.body, updateProductSchema);
-        const updateData = { ...body };
+        const validatedBody = await updateProductSchema.validate(body, {
+            abortEarly: true,
+            stripUnknown: true,
+        });
+        const updateData = { ...validatedBody };
         if (req.file?.filename) {
             updateData.image = req.file.filename;
         }
@@ -118,6 +129,7 @@ export const updateProductData = asyncHandler(async (req, res, next) => {
             data: product,
         });
     } catch (error) {
+        console.log("The error ", error)
         return next(new ErrorResponse(error.message, 400));
     }
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { sidebarData } from "../data/sidebar";
 import { LogOut, Wrench } from "lucide-react";
-import logo from "@shared/assets/Chai_fi_cup.png";
+import logo from "@shared/assets/logo.png";
 import { useSelector } from "react-redux";
 
 export default function Sidebar() {
@@ -70,24 +70,22 @@ export default function Sidebar() {
 
     return (
         <>
-            <aside className="flex flex-col w-64 h-screen sticky top-0 bg-(--surface) shadow-[0_18px_50px_rgba(64,45,28,0.12)] border-r border-(--border) z-50">
-                <div className="flex items-center gap-3 px-4 py-3 bg-(--surface) border-b border-(--border) shadow-[0_10px_24px_rgba(64,45,28,0.08)]">
+            <aside className="flex flex-col w-64 justify-center items-center h-screen sticky top-0 bg-(--surface) shadow-[0_18px_50px_rgba(64,45,28,0.12)] border-r border-(--border) z-50">
+                <div className="relative mt-5 flex flex-row  gap-3 px-4 py-3 ">
                     <img
                         src={logo}
                         alt="Chai Fi logo"
-                        className="h-13 w-13 rounded-md object-contain grayscale hover:grayscale-0 transition"
+                        className="absolute -top-0 left-0 h-19 w-19 rounded-full object-contain"
                     />
-
-                    <div className="leading-tight">
+                    <div className="leading-tight ml-12">
                         <h3 className="text-lg font-semibold text-(--accent) font-display">
-                            Chai Fi
+                            Shop-Manager
                         </h3>
                         <p className="text-xs text-(--muted)">
                             Orders to accounts easy
                         </p>
                     </div>
                 </div>
-
                 <nav className="flex-1 overflow-y-auto p-4">
                     <ul className="space-y-2">
                         {sidebarList.navMain.filter(canAccess).map((item) => {

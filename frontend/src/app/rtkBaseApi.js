@@ -18,9 +18,13 @@ import api from "@shared/services/api.js"; // tumhara existing Axios instance �
 // ── Axios ko RTK Query ke format mein wrap karo ───────────────
 // RTK Query ko { url, method, body, params } format mein call milti hai
 // Axios ko { url, method, data, params } chahiye — yahan convert hota hai
-const axiosBaseQuery = () => async ({ url, method = "GET", body, params }) => {
+const axiosBaseQuery = () => async ({ url, method = "GET", body, params, headers }) => {
     try {
-        const result = await api({ url, method, data: body, params });
+        const reqHeaders = { ...headers };
+        if (body instanceof FormData) {
+            reqHeaders["Content-Type"] = undefined;
+        }
+        const result = await api({ url, method, data: body, params, headers: reqHeaders });
         return { data: result.data };
     } catch (err) {
         return {

@@ -53,10 +53,6 @@ export default function ProductPurchasePage() {
                             <Plus className="w-4 h-4" />
                             {language === "en" ? "Add Purchase" : "خرید شامل کریں"}
                         </button>
-                        <button className="btn-add" onClick={() => navigate("/suppliers")}>
-                            <Plus className="w-4 h-4" />
-                            {language === "en" ? "Suppliers" : "سپلائر"}
-                        </button>
                     </div>
                 </PageHeading>
             </div>
