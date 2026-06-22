@@ -1,4 +1,4 @@
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const purchaseReturnApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
@@ -18,6 +18,13 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
         getPurchaseReturnById: build.query({
             query: (id) => `/purchase-returns/${id}`,
             providesTags: (result, error, id) => [{ type: "PurchaseReturn", id }],
+        }),
+        getPurchaseByInvoiceNumber: build.mutation({
+            query: (invoiceNumber) => ({
+                url: "/purchases/getPurchaseByInvoiceNumber",
+                method: "POST",
+                body: { invoiceNumber },
+            }),
         }),
         createPurchaseReturn: build.mutation({
             query: (data) => ({
@@ -74,6 +81,7 @@ export const {
     useGetPurchaseReturnsQuery,
     useGetPaginatedPurchaseReturnsQuery,
     useGetPurchaseReturnByIdQuery,
+    useGetPurchaseByInvoiceNumberMutation,
     useCreatePurchaseReturnMutation,
     useUpdatePurchaseReturnMutation,
     useDeletePurchaseReturnMutation,

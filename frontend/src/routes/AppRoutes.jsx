@@ -3,11 +3,9 @@ import { Routes, Route, Link } from "react-router-dom";
 import Login from "@modules/auth/pages/Login.jsx";
 import Signup from "@modules/auth/pages/Signup.jsx";
 import Products from "@modules/productsModule/pages/Products.jsx";
-import BusinessExpenses from "@modules/expense/pages/AllExpense.jsx";
 import Analytics from "@modules/dashbaord/pages/Analytics.jsx";
 import Dashboard from "@modules/dashbaord/pages/Dashboard.jsx";
 import Generals from "@modules/setting/pages/Generals.jsx";
-import ReturnPage from "@modules/returns/pages/ReturnPage.jsx";
 import WastagePage from "@modules/wastage/pages/WastagePage.jsx";
 import ProductPurchase from "@modules/productPurchases/pages/ProductPurchase.jsx";
 import SupplierPage from "@modules/suppliers/pages/SupplierPage.jsx";
@@ -53,7 +51,6 @@ function AppRoutes() {
 
             <Route path="/purchases" element={<ProductPurchase />} />
             <Route path="/suppliers" element={<SupplierPage />} />
-            <Route path="/returns" element={<ReturnPage />} />
             <Route path="/purchase-returns" element={<PurchaseReturnPage />} />
             <Route path="/product-return" element={<ProductReturnList />} />
             <Route path="/wastage" element={<WastagePage />} />

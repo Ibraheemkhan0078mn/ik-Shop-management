@@ -73,11 +73,11 @@ export const sidebarData = (language = "en") => ({
             allowedUrls: ["/purchases"],
         },
         {
-            id: "Returns",
+            id: "Purchase Returns",
             title: language === "en" ? "Purchase Return" : "خریداری واپسی",
-            url: "/returns",
+            url: "/purchase-returns",
             icon: RotateCcw,
-            allowedUrls: ["/returns"],
+            allowedUrls: ["/purchase-returns"],
         },
        
       

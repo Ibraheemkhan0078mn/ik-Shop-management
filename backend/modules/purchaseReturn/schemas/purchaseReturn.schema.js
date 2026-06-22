@@ -7,6 +7,8 @@ const purchaseReturnItemSchema = yup.object().shape({
     quantity: yup.number().required("Quantity is required").min(1, "Quantity must be at least 1"),
     purchasePrice: yup.number().required("Purchase price is required").min(0, "Purchase price must be non-negative"),
     returnReason: yup.string().required("Return reason is required").oneOf(["damaged", "expired", "wrong_item", "excess", "quality_issue", "other"]),
+    condition: yup.string().required("Condition is required").oneOf(["good", "fair", "poor", "damaged"]),
+    cut: yup.number().optional().min(0, "Cut must be non-negative"),
     notes: yup.string().optional()
 });
 

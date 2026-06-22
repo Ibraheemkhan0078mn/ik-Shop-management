@@ -13,7 +13,7 @@
 // ============================================================
 
 import { createApi } from "@reduxjs/toolkit/query/react";
-import api from "@shared/services/api.js"; // tumhara existing Axios instance — same jo baaki jagah use ho raha hai
+import api from "../shared/services/api.js"; // tumhara existing Axios instance — same jo baaki jagah use ho raha hai
 
 // ── Axios ko RTK Query ke format mein wrap karo ───────────────
 // RTK Query ko { url, method, body, params } format mein call milti hai
@@ -44,7 +44,8 @@ export const baseApi = createApi({
     baseQuery: axiosBaseQuery(),
 
     // Cache invalidation tags — naya module banao to yahan tag add karo
-    tagTypes: ["Product",
+    tagTypes: [
+        "Product",
         "Category",
         "SubCategory",
         "Qarza",
@@ -66,7 +67,10 @@ export const baseApi = createApi({
         "MemberSalaryChange",
         "PartnerInvestment",
         "ClassPartnership",
-        "Reports"],
+        "Reports",
+        "PurchaseReturn",
+        "OrderReturn"
+    ],
 
     // Endpoints blank — har module injectEndpoints se khud add karega
     endpoints: () => ({}),

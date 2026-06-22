@@ -10,7 +10,6 @@ import {
     getLocalExpenseCategoryModel,
     getLocalInventoryModel,
     getLocalWastageModel,
-    getLocalReturnModel,
     getLocalPurchaseReturnModel,
     getLocalQarzaAccountModel,
     getLocalQarzaPaymentModel,

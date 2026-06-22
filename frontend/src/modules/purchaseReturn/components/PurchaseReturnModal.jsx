@@ -5,8 +5,8 @@
 //   onClose    fn
 //   onSuccess  fn
 
-import { useState, useEffect, useMemo } from "react";
-import { X, Plus, CheckCircle, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { X, Search, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import { showError, showSuccess } from "@shared/utilities/toastHelpers";
 import {
     useCreatePurchaseReturnMutation,
@@ -15,11 +15,9 @@ import {
     useSubmitPurchaseReturnMutation,
     useApprovePurchaseReturnMutation,
     useRejectPurchaseReturnMutation,
-    useGeneratePurchaseReturnNumberQuery,
+    useGetPurchaseByInvoiceNumberMutation,
 } from "../services/purchaseReturn.service.js";
-import { useProducts } from "../../productsModule/services/product.service.js";
 import { useSelector } from "react-redux";
-import api from "@shared/services/api.js";
 
 const REASONS = [
     { label: "Damaged", value: "damaged" },
@@ -30,21 +28,18 @@ const REASONS = [
     { label: "Other", value: "other" },
 ];
 
-const blankItem = () => ({
-    product: "",
-    productName: "",
-    batch: "",
-    batchNumber: "",
-    quantity: "",
-    purchasePrice: "",
-    returnReason: "",
-    notes: "",
-});
+const CONDITIONS = [
+    { label: "Good", value: "good" },
+    { label: "Fair", value: "fair" },
+    { label: "Poor", value: "poor" },
+    { label: "Damaged", value: "damaged" },
+];
 
 const emptyForm = () => ({
-    purchase: "",
-    supplier: "",
+    purchase: null,
+    supplier: null,
     returnDate: new Date().toISOString().split("T")[0],
+    returnReason: "",
     notes: "",
 });
 
@@ -74,9 +69,7 @@ const Txt = ({ className = "", ...p }) => (
 
 const SSelect = ({ options = [], value, onChange, placeholder = "Select…", zIndex = 60 }) => {
     const [open, setOpen] = useState(false);
-    const [q, setQ] = useState("");
     const selected = options.find((o) => o.value === value);
-    const filtered = options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase()));
 
     useEffect(() => {
         const h = (e) => {
@@ -86,7 +79,7 @@ const SSelect = ({ options = [], value, onChange, placeholder = "Select…", zIn
         return () => document.removeEventListener("mousedown", h);
     }, []);
 
-    const ref = { current: null };
+    const ref = useRef(null);
 
     return (
         <div ref={ref} className="relative w-full">
@@ -101,29 +94,17 @@ const SSelect = ({ options = [], value, onChange, placeholder = "Select…", zIn
             </button>
             {open && (
                 <div
-                    className="absolute w-full mt-1 rounded-xl shadow-2xl overflow-hidden"
+                    className="absolute w-full mt-1 rounded-xl shadow-2xl overflow-hidden z-50"
                     style={{ background: "var(--surface)", border: "1px solid var(--border)", zIndex }}
                 >
-                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
-                        <input
-                            autoFocus
-                            type="text"
-                            placeholder="Search…"
-                            value={q}
-                            onChange={(e) => setQ(e.target.value)}
-                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
-                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                        />
-                    </div>
                     <div className="max-h-48 overflow-y-auto">
-                        {filtered.length ? (
-                            filtered.map((o) => (
+                        {options.length ? (
+                            options.map((o) => (
                                 <div
                                     key={o.value}
                                     onClick={() => {
                                         onChange(o.value);
                                         setOpen(false);
-                                        setQ("");
                                     }}
                                     className="px-3 py-2 text-sm cursor-pointer transition"
                                     style={{
@@ -201,120 +182,158 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [submitPurchaseReturn] = useSubmitPurchaseReturnMutation();
     const [approvePurchaseReturn] = useApprovePurchaseReturnMutation();
     const [rejectPurchaseReturn] = useRejectPurchaseReturnMutation();
+    const [getPurchaseByInvoiceNumberMutation]= useGetPurchaseByInvoiceNumberMutation()
     const isSubmitting = isCreating || isUpdating;
 
-    const { data: productsRaw = [] } = useProducts();
-    const products = productsRaw?.data ?? productsRaw ?? [];
-
     const [form, setForm] = useState(emptyForm());
-    const [currentItem, setCurrentItem] = useState(blankItem());
-    const [items, setItems] = useState([]);
-    const [editingIndex, setEditingIndex] = useState(-1);
+    const [purchaseData, setPurchaseData] = useState(null);
+    const [selectedItems, setSelectedItems] = useState({});
+    const [invoiceNumber, setInvoiceNumber] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
 
     const update = (f, v) => setForm((p) => ({ ...p, [f]: v }));
-    const updateCurrent = (f, v) => setCurrentItem((p) => ({ ...p, [f]: v }));
 
     // Prefill for update
     useEffect(() => {
         if (!isUpdate || !existingPurchaseReturn) return;
+
+        // For update mode, we need to load the purchase data
+        if (existingPurchaseReturn.purchase && !purchaseData) {
+            setPurchaseData(existingPurchaseReturn.purchase);
+            setInvoiceNumber(existingPurchaseReturn.purchase.invoiceNumber || "");
+        }
+
         setForm({
             purchase: existingPurchaseReturn.purchase?._id ?? existingPurchaseReturn.purchase ?? "",
             supplier: existingPurchaseReturn.supplier?._id ?? existingPurchaseReturn.supplier ?? "",
             returnDate: existingPurchaseReturn.returnDate ? new Date(existingPurchaseReturn.returnDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+            returnReason: existingPurchaseReturn.notes ?? "",
             notes: existingPurchaseReturn.notes ?? "",
         });
-        setItems(
-            (existingPurchaseReturn.items ?? []).map((it) => ({
-                product: it.product?._id ?? it.product ?? "",
-                productName: it.product?.name ?? "",
-                batch: it.batch?._id ?? it.batch ?? "",
-                batchNumber: it.batchNumber ?? "",
-                quantity: it.quantity ?? "",
-                purchasePrice: it.purchasePrice ?? "",
-                returnReason: it.returnReason ?? "",
-                notes: it.notes ?? "",
-            }))
-        );
-    }, [existingPurchaseReturn, isUpdate]);
 
-    // Fetch purchases for dropdown
-    const [purchases, setPurchases] = useState([]);
-    const [suppliers, setSuppliers] = useState([]);
+        // Prefill selected items with their return details
+        const selected = {};
+        (existingPurchaseReturn.items ?? []).forEach((it) => {
+            selected[it.batch?._id || it.batch] = {
+                returnQuantity: it.quantity,
+                returnReason: it.returnReason,
+                condition: it.condition || "good",
+                cut: it.cut || 0,
+                notes: it.notes || "",
+            };
+        });
+        setSelectedItems(selected);
+    }, [existingPurchaseReturn, isUpdate, purchaseData]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [purchasesRes, suppliersRes] = await Promise.all([
-                    api.get("/purchases"),
-                    api.get("/suppliers"),
-                ]);
-                setPurchases(purchasesRes.data?.data ?? purchasesRes.data ?? []);
-                setSuppliers(suppliersRes.data?.data ?? suppliersRes.data ?? []);
-            } catch (err) {
-                console.error("Failed to fetch data:", err);
+    const handleSearchInvoice = async () => {
+        if (!invoiceNumber.trim()) return showError("Please enter an invoice number");
+
+        setIsSearching(true);
+        try {
+            const result = await getPurchaseByInvoiceNumberMutation(invoiceNumber.trim()).unwrap();
+            if (result?.success && result?.data) {
+                setPurchaseData(result.data);
+                setForm((prev) => ({
+                    ...prev,
+                    purchase: result.data._id,
+                    supplier: result.data.supplier?._id,
+                }));
+                setSelectedItems({});
+                showSuccess("Purchase found!");
+            } else {
+                showError(result.data?.message || "Purchase not found");
             }
-        };
-        fetchData();
-    }, []);
-
-    const purchaseOptions = useMemo(() => purchases.map((p) => ({ label: p.invoiceNumber, value: p._id })), [purchases]);
-    const supplierOptions = useMemo(() => suppliers.map((s) => ({ label: s.name, value: s._id })), [suppliers]);
-    const productOptions = useMemo(() => products.map((p) => ({ label: p.name, value: p._id })), [products]);
-
-    const batchOptions = useMemo(() => {
-        const prod = products.find((p) => p._id === currentItem.product);
-        return (prod?.batches ?? []).map((b) => ({
-            label: `${b.batchNumber} — Exp: ${b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : "N/A"}`,
-            value: b._id,
-            batchNumber: b.batchNumber,
-            purchasePrice: b.purchasePrice,
-        }));
-    }, [currentItem.product, products]);
-
-    const reasonOptions = REASONS;
-
-    const totalRefund = useMemo(() => items.reduce((s, it) => s + Number(it.quantity) * Number(it.purchasePrice || 0), 0), [items]);
-
-    const handleAddItem = () => {
-        if (!currentItem.product) return showError("Select a product");
-        if (!currentItem.batch) return showError("Select a batch");
-        if (!currentItem.quantity) return showError("Enter quantity");
-        if (!currentItem.returnReason) return showError("Select return reason");
-
-        const prod = products.find((p) => p._id === currentItem.product);
-        const batch = batchOptions.find((b) => b.value === currentItem.batch);
-        const row = {
-            ...currentItem,
-            productName: prod?.name ?? currentItem.productName,
-            purchasePrice: batch?.purchasePrice ?? currentItem.purchasePrice,
-        };
-
-        if (editingIndex >= 0) {
-            setItems((p) => p.map((it, i) => (i === editingIndex ? row : it)));
-            setEditingIndex(-1);
-        } else {
-            setItems((p) => [...p, row]);
+        } catch (e) {
+            showError(e?.data?.message || e?.message || "Failed to search purchase");
+        } finally {
+            setIsSearching(false);
         }
-        setCurrentItem(blankItem());
     };
 
-    const handleEditItem = (i) => {
-        setCurrentItem(items[i]);
-        setEditingIndex(i);
+    const handleItemSelect = (batchId, item) => {
+        setSelectedItems((prev) => {
+            if (prev[batchId]) {
+                const newSelected = { ...prev };
+                delete newSelected[batchId];
+                return newSelected;
+            } else {
+                return {
+                    ...prev,
+                    [batchId]: {
+                        returnQuantity: item.quantity,
+                        returnReason: "",
+                        condition: "good",
+                        cut: 0,
+                        notes: "",
+                    },
+                };
+            }
+        });
     };
-    const cancelEdit = () => {
-        setCurrentItem(blankItem());
-        setEditingIndex(-1);
+
+    const handleItemDetailChange = (batchId, field, value) => {
+        setSelectedItems((prev) => ({
+            ...prev,
+            [batchId]: {
+                ...prev[batchId],
+                [field]: value,
+            },
+        }));
     };
-    const removeItem = (i) => {
-        setItems((p) => p.filter((_, idx) => idx !== i));
-        if (editingIndex === i) cancelEdit();
+
+    const calculateRefund = (item, details) => {
+        const returnQty = Number(details.returnQuantity) || 0;
+        const costPrice = Number(item.price) || 0;
+        const cut = Number(details.cut) || 0;
+        return (returnQty * costPrice) - cut;
     };
+
+    const totalRefund = useMemo(() => {
+        if (!purchaseData?.items) return 0;
+        return purchaseData.items.reduce((sum, item) => {
+            const details = selectedItems[item.batch?._id || item.batch];
+            if (!details) return sum;
+            return sum + calculateRefund(item, details);
+        }, 0);
+    }, [purchaseData, selectedItems]);
 
     const handleSubmit = async () => {
-        if (!items.length) return showError("Add at least one item");
+        if (!purchaseData) return showError("Please search and select a purchase first");
+        if (Object.keys(selectedItems).length === 0) return showError("Please select at least one item to return");
 
-        const payload = { ...form, items };
+        // Validate all selected items
+        for (const [batchId, details] of Object.entries(selectedItems)) {
+            if (!details.returnReason) return showError("Please specify return reason for all selected items");
+            if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError("Please specify valid return quantity for all selected items");
+        }
+
+        // Build payload
+        const items = purchaseData.items
+            .filter((item) => selectedItems[item.batch?._id || item.batch])
+            .map((item) => {
+                const batchId = item.batch?._id || item.batch;
+                const details = selectedItems[batchId];
+                return {
+                    product: item.product?._id || item.product,
+                    batch: batchId,
+                    batchNumber: item.batch?.batchNumber || "",
+                    quantity: details.returnQuantity,
+                    purchasePrice: item.price,
+                    returnReason: details.returnReason,
+                    condition: details.condition,
+                    cut: details.cut,
+                    notes: details.notes,
+                };
+            });
+
+        const payload = {
+            purchase: purchaseData._id,
+            supplier: purchaseData.supplier?._id,
+            returnDate: form.returnDate,
+            notes: form.returnReason,
+            items,
+        };
+
         try {
             if (isUpdate) {
                 await updatePurchaseReturn({ id: purchaseReturnId, ...payload }).unwrap();
@@ -323,7 +342,9 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 await createPurchaseReturn(payload).unwrap();
                 showSuccess(t("Purchase return recorded!", "خریداری واپسی محفوظ ہو گیا۔"));
                 setForm(emptyForm());
-                setItems([]);
+                setPurchaseData(null);
+                setSelectedItems({});
+                setInvoiceNumber("");
             }
             onSuccess?.();
             onClose();
@@ -383,7 +404,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-3xl my-4 rounded-3xl shadow-2xl overflow-hidden"
+                className="relative w-full max-w-4xl my-4 rounded-3xl shadow-2xl overflow-hidden"
                 style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -415,140 +436,186 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 </div>
 
                 <div className="p-5 space-y-5">
-                    {/* purchase + supplier + date */}
-                    <Card>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <Field>
-                                <Label>Purchase *</Label>
-                                <SSelect options={purchaseOptions} value={form.purchase} onChange={(v) => update("purchase", v)} placeholder="Select purchase…" zIndex={70} />
-                            </Field>
-                            <Field>
-                                <Label>Supplier *</Label>
-                                <SSelect options={supplierOptions} value={form.supplier} onChange={(v) => update("supplier", v)} placeholder="Select supplier…" zIndex={70} />
-                            </Field>
-                            <Field>
-                                <Label>Return Date *</Label>
-                                <Inp type="date" value={form.returnDate} onChange={(e) => update("returnDate", e.target.value)} />
-                            </Field>
-                        </div>
-                        <Field className="mt-4">
-                            <Label>Notes</Label>
-                            <Inp placeholder="Optional notes…" value={form.notes} onChange={(e) => update("notes", e.target.value)} />
-                        </Field>
-                    </Card>
-
-                    {/* item form */}
-                    <Card title={editingIndex >= 0 ? `Editing Item #${editingIndex + 1}` : "Add Item"}>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Field>
-                                    <Label>Product *</Label>
-                                    <SSelect
-                                        options={productOptions}
-                                        value={currentItem.product}
-                                        onChange={(val) => {
-                                            const prod = products.find((p) => p._id === val);
-                                            setCurrentItem({ ...blankItem(), product: val, productName: prod?.name ?? "" });
-                                        }}
-                                        placeholder="Select product…"
-                                        zIndex={70}
-                                    />
-                                </Field>
-                                <Field>
-                                    <Label>Return Reason *</Label>
-                                    <SSelect options={reasonOptions} value={currentItem.returnReason} onChange={(v) => updateCurrent("returnReason", v)} placeholder="Select reason…" zIndex={70} />
-                                </Field>
-                            </div>
-
-                            {currentItem.product && (
-                                <>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        <Field>
-                                            <Label>Batch *</Label>
-                                            <SSelect
-                                                options={batchOptions}
-                                                value={currentItem.batch}
-                                                onChange={(val) => {
-                                                    const b = batchOptions.find((o) => o.value === val);
-                                                    updateCurrent("batch", val);
-                                                    if (b) {
-                                                        updateCurrent("batchNumber", b.batchNumber);
-                                                        updateCurrent("purchasePrice", b.purchasePrice);
-                                                    }
-                                                }}
-                                                placeholder="Select batch…"
-                                                zIndex={70}
-                                            />
-                                        </Field>
-                                        <Field>
-                                            <Label>Quantity *</Label>
-                                            <Inp type="number" min={1} placeholder="0" value={currentItem.quantity} onChange={(e) => updateCurrent("quantity", e.target.value)} />
-                                        </Field>
-                                        <Field>
-                                            <Label>Purchase Price</Label>
-                                            <Inp type="number" min={0} placeholder="0.00" value={currentItem.purchasePrice} onChange={(e) => updateCurrent("purchasePrice", e.target.value)} />
-                                        </Field>
-                                    </div>
-
-                                    <Field>
-                                        <Label>Notes {currentItem.returnReason === "other" ? "*" : ""}</Label>
-                                        <Txt rows={2} placeholder="Item-level notes…" value={currentItem.notes} onChange={(e) => updateCurrent("notes", e.target.value)} />
-                                    </Field>
-
-                                    <div className="flex gap-2 justify-end">
-                                        {editingIndex >= 0 && <Btn variant="secondary" size="sm" onClick={cancelEdit}>Cancel Edit</Btn>}
-                                        <Btn variant="primary" size="sm" onClick={handleAddItem} disabled={!currentItem.product || !currentItem.batch || !currentItem.quantity || !currentItem.returnReason}>
-                                            {editingIndex >= 0 ? (
-                                                <>
-                                                    <CheckCircle className="w-3.5 h-3.5" /> Update Item
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Plus className="w-3.5 h-3.5" /> Add Item
-                                                </>
-                                            )}
+                    {/* Search by invoice number */}
+                    {!isUpdate && (
+                        <Card>
+                            <div className="flex gap-3">
+                                <Field className="flex-1">
+                                    <Label>Search by Invoice Number</Label>
+                                    <div className="flex gap-2">
+                                        <Inp
+                                            placeholder="Enter invoice number..."
+                                            value={invoiceNumber}
+                                            onChange={(e) => setInvoiceNumber(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && handleSearchInvoice()}
+                                        />
+                                        <Btn variant="primary" onClick={handleSearchInvoice} disabled={isSearching}>
+                                            <Search className="w-4 h-4" />
                                         </Btn>
                                     </div>
-                                </>
-                            )}
-                        </div>
-                    </Card>
+                                </Field>
+                            </div>
+                        </Card>
+                    )}
 
-                    {/* confirmed items */}
-                    {items.length > 0 && (
-                        <Card title={`Items (${items.length})`}>
-                            <div className="space-y-2">
-                                {items.map((item, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl transition"
-                                        style={{
-                                            border: editingIndex === i ? "1.5px solid var(--accent-2)" : "1px solid var(--border)",
-                                            background: editingIndex === i ? "rgba(15,118,110,0.04)" : "var(--surface)",
-                                        }}
-                                    >
-                                        <div className="flex flex-col gap-0.5 min-w-0">
-                                            <span className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>{item.productName || item.product}</span>
-                                            <span className="text-xs" style={{ color: "var(--muted)" }}>
-                                                Qty: {item.quantity} · Batch: {item.batchNumber} · {REASONS.find((r) => r.value === item.returnReason)?.label ?? item.returnReason}
-                                                {item.purchasePrice ? ` · Refund: Rs. ${(Number(item.quantity) * Number(item.purchasePrice)).toFixed(2)}` : ""}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <button onClick={() => handleEditItem(i)} className="p-1.5 rounded-lg transition" style={{ color: "var(--muted)" }} onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                <Pencil className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button onClick={() => removeItem(i)} className="p-1.5 rounded-lg transition" style={{ color: "var(--muted)" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#dc2626"; e.currentTarget.style.background = "rgba(220,38,38,0.08)"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
+                    {/* Purchase details (read-only) */}
+                    {purchaseData && (
+                        <Card title="Purchase Details">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <Field>
+                                    <Label>Supplier</Label>
+                                    <div className="px-3 py-2 text-sm rounded-xl" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
+                                        {purchaseData.supplier?.name || "—"}
                                     </div>
-                                ))}
+                                </Field>
+                                <Field>
+                                    <Label>Invoice Number</Label>
+                                    <div className="px-3 py-2 text-sm rounded-xl font-mono" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
+                                        {purchaseData.invoiceNumber || "—"}
+                                    </div>
+                                </Field>
+                                <Field>
+                                    <Label>Purchase Date</Label>
+                                    <div className="px-3 py-2 text-sm rounded-xl" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
+                                        {purchaseData.date ? new Date(purchaseData.date).toLocaleDateString() : "—"}
+                                    </div>
+                                </Field>
+                                <Field>
+                                    <Label>Total Amount</Label>
+                                    <div className="px-3 py-2 text-sm rounded-xl font-semibold" style={{ background: "var(--surface-muted)", color: "var(--accent)" }}>
+                                        Rs. {Number(purchaseData.totalAmount || 0).toFixed(2)}
+                                    </div>
+                                </Field>
+                            </div>
+                        </Card>
+                    )}
 
-                                <div className="flex justify-between items-center pt-3 mt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Total Refund</span>
-                                    <span className="text-base font-black tabular-nums" style={{ color: "var(--accent)" }}>Rs. {totalRefund.toFixed(2)}</span>
-                                </div>
+                    {/* Return details */}
+                    {purchaseData && (
+                        <Card title="Return Details">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field>
+                                    <Label>Return Date *</Label>
+                                    <Inp type="date" value={form.returnDate} onChange={(e) => update("returnDate", e.target.value)} />
+                                </Field>
+                                <Field>
+                                    <Label>Return Reason (Overall)</Label>
+                                    <Txt rows={2} placeholder="Overall return reason..." value={form.returnReason} onChange={(e) => update("returnReason", e.target.value)} />
+                                </Field>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Items as checkboxes */}
+                    {purchaseData && (
+                        <Card title={`Purchase Items (${purchaseData.items?.length || 0})`}>
+                            <div className="space-y-3">
+                                {purchaseData.items?.map((item, idx) => {
+                                    const batchId = item.batch?._id || item.batch;
+                                    const isSelected = !!selectedItems[batchId];
+                                    const details = selectedItems[batchId] || {};
+                                    const refund = isSelected ? calculateRefund(item, details) : 0;
+
+                                    return (
+                                        <div key={batchId || idx} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                                            {/* Item header with checkbox */}
+                                            <div
+                                                className="flex items-center gap-3 px-4 py-3 cursor-pointer transition"
+                                                style={{ background: isSelected ? "rgba(15,118,110,0.04)" : "var(--surface)" }}
+                                                onClick={() => handleItemSelect(batchId, item)}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => handleItemSelect(batchId, item)}
+                                                    className="w-4 h-4 rounded"
+                                                    style={{ accentColor: "var(--accent-2)" }}
+                                                />
+                                                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                                                    <div>
+                                                        <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.product?.name || "—"}</span>
+                                                    </div>
+                                                    <div style={{ color: "var(--muted)" }}>
+                                                        Qty: {item.quantity}
+                                                    </div>
+                                                    <div style={{ color: "var(--muted)" }}>
+                                                        Price: Rs. {Number(item.price || 0).toFixed(2)}
+                                                    </div>
+                                                    <div style={{ color: "var(--muted)" }}>
+                                                        Batch: {item.batch?.batchNumber || "—"}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Inline form for selected item */}
+                                            {isSelected && (
+                                                <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                                        <Field>
+                                                            <Label>Return Quantity *</Label>
+                                                            <Inp
+                                                                type="number"
+                                                                min={1}
+                                                                max={item.quantity}
+                                                                value={details.returnQuantity}
+                                                                onChange={(e) => handleItemDetailChange(batchId, "returnQuantity", e.target.value)}
+                                                            />
+                                                        </Field>
+                                                        <Field>
+                                                            <Label>Return Reason *</Label>
+                                                            <SSelect
+                                                                options={REASONS}
+                                                                value={details.returnReason}
+                                                                onChange={(v) => handleItemDetailChange(batchId, "returnReason", v)}
+                                                                placeholder="Select reason…"
+                                                                zIndex={70}
+                                                            />
+                                                        </Field>
+                                                        <Field>
+                                                            <Label>Condition *</Label>
+                                                            <SSelect
+                                                                options={CONDITIONS}
+                                                                value={details.condition}
+                                                                onChange={(v) => handleItemDetailChange(batchId, "condition", v)}
+                                                                placeholder="Select condition…"
+                                                                zIndex={70}
+                                                            />
+                                                        </Field>
+                                                        <Field>
+                                                            <Label>Cut (Amount)</Label>
+                                                            <Inp
+                                                                type="number"
+                                                                min={0}
+                                                                value={details.cut}
+                                                                onChange={(e) => handleItemDetailChange(batchId, "cut", e.target.value)}
+                                                            />
+                                                        </Field>
+                                                    </div>
+                                                    <Field className="mt-3">
+                                                        <Label>Refund Preview</Label>
+                                                        <div className="px-3 py-2 text-sm rounded-xl font-semibold" style={{ background: "var(--surface)", color: "var(--accent)" }}>
+                                                            Rs. {refund.toFixed(2)} = ({details.returnQuantity} × Rs. {Number(item.price || 0).toFixed(2)}) - Rs. {Number(details.cut || 0).toFixed(2)}
+                                                        </div>
+                                                    </Field>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Total refund summary */}
+                    {purchaseData && Object.keys(selectedItems).length > 0 && (
+                        <Card>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                                    Total Refund Amount ({Object.keys(selectedItems).length} items)
+                                </span>
+                                <span className="text-xl font-black tabular-nums" style={{ color: "var(--accent)" }}>
+                                    Rs. {totalRefund.toFixed(2)}
+                                </span>
                             </div>
                         </Card>
                     )}
@@ -566,8 +633,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                         </div>
                         <div className="flex gap-2">
                             <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-                            <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
-                                {isSubmitting ? (isUpdate ? "Updating…" : "Saving…") : isUpdate ? t(`Update (${items.length} items)`, `اپڈیٹ`) : t(`Save Purchase Return (${items.length} items)`, `محفوظ`)}
+                            <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting || !purchaseData || Object.keys(selectedItems).length === 0}>
+                                {isSubmitting ? (isUpdate ? "Updating…" : "Saving…") : isUpdate ? t(`Update Return`, `اپڈیٹ`) : t(`Save Return`, `محفوظ`)}
                             </Btn>
                         </div>
                     </div>

@@ -24,7 +24,6 @@ import inventoryRoutes from './modules/assets/routes/assets.route.js'
 import permissionRoutes from './modules/permission/route/permission.route.js'
 import qarzaRoutes from './modules/qarza/routes/qarza.route.js'
 import wastageRoutes from './modules/wastage/routes/wastage.router.js'
-import returnRoutes from './modules/returns/routes/return.router.js'
 import purchaseReturnRoutes from './modules/purchaseReturn/routes/purchaseReturn.route.js'
 import inventoryReconciliationRoutes from './modules/inventory/routes/reconciliation.route.js'
 import ReportsRouter from './modules/reports/routes/reports.routes.js'
@@ -83,7 +82,6 @@ app.use("/api/invetoryRoutes", inventoryRoutes)
 app.use("/api/permissionRoutes", permissionRoutes)
 app.use("/api/qarzaRoutes", qarzaRoutes)
 app.use("/api/wastages", wastageRoutes)
-app.use("/api/returns", returnRoutes)
 app.use("/api/purchase-returns", purchaseReturnRoutes)
 app.use("/api/inventory", inventoryReconciliationRoutes)
 app.use("/api/reports", ReportsRouter)

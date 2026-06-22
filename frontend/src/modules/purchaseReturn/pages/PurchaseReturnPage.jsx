@@ -42,48 +42,48 @@ export default function PurchaseReturnPage() {
                 </button>
             </div>
 
-            <PaginatedList
-                rtkQuery={useGetPaginatedPurchaseReturnsQuery}
-                limit={20}
-                dataKey="data"
-                wrapperClassName="min-h-0"
-                renderItems={(purchaseReturns) => (
-                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
-                        <table className="w-full text-sm text-left">
-                            <thead>
-                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                    <th className="px-4 py-3 font-semibold">Return #</th>
-                                    <th className="px-4 py-3 font-semibold">Purchase Invoice</th>
-                                    <th className="px-4 py-3 font-semibold">Supplier</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Refund</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                    <th className="px-4 py-3 font-semibold">Date</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {purchaseReturns.map((pr) => (
-                                    <PurchaseReturnRow
-                                        key={pr._id}
-                                        purchaseReturn={pr}
-                                        onEdit={(e) => {
-                                            e.stopPropagation();
-                                            setModal({ mode: "update", id: pr._id });
-                                        }}
-                                        onDelete={(e) => handleDelete(pr._id, e)}
-                                    />
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-                renderEmpty={() => (
-                    <p className="text-center py-12 text-sm text-ink-muted">
-                        No purchase returns found.
-                    </p>
-                )}
-            />
+                <PaginatedList
+                    rtkQuery={useGetPaginatedPurchaseReturnsQuery}
+                    limit={20}
+                    dataKey="data"
+                    wrapperClassName="min-h-0"
+                    renderItems={(purchaseReturns) => (
+                        <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
+                            <table className="w-full text-sm text-left">
+                                <thead>
+                                    <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
+                                        <th className="px-4 py-3 font-semibold">Return #</th>
+                                        <th className="px-4 py-3 font-semibold">Purchase Invoice</th>
+                                        <th className="px-4 py-3 font-semibold">Supplier</th>
+                                        <th className="px-4 py-3 font-semibold text-center">Items</th>
+                                        <th className="px-4 py-3 font-semibold text-right">Refund</th>
+                                        <th className="px-4 py-3 font-semibold text-center">Status</th>
+                                        <th className="px-4 py-3 font-semibold">Date</th>
+                                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {purchaseReturns.map((pr) => (
+                                        <PurchaseReturnRow
+                                            key={pr._id}
+                                            purchaseReturn={pr}
+                                            onEdit={(e) => {
+                                                e.stopPropagation();
+                                                setModal({ mode: "update", id: pr._id });
+                                            }}
+                                            onDelete={(e) => handleDelete(pr._id, e)}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    renderEmpty={() => (
+                        <p className="text-center py-12 text-sm text-ink-muted">
+                            No purchase returns found.
+                        </p>
+                    )}
+                />
         </div>
     );
 }

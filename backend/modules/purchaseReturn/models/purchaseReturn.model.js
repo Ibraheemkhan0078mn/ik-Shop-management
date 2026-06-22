@@ -29,6 +29,16 @@ const purchaseReturnItemSchema = new mongoose.Schema({
         required: true,
         enum: ["damaged", "expired", "wrong_item", "excess", "quality_issue", "other"]
     },
+    condition: {
+        type: String,
+        required: true,
+        enum: ["good", "fair", "poor", "damaged"]
+    },
+    cut: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
     notes: {
         type: String
     }
@@ -98,7 +108,7 @@ const purchaseReturnSchema = new mongoose.Schema({
 purchaseReturnSchema.pre("save", function(next) {
     // Calculate total quantity and refund amount
     this.totalQuantity = this.items.reduce((sum, item) => sum + item.quantity, 0);
-    this.totalRefundAmount = this.items.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0);
+    this.totalRefundAmount = this.items.reduce((sum, item) => sum + ((item.quantity * item.purchasePrice) - (item.cut || 0)), 0);
     this.updatedAt = new Date();
     next();
 });
