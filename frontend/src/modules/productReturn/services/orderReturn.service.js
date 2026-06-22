@@ -1,76 +1,68 @@
+// ─── services/orderReturn.service.js ──────────────────────────────────────
 import { baseApi } from "../../../app/rtkBaseApi.js";
 
-export const productReturnApi = baseApi.injectEndpoints({
+export const orderReturnApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // Generate return number
         generateReturnNumber: builder.query({
             query: () => "/product-returns/generate-number",
-            providesTags: ["ProductReturn"],
+            providesTags: ["OrderReturn"],
         }),
 
-        // Get order by order number for return
         getOrderForReturn: builder.query({
             query: (orderNumber) => `/product-returns/order/${orderNumber}`,
-            providesTags: ["ProductReturn"],
+            providesTags: ["OrderReturn"],
         }),
 
-        // Create product return
-        createProductReturn: builder.mutation({
+        createOrderReturn: builder.mutation({
             query: (data) => ({
                 url: "/product-returns",
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["ProductReturn"],
+            invalidatesTags: ["OrderReturn"],
         }),
 
-        // Get all product returns
-        getAllProductReturns: builder.query({
+        getAllOrderReturns: builder.query({
             query: (params) => ({
                 url: "/product-returns",
                 params,
             }),
-            providesTags: ["ProductReturn"],
+            providesTags: ["OrderReturn"],
         }),
 
-        // Get paginated product returns
-        getPaginatedProductReturns: builder.query({
+        getPaginatedOrderReturns: builder.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
                 url: "/product-returns/pagination",
                 params: { page, limit, ...filters },
             }),
-            providesTags: ["ProductReturn"],
+            providesTags: ["OrderReturn"],
         }),
 
-        // Get product return by ID
-        getProductReturnById: builder.query({
+        getOrderReturnById: builder.query({
             query: (id) => `/product-returns/${id}`,
-            providesTags: (result, error, id) => [{ type: "ProductReturn", id }],
+            providesTags: (result, error, id) => [{ type: "OrderReturn", id }],
         }),
 
-        // Update product return
-        updateProductReturn: builder.mutation({
+        updateOrderReturn: builder.mutation({
             query: ({ id, data }) => ({
                 url: `/product-returns/${id}`,
                 method: "PUT",
                 body: data,
             }),
             invalidatesTags: (result, error, { id }) => [
-                { type: "ProductReturn", id },
-                "ProductReturn",
+                { type: "OrderReturn", id },
+                "OrderReturn",
             ],
         }),
 
-        // Delete product return
-        deleteProductReturn: builder.mutation({
+        deleteOrderReturn: builder.mutation({
             query: (id) => ({
                 url: `/product-returns/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["ProductReturn"],
+            invalidatesTags: ["OrderReturn"],
         }),
 
-        // Update return status
         updateReturnStatus: builder.mutation({
             query: ({ id, status }) => ({
                 url: `/product-returns/${id}/status`,
@@ -78,8 +70,8 @@ export const productReturnApi = baseApi.injectEndpoints({
                 body: { status },
             }),
             invalidatesTags: (result, error, { id }) => [
-                { type: "ProductReturn", id },
-                "ProductReturn",
+                { type: "OrderReturn", id },
+                "OrderReturn",
             ],
         }),
     }),
@@ -88,11 +80,11 @@ export const productReturnApi = baseApi.injectEndpoints({
 export const {
     useGenerateReturnNumberQuery,
     useGetOrderForReturnQuery,
-    useCreateProductReturnMutation,
-    useGetAllProductReturnsQuery,
-    useGetPaginatedProductReturnsQuery,
-    useGetProductReturnByIdQuery,
-    useUpdateProductReturnMutation,
-    useDeleteProductReturnMutation,
+    useCreateOrderReturnMutation,
+    useGetAllOrderReturnsQuery,
+    useGetPaginatedOrderReturnsQuery,
+    useGetOrderReturnByIdQuery,
+    useUpdateOrderReturnMutation,
+    useDeleteOrderReturnMutation,
     useUpdateReturnStatusMutation,
-} = productReturnApi;
+} = orderReturnApi;

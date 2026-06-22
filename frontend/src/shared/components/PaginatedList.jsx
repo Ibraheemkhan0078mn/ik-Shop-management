@@ -24,6 +24,7 @@ export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null }) => {
         return Array.isArray(res) ? res : []
     }
 
+    console.log("Data : ", data, "$$%%$%%")
     const items = extractData(data)
     const total = data?.total ?? data?.totalStudents ?? data?.count ?? 0
     const totalPages = total > 0 ? Math.ceil(total / limit) : 1

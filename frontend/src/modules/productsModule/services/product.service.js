@@ -23,7 +23,7 @@ export const productApi = baseApi.injectEndpoints({
                 url: "/products/pagination",
                 params: { page, limit, ...filters },
             }),
-            transformResponse: (raw) => { return raw.data },
+            transformResponse: (raw) => { return raw },
             providesTags: ["Product"],
         }),
 
@@ -42,7 +42,7 @@ export const productApi = baseApi.injectEndpoints({
 
         // Update
         updateProduct: build.mutation({
-            query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
+            query: ({ id, payload:body }) => ({ url: `/products/${id}`, method: "PUT", body }),
             invalidatesTags: (result, error, { id }) => [{ type: "Product", id }, "Product"],
         }),
 

@@ -15,14 +15,7 @@ import {
 
 export const sidebarData = (language = "en") => ({
     navMain: [
-        {
-            id: "Dashboard",
-            title: language === "en" ? "Dashboard" : "ڈیش بورڈ",
-            url: "/dashboard",
-            icon: BarChart3,
-            allowedUrls: ["/dashboard", "/dashboard/analytics"],
-        },
-        {
+       {
             id: "Quick List",
             title: language === "en" ? "Quick List" : "فوری لسٹ",
             url: "/quick-list",
@@ -30,11 +23,28 @@ export const sidebarData = (language = "en") => ({
             allowedUrls: ["/quick-list"],
         },
         {
+            id: "Dashboard",
+            title: language === "en" ? "Dashboard" : "ڈیش بورڈ",
+            url: "/dashboard",
+            icon: BarChart3,
+            allowedUrls: ["/dashboard", "/dashboard/analytics"],
+        },
+        
+        {
             id: "Sale",
             title: language === "en" ? "POS" : "سیل",
             url: "/pos",
             icon: ShoppingCart,
         },
+          {
+            id: "Product Return",
+            title: language === "en" ? "Order Return" : "پروڈکٹ واپسی",
+            url: "/product-return",
+            icon: ArrowLeftRight,
+            allowedUrls: ["/product-return"],
+        },
+     
+
         {
             id: "Stock & Expenses",
             title: "Products",
@@ -47,9 +57,17 @@ export const sidebarData = (language = "en") => ({
                 "/products/sub-categories",
             ],
         },
+             {
+            id: "Wastage",
+            title: language === "en" ? "Product Wastage" : "ضیاع",
+            url: "/wastage",
+            icon: Trash2,
+            allowedUrls: ["/wastage"],
+        },
+       
         {
             id: "Purchases",
-            title: language === "en" ? "Purchases" : "خریداری",
+            title: language === "en" ? "Product Purchases" : "خریداری",
             url: "/purchases",
             icon: CreditCard,
             allowedUrls: ["/purchases"],
@@ -61,20 +79,8 @@ export const sidebarData = (language = "en") => ({
             icon: RotateCcw,
             allowedUrls: ["/returns"],
         },
-        {
-            id: "Product Return",
-            title: language === "en" ? "Product Return" : "پروڈکٹ واپسی",
-            url: "/product-return",
-            icon: ArrowLeftRight,
-            allowedUrls: ["/product-return"],
-        },
-        {
-            id: "Wastage",
-            title: language === "en" ? "Wastage" : "ضیاع",
-            url: "/wastage",
-            icon: Trash2,
-            allowedUrls: ["/wastage"],
-        },
+       
+      
         {
             id: "Suppliers",
             title: language === "en" ? "Suppliers" : "سپلائرز",

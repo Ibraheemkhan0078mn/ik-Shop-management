@@ -1,4 +1,233 @@
-import React, { useEffect, useState } from "react";
+// import React, { useEffect, useState } from "react";
+// import { X, PlusCircle, Pencil, Trash2, Tag, Check } from "lucide-react";
+// import { toast } from "sonner";
+// import {
+//     useCreateInventoryCategoryMutation,
+//     useDeleteInventoryCategoryMutation,
+//     useGetInventoryCategoriesQuery,
+//     useUpdateInventoryCategoryMutation,
+// } from "../services/inventory.service.js";
+
+// // ── Small inline create/edit form ────────────────────────────────────────────
+// function CategoryForm({ initialValue = "", onSubmit, onCancel, loading }) {
+//     const [name, setName] = useState(initialValue);
+
+//     return (
+//         <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-cyan-200 rounded-xl">
+//             <input
+//                 autoFocus
+//                 value={name}
+//                 onChange={e => setName(e.target.value)}
+//                 onKeyDown={e => { if (e.key === "Enter") onSubmit(name); if (e.key === "Escape") onCancel(); }}
+//                 className="flex-1 border-2 border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-cyan-400 transition-colors bg-white"
+//                 placeholder="Category name..."
+//             />
+//             <button
+//                 onClick={() => onSubmit(name)}
+//                 disabled={loading || !name.trim()}
+//                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+//             >
+//                 <Check size={14} />
+//                 {loading ? "Saving..." : "Save"}
+//             </button>
+//             <button
+//                 onClick={onCancel}
+//                 className="p-2 rounded-xl hover:bg-slate-200 transition-colors text-slate-500"
+//             >
+//                 <X size={14} />
+//             </button>
+//         </div>
+//     );
+// }
+
+// // ── Each category row ────────────────────────────────────────────────────────
+// function EachCategoryRow({ category, onDeleteDone, onUpdateDone, updateInventoryCategory, deleteInventoryCategory }) {
+//     const [editMode, setEditMode] = useState(false);
+//     const [updateLoading, setUpdateLoading] = useState(false);
+//     const [deleteLoading, setDeleteLoading] = useState(false);
+
+//     async function handleUpdate(name) {
+//         try {
+//             if (!name?.trim()) return;
+//             setUpdateLoading(true);
+//             const res = await updateInventoryCategory({ id: category._id, name: name.trim() }).unwrap();
+//             if (res?.success) {
+//                 onUpdateDone(category._id, name.trim());
+//                 setEditMode(false);
+//             }
+//         } catch (error) {
+//             console.error(error);
+//         } finally {
+//             setUpdateLoading(false);
+//         }
+//     }
+
+//     async function handleDelete() {
+//         try {
+//             setDeleteLoading(true);
+//             const res = await deleteInventoryCategory(category._id).unwrap();
+//             if (res?.success) onDeleteDone(category._id);
+//         } catch (error) {
+//             console.error(error);
+//         } finally {
+//             setDeleteLoading(false);
+//         }
+//     }
+
+//     if (editMode) {
+//         return (
+//             <div className="border-b border-slate-100 py-2">
+//                 <CategoryForm
+//                     initialValue={category.name}
+//                     onSubmit={handleUpdate}
+//                     onCancel={() => setEditMode(false)}
+//                     loading={updateLoading}
+//                 />
+//             </div>
+//         );
+//     }
+
+//     return (
+//         <div className="flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition-colors duration-100 py-3 px-4">
+//             <div className="flex items-center gap-3">
+//                 <div className="p-1.5 bg-cyan-50 rounded-lg">
+//                     <Tag size={13} className="text-cyan-600" />
+//                 </div>
+//                 <span className="text-sm font-semibold text-slate-700">{category.name}</span>
+//             </div>
+//             <div className="flex items-center gap-2">
+//                 <button
+//                     onClick={() => setEditMode(true)}
+//                     className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+//                 >
+//                     <Pencil size={14} />
+//                 </button>
+//                 <button
+//                     onClick={handleDelete}
+//                     disabled={deleteLoading}
+//                     className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors disabled:opacity-50"
+//                 >
+//                     <Trash2 size={14} />
+//                 </button>
+//             </div>
+//         </div>
+//     );
+// }
+
+// // ── Main component ───────────────────────────────────────────────────────────
+// export default function InventoryCategory({ setVisibility }) {
+//     const { data: categoriesResponse, isLoading: loading } = useGetInventoryCategoriesQuery();
+//     const [createInventoryCategory, { isLoading: createLoading }] = useCreateInventoryCategoryMutation();
+//     const [updateInventoryCategory] = useUpdateInventoryCategoryMutation();
+//     const [deleteInventoryCategory] = useDeleteInventoryCategoryMutation();
+//     const [categories, setCategories] = useState([]);
+//     const [createFormOpen, setCreateFormOpen] = useState(false);
+
+//     useEffect(() => {
+//         const nextCategories = categoriesResponse?.data?.categories || categoriesResponse?.categories || [];
+//         setCategories(nextCategories);
+//     }, [categoriesResponse]);
+
+//     async function handleCreate(name) {
+//         try {
+//             if (!name?.trim()) return;
+//             const res = await createInventoryCategory(name.trim()).unwrap();
+//             if (res?.success) {
+//                 setCreateFormOpen(false);
+//             } else {
+//                 toast.error(res?.reason || res?.msg || "Category creation failed");
+//             }
+//         } catch (error) {
+//             console.error(error);
+//             toast.error(error?.data?.reason || "Category creation failed");
+//         }
+//     }
+
+//     function handleUpdateDone(id, newName) {
+//         setCategories(prev => prev.map(c => c._id === id ? { ...c, name: newName } : c));
+//     }
+
+//     function handleDeleteDone(id) {
+//         setCategories(prev => prev.filter(c => c._id !== id));
+//     }
+
+//     return (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+//             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+
+//                 {/* Header */}
+//                 <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 rounded-t-2xl">
+//                     <div className="flex items-center gap-3">
+//                         <div className="p-2 bg-cyan-50 rounded-xl">
+//                             <Tag size={18} className="text-cyan-600" />
+//                         </div>
+//                         <div>
+//                             <h2 className="text-lg font-bold text-slate-800">Inventory Categories</h2>
+//                             <p className="text-xs text-slate-400">{categories.length} categories</p>
+//                         </div>
+//                     </div>
+//                     <button onClick={() => setVisibility(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+//                         <X size={18} className="text-slate-500" />
+//                     </button>
+//                 </div>
+
+//                 {/* Add button + create form */}
+//                 <div className="px-6 py-4 border-b border-slate-100">
+//                     {!createFormOpen ? (
+//                         <button
+//                             onClick={() => setCreateFormOpen(true)}
+//                             className="flex items-center gap-2 w-full justify-center bg-gradient-to-r from-cyan-600 to-blue-700 text-white py-2.5 rounded-xl font-semibold text-sm shadow hover:opacity-90 transition-opacity"
+//                         >
+//                             <PlusCircle size={15} />
+//                             Add Category
+//                         </button>
+//                     ) : (
+//                         <CategoryForm
+//                             onSubmit={handleCreate}
+//                             onCancel={() => setCreateFormOpen(false)}
+//                             loading={createLoading}
+//                         />
+//                     )}
+//                 </div>
+
+//                 {/* Categories list */}
+//                 <div className="overflow-y-auto flex-1 px-2 py-2">
+//                     {loading ? (
+//                         <div className="flex justify-center items-center h-32 text-slate-400 text-sm">
+//                             Loading categories...
+//                         </div>
+//                     ) : categories.length < 1 ? (
+//                         <div className="flex flex-col justify-center items-center h-32 gap-2 text-slate-400 text-sm">
+//                             <Tag size={28} className="text-slate-200" />
+//                             No categories yet
+//                         </div>
+//                     ) : (
+//                         categories.map(category => (
+//                             <EachCategoryRow
+//                                 key={category._id}
+//                                 category={category}
+//                                 onUpdateDone={handleUpdateDone}
+//                                 onDeleteDone={handleDeleteDone}
+//                                 updateInventoryCategory={updateInventoryCategory}
+//                                 deleteInventoryCategory={deleteInventoryCategory}
+//                             />
+//                         ))
+//                     )}
+//                 </div>
+
+//             </div>
+//         </div>
+//     );
+// }
+
+
+
+
+
+
+
+// ─── components/InventoryCategory.jsx ──────────────────────────────────────
+import React, { useState, useEffect } from "react";
 import { X, PlusCircle, Pencil, Trash2, Tag, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -8,75 +237,66 @@ import {
     useUpdateInventoryCategoryMutation,
 } from "../services/inventory.service.js";
 
-// ── Small inline create/edit form ────────────────────────────────────────────
-function CategoryForm({ initialValue = "", onSubmit, onCancel, loading }) {
+// ─── Category Form ──────────────────────────────────────────────────────────
+const CategoryForm = ({ initialValue = "", onSubmit, onCancel, loading }) => {
     const [name, setName] = useState(initialValue);
 
     return (
-        <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-cyan-200 rounded-xl">
+        <div className="flex items-center gap-2 p-3 bg-[var(--app-bg)] border-2 border-[var(--accent-2)] rounded-xl">
             <input
                 autoFocus
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") onSubmit(name); if (e.key === "Escape") onCancel(); }}
-                className="flex-1 border-2 border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-cyan-400 transition-colors bg-white"
+                className="flex-1 border-2 border-[var(--border)] rounded-xl px-4 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent-2)] transition-colors bg-[var(--surface)]"
                 placeholder="Category name..."
             />
             <button
                 onClick={() => onSubmit(name)}
                 disabled={loading || !name.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-2)] text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
             >
                 <Check size={14} />
                 {loading ? "Saving..." : "Save"}
             </button>
             <button
                 onClick={onCancel}
-                className="p-2 rounded-xl hover:bg-slate-200 transition-colors text-slate-500"
+                className="p-2 rounded-xl hover:bg-[var(--surface)] transition-colors text-[var(--muted)]"
             >
                 <X size={14} />
             </button>
         </div>
     );
-}
+};
 
-// ── Each category row ────────────────────────────────────────────────────────
-function EachCategoryRow({ category, onDeleteDone, onUpdateDone, updateInventoryCategory, deleteInventoryCategory }) {
+// ─── Category Row ───────────────────────────────────────────────────────────
+const CategoryRow = ({ category, onDeleteDone, onUpdateDone, updateCategory, deleteCategory }) => {
     const [editMode, setEditMode] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    async function handleUpdate(name) {
+    const handleUpdate = async (name) => {
+        if (!name?.trim()) return;
+        setUpdateLoading(true);
         try {
-            if (!name?.trim()) return;
-            setUpdateLoading(true);
-            const res = await updateInventoryCategory({ id: category._id, name: name.trim() }).unwrap();
-            if (res?.success) {
-                onUpdateDone(category._id, name.trim());
-                setEditMode(false);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setUpdateLoading(false);
-        }
-    }
+            const res = await updateCategory({ id: category._id, name: name.trim() }).unwrap();
+            if (res?.success) { onUpdateDone(category._id, name.trim()); setEditMode(false); }
+        } catch (error) { console.error(error); }
+        finally { setUpdateLoading(false); }
+    };
 
-    async function handleDelete() {
+    const handleDelete = async () => {
+        setDeleteLoading(true);
         try {
-            setDeleteLoading(true);
-            const res = await deleteInventoryCategory(category._id).unwrap();
+            const res = await deleteCategory(category._id).unwrap();
             if (res?.success) onDeleteDone(category._id);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setDeleteLoading(false);
-        }
-    }
+        } catch (error) { console.error(error); }
+        finally { setDeleteLoading(false); }
+    };
 
     if (editMode) {
         return (
-            <div className="border-b border-slate-100 py-2">
+            <div className="border-b border-[var(--border)] py-2">
                 <CategoryForm
                     initialValue={category.name}
                     onSubmit={handleUpdate}
@@ -88,98 +308,78 @@ function EachCategoryRow({ category, onDeleteDone, onUpdateDone, updateInventory
     }
 
     return (
-        <div className="flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition-colors duration-100 py-3 px-4">
+        <div className="flex items-center justify-between border-b border-[var(--border)] hover:bg-[var(--app-bg)] transition-colors py-3 px-4">
             <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-cyan-50 rounded-lg">
-                    <Tag size={13} className="text-cyan-600" />
+                <div className="p-1.5 bg-[var(--accent-2)]/10 rounded-lg">
+                    <Tag size={13} className="text-[var(--accent-2)]" />
                 </div>
-                <span className="text-sm font-semibold text-slate-700">{category.name}</span>
+                <span className="text-sm font-semibold text-[var(--ink)]">{category.name}</span>
             </div>
             <div className="flex items-center gap-2">
-                <button
-                    onClick={() => setEditMode(true)}
-                    className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
-                >
+                <button onClick={() => setEditMode(true)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors">
                     <Pencil size={14} />
                 </button>
-                <button
-                    onClick={handleDelete}
-                    disabled={deleteLoading}
-                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors disabled:opacity-50"
-                >
+                <button onClick={handleDelete} disabled={deleteLoading} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors disabled:opacity-50">
                     <Trash2 size={14} />
                 </button>
             </div>
         </div>
     );
-}
+};
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ─── Main Component ──────────────────────────────────────────────────────────
 export default function InventoryCategory({ setVisibility }) {
     const { data: categoriesResponse, isLoading: loading } = useGetInventoryCategoriesQuery();
-    const [createInventoryCategory, { isLoading: createLoading }] = useCreateInventoryCategoryMutation();
-    const [updateInventoryCategory] = useUpdateInventoryCategoryMutation();
-    const [deleteInventoryCategory] = useDeleteInventoryCategoryMutation();
+    const [createCategory, { isLoading: createLoading }] = useCreateInventoryCategoryMutation();
+    const [updateCategory] = useUpdateInventoryCategoryMutation();
+    const [deleteCategory] = useDeleteInventoryCategoryMutation();
     const [categories, setCategories] = useState([]);
     const [createFormOpen, setCreateFormOpen] = useState(false);
 
     useEffect(() => {
-        const nextCategories = categoriesResponse?.data?.categories || categoriesResponse?.categories || [];
-        setCategories(nextCategories);
+        const next = categoriesResponse?.data?.categories || categoriesResponse?.categories || [];
+        setCategories(next);
     }, [categoriesResponse]);
 
-    async function handleCreate(name) {
+    const handleCreate = async (name) => {
+        if (!name?.trim()) return;
         try {
-            if (!name?.trim()) return;
-            const res = await createInventoryCategory(name.trim()).unwrap();
-            if (res?.success) {
-                setCreateFormOpen(false);
-            } else {
-                toast.error(res?.reason || res?.msg || "Category creation failed");
-            }
+            const res = await createCategory(name.trim()).unwrap();
+            if (res?.success) { setCreateFormOpen(false); }
+            else toast.error(res?.reason || res?.msg || "Category creation failed");
         } catch (error) {
             console.error(error);
             toast.error(error?.data?.reason || "Category creation failed");
         }
-    }
-
-    function handleUpdateDone(id, newName) {
-        setCategories(prev => prev.map(c => c._id === id ? { ...c, name: newName } : c));
-    }
-
-    function handleDeleteDone(id) {
-        setCategories(prev => prev.filter(c => c._id !== id));
-    }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
-
+            <div className="bg-[var(--surface)] rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 rounded-t-2xl">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)] rounded-t-2xl">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-cyan-50 rounded-xl">
-                            <Tag size={18} className="text-cyan-600" />
+                        <div className="p-2 bg-[var(--accent-2)]/10 rounded-xl">
+                            <Tag size={18} className="text-[var(--accent-2)]" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-slate-800">Inventory Categories</h2>
-                            <p className="text-xs text-slate-400">{categories.length} categories</p>
+                            <h2 className="text-lg font-bold text-[var(--ink)] font-display">Inventory Categories</h2>
+                            <p className="text-xs text-[var(--muted)]">{categories.length} categories</p>
                         </div>
                     </div>
-                    <button onClick={() => setVisibility(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                        <X size={18} className="text-slate-500" />
+                    <button onClick={() => setVisibility(false)} className="p-2 hover:bg-[var(--app-bg)] rounded-xl transition-colors">
+                        <X size={18} className="text-[var(--muted)]" />
                     </button>
                 </div>
 
-                {/* Add button + create form */}
-                <div className="px-6 py-4 border-b border-slate-100">
+                {/* Add Button */}
+                <div className="px-6 py-4 border-b border-[var(--border)]">
                     {!createFormOpen ? (
                         <button
                             onClick={() => setCreateFormOpen(true)}
-                            className="flex items-center gap-2 w-full justify-center bg-gradient-to-r from-cyan-600 to-blue-700 text-white py-2.5 rounded-xl font-semibold text-sm shadow hover:opacity-90 transition-opacity"
+                            className="flex items-center gap-2 w-full justify-center bg-[var(--accent-2)] text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
                         >
-                            <PlusCircle size={15} />
-                            Add Category
+                            <PlusCircle size={15} /> Add Category
                         </button>
                     ) : (
                         <CategoryForm
@@ -190,31 +390,28 @@ export default function InventoryCategory({ setVisibility }) {
                     )}
                 </div>
 
-                {/* Categories list */}
-                <div className="overflow-y-auto flex-1 px-2 py-2">
+                {/* Category List */}
+                <div className="overflow-y-auto flex-1 px-2 py-2 custom-scrollbar">
                     {loading ? (
-                        <div className="flex justify-center items-center h-32 text-slate-400 text-sm">
-                            Loading categories...
-                        </div>
+                        <div className="flex justify-center items-center h-32 text-[var(--muted)] text-sm">Loading categories...</div>
                     ) : categories.length < 1 ? (
-                        <div className="flex flex-col justify-center items-center h-32 gap-2 text-slate-400 text-sm">
-                            <Tag size={28} className="text-slate-200" />
+                        <div className="flex flex-col justify-center items-center h-32 gap-2 text-[var(--muted)] text-sm">
+                            <Tag size={28} className="text-[var(--border)]" />
                             No categories yet
                         </div>
                     ) : (
-                        categories.map(category => (
-                            <EachCategoryRow
-                                key={category._id}
-                                category={category}
-                                onUpdateDone={handleUpdateDone}
-                                onDeleteDone={handleDeleteDone}
-                                updateInventoryCategory={updateInventoryCategory}
-                                deleteInventoryCategory={deleteInventoryCategory}
+                        categories.map(c => (
+                            <CategoryRow
+                                key={c._id}
+                                category={c}
+                                onUpdateDone={(id, newName) => setCategories(prev => prev.map(c => c._id === id ? { ...c, name: newName } : c))}
+                                onDeleteDone={id => setCategories(prev => prev.filter(c => c._id !== id))}
+                                updateCategory={updateCategory}
+                                deleteCategory={deleteCategory}
                             />
                         ))
                     )}
                 </div>
-
             </div>
         </div>
     );

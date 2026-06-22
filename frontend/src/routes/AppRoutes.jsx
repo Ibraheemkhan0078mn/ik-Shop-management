@@ -28,7 +28,7 @@ import InventoryReports from "@modules/reports/pages/InventoryReports.jsx";
 import ProfitLossReports from "@modules/reports/pages/ProfitLossReports.jsx";
 import AccountsReports from "@modules/reports/pages/AccountsReports.jsx";
 import ReportDetailsPage from "@modules/reports/pages/ReportDetailsPage.jsx";
-import ProductReturnList from "@modules/productReturn/pages/ProductReturnList.jsx";
+import ProductReturnList from "@modules/productReturn/pages/OrderReturnList.jsx";
 
 
 function AppRoutes() {
@@ -37,7 +37,7 @@ function AppRoutes() {
 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            
+
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/analytics" element={<Analytics />} />
