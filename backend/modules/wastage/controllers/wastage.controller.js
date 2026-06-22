@@ -108,7 +108,6 @@ export const createWastage = asyncHandler(async (req, res, next) => {
     validatedData.totalItems      = validatedData.items.length;
     validatedData.totalQuantity   = totalQuantity;
     validatedData.totalLossAmount = totalLossAmount;
-    validatedData.createdBy       = req.user._id;
 
     // Auto-generate wastage number  e.g. WST-00042
     const count          = await countWastagesService();

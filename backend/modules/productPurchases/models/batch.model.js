@@ -57,6 +57,10 @@ const batchSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        currentStock: {
+            type: Number,
+            default: 0
+        }
     },
     { timestamps: true },
 );

@@ -68,7 +68,7 @@ export default function ProductPurchasePage() {
                         <table className="w-full text-sm text-left">
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                    <th className="px-4 py-3 font-semibold">Supplier</th>
+
                                     <th className="px-4 py-3 font-semibold">Invoice</th>
                                     <th className="px-4 py-3 font-semibold text-center">Items</th>
                                     <th className="px-4 py-3 font-semibold text-right">Total</th>
@@ -107,9 +107,6 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete }) {
         <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
             onClick={onView}>
 
-            <td className="px-4 py-3 font-medium text-ink">
-                {purchase?.supplier?.name ?? "—"}
-            </td>
             <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                 {purchase?.invoiceNumber ?? "—"}
             </td>

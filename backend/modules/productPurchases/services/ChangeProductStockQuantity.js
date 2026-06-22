@@ -36,7 +36,7 @@
 
 import { getLocalProductModel } from "../../../configs/connect.db.js";
 
-export async function handleProductStockQuantity(productId, origin, quantity) {
+export async function handleProductStockQuantity(productId, origin, quantity, batchId) {
     try {
         const ProductModel = getLocalProductModel();
 

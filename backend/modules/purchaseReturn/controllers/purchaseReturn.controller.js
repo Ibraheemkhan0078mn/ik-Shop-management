@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { createPurchaseReturnSchema, updatePurchaseReturnSchema } from "../schemas/purchaseReturn.schema.js";
+import { getPurchaseById as getPurchaseDetails } from "../../productPurchases/services/purchase.service.js";
 import {
     getPurchaseReturns,
     getPaginatedPurchaseReturns,
@@ -12,6 +13,7 @@ import {
     approvePurchaseReturn,
     rejectPurchaseReturn,
     generatePurchaseReturnNumber,
+    // Removed getPurchaseById import (now imported as getPurchaseDetails above)
 } from "../services/purchaseReturn.service.js";
 
 // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
@@ -149,6 +151,22 @@ export const rejectPurchaseReturnData = asyncHandler(async (req, res, next) => {
         });
     } catch (error) {
         return next(new ErrorResponse(error.message, 400));
+    }
+});
+
+// ─── GENERATE NUMBER ─────────────────────────────────────────────────────────
+// ─── GET PURCHASE DETAILS FOR RETURN ────────────────────────────────────────
+export const getPurchaseDetailsForReturn = asyncHandler(async (req, res, next) => {
+    const { purchaseId } = req.params;
+    try {
+        const purchase = await getPurchaseDetails(purchaseId);
+        res.status(200).json({
+            success: true,
+            message: "Purchase details retrieved successfully",
+            data: purchase,
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message || "Purchase not found", 404));
     }
 });
 

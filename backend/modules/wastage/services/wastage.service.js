@@ -5,11 +5,11 @@ const wastageCreate = async (data) => {
 };
 
 const getAllWastages = (query = {}) => {
-    return findWastageService(query).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email").sort({ createdAt: -1 });
+    return findWastageService(query).populate("items.product").sort({ createdAt: -1 });
 };
 
 const getWastageById = async (id) => {
-    return await findByIdWastageService(id).populate("items.product").populate("createdBy", "name email").populate("approvedBy", "name email");
+    return await findByIdWastageService(id).populate("items.product");
 };
 
 const wastageUpdate = async (id, data) => {
