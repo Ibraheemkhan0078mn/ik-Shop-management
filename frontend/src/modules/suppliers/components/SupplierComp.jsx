@@ -40,7 +40,6 @@ export default function SupplierComp({setVisibility}) {
             </div>
 
             <PaginatedTable
-                endpoint="/suppliers/pagination"
                 columns={columns}
                 limit={20}
                 isUpdate={true}

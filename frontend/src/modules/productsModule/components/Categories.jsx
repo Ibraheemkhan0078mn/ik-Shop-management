@@ -142,12 +142,11 @@ const Categories = ({ setVisibility }) => {
                 {/* List */}
                 <div className="h-[60vh] overflow-hidden">
                     <PaginatedList
-                        endpoint="/categories/getPaginationCategories"
+                        rtkQuery={useGetCategoriesQuery}
                         limit={10}
                         dataKey="data"
                         wrapperClassName="h-full"
                         renderItems={renderItems}
-                        rtkGetDataQuery={useGetCategoriesQuery}
                     />
                 </div>
             </div>

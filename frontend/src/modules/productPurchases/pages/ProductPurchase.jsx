@@ -1,9 +1,9 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { Plus }                           from "lucide-react";
 import { useSelector }                    from "react-redux";
 import { useNavigate }                    from "react-router-dom";
-import { useDeletePurchase }              from "../services/purchases.service.js";
+import { useDeletePurchase, usePurchases } from "../services/purchases.service.js";
 import PaginatedList                      from "@shared/components/PaginatedList.jsx";
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
@@ -14,19 +14,15 @@ export default function ProductPurchasePage() {
     const navigate         = useNavigate();
     const [deletePurchase] = useDeletePurchase();
 
-    const [modal,        setModal]        = useState(null);   // null | { mode: "create" } | { mode: "update", id }
+    const [modal,        setModal]        = useState(null);
     const [viewPurchase, setViewPurchase] = useState(null);
-    const [refreshKey,   setRefreshKey]   = useState(0);      // increment to force PaginatedList refetch
 
     const listRef = useRef(null);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this purchase?")) return;
         await deletePurchase(id);
-        refresh();
     };
 
     return (
@@ -37,7 +33,6 @@ export default function ProductPurchasePage() {
                     mode={modal.mode}
                     purchaseId={modal.id}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
             {viewPurchase && (
@@ -66,10 +61,9 @@ export default function ProductPurchasePage() {
                 </PageHeading>
             </div>
 
-            {/* ── list — refreshKey forces re-mount → new fetch ── */}
+            {/* ── list ── */}
             <PaginatedList
-                key={refreshKey}
-                endpoint="/purchases/pagination"
+                rtkQuery={usePurchases}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

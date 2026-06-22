@@ -20,7 +20,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { useDeleteProduct, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import { useGetCategoriesQuery } from "../services/category.service.js";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
 import Categories from "../components/Categories.jsx";
 import SubCategories from "../components/SubCategories.jsx";
@@ -240,12 +240,11 @@ export default function Products() {
             */}
             <div className="flex-1 overflow-hidden">
                 <PaginatedList
-                    endpoint="/products/pagination"
+                    rtkQuery={useProducts}
                     limit={20}
                     dataKey="data"
                     wrapperClassName="h-full"
                     renderItems={renderItems}
-                    rtkGetDataQuery={useProducts}
                 />
             </div>
         </div>

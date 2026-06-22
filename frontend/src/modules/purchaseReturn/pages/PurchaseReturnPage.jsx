@@ -1,8 +1,8 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
-import { useDeletePurchaseReturnMutation } from "../services/purchaseReturn.service.js";
+import { useDeletePurchaseReturnMutation, useGetPaginatedPurchaseReturnsQuery } from "../services/purchaseReturn.service.js";
 import PaginatedList from "@shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
 
@@ -18,15 +18,11 @@ export default function PurchaseReturnPage() {
     const [deletePurchaseReturn] = useDeletePurchaseReturnMutation();
 
     const [modal, setModal] = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this purchase return?")) return;
         await deletePurchaseReturn(id);
-        refresh();
     };
 
     return (
@@ -36,7 +32,6 @@ export default function PurchaseReturnPage() {
                     mode={modal.mode}
                     purchaseReturnId={modal.id}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
 
@@ -48,8 +43,7 @@ export default function PurchaseReturnPage() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/purchase-returns/paginate"
+                rtkQuery={useGetPaginatedPurchaseReturnsQuery}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="min-h-0"

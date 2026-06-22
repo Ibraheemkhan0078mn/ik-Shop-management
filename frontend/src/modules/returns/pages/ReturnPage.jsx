@@ -1,8 +1,8 @@
 // src/modules/returns/pages/ReturnPage.jsx
-import { useState, useCallback }   from "react";
+import { useState }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
-import { useDeleteReturn }         from "../services/return.service.js";
+import { useDeleteReturn, useReturns } from "../services/return.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import ReturnModal                 from "../components/ReturnModal.jsx";
 import PageHeading                 from "@shared/components/PageHeading.jsx";
@@ -19,16 +19,12 @@ export default function ReturnPage() {
     const language         = useSelector(s => s.auth?.user?.language ?? "en");
     const [deleteReturn]   = useDeleteReturn();
 
-    const [modal,      setModal]      = useState(null);  // null | { mode, id? }
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
+    const [modal,      setModal]      = useState(null);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this return?")) return;
         await deleteReturn(id);
-        refresh();
     };
 
     return (
@@ -38,7 +34,6 @@ export default function ReturnPage() {
                     mode={modal.mode}
                     returnId={modal.id}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
 
@@ -57,8 +52,7 @@ export default function ReturnPage() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/returns/paginate"
+                rtkQuery={useReturns}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

@@ -33,6 +33,15 @@ export const productReturnApi = baseApi.injectEndpoints({
             providesTags: ["ProductReturn"],
         }),
 
+        // Get paginated product returns
+        getPaginatedProductReturns: builder.query({
+            query: ({ page = 1, limit = 20, ...filters } = {}) => ({
+                url: "/product-returns/pagination",
+                params: { page, limit, ...filters },
+            }),
+            providesTags: ["ProductReturn"],
+        }),
+
         // Get product return by ID
         getProductReturnById: builder.query({
             query: (id) => `/product-returns/${id}`,
@@ -81,6 +90,7 @@ export const {
     useGetOrderForReturnQuery,
     useCreateProductReturnMutation,
     useGetAllProductReturnsQuery,
+    useGetPaginatedProductReturnsQuery,
     useGetProductReturnByIdQuery,
     useUpdateProductReturnMutation,
     useDeleteProductReturnMutation,

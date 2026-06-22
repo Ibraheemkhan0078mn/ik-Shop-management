@@ -1,8 +1,8 @@
 // src/modules/expense/pages/AllExpense.jsx
-import { useState, useCallback } from "react";
-import { Plus, Tag, Edit2, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Plus, Tag, Edit2, Trash2, Calendar } from "lucide-react";
 import { useSelector }      from "react-redux";
-import { useDeleteExpense } from "../services/expense.service.js";
+import { useDeleteExpense, useExpensesPaginated } from "../services/expense.service.js";
 import ExpenseModal          from "../components/ExpenseModal.jsx";
 import CategoryModal         from "../components/CategoryModal.jsx";
 import PaginatedList         from "@shared/components/PaginatedList.jsx";
@@ -12,27 +12,23 @@ export default function AllExpense() {
     const language        = useSelector(s => s.auth?.user?.language ?? "en");
     const [deleteExpense] = useDeleteExpense();
 
-    const [modal,      setModal]      = useState(null);   // null | "create" | { expense }
+    const [modal,      setModal]      = useState(null);
     const [catModal,   setCatModal]   = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this expense?")) return;
         await deleteExpense(id);
-        refresh();
     };
 
     return (
         <div className="h-screen flex flex-col">
             {/* modals */}
             {modal === "create" && (
-                <ExpenseModal mode="create" onClose={() => setModal(null)} onSuccess={refresh} />
+                <ExpenseModal mode="create" onClose={() => setModal(null)} />
             )}
             {modal && typeof modal === "object" && (
-                <ExpenseModal mode="update" expense={modal.expense} onClose={() => setModal(null)} onSuccess={refresh} />
+                <ExpenseModal mode="update" expense={modal.expense} onClose={() => setModal(null)} />
             )}
             {catModal && <CategoryModal onClose={() => setCatModal(false)} />}
 
@@ -55,8 +51,7 @@ export default function AllExpense() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/expenses/pagination"
+                rtkQuery={useExpensesPaginated}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"
@@ -77,7 +72,6 @@ export default function AllExpense() {
                                     <ExpenseRow
                                         key={exp._id ?? i}
                                         expense={exp}
-                                        catSearch={catSearch}
                                         onEdit={e => { e.stopPropagation(); setModal({ expense: exp }); }}
                                         onDelete={e => handleDelete(exp._id, e)}
                                     />
@@ -96,7 +90,7 @@ export default function AllExpense() {
     );
 }
 
-function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
+function ExpenseRow({ expense: exp, onEdit, onDelete }) {
     return (
         <tr className="transition border-b border-edge hover:bg-surface-muted">
 
@@ -116,14 +110,14 @@ function ExpenseRow({ expense: exp, catSearch, onEdit, onDelete }) {
                 <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-primary" />
                     <span className="text-xs font-semibold uppercase tracking-tight text-ink">
-                        {highlightMatch(exp.category || "General", catSearch)}
+                        {exp.category || "General"}
                     </span>
                 </div>
             </td>
 
             <td className="px-4 py-3 text-xs text-ink-muted">
                 {exp.notes
-                    ? <span className="italic truncate max-w-xs block">"{highlightMatch(exp.notes, catSearch)}"</span>
+                    ? <span className="italic truncate max-w-xs block">"{exp.notes}"</span>
                     : "—"}
             </td>
 

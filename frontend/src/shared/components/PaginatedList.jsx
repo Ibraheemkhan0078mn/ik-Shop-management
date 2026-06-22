@@ -1,83 +1,53 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import api from "@shared/services/api.js"
 
 // ─────────────────────────────────────────────────────────────────
-//  usePaginatedFetch
-//  Page-based. Fetches exactly one page at a time.
-//  Returns:
-//    data        – current page's records
-//    total       – total record count from backend
-//    totalPages  – Math.ceil(total / limit)
-//    currentPage – active page number
-//    isLoading   – fetch in progress
-//    goToPage    – (n) => void  — the only way to change page
+//  usePaginatedFetch - RTK Query version
+//  Uses RTK Query hook for auto-updating on CRUD operations
 // ─────────────────────────────────────────────────────────────────
-export const usePaginatedFetch = ({ endpoint, limit = 20, dataKey = null }) => {
-    const [data, setData]           = useState([])
-    const [total, setTotal]         = useState(0)
+export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null }) => {
     const [currentPage, setCurrentPage] = useState(1)
-    const [isLoading, setIsLoading] = useState(false)
+    const [filter, setFilter] = useState({})
 
-    const isLoadingRef = useRef(false)
-    const filterRef    = useRef({})
-
-    const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+    const { data, isLoading, isFetching, refetch } = rtkQuery({
+        page: currentPage,
+        limit,
+        ...filter,
+    })
 
     const extractData = (res) => {
+        if (!res) return []
         if (dataKey) return res[dataKey] ?? []
-        for (const key of ["students", "data", "items", "results", "records"]) {
+        for (const key of ["data", "items", "results", "records", "students"]) {
             if (Array.isArray(res[key])) return res[key]
         }
-        return []
+        return Array.isArray(res) ? res : []
     }
 
-    const fetchPage = useCallback(async (page, filter) => {
-        if (isLoadingRef.current) return
-        isLoadingRef.current = true
-        setIsLoading(true)
+    const items = extractData(data)
+    const total = data?.total ?? data?.totalStudents ?? data?.count ?? 0
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 1
 
-        if (filter !== undefined) filterRef.current = filter
-
-        try {
-            const params = new URLSearchParams({
-                page,
-                limit,
-                ...filterRef.current,
-            }).toString()
-
-            const { data: res } = await api.get(`${endpoint}?${params}`)
-
-            if (res.success) {
-                // Replace — never append. No flicker because we set data atomically.
-                setData(extractData(res))
-                setTotal(res.totalStudents ?? res.total ?? 0)
-                setCurrentPage(page)
-            } else {
-                setData([])
-                setTotal(0)
-                setCurrentPage(1)
-            }
-        } catch {
-            setData([])
-        } finally {
-            isLoadingRef.current = false
-            setIsLoading(false)
-        }
-    }, [endpoint, limit])
-
-    // goToPage: clamps to valid range, then fetches
     const goToPage = useCallback((n) => {
         const clamped = Math.max(1, Math.min(n, totalPages))
-        fetchPage(clamped)
-    }, [fetchPage, totalPages])
+        setCurrentPage(clamped)
+    }, [totalPages])
 
-    // Called when filter changes — reset to page 1
-    const resetWithFilter = useCallback((filter) => {
-        fetchPage(1, filter)
-    }, [fetchPage])
+    const resetWithFilter = useCallback((newFilter) => {
+        setFilter(newFilter)
+        setCurrentPage(1)
+    }, [])
 
-    return { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter }
+    return {
+        data: items,
+        total,
+        totalPages,
+        currentPage,
+        isLoading: isLoading || isFetching,
+        goToPage,
+        resetWithFilter,
+        refetch,
+    }
 }
 
 
@@ -85,7 +55,7 @@ export const usePaginatedFetch = ({ endpoint, limit = 20, dataKey = null }) => {
 //  PaginatedList — drop-in wrapper
 //
 //  Props:
-//    endpoint        string    required
+//    rtkQuery        function   required  - RTK Query hook for fetching data
 //    filter          object    optional  – changing this resets to page 1
 //    renderItems     fn        required  (items: array) => JSX
 //                              ↑ receives the FULL page array, not one item
@@ -96,7 +66,7 @@ export const usePaginatedFetch = ({ endpoint, limit = 20, dataKey = null }) => {
 //    wrapperClassName string   optional
 // ─────────────────────────────────────────────────────────────────
 const PaginatedList = ({
-    endpoint,
+    rtkQuery,
     filter = {},
     renderItems,
     renderEmpty,
@@ -106,13 +76,13 @@ const PaginatedList = ({
     wrapperClassName = "",
 }) => {
     const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter } =
-        usePaginatedFetch({ endpoint, limit, dataKey })
+        usePaginatedFetch({ rtkQuery, limit, dataKey })
 
     const filterStr = JSON.stringify(filter)
 
     useEffect(() => {
         resetWithFilter(filter)
-    }, [filterStr])
+    }, [filterStr, resetWithFilter])
 
     const isEmpty = !isLoading && data.length === 0
 

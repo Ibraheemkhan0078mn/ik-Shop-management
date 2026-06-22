@@ -4,12 +4,11 @@ import { toast } from "sonner";
 import PaginatedList from "@shared/components/PaginatedList.jsx";
 import ProductReturnModal from "../components/ProductReturnModal.jsx";
 import PageHeading from "@shared/components/PageHeading.jsx";
-import { useDeleteProductReturnMutation } from "../services/productReturn.service.js";
+import { useDeleteProductReturnMutation, useGetPaginatedProductReturnsQuery } from "../services/productReturn.service.js";
 
 const ProductReturnList = () => {
     const [language, setLanguage] = useState("en");
     const [showModal, setShowModal] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
     const [selectedReturn, setSelectedReturn] = useState(null);
     const [deleteProductReturn] = useDeleteProductReturnMutation();
 
@@ -18,7 +17,6 @@ const ProductReturnList = () => {
             try {
                 await deleteProductReturn(id).unwrap();
                 toast.success(language === "en" ? "Return deleted successfully" : "واپسی کامیابی سے حذف ہو گئی");
-                setRefreshKey(prev => prev + 1);
             } catch (error) {
                 toast.error(error?.data?.message || "Failed to delete return");
             }
@@ -42,7 +40,6 @@ const ProductReturnList = () => {
                     isOpen={showModal}
                     onClose={() => {
                         setShowModal(false);
-                        setRefreshKey(prev => prev + 1);
                     }}
                 />
             )}
@@ -63,8 +60,7 @@ const ProductReturnList = () => {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/product-returns/pagination"
+                rtkQuery={useGetPaginatedProductReturnsQuery}
                 limit={10}
                 dataKey="data"
                 wrapperClassName="flex-1"

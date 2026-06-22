@@ -13,6 +13,15 @@ export const expenseApi = baseApi.injectEndpoints({
             providesTags: ["Expense"],
         }),
 
+        // paginated list with page/limit for PaginatedList
+        getExpensesPaginated: build.query({
+            query: ({ page = 1, limit = 20, ...filters } = {}) => ({
+                url: "/expenses/pagination",
+                params: { page, limit, ...filters },
+            }),
+            providesTags: ["Expense"],
+        }),
+
         createExpense: build.mutation({
             query: (body) => ({ url: "/expenseRoutes/expense", method: "POST", body }),
             invalidatesTags: ["Expense"],
@@ -48,11 +57,12 @@ export const expenseApi = baseApi.injectEndpoints({
 });
 
 export const {
-    useGetExpensesQuery:            useExpenses,
-    useCreateExpenseMutation:       useCreateExpense,
-    useUpdateExpenseMutation:       useUpdateExpense,
-    useDeleteExpenseMutation:       useDeleteExpense,
-    useGetExpenseCategoriesQuery:   useExpenseCategories,
+    useGetExpensesQuery:           useExpenses,
+    useGetExpensesPaginatedQuery:  useExpensesPaginated,
+    useCreateExpenseMutation:      useCreateExpense,
+    useUpdateExpenseMutation:      useUpdateExpense,
+    useDeleteExpenseMutation:      useDeleteExpense,
+    useGetExpenseCategoriesQuery:  useExpenseCategories,
     useCreateExpenseCategoryMutation: useCreateExpenseCategory,
     useDeleteExpenseCategoryMutation: useDeleteExpenseCategory,
 } = expenseApi;

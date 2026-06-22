@@ -1,8 +1,8 @@
 // src/modules/wastage/pages/WastagePage.jsx
-import { useState, useCallback }   from "react";
+import { useState }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
-import { useDeleteWastage }        from "../services/wastage.service.js";
+import { useDeleteWastage, useWastages } from "../services/wastage.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import WastageModal                from "../components/WastageModal.jsx";
 import PageHeading                 from "@shared/components/PageHeading.jsx";
@@ -19,15 +19,11 @@ export default function WastagePage() {
     const [deleteWastage] = useDeleteWastage();
 
     const [modal,      setModal]      = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this wastage record?")) return;
         await deleteWastage(id);
-        refresh();
     };
 
     return (
@@ -37,7 +33,6 @@ export default function WastagePage() {
                     mode={modal.mode}
                     wastageId={modal.id}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
 
@@ -56,8 +51,7 @@ export default function WastagePage() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/wastages/paginate"
+                rtkQuery={useWastages}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

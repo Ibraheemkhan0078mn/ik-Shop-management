@@ -45,22 +45,25 @@ export default function PosCartSidebar({
     return (
         <>
             {/* ── Main Sidebar ──────────────────────────────────────────── */}
-            <aside className="w-[400px] h-screen flex flex-col bg-white/70 backdrop-blur-md border-l border-white/50 shadow-xl">
+            <aside className="w-[400px] h-screen flex flex-col backdrop-blur-md shadow-xl"
+                style={{ background: "var(--surface)", borderLeft: "1px solid var(--border)" }}>
 
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                    <ShoppingCart size={20} className="text-cyan-600" />
-                    <h2 className="font-bold text-gray-800 text-base">Current Order</h2>
+                <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                    <ShoppingCart size={20} style={{ color: "var(--accent-2)" }} />
+                    <h2 className="font-bold text-base" style={{ color: "var(--ink)" }}>Current Order</h2>
 
                     {/* Shows "Resumed" if the cart was loaded from a held order */}
                     {resumedHoldId && (
-                        <span className="ml-1 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                        <span className="ml-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                            style={{ background: "rgba(180,83,9,0.1)", color: "var(--accent)", border: "1px solid rgba(180,83,9,0.2)" }}>
                             Resumed
                         </span>
                     )}
 
                     {totalItems > 0 && (
-                        <span className="ml-auto bg-cyan-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: "var(--accent-2)", color: "white" }}>
                             {totalItems}
                         </span>
                     )}
@@ -69,7 +72,8 @@ export default function PosCartSidebar({
                 {/* Cart item list */}
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
                     {cart.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                        <div className="flex flex-col items-center justify-center h-full gap-2"
+                            style={{ color: "var(--muted)" }}>
                             <ShoppingCart size={48} strokeWidth={1} />
                             <p className="text-sm font-medium">Cart is empty</p>
                             <p className="text-xs">Click a product to add it</p>
@@ -91,12 +95,13 @@ export default function PosCartSidebar({
                 </div>
 
                 {/* Subtotal + checkout button */}
-                <div className="border-t border-gray-100 bg-white/80 px-5 py-4 space-y-3">
-                    <div className="flex justify-between text-sm text-gray-500">
+                <div className="px-5 py-4 space-y-3"
+                    style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
+                    <div className="flex justify-between text-sm" style={{ color: "var(--muted)" }}>
                         <span>Items</span>
                         <span>{totalItems}</span>
                     </div>
-                    <div className="flex justify-between font-bold text-gray-800 text-lg">
+                    <div className="flex justify-between font-bold text-lg" style={{ color: "var(--ink)" }}>
                         <span>Subtotal</span>
                         <span>Rs {subtotal.toLocaleString()}</span>
                     </div>
@@ -104,16 +109,35 @@ export default function PosCartSidebar({
                         <button
                             onClick={onHold}
                             disabled={cart.length === 0}
-                            className="flex-1 py-3 bg-amber-50 hover:bg-amber-100 disabled:bg-gray-200 disabled:text-gray-400
-                                       text-amber-700 border border-amber-200 font-semibold rounded-xl transition text-sm flex items-center justify-center gap-2"
+                            className="flex-1 py-3 font-semibold rounded-xl transition text-sm flex items-center justify-center gap-2"
+                            style={{
+                                background: cart.length === 0 ? "var(--surface-muted)" : "rgba(180,83,9,0.1)",
+                                color: cart.length === 0 ? "var(--muted)" : "var(--accent)",
+                                border: "1px solid rgba(180,83,9,0.2)"
+                            }}
+                            onMouseEnter={e => {
+                                if (cart.length > 0) e.currentTarget.style.background = "rgba(180,83,9,0.2)";
+                            }}
+                            onMouseLeave={e => {
+                                if (cart.length > 0) e.currentTarget.style.background = "rgba(180,83,9,0.1)";
+                            }}
                         >
                             <Pause size={16} /> Hold
                         </button>
                         <button
                             onClick={onCheckout}
                             disabled={cart.length === 0}
-                            className="flex-2 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-200 disabled:text-gray-400
-                                       text-white font-bold rounded-xl transition-all active:scale-95 text-sm shadow-sm"
+                            className="flex-2 py-3 font-bold rounded-xl transition-all active:scale-95 text-sm shadow-sm"
+                            style={{
+                                background: cart.length === 0 ? "var(--surface-muted)" : "var(--accent-2)",
+                                color: cart.length === 0 ? "var(--muted)" : "white"
+                            }}
+                            onMouseEnter={e => {
+                                if (cart.length > 0) e.currentTarget.style.background = "rgba(15,118,110,0.8)";
+                            }}
+                            onMouseLeave={e => {
+                                if (cart.length > 0) e.currentTarget.style.background = "var(--accent-2)";
+                            }}
                         >
                             {cart.length === 0 ? "Add items" : "Complete  ⇧↵"}
                         </button>
@@ -124,11 +148,12 @@ export default function PosCartSidebar({
             {/* ── Held Orders / History Drawer ──────────────────────────── */}
             {showHeldOrders && (
                 <div
-                    className="fixed inset-y-0 right-[400px] w-80 z-50 bg-white/90 backdrop-blur-lg shadow-2xl border-l border-gray-100 flex flex-col"
+                    className="fixed inset-y-0 right-[400px] w-80 z-50 backdrop-blur-lg shadow-2xl flex flex-col"
+                    style={{ background: "var(--surface)", borderLeft: "1px solid var(--border)" }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Tab switcher */}
-                    <div className="flex border-b border-gray-100">
+                    <div className="flex" style={{ borderBottom: "1px solid var(--border)" }}>
                         {[
                             { key: "held",    label: `Held (${holdOrders.length})` },
                             { key: "history", label: "History" },
@@ -136,11 +161,11 @@ export default function PosCartSidebar({
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`flex-1 py-3 text-sm font-semibold transition
-                                    ${activeTab === key
-                                        ? "text-cyan-600 border-b-2 border-cyan-600"
-                                        : "text-gray-400 hover:text-gray-600"
-                                    }`}
+                                className="flex-1 py-3 text-sm font-semibold transition"
+                                style={{
+                                    color: activeTab === key ? "var(--accent-2)" : "var(--muted)",
+                                    borderBottom: activeTab === key ? "2px solid var(--accent-2)" : "none"
+                                }}
                             >
                                 {label}
                             </button>
@@ -152,7 +177,7 @@ export default function PosCartSidebar({
 
                         {activeTab === "held" && (
                             holdOrders.length === 0
-                                ? <p className="text-center text-gray-400 text-sm mt-8">No held orders</p>
+                                ? <p className="text-center text-sm mt-8" style={{ color: "var(--muted)" }}>No held orders</p>
                                 : holdOrders.map((order) => (
                                     <HeldOrderCard
                                         key={order._id}
@@ -167,7 +192,7 @@ export default function PosCartSidebar({
 
                         {activeTab === "history" && (
                             orderHistory.length === 0
-                                ? <p className="text-center text-gray-400 text-sm mt-8">No history yet</p>
+                                ? <p className="text-center text-sm mt-8" style={{ color: "var(--muted)" }}>No history yet</p>
                                 : orderHistory.slice(0, 30).map((order) => (
                                     <HistoryCard key={order._id || order.id} order={order} />
                                 ))
@@ -185,13 +210,17 @@ export default function PosCartSidebar({
 // ─────────────────────────────────────────────────────────────────────────────
 function CartItem({ item, portionLabel, onInc, onDec, onRemove, onQtyChange, onEdit }) {
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 group hover:border-cyan-100 transition">
+        <div className="rounded-xl shadow-sm p-3 group transition"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(15,118,110,0.2)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
             <div className="flex items-start gap-3">
                 {/* Product image */}
                 {item.image && (
                     <img
                         src={item.image} alt={item.name}
-                        className="w-10 h-10 rounded-lg object-cover shrink-0 bg-gray-100"
+                        className="w-10 h-10 rounded-lg object-cover shrink-0"
+                        style={{ background: "var(--surface-muted)" }}
                         onError={(e) => { e.target.style.display = "none"; }}
                     />
                 )}
@@ -201,18 +230,21 @@ function CartItem({ item, portionLabel, onInc, onDec, onRemove, onQtyChange, onE
                     {/* Clicking the name opens the portion-type editor */}
                     <button
                         onClick={onEdit}
-                        className="text-sm font-semibold text-gray-800 hover:text-cyan-600 transition truncate block text-left w-full"
+                        className="text-sm font-semibold transition truncate block text-left w-full"
+                        style={{ color: "var(--ink)" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "var(--accent-2)"}
+                        onMouseLeave={e => e.currentTarget.style.color = "var(--ink)"}
                         title="Click to change portion type"
                     >
                         {item.name}{portionLabel}
                     </button>
                     {item.batchNumber && (
-                        <span className="text-xs text-gray-400">Batch: {item.batchNumber}</span>
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>Batch: {item.batchNumber}</span>
                     )}
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
                         Rs {item.unitPrice.toLocaleString()} × {item.qty}
                         {" = "}
-                        <span className="font-semibold text-gray-700">
+                        <span className="font-semibold" style={{ color: "var(--ink)" }}>
                             Rs {(item.unitPrice * item.qty).toLocaleString()}
                         </span>
                     </p>
@@ -221,7 +253,10 @@ function CartItem({ item, portionLabel, onInc, onDec, onRemove, onQtyChange, onE
                 {/* Remove button (appears on hover) */}
                 <button
                     onClick={onRemove}
-                    className="opacity-0 group-hover:opacity-100 transition text-red-400 hover:text-red-600 p-1 rounded"
+                    className="opacity-0 group-hover:opacity-100 transition p-1 rounded"
+                    style={{ color: "#f87171" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#dc2626"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#f87171"}
                 >
                     <Trash2 size={14} />
                 </button>
@@ -231,18 +266,25 @@ function CartItem({ item, portionLabel, onInc, onDec, onRemove, onQtyChange, onE
             <div className="flex items-center gap-2 mt-2">
                 <button
                     onClick={onDec}
-                    className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-cyan-100 text-gray-700 font-bold text-sm transition flex items-center justify-center"
+                    className="w-7 h-7 rounded-lg font-bold text-sm transition flex items-center justify-center"
+                    style={{ background: "var(--surface-muted)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.1)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "var(--surface-muted)"}
                 >
                     −
                 </button>
                 <input
                     type="number" min={1} value={item.qty}
                     onChange={(e) => onQtyChange(Number(e.target.value))}
-                    className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-0.5 outline-none focus:ring-1 focus:ring-cyan-400"
+                    className="w-12 text-center text-sm font-semibold rounded-lg py-0.5 outline-none"
+                    style={{ background: "var(--surface-muted)", color: "var(--ink)", border: "1px solid var(--border)" }}
                 />
                 <button
                     onClick={onInc}
-                    className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-cyan-100 text-gray-700 font-bold text-sm transition flex items-center justify-center"
+                    className="w-7 h-7 rounded-lg font-bold text-sm transition flex items-center justify-center"
+                    style={{ background: "var(--surface-muted)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.1)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "var(--surface-muted)"}
                 >
                     +
                 </button>
@@ -257,31 +299,42 @@ function CartItem({ item, portionLabel, onInc, onDec, onRemove, onQtyChange, onE
 // ─────────────────────────────────────────────────────────────────────────────
 function HeldOrderCard({ order, isInCart, canDelete, onResume, onDelete }) {
     return (
-        <div className={`border rounded-xl p-3 ${isInCart ? "bg-cyan-50 border-cyan-200" : "bg-amber-50 border-amber-100"}`}>
+        <div className="border rounded-xl p-3"
+            style={{
+                background: isInCart ? "rgba(15,118,110,0.1)" : "rgba(180,83,9,0.1)",
+                borderColor: isInCart ? "rgba(15,118,110,0.2)" : "rgba(180,83,9,0.2)"
+            }}>
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-gray-800">{order.orderNumber || "—"}</p>
+                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{order.orderNumber || "—"}</p>
                         {isInCart && (
-                            <span className="text-xs bg-cyan-600 text-white px-1.5 py-0.5 rounded-full">In cart</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full"
+                                style={{ background: "var(--accent-2)", color: "white" }}>In cart</span>
                         )}
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
                         {order.customerName || "No name"} · Rs {(order.totalAmount || 0).toLocaleString()}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
                         {order.items?.length || 0} item{order.items?.length !== 1 ? "s" : ""}
                     </p>
                 </div>
 
                 <div className="flex gap-1.5">
                     <button onClick={onResume} title="Resume order"
-                        className="p-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition">
+                        className="p-1.5 rounded-lg transition"
+                        style={{ background: "var(--accent-2)", color: "white" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.8)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "var(--accent-2)"}>
                         <RotateCcw size={14} />
                     </button>
                     {canDelete && (
                         <button onClick={onDelete} title="Delete order"
-                            className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition">
+                            className="p-1.5 rounded-lg transition"
+                            style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.2)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.2)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.1)"}>
                             <Trash2 size={14} />
                         </button>
                     )}
@@ -297,23 +350,27 @@ function HeldOrderCard({ order, isInCart, canDelete, onResume, onDelete }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function HistoryCard({ order }) {
     const METHOD_STYLE = {
-        cash:   "bg-green-100 text-green-700",
-        online: "bg-blue-100 text-blue-700",
-        credit: "bg-purple-100 text-purple-700",
-        hybrid: "bg-orange-100 text-orange-700",
-        free:   "bg-gray-100 text-gray-600",
+        cash:   { bg: "rgba(15,118,110,0.1)", color: "var(--accent-2)", border: "rgba(15,118,110,0.2)" },
+        online: { bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.2)" },
+        credit: { bg: "rgba(168,85,247,0.1)", color: "#a855f7", border: "rgba(168,85,247,0.2)" },
+        hybrid: { bg: "rgba(249,115,22,0.1)", color: "#f97316", border: "rgba(249,115,22,0.2)" },
+        free:   { bg: "var(--surface-muted)", color: "var(--muted)", border: "var(--border)" },
     };
 
+    const style = METHOD_STYLE[order.paymentMethod] || METHOD_STYLE.free;
+
     return (
-        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div className="border rounded-xl p-3"
+            style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-gray-800">{order.orderNumber || "—"}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{order.orderNumber || "—"}</p>
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
                         {order.customerName || "—"} · Rs {(order.totalAmount || 0).toLocaleString()}
                     </p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${METHOD_STYLE[order.paymentMethod] || "bg-gray-100 text-gray-600"}`}>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
+                    style={{ background: style.bg, color: style.color, border: "1px solid " + style.border }}>
                     {order.paymentMethod || "—"}
                 </span>
             </div>

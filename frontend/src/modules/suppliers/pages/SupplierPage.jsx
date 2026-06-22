@@ -1,8 +1,8 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
-import { useState, useCallback }   from "react";
+import { useState }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
-import { useDeleteSupplier }       from "../services/suppliers.service.js";
+import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
 import PaginatedList               from "@shared/components/PaginatedList.jsx";
 import SupplierModal               from "../components/SupplierModal.jsx";
 import PageHeading                 from "@shared/components/PageHeading.jsx";
@@ -12,15 +12,11 @@ export default function SupplierPage() {
     const [deleteSupplier]   = useDeleteSupplier();
 
     const [modal,      setModal]      = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this supplier?")) return;
         await deleteSupplier(id);
-        refresh();
     };
 
     return (
@@ -30,7 +26,6 @@ export default function SupplierPage() {
                     mode={modal.mode}
                     supplierId={modal.id}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
 
@@ -49,8 +44,7 @@ export default function SupplierPage() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/suppliers/pagination"
+                rtkQuery={useSuppliers}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"

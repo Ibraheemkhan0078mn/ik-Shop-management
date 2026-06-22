@@ -149,12 +149,11 @@ const SubCategories = ({ setVisibility }) => {
                 {/* List */}
                 <div className="h-[60vh] overflow-hidden">
                     <PaginatedList
-                        endpoint="/subcategories"
+                        rtkQuery={useGetSubCategoriesQuery}
                         limit={10}
                         dataKey="data"
                         wrapperClassName="h-full"
                         renderItems={renderItems}
-                        rtkGetDataQuery={useGetSubCategoriesQuery}
                     />
                 </div>
             </div>

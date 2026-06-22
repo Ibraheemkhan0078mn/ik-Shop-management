@@ -328,12 +328,12 @@ export default function PosPage() {
             if (resumedHoldId) {
                 // Issue 1 & 5: update the existing hold, preserve its original order number
                 console.log("Updating existing hold:", resumedHoldId);
-                await updateHoldMutation.mutateAsync({ id: resumedHoldId, body: holdBody });
+                await updateHoldMutation.mutate({ id: resumedHoldId, body: holdBody }).unwrap();
             } else {
                 // New hold — generate a fresh order number
                 const { data } = await api.get("/orders/generate-number");
                 console.log("Creating new hold with order number:", data.orderNumber);
-                await createHoldMutation.mutateAsync({ orderNumber: data.orderNumber, ...holdBody });
+                await createHoldMutation.mutate({ orderNumber: data.orderNumber, ...holdBody }).unwrap();
             }
 
             console.log("Hold order successful");
@@ -393,7 +393,7 @@ export default function PosPage() {
 
     // Manually deletes a held order (cashier clicks delete button)
     const handleDeleteHeldOrder = async (id) => {
-        try { await deleteHoldMutation.mutateAsync(id); } catch { }
+        try { await deleteHoldMutation.mutate(id).unwrap(); } catch { }
     };
 
 
@@ -454,7 +454,7 @@ export default function PosPage() {
 
             console.log("Creating order with body:", orderBody);
             console.log("Calling addOrderMutation...");
-            const res = await addOrderMutation.mutateAsync(orderBody);
+            const res = await addOrderMutation.mutate(orderBody).unwrap();
             console.log("Order created successfully:", res);
 
             // Print the receipt
@@ -472,7 +472,7 @@ export default function PosPage() {
 
             // Delete the hold if this cart came from a resumed hold order
             if (resumedHoldId) {
-                try { await deleteHoldMutation.mutateAsync(resumedHoldId); } catch { }
+                try { await deleteHoldMutation.mutate(resumedHoldId).unwrap(); } catch { }
                 setResumedHoldId(null);
                 setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
             }
@@ -551,12 +551,12 @@ export default function PosPage() {
                 status: "completed",
             };
 
-            const res = await addOrderMutation.mutateAsync(orderBody);
+            const res = await addOrderMutation.mutate(orderBody).unwrap();
             printOrder({ ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber }, "Free Food");
 
             // Issue 4: delete the resumed hold if this was a free-food completion
             if (resumedHoldId) {
-                try { await deleteHoldMutation.mutateAsync(resumedHoldId); } catch { }
+                try { await deleteHoldMutation.mutate(resumedHoldId).unwrap(); } catch { }
                 setResumedHoldId(null);
                 setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
             }
@@ -621,7 +621,7 @@ export default function PosPage() {
                 {/* Product list — clicking a card calls handleProductClick */}
                 <div className="flex-1 overflow-hidden bg-white rounded-2xl shadow-sm border border-gray-100">
                     <PaginatedList
-                        endpoint="/products/pagination"
+                        rtkQuery={useProducts}
                         limit={20}
                         dataKey="data"
                         wrapperClassName="h-full"

@@ -1,9 +1,9 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate }           from "react-router-dom";
 import { Plus, Edit2, Trash2, Phone, MapPin, Wallet } from "lucide-react";
 import { useSelector }           from "react-redux";
-import { useQarzaAccounts, useDeleteQarzaAccount } from "../services/qarza.service.js";
+import { useQarzaAccountsPaginated, useDeleteQarzaAccount } from "../services/qarza.service.js";
 import QarzaAccountModal         from "../components/QarzaAccountModal.jsx";
 import { showSuccess, showError } from "@shared/utilities/toastHelpers";
 import emptyImage                from "@shared/assets/images/boy-user.jpg";
@@ -17,9 +17,6 @@ export default function QarzaAccounts() {
 
     const [deleteAccount] = useDeleteQarzaAccount();
     const [modal,  setModal]  = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
@@ -27,7 +24,6 @@ export default function QarzaAccounts() {
         try {
             await deleteAccount(id).unwrap();
             showSuccess("Account deleted");
-            refresh();
         } catch (e) {
             showError(e?.data?.message ?? "Delete failed");
         }
@@ -45,7 +41,6 @@ export default function QarzaAccounts() {
                     mode={modal.mode}
                     account={modal.account}
                     onClose={() => setModal(null)}
-                    onSuccess={refresh}
                 />
             )}
 
@@ -62,8 +57,7 @@ export default function QarzaAccounts() {
             </div>
 
             <PaginatedList
-                key={refreshKey}
-                endpoint="/qarza/pagination"
+                rtkQuery={useQarzaAccountsPaginated}
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"
