@@ -87,10 +87,10 @@ const PaginatedList = ({
     const isEmpty = !isLoading && data.length === 0
 
     return (
-        <div className={`flex flex-col h-full ${wrapperClassName}`}>
+        <div className={`flex flex-col h-full min-h-0 overflow-hidden rounded-2xl border border-(--border) bg-(--surface) shadow-sm ${wrapperClassName}`}>
 
             {/* ── Content area ── */}
-            <div className={`flex-1 overflow-y-auto relative ${className}`}>
+            <div className={`flex-1 min-h-0 overflow-y-auto relative ${className}`}>
                 {/* Loading overlay — sits on top of old data so layout doesn't jump */}
                 {isLoading && (
                     <div className="absolute inset-0 z-10 bg-(--surface)/60 backdrop-blur-[1px] flex items-center justify-center">
@@ -226,8 +226,10 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
 }
 
 const DefaultEmpty = () => (
-    <div className="h-[40vh] w-full flex justify-center items-center text-center text-(--muted)">
-        No records found
+    <div className="flex h-full min-h-[220px] w-full items-center justify-center px-6 py-10 text-center text-(--muted)">
+        <div className="rounded-2xl border border-dashed border-(--border) bg-(--surface-muted)/70 px-6 py-8 text-sm font-medium">
+            No records found
+        </div>
     </div>
 )
 

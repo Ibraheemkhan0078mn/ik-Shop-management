@@ -30,9 +30,9 @@ function App() {
       {sideBarShow && <Sidebar />}
 
       {/* <LoadingBar height={3} color="#3b82f6" ref={loadingRef} /> */}
-    <div className="p-5 flex-1 w-[70%]">
+      <div className="p-5 flex-1 w-[70%]">
         <AppRoutes />
-    </div>
+      </div>
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </div>
   );

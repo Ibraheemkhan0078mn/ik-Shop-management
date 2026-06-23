@@ -14,8 +14,9 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
         skip: !subCategoryId || isCreate,
     });
 
-    const { data: categories = [] } = useGetCategoriesQuery();
-
+const { data: categoriesData } = useGetCategoriesQuery();
+console.log(categoriesData, "LSKDJLSKDJF")
+const categories = categoriesData?.data ?? categoriesData ?? [];
     const [formData, setFormData] = useState({
         name: "",
         category: categoryId || "",

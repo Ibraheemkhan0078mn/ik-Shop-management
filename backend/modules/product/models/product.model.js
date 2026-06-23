@@ -35,6 +35,7 @@ const productSchema = new mongoose.Schema(
         // ─── Batches & Status ─────────────────────────────────────
         batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batches" }],
         isActive: { type: Boolean, default: true },
+        currentStockLevel: {type: Number, default: 0},
 
 
         created: { type: Date, default: Date.now },

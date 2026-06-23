@@ -93,3 +93,5 @@ out/
 
 # exe files
 *.exe
+
+dist

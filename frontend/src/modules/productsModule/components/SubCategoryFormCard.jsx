@@ -12,8 +12,8 @@ export default function SubCategoryFormCard({ mode = "create", subCategoryId = n
     const { data: subCategoryData, isLoading: isFetching } = useGetSubCategoryByIdQuery(subCategoryId, {
         skip: !subCategoryId || isCreate,
     });
-    const { data: categories = [] } = useGetCategoriesQuery();
-
+    const { data: categoriesData = {} } = useGetCategoriesQuery();
+    let categories = categoriesData?.data ?? categoriesData ?? []
     const [formData, setFormData] = useState({ name: "", category: categoryId || "", description: "" });
 
     useEffect(() => {
@@ -59,7 +59,7 @@ export default function SubCategoryFormCard({ mode = "create", subCategoryId = n
                 label: "Category",
                 type: "select",
                 required: true,
-                options: categories.map((c) => ({ label: c.name, value: c._id })),
+options: Array.isArray(categories) ? categories.map((c) => ({ label: c.name, value: c._id })) : [],
                 placeholder: "Select a category",
                 disabled: !!categoryId,
             },
@@ -99,7 +99,7 @@ export default function SubCategoryFormCard({ mode = "create", subCategoryId = n
                 </div>
             ) : (
                 <FormLayout
-                    setVisibility={onClose || (() => {})}
+                    setVisibility={onClose || (() => { })}
                     config={config}
                     formData={formData}
                     setFormData={setFormData}

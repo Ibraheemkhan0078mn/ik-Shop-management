@@ -222,7 +222,7 @@ export default function Products() {
                 </PageHeading>
             </div>
 
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1  overflow-hidden">
                 <PaginatedList rtkQuery={useProducts} limit={20} dataKey="data" wrapperClassName="h-full" renderItems={renderItems} />
             </div>
         </div>
