@@ -97,7 +97,9 @@ body {
 
 .sidebar-item-active:hover {
     color: white;
+    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
 }
+
 
 /* Badges remain the same */
 .sidebar-badge {

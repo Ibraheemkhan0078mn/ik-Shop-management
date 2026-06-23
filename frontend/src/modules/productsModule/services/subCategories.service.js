@@ -12,7 +12,24 @@ export const subCategoryApi = baseApi.injectEndpoints({
                 url: "/subcategories",
                 params: { page, limit, ...filters },
             }),
-            transformResponse: (r) => r.data || [],
+            transformResponse: (raw) => {
+                const payload = raw?.data ?? raw;
+                const items = Array.isArray(payload?.items)
+                    ? payload.items
+                    : Array.isArray(payload?.docs)
+                        ? payload.docs
+                        : Array.isArray(payload?.results)
+                            ? payload.results
+                            : Array.isArray(payload?.data)
+                                ? payload.data
+                                : Array.isArray(payload)
+                                    ? payload
+                                    : [];
+                return {
+                    data: items,
+                    total: payload?.total ?? raw?.total ?? raw?.count ?? payload?.count ?? items.length,
+                };
+            },
             providesTags: ["SubCategory"],
         }),
 

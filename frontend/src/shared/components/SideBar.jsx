@@ -81,10 +81,12 @@ export default function Sidebar() {
     const toggleGroup = (item) => {
         if (!item.items?.length) return;
         setSelected(item.id);
-        setOpenGroups((prev) => ({
-            ...prev,
-            [item.id]: !prev[item.id],
-        }));
+        setOpenGroups((prev) => {
+            const isOpen = !!prev[item.id];
+            const next = { ...prev };
+            next[item.id] = !isOpen;
+            return next;
+        });
     };
 
     return (
@@ -113,11 +115,11 @@ export default function Sidebar() {
                         const Icon = item.icon;
                         const hasChildren = item.items?.length > 0;
                         const isActive = selected === item.id;
-                        const isExpanded = Boolean(openGroups[item.id] || isActive);
+                        const isExpanded = hasChildren ? Boolean(openGroups[item.id]) : false;
 
                         return (
-                            <li key={item.id}>
-                                <div className={`rounded-xl border transition-all ${isActive ? "border-(--accent-2)/30 bg-(--surface-muted)" : "border-transparent hover:bg-(--surface-muted)"}`}>
+                            <li key={item.id} className="mt-1">
+                                <div className={`rounded-xl border transition-all ${isActive ? "border-(--accent-2)/30 bg-(--surface-muted) shadow-sm" : "border-transparent hover:bg-(--surface-muted)"}`}>
                                     <div className="flex items-center">
                                         <NavLink
                                             to={item.url}

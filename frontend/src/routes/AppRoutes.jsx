@@ -17,8 +17,8 @@ import EachQarzaAccountRecords from "@modules/qarza/pages/EachQarzaAccountRecord
 import Inventory from "@modules/inventory/pages/Inventory.jsx";
 import AllExpenses from "@modules/expense/pages/AllExpense.jsx";
 import PosPage from "@modules/POSmodule/pages/PosPage.jsx";
-import Categories from "@modules/productsModule/components/Categories.jsx";
-import SubCategories from "@modules/productsModule/components/SubCategories.jsx";
+import ProductCategoriesPage from "@modules/productsModule/pages/ProductCategoriesPage.jsx";
+import ProductSubCategoriesPage from "@modules/productsModule/pages/ProductSubCategoriesPage.jsx";
 import ReportsPage from "@modules/reports/pages/ReportsPage.jsx";
 import SalesReports from "@modules/reports/pages/SalesReports.jsx";
 import PurchasesReports from "@modules/reports/pages/PurchasesReports.jsx";
@@ -41,8 +41,8 @@ function AppRoutes() {
             <Route path="/dashboard/analytics" element={<Analytics />} />
             <Route path="/quick-list" element={<QuickActions />} />
             <Route path="/products" element={<Products />} />
-            <Route path="/products/categories" element={<Categories />} />
-            <Route path="/products/sub-categories" element={<SubCategories />} />
+            <Route path="/products/categories" element={<ProductCategoriesPage />} />
+            <Route path="/products/sub-categories" element={<ProductSubCategoriesPage />} />
             <Route path="/products/view/:id" element={<ViewProductPage />} />
             <Route path="/products/batches" element={<Products />} />
 

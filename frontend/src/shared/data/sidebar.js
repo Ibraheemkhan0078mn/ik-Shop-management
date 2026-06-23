@@ -67,18 +67,6 @@ export const sidebarData = (language = "en") => ({
             ],
             items: [
                 {
-                    id: "All Products",
-                    title: language === "en" ? "All Products" : "تمام پروڈکٹس",
-                    url: "/products",
-                    icon: Package,
-                },
-                {
-                    id: "Batches",
-                    title: language === "en" ? "Batches" : "بیچز",
-                    url: "/products/batches",
-                    icon: Boxes,
-                },
-                {
                     id: "Categories",
                     title: language === "en" ? "Categories" : "زمرے",
                     url: "/products/categories",

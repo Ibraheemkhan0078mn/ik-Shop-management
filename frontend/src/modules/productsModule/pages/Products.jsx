@@ -20,8 +20,6 @@ import { useUser } from "../../auth/services/auth.service.js";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
-import Categories from "../components/Categories.jsx";
-import SubCategories from "../components/SubCategories.jsx";
 import PageHeading from "@shared/components/PageHeading.jsx";
 import { showSuccess, showError, showLoading, dismiss } from "@shared/utilities/toastHelpers.js";
 
@@ -39,8 +37,6 @@ export default function Products() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("create");
     const [selectedProductId, setSelectedProductId] = useState(null);
-    const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-    const [isSubCategoryOpen, setIsSubCategoryOpen] = useState(false);
 
     // Delete flow state
     const [deleteTarget, setDeleteTarget] = useState(null);        // { id, name } or null
@@ -252,9 +248,6 @@ export default function Products() {
                     }}
                 />
             )}
-            {isCategoryOpen && <Categories setVisibility={setIsCategoryOpen} />}
-            {isSubCategoryOpen && <SubCategories setVisibility={setIsSubCategoryOpen} />}
-
             {/* ── Delete confirmation modal ── */}
             {deleteTarget && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -342,12 +335,6 @@ export default function Products() {
                             setIsModalOpen(true);
                         }} className="btn-add">
                             {language === "en" ? "+ Add Product" : "+ مصنوعات شامل کریں"}
-                        </button>
-                        <button onClick={() => setIsCategoryOpen(true)} className="btn-add">
-                            {language === "en" ? "Categories" : "زمرہ جات"}
-                        </button>
-                        <button onClick={() => setIsSubCategoryOpen(true)} className="btn-add">
-                            {language === "en" ? "SubCategories" : "زمرہ جات"}
                         </button>
                     </div>
                 </PageHeading>
