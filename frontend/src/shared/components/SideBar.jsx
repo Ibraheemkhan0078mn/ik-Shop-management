@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { sidebarData } from "../data/sidebar";
-import { LogOut, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Wrench } from "lucide-react";
 import logo from "@shared/assets/logo.png";
 import { useSelector } from "react-redux";
 
 export default function Sidebar() {
     const location = useLocation();
-    const [openSetting, setOpenSetting] = useState(false);
-
-    const currentUser = useSelector(state => state.auth);
-    // const { mutateAsync: logout } = useLogout();
+    const currentUser = useSelector((state) => state.auth);
 
     const permissions = currentUser?.permissions || {};
     const role = currentUser?.role || null;
     const language = currentUser?.language || "en";
-    const sidebarList = sidebarData(language);
+    const sidebarList = useMemo(() => sidebarData(language), [language]);
 
     const handleLogout = async () => {
         // await logout();
@@ -55,6 +52,10 @@ export default function Sidebar() {
     const getActiveParentId = () => {
         const current = sidebarList.navMain.find((item) => {
             if (item.id === "Dashboard") return location.pathname === "/";
+            const hasActiveChild = item.items?.some((subItem) =>
+                location.pathname.startsWith(subItem.url)
+            );
+            if (hasActiveChild) return true;
             return item.allowedUrls?.some((url) =>
                 location.pathname.startsWith(url)
             );
@@ -63,21 +64,39 @@ export default function Sidebar() {
     };
 
     const [selected, setSelected] = useState(getActiveParentId());
+    const [openGroups, setOpenGroups] = useState({});
 
     useEffect(() => {
-        setSelected(getActiveParentId());
-    }, [location.pathname]);
+        const activeParentId = getActiveParentId();
+        setSelected(activeParentId);
+
+        if (activeParentId && activeParentId !== "/") {
+            setOpenGroups((prev) => ({
+                ...prev,
+                [activeParentId]: true,
+            }));
+        }
+    }, [location.pathname, sidebarList.navMain]);
+
+    const toggleGroup = (item) => {
+        if (!item.items?.length) return;
+        setSelected(item.id);
+        setOpenGroups((prev) => ({
+            ...prev,
+            [item.id]: !prev[item.id],
+        }));
+    };
 
     return (
-        <>
-            <aside className="flex flex-col w-64 justify-center items-center h-screen sticky top-0 bg-(--surface) shadow-[0_18px_50px_rgba(64,45,28,0.12)] border-r border-(--border) z-50">
-                <div className="relative mt-5 flex flex-row  gap-3 px-4 py-3 ">
+        <aside className="flex flex-col w-64 h-screen sticky top-0 bg-(--surface) shadow-[0_18px_50px_rgba(64,45,28,0.12)] border-r border-(--border) z-50">
+            <div className="px-4 py-4 border-b border-(--border)">
+                <div className="flex items-center gap-3">
                     <img
                         src={logo}
-                        alt="Chai Fi logo"
-                        className="absolute -top-0 left-0 h-19 w-19 rounded-full object-contain"
+                        alt="Shop Manager logo"
+                        className="h-14 w-14 rounded-full object-contain"
                     />
-                    <div className="leading-tight ml-12">
+                    <div className="leading-tight">
                         <h3 className="text-lg font-semibold text-(--accent) font-display">
                             Shop-Manager
                         </h3>
@@ -86,88 +105,93 @@ export default function Sidebar() {
                         </p>
                     </div>
                 </div>
-                <nav className="flex-1 overflow-y-auto p-4">
-                    <ul className="space-y-2">
-                        {sidebarList.navMain.filter(canAccess).map((item) => {
-                            const Icon = item.icon;
-                            const isActive = selected === item.id;
+            </div>
 
-                            return (
-                                <li key={item.id}>
-                                    <NavLink
-                                        to={item.url}
-                                        onClick={() => setSelected(item.id)}
-                                        className={`sidebar-item ${isActive ? "sidebar-item-active" : ""}`}
-                                    >
-                                        {Icon && <Icon />}
-                                        <span>{item.title}</span>
-                                    </NavLink>
+            <nav className="flex-1 overflow-y-auto px-3 py-3">
+                <ul className="space-y-1.5">
+                    {sidebarList.navMain.filter(canAccess).map((item) => {
+                        const Icon = item.icon;
+                        const hasChildren = item.items?.length > 0;
+                        const isActive = selected === item.id;
+                        const isExpanded = Boolean(openGroups[item.id] || isActive);
 
-                                    {item.items?.length > 0 && (
-                                        <ul className="mt-0.6 ml-6 space-y-1">
+                        return (
+                            <li key={item.id}>
+                                <div className={`rounded-xl border transition-all ${isActive ? "border-(--accent-2)/30 bg-(--surface-muted)" : "border-transparent hover:bg-(--surface-muted)"}`}>
+                                    <div className="flex items-center">
+                                        <NavLink
+                                            to={item.url}
+                                            onClick={() => {
+                                                setSelected(item.id);
+                                                if (hasChildren) {
+                                                    setOpenGroups((prev) => ({
+                                                        ...prev,
+                                                        [item.id]: true,
+                                                    }));
+                                                }
+                                            }}
+                                            className={`sidebar-item flex-1 ${isActive ? "sidebar-item-active" : ""}`}
+                                        >
+                                            {Icon && <Icon />}
+                                            <span>{item.title}</span>
+                                        </NavLink>
+
+                                        {hasChildren && (
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleGroup(item)}
+                                                className="mr-2 rounded-md p-1.5 text-(--muted) transition hover:bg-(--accent-2)/10 hover:text-(--accent-2)"
+                                            >
+                                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {hasChildren && isExpanded && (
+                                        <ul className="pb-2 pl-8 pr-2 space-y-1">
                                             {item.items.map((sub) => {
                                                 const SubIcon = sub.icon;
-                                                const isSubActive =
-                                                    location.pathname.startsWith(
-                                                        sub.url
-                                                    );
-
+                                                const isSubActive = location.pathname.startsWith(sub.url);
 
                                                 return (
-                                                    <li
-                                                        key={
-                                                            sub.id || sub.title
-                                                        }
-                                                    >
+                                                    <li key={sub.id || sub.title}>
                                                         <NavLink
                                                             to={sub.url}
-                                                            className={`sidebar-item  ${isSubActive ? "sidebar-item-active" : ""}`}
-                                                            onClick={() =>
-                                                                setSelected(
-                                                                    item.id
-                                                                )
-                                                            }
+                                                            className={`sidebar-item py-1.5 ${isSubActive ? "sidebar-item-active" : ""}`}
+                                                            onClick={() => setSelected(item.id)}
                                                         >
-                                                            {SubIcon && (
-                                                                <SubIcon className="w-4 h-4 " />
-                                                            )}
-                                                            <span>
-                                                                {sub.title}
-                                                            </span>
+                                                            {SubIcon && <SubIcon className="h-4 w-4" />}
+                                                            <span>{sub.title}</span>
                                                         </NavLink>
                                                     </li>
                                                 );
                                             })}
                                         </ul>
                                     )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </nav>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </nav>
 
-                <div className="p-2 border-t border-(--border) flex justify-between gap-2">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-3 py-2 text-(--ink) hover:text-(--accent) hover:bg-(--surface-muted) rounded-xl transition"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        {language === "en" ? "Logout" : "لاگ آؤٹ"}
-                    </button>
+            <div className="border-t border-(--border) p-2 flex justify-between gap-2">
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-3 py-2 text-(--ink) hover:text-(--accent) hover:bg-(--surface-muted) rounded-xl transition"
+                >
+                    <LogOut className="w-4 h-4" />
+                    {language === "en" ? "Logout" : "لاگ آؤٹ"}
+                </button>
 
-                    <Link
-                        to={"/settings/generals"}
-                        className="flex items-center gap-2 px-3 py-2 text-(--ink) hover:text-(--ink) hover:bg-(--surface-muted) rounded-xl transition"
-                    >
-                        <Wrench className="w-4 h-4" />
-                        {language === "en" ? "Settings" : "سیٹنگز"}
-                    </Link>
-                </div>
-            </aside>
-
-            {openSetting && (
-                <SettingsModel onClose={() => setOpenSetting(false)} />
-            )}
-        </>
+                <Link
+                    to={"/settings/generals"}
+                    className="flex items-center gap-2 px-3 py-2 text-(--ink) hover:text-(--ink) hover:bg-(--surface-muted) rounded-xl transition"
+                >
+                    <Wrench className="w-4 h-4" />
+                    {language === "en" ? "Settings" : "سیٹنگز"}
+                </Link>
+            </div>
+        </aside>
     );
 }

@@ -28,6 +28,7 @@ import QarzaAccountSchema from "../modules/qarza/models/qarzaAccount.model.js";
 import QarzaPaymentSchema from "../modules/qarza/models/qarzaPayment.js";
 import wastageSchema from "../modules/wastage/models/wastage.model.js";
 import purchaseReturnSchema from "../modules/purchaseReturn/models/purchaseReturn.model.js";
+import customerSchema from "../modules/customer/models/customer.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
 
 let UserModel = null;
@@ -59,6 +60,7 @@ let QarzaAccountModel = null;
 let QarzaPaymentModel = null;
 let WastageModel = null;
 let PurchaseReturnModel = null;
+let CustomerModel = null;
 
 export const connectDb = async () => {
     console.log("the connection is running")
@@ -103,6 +105,7 @@ export const connectDb = async () => {
     QarzaPaymentModel = LocalConnection.model("QarzaPayment", QarzaPaymentSchema)
     WastageModel = LocalConnection.model("Wastages", wastageSchema)
     PurchaseReturnModel = LocalConnection.model("PurchaseReturn", purchaseReturnSchema)
+    CustomerModel = LocalConnection.model("Customers", customerSchema)
 
 };
 
@@ -110,6 +113,7 @@ export const connectDb = async () => {
 
 export const getLocalPurchaseReturnModel = () => PurchaseReturnModel || null;
 export const getLocalWastageModel = () => WastageModel || null;
+export const getLocalCustomerModel = () => CustomerModel || null;
 export const getLocalQarzaAccountModel = () => QarzaAccountModel || null;
 export const getLocalQarzaPaymentModel = () => QarzaPaymentModel || null;
 export const getLocalMemberInvestmentModel = () => MemberInvestmentModel || null;

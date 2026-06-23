@@ -70,39 +70,33 @@ body {
 
 /* ---------- Sidebar Items (Stable on Click) ---------- */
 .sidebar-item {
-    @apply flex items-center gap-2.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer select-none transition-colors duration-200;
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer select-none transition-all duration-200;
     color: var(--muted);
-    /* muted for inactive */
-    /* stable layout */
     border: 1px solid transparent;
-    /* reserve space for active border */
 }
 
 .sidebar-item svg {
-    @apply w-5 h-5  hover:text-white transition-colors duration-200;
+    @apply w-4.5 h-4.5 transition-colors duration-200;
 }
 
-/* Hover effect -> subtle, no layout shift */
 .sidebar-item:hover {
-    color: #fff;
-    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    color: var(--accent-2);
+    background: rgba(15, 118, 110, 0.08);
 }
 
-/* Active effect -> smooth, stable */
 .sidebar-item-active {
     @apply text-white font-semibold;
     background: linear-gradient(90deg, var(--accent-2), #0b5f59);
-    border: 1px solid rgba(15, 118, 110, 0.55);
-    /* same width, prevents jump */
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
-    /* soft shadow */
-    transform: none;
-    /* no scale on active */
+    border: 1px solid rgba(15, 118, 110, 0.45);
+    box-shadow: 0 8px 20px rgba(15, 118, 110, 0.16);
 }
 
-/* Active icon */
 .sidebar-item-active svg {
     @apply text-white;
+}
+
+.sidebar-item-active:hover {
+    color: white;
 }
 
 /* Badges remain the same */
