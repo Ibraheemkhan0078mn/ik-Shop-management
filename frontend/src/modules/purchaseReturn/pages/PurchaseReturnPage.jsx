@@ -1,10 +1,10 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
-import { useDeletePurchaseReturnMutation, useGetPaginatedPurchaseReturnsQuery } from "../services/purchaseReturn.service.js";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import PaginatedList, { usePaginatedFetch } from "@shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
+import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi } from "../api/purchaseReturnApi.js";
 
 const STATUS_CLASS = {
     draft: "bg-gray-100 text-gray-600",
@@ -15,14 +15,39 @@ const STATUS_CLASS = {
 
 export default function PurchaseReturnPage() {
     const language = useSelector((s) => s.auth?.user?.language ?? "en");
-    const [deletePurchaseReturn] = useDeletePurchaseReturnMutation();
-
     const [modal, setModal] = useState(null);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const usePurchaseReturnsQuery = (params = {}) => {
+        const [data, setData] = useState(null);
+        const [isLoading, setIsLoading] = useState(true);
+        const [isFetching, setIsFetching] = useState(false);
+
+        const fetchData = useCallback(async () => {
+            setIsFetching(true);
+            try {
+                const result = await getPaginatedPurchaseReturnsApi(params);
+                setData(result);
+            } catch (error) {
+                setData({ data: [], total: 0 });
+            } finally {
+                setIsLoading(false);
+                setIsFetching(false);
+            }
+        }, [params.page, params.limit, params.status, params.supplier, refreshKey]);
+
+        useEffect(() => {
+            fetchData();
+        }, [fetchData]);
+
+        return { data, isLoading, isFetching, refetch: fetchData };
+    };
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this purchase return?")) return;
-        await deletePurchaseReturn(id);
+        await deletePurchaseReturnApi(id);
+        setRefreshKey((v) => v + 1);
     };
 
     return (
@@ -32,6 +57,7 @@ export default function PurchaseReturnPage() {
                     mode={modal.mode}
                     purchaseReturnId={modal.id}
                     onClose={() => setModal(null)}
+                    onSuccess={() => setRefreshKey((v) => v + 1)}
                 />
             )}
 
@@ -43,7 +69,7 @@ export default function PurchaseReturnPage() {
             </div>
 
                 <PaginatedList
-                    rtkQuery={useGetPaginatedPurchaseReturnsQuery}
+                    rtkQuery={usePurchaseReturnsQuery}
                     limit={20}
                     dataKey="data"
                     wrapperClassName="min-h-0"

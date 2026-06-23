@@ -59,7 +59,8 @@ export const createPurchaseReturnData = asyncHandler(async (req, res, next) => {
     });
 
     try {
-        const purchaseReturn = await createPurchaseReturn(validatedData, req.user._id);
+        const userId = req.user?._id || req.user?.id || null;
+        const purchaseReturn = await createPurchaseReturn(validatedData, userId);
         res.status(201).json({
             success: true,
             message: "Purchase return created successfully",
@@ -124,7 +125,8 @@ export const submitPurchaseReturnData = asyncHandler(async (req, res, next) => {
 export const approvePurchaseReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     try {
-        const approved = await approvePurchaseReturn(id, req.user._id);
+        const userId = req.user?._id || req.user?.id || null;
+        const approved = await approvePurchaseReturn(id, userId);
         res.status(200).json({
             success: true,
             message: "Purchase return approved and stock deducted successfully",

@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 const purchaseReturnItemSchema = new mongoose.Schema({
     product: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
+        ref: "Products",
         required: true
     },
     batch: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Batch",
+        ref: "Batches",
         required: true
     },
     batchNumber: {
@@ -52,12 +52,12 @@ const purchaseReturnSchema = new mongoose.Schema({
     },
     purchase: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Purchase",
+        ref: "Purchases",
         required: true
     },
     supplier: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Supplier",
+        ref: "Suppliers",
         required: true
     },
     returnDate: {

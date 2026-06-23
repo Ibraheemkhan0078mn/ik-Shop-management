@@ -8,16 +8,16 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Search, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import { showError, showSuccess } from "@shared/utilities/toastHelpers";
-import {
-    useCreatePurchaseReturnMutation,
-    useUpdatePurchaseReturnMutation,
-    useGetPurchaseReturnByIdQuery,
-    useSubmitPurchaseReturnMutation,
-    useApprovePurchaseReturnMutation,
-    useRejectPurchaseReturnMutation,
-    useGetPurchaseByInvoiceNumberMutation,
-} from "../services/purchaseReturn.service.js";
 import { useSelector } from "react-redux";
+import {
+    createPurchaseReturnApi,
+    updatePurchaseReturnApi,
+    getPurchaseReturnByIdApi,
+    submitPurchaseReturnApi,
+    approvePurchaseReturnApi,
+    rejectPurchaseReturnApi,
+    getPurchaseByInvoiceNumberApi,
+} from "../api/purchaseReturnApi.js";
 
 const REASONS = [
     { label: "Damaged", value: "damaged" },
@@ -173,16 +173,10 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const t = (en, ur) => (language === "en" ? en : ur);
     const isUpdate = mode === "update";
 
-    const { data: existingPurchaseReturn, isLoading: isFetching } = useGetPurchaseReturnByIdQuery(purchaseReturnId, {
-        skip: !isUpdate || !purchaseReturnId,
-    });
-
-    const [createPurchaseReturn, { isLoading: isCreating }] = useCreatePurchaseReturnMutation();
-    const [updatePurchaseReturn, { isLoading: isUpdating }] = useUpdatePurchaseReturnMutation();
-    const [submitPurchaseReturn] = useSubmitPurchaseReturnMutation();
-    const [approvePurchaseReturn] = useApprovePurchaseReturnMutation();
-    const [rejectPurchaseReturn] = useRejectPurchaseReturnMutation();
-    const [getPurchaseByInvoiceNumberMutation]= useGetPurchaseByInvoiceNumberMutation()
+    const [existingPurchaseReturn, setExistingPurchaseReturn] = useState(null);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
     const isSubmitting = isCreating || isUpdating;
 
     const [form, setForm] = useState(emptyForm());
@@ -193,44 +187,56 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
     const update = (f, v) => setForm((p) => ({ ...p, [f]: v }));
 
-    // Prefill for update
     useEffect(() => {
-        if (!isUpdate || !existingPurchaseReturn) return;
+        const loadExisting = async () => {
+            if (!isUpdate || !purchaseReturnId) return;
+            setIsFetching(true);
+            try {
+                const res = await getPurchaseReturnByIdApi(purchaseReturnId);
+                const data = res?.data;
+                setExistingPurchaseReturn(data);
 
-        // For update mode, we need to load the purchase data
-        if (existingPurchaseReturn.purchase && !purchaseData) {
-            setPurchaseData(existingPurchaseReturn.purchase);
-            setInvoiceNumber(existingPurchaseReturn.purchase.invoiceNumber || "");
-        }
+                if (data?.purchase && !purchaseData) {
+                    setPurchaseData(data.purchase);
+                    setInvoiceNumber(data.purchase.invoiceNumber || "");
+                }
 
-        setForm({
-            purchase: existingPurchaseReturn.purchase?._id ?? existingPurchaseReturn.purchase ?? "",
-            supplier: existingPurchaseReturn.supplier?._id ?? existingPurchaseReturn.supplier ?? "",
-            returnDate: existingPurchaseReturn.returnDate ? new Date(existingPurchaseReturn.returnDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-            returnReason: existingPurchaseReturn.notes ?? "",
-            notes: existingPurchaseReturn.notes ?? "",
-        });
+                setForm({
+                    purchase: data?.purchase?._id ?? data?.purchase ?? "",
+                    supplier: data?.supplier?._id ?? data?.supplier ?? "",
+                    returnDate: data?.returnDate ? new Date(data.returnDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                    returnReason: data?.notes ?? "",
+                    notes: data?.notes ?? "",
+                });
 
-        // Prefill selected items with their return details
-        const selected = {};
-        (existingPurchaseReturn.items ?? []).forEach((it) => {
-            selected[it.batch?._id || it.batch] = {
-                returnQuantity: it.quantity,
-                returnReason: it.returnReason,
-                condition: it.condition || "good",
-                cut: it.cut || 0,
-                notes: it.notes || "",
-            };
-        });
-        setSelectedItems(selected);
-    }, [existingPurchaseReturn, isUpdate, purchaseData]);
+                const selected = {};
+                (data?.items ?? []).forEach((it) => {
+                    selected[it.batch?._id || it.batch] = {
+                        returnQuantity: it.quantity,
+                        returnReason: it.returnReason,
+                        condition: it.condition || "good",
+                        cut: it.cut || 0,
+                        notes: it.notes || "",
+                    };
+                });
+                setSelectedItems(selected);
+            } catch (e) {
+                showError(e?.response?.data?.message || "Failed to load purchase return");
+            } finally {
+                setIsFetching(false);
+            }
+        };
+
+        loadExisting();
+    }, [isUpdate, purchaseReturnId]);
 
     const handleSearchInvoice = async () => {
         if (!invoiceNumber.trim()) return showError("Please enter an invoice number");
 
         setIsSearching(true);
         try {
-            const result = await getPurchaseByInvoiceNumberMutation(invoiceNumber.trim()).unwrap();
+            const result = await getPurchaseByInvoiceNumberApi(invoiceNumber.trim());
+
             if (result?.success && result?.data) {
                 setPurchaseData(result.data);
                 setForm((prev) => ({
@@ -241,10 +247,10 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 setSelectedItems({});
                 showSuccess("Purchase found!");
             } else {
-                showError(result.data?.message || "Purchase not found");
+                showError(result?.message || "Purchase not found");
             }
         } catch (e) {
-            showError(e?.data?.message || e?.message || "Failed to search purchase");
+            showError(e?.response?.data?.message || e?.message || "Failed to search purchase");
         } finally {
             setIsSearching(false);
         }
@@ -336,10 +342,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
         try {
             if (isUpdate) {
-                await updatePurchaseReturn({ id: purchaseReturnId, ...payload }).unwrap();
+                setIsUpdating(true);
+                await updatePurchaseReturnApi(purchaseReturnId, payload);
                 showSuccess(t("Purchase return updated!", "خریداری واپسی اپڈیٹ ہو گیا۔"));
             } else {
-                await createPurchaseReturn(payload).unwrap();
+                setIsCreating(true);
+                await createPurchaseReturnApi(payload);
                 showSuccess(t("Purchase return recorded!", "خریداری واپسی محفوظ ہو گیا۔"));
                 setForm(emptyForm());
                 setPurchaseData(null);
@@ -349,31 +357,34 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
+        } finally {
+            setIsCreating(false);
+            setIsUpdating(false);
         }
     };
 
     const handleSubmitForApproval = async () => {
         if (!purchaseReturnId) return;
         try {
-            await submitPurchaseReturn(purchaseReturnId).unwrap();
+            await submitPurchaseReturnApi(purchaseReturnId);
             showSuccess(t("Submitted for approval", "منظوری کے لیے پیش کیا گیا"));
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
         }
     };
 
     const handleApprove = async () => {
         if (!purchaseReturnId) return;
         try {
-            await approvePurchaseReturn(purchaseReturnId).unwrap();
+            await approvePurchaseReturnApi(purchaseReturnId);
             showSuccess(t("Purchase return approved", "خریداری واپسی منظور ہو گئی"));
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
         }
     };
 
@@ -382,12 +393,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         const reason = prompt("Enter rejection reason:");
         if (!reason) return;
         try {
-            await rejectPurchaseReturn({ id: purchaseReturnId, rejectionReason: reason }).unwrap();
+            await rejectPurchaseReturnApi(purchaseReturnId, reason);
             showSuccess(t("Purchase return rejected", "خریداری واپسی مسترد ہو گئی"));
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
         }
     };
 
@@ -527,7 +538,11 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                 <input
                                                     type="checkbox"
                                                     checked={isSelected}
-                                                    onChange={() => handleItemSelect(batchId, item)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        handleItemSelect(batchId, item);
+                                                    }}
                                                     className="w-4 h-4 rounded"
                                                     style={{ accentColor: "var(--accent-2)" }}
                                                 />

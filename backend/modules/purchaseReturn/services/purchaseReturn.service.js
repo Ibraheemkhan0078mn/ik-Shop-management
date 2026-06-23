@@ -1,5 +1,5 @@
 import { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService } from "./purchaseReturn.crud.js";
-import { getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { getLocalPurchaseModel, getLocalBatchModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
 const getPurchaseReturns = async (filters = {}) => {
@@ -56,9 +56,9 @@ const getPurchaseReturnById = async (id) => {
 };
 
 const createPurchaseReturn = async (data, userId) => {
-    const PurchaseReturnModel = require("./purchaseReturn.crud.js").PurchaseReturnModel || getLocalPurchaseReturnModel();
     const PurchaseModel = getLocalPurchaseModel();
     const BatchModel = getLocalBatchModel();
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
 
     // Generate purchase return number
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));

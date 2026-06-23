@@ -42,7 +42,7 @@ function buildSteps({ categories, subCategories, currentCategory, openCategoryDi
       id: "classification",
       title: "Classification",
       fields: [
-        { name: "category", label: "Category", type: "select", required: true, placeholder: "Category chunein...", options: categories.map(c => ({ label: c.name, value: c._id })), action: { label: "New", icon: Plus, onClick: openCategoryDialog } },
+        { name: "category", label: "Category", type: "select", required: true, placeholder: "Category chunein...", options: categories?.map(c => ({ label: c.name, value: c?._id })), action: { label: "New", icon: Plus, onClick: openCategoryDialog } },
         { name: "subCategory", label: "Sub Category", type: "select", required: true, placeholder: "Sub category chunein...", disabled: !currentCategory, options: subCategories.map(c => ({ label: c.name, value: c._id })), action: { label: "New", icon: Plus, onClick: openSubCategoryDialog } },
         { name: "form", label: "Form", type: "text", required: true, placeholder: "e.g., Tablet, Syrup, Injection" },
         { name: "strength", label: "Strength", type: "text", required: true, placeholder: "e.g., 500mg, 250ml" },
@@ -221,7 +221,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         await createProduct(payload).unwrap();
         showSuccess("Product created successfully");
       } else {
-        await updateProduct({payload, id: productData._id}).unwrap();
+        await updateProduct({ payload, id: productData._id }).unwrap();
         showSuccess("Product updated successfully");
       }
       onClose();
