@@ -1,199 +1,165 @@
 import {
-    BarChart3,
-    Wallet,
-    ShoppingCart,
-    Users,
-    DollarSign,
-    CreditCard,
-    Package,
-    TrendingUp,
-    Trash2,
-    RotateCcw,
-    Truck,
-    ArrowLeftRight,
-    FileText,
-    Receipt,
-    Boxes,
+  BarChart3, Wallet, ShoppingCart, Users, DollarSign,
+  CreditCard, Package, TrendingUp, Trash2, RotateCcw,
+  Truck, ArrowLeftRight, FileText, Receipt, Boxes
 } from "lucide-react";
 
-export const sidebarData = (language = "en") => ({
-    navMain: [
-        {
-            id: "Quick List",
-            title: language === "en" ? "Quick List" : "فوری لسٹ",
-            url: "/quick-list",
-            icon: Package,
-            allowedUrls: ["/quick-list"],
-        },
-        {
-            id: "Dashboard",
-            title: language === "en" ? "Dashboard" : "ڈیش بورڈ",
-            url: "/dashboard",
-            icon: BarChart3,
-            allowedUrls: ["/dashboard", "/dashboard/analytics"],
-        },
-        {
-            id: "Sales",
-            title: language === "en" ? "Sales" : "سیلز",
-            url: "/pos",
-            icon: ShoppingCart,
-            allowedUrls: ["/pos", "/product-return"],
-            items: [
-                {
-                    id: "POS",
-                    title: language === "en" ? "POS" : "پوائنٹ آف سیلز",
-                    url: "/pos",
-                    icon: ShoppingCart,
-                    permissions: "Sale",
-                },
-                {
-                    id: "Order Returns",
-                    title: language === "en" ? "Order Return" : "آرڈر واپسی",
-                    url: "/product-return",
-                    icon: ArrowLeftRight,
-                },
-            ],
-        },
-        {
-            id: "Products",
-            title: language === "en" ? "Products" : "پروڈکٹس",
-            url: "/products",
-            icon: Boxes,
-            allowedUrls: [
-                "/products",
-                "/products/batches",
-                "/products/categories",
-                "/products/sub-categories",
-            ],
-            items: [
-                {
-                    id: "Categories",
-                    title: language === "en" ? "Categories" : "زمرے",
-                    url: "/products/categories",
-                    icon: FileText,
-                },
-                {
-                    id: "Sub Categories",
-                    title: language === "en" ? "Sub Categories" : "ذیلی زمرے",
-                    url: "/products/sub-categories",
-                    icon: FileText,
-                },
-            ],
-        },
-        {
-            id: "Wastage",
-            title: language === "en" ? "Product Wastage" : "ضیاع",
-            url: "/wastage",
-            icon: Trash2,
-            allowedUrls: ["/wastage"],
-        },
-        {
-            id: "Purchases",
-            title: language === "en" ? "Purchases" : "خریداری",
-            url: "/purchases",
-            icon: CreditCard,
-            allowedUrls: ["/purchases"],
-        },
-        {
-            id: "Purchase Returns",
-            title: language === "en" ? "Purchase Return" : "خریداری واپسی",
-            url: "/purchase-returns",
-            icon: RotateCcw,
-            allowedUrls: ["/purchase-returns"],
-        },
-        {
-            id: "Customers",
-            title: language === "en" ? "Customers" : "گاہک",
-            url: "/customers",
-            icon: Users,
-            allowedUrls: ["/customers"],
-        },
-        {
-            id: "Suppliers",
-            title: language === "en" ? "Suppliers" : "سپلائرز",
-            url: "/suppliers",
-            icon: Truck,
-            allowedUrls: ["/suppliers"],
-        },
-        {
-            id: "Reports",
-            title: language === "en" ? "Reports" : "رپورٹس",
-            url: "/reports",
-            icon: TrendingUp,
-            allowedUrls: [
-                "/reports",
-                "/reports/sales",
-                "/reports/purchases",
-                "/reports/inventory",
-                "/reports/accounts-and-financials",
-                "/reports/profit-and-loss",
-                "/reports/sales/details",
-                "/reports/purchases/details",
-                "/reports/inventory/details",
-                "/reports/finance/details",
-                "/reports/profitLoss/details",
-            ],
-            items: [
-                {
-                    id: "Sales Report",
-                    title: language === "en" ? "Sales" : "سیلز",
-                    url: "/reports/sales",
-                    icon: Receipt,
-                },
-                {
-                    id: "Purchase Report",
-                    title: language === "en" ? "Purchases" : "خریداری",
-                    url: "/reports/purchases",
-                    icon: CreditCard,
-                },
-                {
-                    id: "Inventory Report",
-                    title: language === "en" ? "Inventory" : "انوینٹری",
-                    url: "/reports/inventory",
-                    icon: Boxes,
-                },
-                {
-                    id: "Finance Report",
-                    title: language === "en" ? "Finance" : "فنانس",
-                    url: "/reports/accounts-and-financials",
-                    icon: Wallet,
-                },
-            ],
-        },
-        {
-            id: "Credit & Debits",
-            title: language === "en" ? "Credit & Debits" : "کریڈٹ اور ڈیبٹس",
-            url: "/qarzaAccount",
-            icon: Wallet,
-            allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"],
-        },
-        {
-            id: "Expenses",
-            title: language === "en" ? "Expenses" : "اخراجات",
-            url: "/expenses",
-            icon: DollarSign,
-            allowedUrls: ["/expenses"],
-        },
-        {
-            id: "Members",
-            title: language === "en" ? "Members" : "ممبرز",
-            url: "/member",
-            icon: Users,
-            allowedUrls: ["/member", "/members"],
-        },
-        {
-            id: "Investors",
-            title: language === "en" ? "Investors" : "سرمایہ دار",
-            url: "/investor",
-            icon: Users,
-            allowedUrls: ["/investor"],
-        },
-        {
-            id: "Assets",
-            title: language === "en" ? "Assets" : "اثاثے",
-            url: "/assets",
-            icon: Package,
-            allowedUrls: ["/assets"],
-        },
+// Language translations
+const t = {
+  en: {
+    quickList: "Quick List",
+    dashboard: "Dashboard",
+    sales: "Sales",
+    pos: "POS",
+    orderReturn: "Order Return",
+    products: "Products",
+    categories: "Categories",
+    subCategories: "Sub Categories",
+    productWastage: "Product Wastage",
+    purchases: "Purchases",
+    purchaseReturn: "Purchase Return",
+    customers: "Customers",
+    suppliers: "Suppliers",
+    reports: "Reports",
+    salesReport: "Sales",
+    purchaseReport: "Purchases",
+    inventoryReport: "Inventory",
+    financeReport: "Finance",
+    creditDebits: "Credit & Debits",
+    expenses: "Expenses",
+    members: "Members",
+    investors: "Investors",
+    assets: "Assets",
+    logout: "Logout",
+    settings: "Settings"
+  },
+  ur: {
+    quickList: "فوری لسٹ",
+    dashboard: "ڈیش بورڈ",
+    sales: "سیلز",
+    pos: "پوائنٹ آف سیلز",
+    orderReturn: "آرڈر واپسی",
+    products: "پروڈکٹس",
+    categories: "زمرے",
+    subCategories: "ذیلی زمرے",
+    productWastage: "ضیاع",
+    purchases: "خریداری",
+    purchaseReturn: "خریداری واپسی",
+    customers: "گاہک",
+    suppliers: "سپلائرز",
+    reports: "رپورٹس",
+    salesReport: "سیلز",
+    purchaseReport: "خریداری",
+    inventoryReport: "انوینٹری",
+    financeReport: "فنانس",
+    creditDebits: "کریڈٹ اور ڈیبٹس",
+    expenses: "اخراجات",
+    members: "ممبرز",
+    investors: "سرمایہ دار",
+    assets: "اثاثے",
+    logout: "لاگ آؤٹ",
+    settings: "سیٹنگز"
+  },
+  ur_en: {
+    quickList: "فوری لسٹ / Quick List",
+    dashboard: "ڈیش بورڈ / Dashboard",
+    sales: "سیلز / Sales",
+    pos: "پوائنٹ آف سیلز / POS",
+    orderReturn: "آرڈر واپسی / Order Return",
+    products: "پروڈکٹس / Products",
+    categories: "زمرے / Categories",
+    subCategories: "ذیلی زمرے / Sub Categories",
+    productWastage: "ضیاع / Product Wastage",
+    purchases: "خریداری / Purchases",
+    purchaseReturn: "خریداری واپسی / Purchase Return",
+    customers: "گاہک / Customers",
+    suppliers: "سپلائرز / Suppliers",
+    reports: "رپورٹس / Reports",
+    salesReport: "سیلز / Sales",
+    purchaseReport: "خریداری / Purchases",
+    inventoryReport: "انوینٹری / Inventory",
+    financeReport: "فنانس / Finance",
+    creditDebits: "کریڈٹ اور ڈیبٹس / Credit & Debits",
+    expenses: "اخراجات / Expenses",
+    members: "ممبرز / Members",
+    investors: "سرمایہ دار / Investors",
+    assets: "اثاثے / Assets",
+    logout: "لاگ آؤٹ / Logout",
+    settings: "سیٹنگز / Settings"
+  }
+};
+
+// Navigation items configuration
+const navItems = [
+  { id: "quickList", icon: Package, url: "/quick-list", allowedUrls: ["/quick-list"] },
+  { 
+    id: "dashboard", 
+    icon: BarChart3, 
+    url: "/dashboard", 
+    allowedUrls: ["/dashboard", "/dashboard/analytics"] 
+  },
+  {
+    id: "sales",
+    icon: ShoppingCart,
+    url: "/pos",
+    allowedUrls: ["/pos", "/product-return"],
+    items: [
+      { id: "pos", icon: ShoppingCart, url: "/pos", permissions: "Sale" },
+      { id: "orderReturn", icon: ArrowLeftRight, url: "/product-return" }
+    ]
+  },
+  {
+    id: "products",
+    icon: Boxes,
+    url: "/products",
+    allowedUrls: ["/products", "/products/batches", "/products/categories", "/products/sub-categories"],
+    items: [
+      { id: "categories", icon: FileText, url: "/products/categories" },
+      { id: "subCategories", icon: FileText, url: "/products/sub-categories" }
+    ]
+  },
+  { id: "productWastage", icon: Trash2, url: "/wastage", allowedUrls: ["/wastage"] },
+  { id: "purchases", icon: CreditCard, url: "/purchases", allowedUrls: ["/purchases"] },
+  { id: "purchaseReturn", icon: RotateCcw, url: "/purchase-returns", allowedUrls: ["/purchase-returns"] },
+  { id: "customers", icon: Users, url: "/customers", allowedUrls: ["/customers"] },
+  { id: "suppliers", icon: Truck, url: "/suppliers", allowedUrls: ["/suppliers"] },
+  {
+    id: "reports",
+    icon: TrendingUp,
+    url: "/reports",
+    allowedUrls: [
+      "/reports", "/reports/sales", "/reports/purchases", "/reports/inventory",
+      "/reports/accounts-and-financials", "/reports/profit-and-loss",
+      "/reports/sales/details", "/reports/purchases/details", "/reports/inventory/details",
+      "/reports/finance/details", "/reports/profitLoss/details"
     ],
+    items: [
+      { id: "salesReport", icon: Receipt, url: "/reports/sales" },
+      { id: "purchaseReport", icon: CreditCard, url: "/reports/purchases" },
+      { id: "inventoryReport", icon: Boxes, url: "/reports/inventory" },
+      { id: "financeReport", icon: Wallet, url: "/reports/accounts-and-financials" }
+    ]
+  },
+  {
+    id: "creditDebits",
+    icon: Wallet,
+    url: "/qarzaAccount",
+    allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"]
+  },
+  { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
+  { id: "members", icon: Users, url: "/member", allowedUrls: ["/member", "/members"] },
+  { id: "investors", icon: Users, url: "/investor", allowedUrls: ["/investor"] },
+  { id: "assets", icon: Package, url: "/assets", allowedUrls: ["/assets"] }
+];
+
+// Helper to build sidebar data with translations
+export const sidebarData = (language = "en") => ({
+  navMain: navItems.map(item => ({
+    ...item,
+    title: t[language]?.[item.id] || t.en[item.id] || item.id,
+    items: item.items?.map(sub => ({
+      ...sub,
+      title: t[language]?.[sub.id] || t.en[sub.id] || sub.id
+    }))
+  }))
 });
