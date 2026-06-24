@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useState } from "react";
-import api from "@shared/services/axiosInstance.js";
+import api from "../services/axiosInstance.js";
 const AppPermissionContext = createContext()
 
 

@@ -1,5 +1,5 @@
 // src/modules/qarza/services/qarza.service.js
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const qarzaApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

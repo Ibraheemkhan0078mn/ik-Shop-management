@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
-import PaginatedList, { usePaginatedFetch } from "@shared/components/PaginatedList.jsx";
+import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi } from "../api/purchaseReturnApi.js";
 

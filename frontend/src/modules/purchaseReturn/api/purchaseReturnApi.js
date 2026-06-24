@@ -1,4 +1,4 @@
-import api from "@shared/services/api.js";
+import api from "../../../shared/services/api.js";
 
 export const getPurchaseReturnsApi = async (params = {}) => {
     const response = await api.get("/purchase-returns", { params });

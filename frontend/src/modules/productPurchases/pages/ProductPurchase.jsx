@@ -4,10 +4,10 @@ import { Plus }                           from "lucide-react";
 import { useSelector }                    from "react-redux";
 import { useNavigate }                    from "react-router-dom";
 import { useDeletePurchase, usePurchases } from "../services/purchases.service.js";
-import PaginatedList                      from "@shared/components/PaginatedList.jsx";
+import PaginatedList                      from "../../../shared/components/PaginatedList.jsx";
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
-import PageHeading                        from "@shared/components/PageHeading.jsx";
+import PageHeading                        from "../../../shared/components/PageHeading.jsx";
 
 export default function ProductPurchasePage() {
     const language         = useSelector(s => s.auth?.user?.language ?? "en");

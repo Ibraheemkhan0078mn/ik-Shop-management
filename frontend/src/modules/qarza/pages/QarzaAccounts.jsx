@@ -5,11 +5,11 @@ import { Plus, Edit2, Trash2, Phone, MapPin, Wallet } from "lucide-react";
 import { useSelector }           from "react-redux";
 import { useQarzaAccountsPaginated, useDeleteQarzaAccount } from "../services/qarza.service.js";
 import QarzaAccountModal         from "../components/QarzaAccountModal.jsx";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers";
-import emptyImage                from "@shared/assets/images/boy-user.jpg";
-import { backendBaseUrl }        from "@shared/constants/constants.js";
-import PaginatedList             from "@shared/components/PaginatedList.jsx";
-import PageHeading               from "@shared/components/PageHeading.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import emptyImage                from "../../../shared/assets/images/boy-user.jpg";
+import { backendBaseUrl }        from "../../../shared/constants/constants.js";
+import PaginatedList             from "../../../shared/components/PaginatedList.jsx";
+import PageHeading               from "../../../shared/components/PageHeading.jsx";
 
 export default function QarzaAccounts() {
     const navigate   = useNavigate();

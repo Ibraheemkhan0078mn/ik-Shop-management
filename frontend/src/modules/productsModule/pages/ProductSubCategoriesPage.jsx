@@ -1,11 +1,11 @@
 // features/productsModule/pages/ProductSubCategoriesPage.jsx
 import { useState } from "react";
 import { Plus, Edit, Trash2, Layers3, AlertTriangle } from "lucide-react";
-import PageHeading from "@shared/components/PageHeading.jsx";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryFormCard from "../components/SubCategoryFormCard";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductSubCategoriesPage() {
     const [mode, setMode] = useState("list");

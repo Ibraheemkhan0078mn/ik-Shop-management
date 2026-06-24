@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
-import PageHeading from "@shared/components/PageHeading.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
 
 export default function CustomerPage() {

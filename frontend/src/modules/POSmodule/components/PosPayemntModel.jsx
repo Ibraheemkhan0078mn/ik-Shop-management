@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus } from "lucide-react";
-import { FormField, Input, SearchableSelect } from "@shared/components/FormFields.jsx";
+import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
 import { useAccountPayments } from "../../qarza/services/qarza.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -3,9 +3,9 @@ import { useState }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
 import { useDeleteWastage, useWastages } from "../services/wastage.service.js";
-import PaginatedList               from "@shared/components/PaginatedList.jsx";
+import PaginatedList               from "../../../shared/components/PaginatedList.jsx";
 import WastageModal                from "../components/WastageModal.jsx";
-import PageHeading                 from "@shared/components/PageHeading.jsx";
+import PageHeading                 from "../../../shared/components/PageHeading.jsx";
 
 const STATUS_STYLE = {
     draft:    { background: "rgba(107,114,128,0.1)", color: "#6b7280"  },

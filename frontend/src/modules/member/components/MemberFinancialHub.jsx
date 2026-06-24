@@ -2,7 +2,7 @@
 import MemberSalaryPaymentCreationComp from './MemberSalaryPaymentCreationComp';
 import MemberFeeDepositsAndDetails from './MemberFeeDepositsAndDetails';
 import { useGetMemberFinanceQuery } from '../member.rtk.api.js';
-import { PermissionGuard } from '@shared/components/PermissionGuard';
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx';
 import SalaryHistory from './SalaryChangeRecord';
 import ClassPartnership from './ClassPartnerShip.jsx';
 

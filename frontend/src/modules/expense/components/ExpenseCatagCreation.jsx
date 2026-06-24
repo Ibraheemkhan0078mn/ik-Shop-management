@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { X } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { setAllExpenseCatags } from '../slices/expense.slice';
-import api from '@shared/services/axiosInstance.js';
+import api from '../../../shared/services/axiosInstance.js';
 
 const ExpenseCatagCreation = ({ setVisibility }) => {
     const [category, setCategory] = useState("");

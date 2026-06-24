@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
-import PaginatedList from "@shared/components/PaginatedList";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal";
 

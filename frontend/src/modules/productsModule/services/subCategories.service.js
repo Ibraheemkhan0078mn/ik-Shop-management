@@ -1,7 +1,7 @@
 
 
 
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const subCategoryApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

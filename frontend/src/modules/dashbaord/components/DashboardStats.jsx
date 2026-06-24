@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
-import api from "@shared/services/api";
-import { sidebarData } from "@shared/data/sidebar";
+import api from "../../../shared/services/api.js";
+import { sidebarData } from "../../../shared/data/sidebar.js";
 
 export default function DashboardStats({
     stats,

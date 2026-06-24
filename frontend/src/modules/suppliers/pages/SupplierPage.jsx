@@ -3,9 +3,9 @@ import { useState }   from "react";
 import { Plus }                    from "lucide-react";
 import { useSelector }             from "react-redux";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
-import PaginatedList               from "@shared/components/PaginatedList.jsx";
+import PaginatedList               from "../../../shared/components/PaginatedList.jsx";
 import SupplierModal               from "../components/SupplierModal.jsx";
-import PageHeading                 from "@shared/components/PageHeading.jsx";
+import PageHeading                 from "../../../shared/components/PageHeading.jsx";
 
 export default function SupplierPage() {
     const language           = useSelector(s => s.auth?.user?.language ?? "en");

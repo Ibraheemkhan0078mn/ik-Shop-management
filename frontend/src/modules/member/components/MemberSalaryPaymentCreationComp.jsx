@@ -1,6 +1,6 @@
 ﻿import React, {useState } from "react";
 import { useCreateSalaryPaymentMutation } from "../member.rtk.api.js";
-import { toInputDateFormat } from '@shared/utilities/date.utility.js'
+import { toInputDateFormat } from '../../../shared/utilities/date.utility.js'
 
 
 const MemberSalaryPaymentCreationComp = ({ setVisible, memberId }) => {

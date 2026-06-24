@@ -1,5 +1,5 @@
 // src/modules/suppliers/services/suppliers.service.js
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const supplierApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "@shared/services/api.js";
+import api from "../../../shared/services/api.js";
 
 const initialState = {
   accounts: [], // all accounts with payments

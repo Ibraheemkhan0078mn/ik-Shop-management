@@ -4,8 +4,8 @@ import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
-import api from "@shared/services/api.js";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import api from "../../../shared/services/api.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PosCartSidebar from "../components/PosCartSidebar.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
 import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
@@ -14,8 +14,8 @@ import SplitBillModal from "../components/SplitBillModal.jsx";
 import FreeFoodModal from "../components/FreeFoodModal.jsx";
 import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 import ProductReturnModal from "../../productReturn/components/OrderReturnModal.jsx";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers.js";
-import { printOrder } from "@shared/utilities/printOrder.js";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import { printOrder } from "../../../shared/utilities/printOrder.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const toImageUrl = (img) => !img ? null : img.startsWith("http") ? img : `http://localhost:5001${img}`;
@@ -673,8 +673,8 @@ export default function PosPage() {
 // import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 // import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
 // import { useProducts } from "../../productsModule/services/product.service.js";
-// import api from "@shared/services/api.js";
-// import PaginatedList from "@shared/components/PaginatedList.jsx";
+// import api from "../../../shared/services/api.js";
+// import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 // import PosCartSidebar from "../components/PosCartSidebar.jsx";
 // import PosPaymentModal from "../components/PosPayemntModel.jsx";
 // import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
@@ -683,8 +683,8 @@ export default function PosPage() {
 // import FreeFoodModal from "../components/FreeFoodModal.jsx";
 // import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 // import ProductReturnModal from "../../productReturn/components/ProductReturnModal.jsx";
-// import { showError, showSuccess } from "@shared/utilities/toastHelpers.js";
-// import { printOrder } from "@shared/utilities/printOrder.js";
+// import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+// import { printOrder } from "../../../shared/utilities/printOrder.js";
 
 // // ─── Constants ──────────────────────────────────────────────────────────────
 // const toImageUrl = (img) => !img ? null : img.startsWith("http") ? img : `http://localhost:5001${img}`;
@@ -1300,9 +1300,9 @@ export default function PosPage() {
 // import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 // import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
 // import { useProducts } from "../../productsModule/services/product.service.js";
-// import api from "@shared/services/api.js";
+// import api from "../../../shared/services/api.js";
 
-// import PaginatedList from "@shared/components/PaginatedList.jsx";
+// import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 // import PosCartSidebar from "../components/PosCartSidebar.jsx";
 // import PosPaymentModal from "../components/PosPayemntModel.jsx";
 // import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
@@ -1312,8 +1312,8 @@ export default function PosPage() {
 // import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 // import ProductReturnModal from "../../productReturn/components/ProductReturnModal.jsx";
 
-// import { showError, showSuccess } from "@shared/utilities/toastHelpers.js";
-// import { printOrder } from "@shared/utilities/printOrder.js";
+// import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+// import { printOrder } from "../../../shared/utilities/printOrder.js";
 
 // // ─────────────────────────────────────────────────────────────────────────────
 // //  PosPage — main Point of Sale screen

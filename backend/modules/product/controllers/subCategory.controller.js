@@ -1,9 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import {
-    createSubCategorySchema,
-    updateSubCategorySchema,
-} from "../schema/subCategory.schema.js";
 import { getLocalSubCategoryModel } from "../../../configs/connect.db.js";
 
 export const getSubCategories = asyncHandler(async (req, res, next) => {
@@ -23,10 +19,7 @@ export const getSubCategories = asyncHandler(async (req, res, next) => {
 export const createSubCategory = asyncHandler(async (req, res, next) => {
     const SubCategoryModel = getLocalSubCategoryModel();
 
-    const validatedData = await createSubCategorySchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     const { name, category } = validatedData;
 
@@ -63,10 +56,7 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Subcategory not found", 404));
     }
 
-    const validatedData = await updateSubCategorySchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     if (validatedData.name) {
         const checkCategory = validatedData.category || subcategory.category;

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { sidebarData } from "../data/sidebar";
 import { ChevronDown, ChevronRight, LogOut, Wrench } from "lucide-react";
-import logo from "@shared/assets/logo.png";
+import logo from "../assets/logo.png";
 import { useSelector } from "react-redux";
 
 export default function Sidebar() {

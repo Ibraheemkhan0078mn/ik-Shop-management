@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { toInputDateFormat } from '@shared/utilities/date.utility.js';
+import { toInputDateFormat } from '../../../shared/utilities/date.utility.js';
 import { useCreateSalaryChangeMutation, useUpdateSalaryChangeMutation } from '../member.rtk.api.js';
 
 const SalaryChangeForm = ({ type, toUpdateData, memberId, setVisibility }) => {

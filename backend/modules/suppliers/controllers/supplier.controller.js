@@ -1,9 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import {
-    createSupplierSchema,
-    updateSupplierSchema,
-} from "../schemas/supplier.schema.js";
 import { getLocalSupplierModel, getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
 import {
@@ -69,10 +65,7 @@ export const getSupplierById = asyncHandler(async (req, res, next) => {
 })
 
 export const createSupplier = asyncHandler(async (req, res, next) => {
-    const validatedData = await createSupplierSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     const { name } = validatedData;
 
@@ -102,10 +95,7 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Supplier not found", 404));
     }
 
-    const validatedData = await updateSupplierSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     if (validatedData.name && validatedData.name !== supplier.name) {
         const nameExists = await findSupplierByNameService(validatedData.name);

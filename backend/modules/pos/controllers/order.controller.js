@@ -1,6 +1,5 @@
 import asyncHandler   from "express-async-handler";
 import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
-import { createOrderSchema } from "../schemas/order.schema.js";
 import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 import {
@@ -74,11 +73,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         };
     });
 
-    // Validate with yup schema
-    const validatedData = await createOrderSchema.validate(
-        { ...req.body, items: normalizedItems },
-        { abortEarly: false, stripUnknown: true },
-    );
+    const validatedData = { ...req.body, items: normalizedItems };
 
     // Prevent duplicate order numbers
     const duplicate = await findOrderByNumberService(validatedData.orderNumber);

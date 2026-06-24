@@ -13,8 +13,8 @@ import {
     CheckSquare,
 } from "lucide-react";
 // import { Card } from "@/components/ui/card";
-import Button from "@shared/ui/Button";
-import Input from "@shared/ui/Input";
+import Button from "../../../shared/ui/Button.jsx";
+import Input from "../../../shared/ui/Input.jsx";
 import {
     BarChart,
     Bar,

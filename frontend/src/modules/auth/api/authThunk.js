@@ -5,7 +5,7 @@ import {
   getItem,
   removeItem,
   setItem,
-} from "@shared/utilities/localStorage";
+} from "../../../shared/utilities/localStorage.js";
 
 export const signupUser = createAsyncThunk(
   "/auth/signup",

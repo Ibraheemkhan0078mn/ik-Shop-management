@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import api from "@shared/services/axiosInstance.js";
+import api from "../../../shared/services/axiosInstance.js";
 
 export default function QarzaPaymentEditForm({ getAccountPaymentAndSummary, currentToUpdateData, setQarzaPaymentData, setVisibility, qarzaAccountId }) {
   const [formData, setFormData] = useState({

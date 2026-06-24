@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { Trash2, DollarSign, CreditCard, Receipt, Users, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDeleteSalaryPaymentMutation } from '../member.rtk.api.js';
-import ScreenTabButton from '@shared/components/ScreenTabButton';
+import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx';
 import MemberSalaryPaymentCreationComp from './MemberSalaryPaymentCreationComp';
 // import TransactionReceipt from '../../../common/components/Reciept';
 
@@ -383,7 +383,7 @@ export default MemberFeeDepositsAndDetails;
 // import React, { useState, useEffect } from 'react';
 // import { IndianRupee, Trash2, DollarSign, CreditCard, Receipt, Users, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 // import { useDeleteSalaryPaymentMutation } from '../member.rtk.api.js';
-// import ScreenTabButton from '@shared/components/ScreenTabButton';
+// import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx';
 // import MemberSalaryPaymentCreationComp from './MemberSalaryPaymentCreationComp';
 // import TransactionReceipt from '../../../common/components/Reciept';
 

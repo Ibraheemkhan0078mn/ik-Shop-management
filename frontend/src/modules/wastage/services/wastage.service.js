@@ -1,5 +1,5 @@
 // src/modules/wastage/services/wastage.service.js
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const wastageApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

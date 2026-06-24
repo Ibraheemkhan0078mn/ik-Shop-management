@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { createCustomerSchema, updateCustomerSchema } from "../schemas/customer.schema.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
 import {
@@ -49,10 +48,7 @@ export const getCustomerById = asyncHandler(async (req, res, next) => {
 });
 
 export const createCustomer = asyncHandler(async (req, res, next) => {
-    const validatedData = await createCustomerSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     const { phoneNo, cnic } = validatedData;
     const duplicate = await findCustomerByPhoneOrCnicService({ $or: [{ phoneNo }, { cnic }] });
@@ -73,10 +69,7 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Customer not found", 404));
     }
 
-    const validatedData = await updateCustomerSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     if (validatedData.phoneNo || validatedData.cnic) {
         const duplicate = await findCustomerByPhoneOrCnicService({

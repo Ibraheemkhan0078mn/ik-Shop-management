@@ -5,8 +5,8 @@ import { useSelector }      from "react-redux";
 import { useDeleteExpense, useExpensesPaginated } from "../services/expense.service.js";
 import ExpenseModal          from "../components/ExpenseModal.jsx";
 import CategoryModal         from "../components/CategoryModal.jsx";
-import PaginatedList         from "@shared/components/PaginatedList.jsx";
-import PageHeading           from "@shared/components/PageHeading.jsx";
+import PaginatedList         from "../../../shared/components/PaginatedList.jsx";
+import PageHeading           from "../../../shared/components/PageHeading.jsx";
 
 export default function AllExpense() {
     const language        = useSelector(s => s.auth?.user?.language ?? "en");

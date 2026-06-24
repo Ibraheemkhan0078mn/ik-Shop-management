@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Search, CheckCircle, Pencil, Trash2 } from "lucide-react";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSelector } from "react-redux";
 import {
     createPurchaseReturnApi,
@@ -304,6 +304,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     }, [purchaseData, selectedItems]);
 
     const handleSubmit = async () => {
+        console.log("the submit is running.")
         if (!purchaseData) return showError("Please search and select a purchase first");
         if (Object.keys(selectedItems).length === 0) return showError("Please select at least one item to return");
 
@@ -339,6 +340,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             notes: form.returnReason,
             items,
         };
+
+        console.log(payload, "the paylaod")
 
         try {
             if (isUpdate) {

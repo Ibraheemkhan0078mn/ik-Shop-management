@@ -1,10 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
-    createBatchSchema,
-    updateBatchSchema,
-} from "../schemas/batch.schema.js";
-import {
     getLocalProductModel,
 } from "../../../configs/connect.db.js";
 import {
@@ -27,10 +23,7 @@ export const getBatchesData = asyncHandler(async (req, res, next) => {
 export const createBatchData = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
 
-    const validatedData = await createBatchSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     try {
         const batch = await createBatch(validatedData, ProductModel);
@@ -48,10 +41,7 @@ export const updateBatchData = asyncHandler(async (req, res, next) => {
     const ProductModel = getLocalProductModel();
     const { id } = req.params;
 
-    const validatedData = await updateBatchSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     try {
         const batch = await updateBatch(id, validatedData, ProductModel);

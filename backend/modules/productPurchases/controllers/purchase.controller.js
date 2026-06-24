@@ -1,5 +1,4 @@
 import asyncHandler from "express-async-handler";
-import { createPurchaseSchema, updatePurchaseSchema } from "../schemas/purchase.schema.js";
 import {
     getLocalBatchModel,
     getLocalProductModel,
@@ -65,10 +64,7 @@ export const createPurchaseData = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
-    const validatedData = await createPurchaseSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     const purchase = await createPurchase(validatedData, BatchModel, ProductModel);
 
@@ -234,7 +230,7 @@ export const updatePurchaseData = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
-    const data = await updatePurchaseSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    const data = req.body || {};
 
     try {
         const updated = await updatePurchase(req.params.id, data, BatchModel, ProductModel);

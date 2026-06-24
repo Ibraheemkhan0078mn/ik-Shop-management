@@ -4,7 +4,7 @@ import {
     useUpdateSupplier,
     useSupplier, // agar yeh hook hai to
 } from "../services/suppliers.service.js";
-import FormLayout from "@shared/components/FormLayout.jsx";
+import FormLayout from "../../../shared/components/FormLayout.jsx";
 
 const SupplierCrudModel = ({ setVisibility, id, operation = "create" }) => {
     const { data: supplierData } = useSupplier(id, { skip: operation === "create" });

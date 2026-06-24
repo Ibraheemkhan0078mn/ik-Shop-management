@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import LoadingBar from "react-top-loading-bar";
 import { Toaster } from "sonner"
-import Sidebar from "@shared/components/SideBar";
+import Sidebar from "./shared/components/SideBar.jsx";
 import { useLocation } from "react-router-dom";
 
 function App() {

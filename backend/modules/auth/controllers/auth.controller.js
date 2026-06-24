@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
 import {
     userCreate as userCreateService,
@@ -10,10 +9,7 @@ import {
 
 export const loginUser = asyncHandler(async (req, res, next) => {
     const UserModel = getLocalUserModel();
-    const { email, password } = await loginSchema.validate(req.body, {
-        abortEarly: true,
-        stripUnknown: true,
-    });
+    const { email, password } = req.body || {};
 
     const user = await findUserByEmailService(email);
     if (!user) {
@@ -41,10 +37,7 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 });
 
 export const registerUser = asyncHandler(async (req, res, next) => {
-    const validatedData = await registerSchema.validate(req.body, {
-        abortEarly: true,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
     const { email } = validatedData;
     const userExists = await findUserByEmailService(email);
     if (userExists) {

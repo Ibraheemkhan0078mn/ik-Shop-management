@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import AdminSideMemberFilteration from '../components/AdminSideMemberFilteration'
 import { CalendarCheck, CirclePlus, Filter } from 'lucide-react'
-import ScreenTabButton from '@shared/components/ScreenTabButton'
+import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
 import EachMemberDataComp from '../components/EachMemberDataComp'
 import { MemberMakingAttendenceComp } from '../components/MemberMakingAttendanceComp'
 import { useHotkeys } from 'react-hotkeys-hook'

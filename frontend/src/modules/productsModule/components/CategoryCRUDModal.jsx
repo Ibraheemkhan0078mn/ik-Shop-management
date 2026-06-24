@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCreateCategoryMutation, useUpdateCategoryMutation, useGetCategoryByIdQuery } from "../services/category.service";
-import FormLayout from "@shared/components/FormLayout";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import FormLayout from "../../../shared/components/FormLayout.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function CategoryCRUDModal({ mode = "create", categoryId = null, open, onClose }) {
     const isCreate = mode === "create";

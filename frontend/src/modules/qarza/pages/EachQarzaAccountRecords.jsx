@@ -8,7 +8,7 @@ import {
     useDeleteQarzaPayment,
 } from "../services/qarza.service.js";
 import QarzaPaymentModal from "../components/QarzaPaymentModal.jsx";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const STATUS_COLOR = {
     cashin:  { bg: "rgba(16,185,129,0.1)",  text: "#10b981", Icon: ArrowDownLeft },

@@ -1,5 +1,5 @@
 // src/modules/productPurchases/components/PurchaseModal.jsx
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { Plus, Upload, Download, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
@@ -7,7 +7,7 @@ import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } fr
 import { useProducts } from "../../productsModule/services/product.service";
 import { useBatchesByProduct } from "../services/batch.service";
 import { useSelector } from "react-redux";
-import { SearchableSelect } from "@shared/components/FormFields";
+import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate  = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
@@ -669,18 +669,8 @@ export default function PurchaseModal(props) {
 
 
 
-
-
-
-
-
-
-
-
-
-
 // // src/modules/productPurchases/components/PurchaseModal.jsx
-// import { showError, showSuccess }       from "@shared/utilities/toastHelpers";
+// import { showError, showSuccess }       from "../../../shared/utilities/toastHelpers.js";
 // import { Plus, Upload, Download, TrendingUp, Package, Calendar, FileText,
 //          DollarSign, Truck, File, X, ChevronDown }  from "lucide-react";
 // import { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -690,7 +680,7 @@ export default function PurchaseModal(props) {
 // import { useProducts }                  from "../../productsModule/services/product.service";
 // import { useBatchesByProduct }          from "../services/batch.service";
 // import { useSelector }                  from "react-redux";
-// import { SearchableSelect }             from "@shared/components/FormFields";
+// import { SearchableSelect }             from "../../../shared/components/FormFields.jsx";
 
 // // ─── helpers ──────────────────────────────────────────────────────────────────
 // const toInputDate  = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";

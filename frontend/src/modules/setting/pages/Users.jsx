@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "@shared/services/api";
+import api from "../../../shared/services/api.js";
 import {
     Pencil,
     Trash2,
@@ -11,7 +11,7 @@ import {
     X,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { showError } from "@shared/utilities/toastHelpers";
+import { showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function UsersPage() {
     const [users, setUsers] = useState([]);

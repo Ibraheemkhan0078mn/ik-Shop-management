@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Users } from "lucide-react";
 import { useSelector } from "react-redux";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateCustomer, useUpdateCustomer, useCustomer, useAllCustomers } from "../services/customers.service.js";
 
 const emptyForm = () => ({

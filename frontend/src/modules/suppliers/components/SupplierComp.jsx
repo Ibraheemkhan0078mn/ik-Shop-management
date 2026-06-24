@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
-import PaginatedTable from "@shared/components/PaginatedTable.jsx";
+import PaginatedTable from "../../../shared/components/PaginatedTable.jsx";
 import SupplierCrudModel from "../components/SupplierCrudModel.jsx";
 
 export default function SupplierComp({setVisibility}) {

@@ -2,11 +2,11 @@
 // Props: mode "create"|"update", account (full object for update), onClose, onSuccess
 import { useState, useEffect } from "react";
 import { X, Wallet } from "lucide-react";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateQarzaAccount, useUpdateQarzaAccount } from "../services/qarza.service.js";
 import { useSelector } from "react-redux";
-import emptyImage from "@shared/assets/images/boy-user.jpg";
-import { backendBaseUrl } from "@shared/constants/constants.js";
+import emptyImage from "../../../shared/assets/images/boy-user.jpg";
+import { backendBaseUrl } from "../../../shared/constants/constants.js";
 
 // ─── atoms ────────────────────────────────────────────────────────────────────
 const Label = ({ children }) => (

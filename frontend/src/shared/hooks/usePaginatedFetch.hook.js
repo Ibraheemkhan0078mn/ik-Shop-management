@@ -1,6 +1,6 @@
 // usePaginatedFetch.js
 import { useState, useRef, useCallback } from "react"
-import api from "@shared/services/api.js"
+import api from "../services/api.js"
 
 export const usePaginatedFetch = ({ endpoint, limit = 20 }) => {
     const [data, setData] = useState([])

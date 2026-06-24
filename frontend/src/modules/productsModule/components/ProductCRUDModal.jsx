@@ -4,10 +4,10 @@ import { Scan, Plus, AlertCircle, Check, ChevronDown, ChevronUp } from "lucide-r
 import { useCreateProduct, useUpdateProduct, useProduct } from "../services/product.service";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetSubCategoriesQuery } from "../services/subCategories.service.js";
-import Scanner from "@shared/components/Scanner";
+import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -655,10 +655,10 @@ function ToggleField({ label, name, value, onChange }) {
 // import { useGetCategoriesQuery } from "../services/category.service.js";
 // import { useGetSubCategoriesQuery } from "../services/subCategories.service.js";
 // import { useProduct } from "../services/product.service.js";
-// import Scanner from "@shared/components/Scanner";
+// import Scanner from "../../../shared/components/Scanner.jsx";
 // import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 // import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
-// import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+// import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 // const IMAGE_BASE = "http://localhost:5001/uploads";
 

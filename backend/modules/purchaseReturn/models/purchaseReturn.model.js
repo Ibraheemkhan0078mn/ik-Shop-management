@@ -113,6 +113,6 @@ purchaseReturnSchema.pre("save", function(next) {
     next();
 });
 
-// const PurchaseReturn = mongoose.model("PurchaseReturn", purchaseReturnSchema);
+const PurchaseReturn = mongoose.model("PurchaseReturn", purchaseReturnSchema);
 
-export default purchaseReturnSchema;
+export default PurchaseReturn;

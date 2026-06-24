@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { PlusCircle } from "lucide-react";
-import FormLayout from "@shared/components/FormLayout";
+import FormLayout from "../../../shared/components/FormLayout.jsx";
 import { useCreateCategoryMutation, useUpdateCategoryMutation, useGetCategoryByIdQuery } from "../services/category.service";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function CategoryFormCard({ mode = "create", categoryId = null, onClose, onSaved }) {
     const isCreate = mode === "create";

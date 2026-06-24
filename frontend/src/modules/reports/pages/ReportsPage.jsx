@@ -21,7 +21,7 @@ import {
     useGetWastageReportQuery,
     useGetActivityReportQuery,
 } from "../services/reports.service.js";
-import { FormField, Input, SearchableSelect } from "@shared/components/FormFields.jsx";
+import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
 
 const REPORT_TYPES = [
     { value: "sales", label: "Sales Report", icon: FileText },

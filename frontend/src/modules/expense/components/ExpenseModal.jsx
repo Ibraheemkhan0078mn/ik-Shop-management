@@ -2,7 +2,7 @@
 // Props: mode "create"|"update", expense (for update), onClose, onSuccess
 import { useState, useEffect } from "react";
 import { X, DollarSign } from "lucide-react";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateExpense, useUpdateExpense, useExpenseCategories } from "../services/expense.service.js";
 import { useSelector } from "react-redux";
 

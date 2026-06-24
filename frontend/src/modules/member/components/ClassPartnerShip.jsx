@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { PermissionGuard } from '@shared/components/PermissionGuard';
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx';
 import NonActiveClassPartnershipRecords from './NonActiveClassPartnershipRecords';
 import ClassPartnershipCrudModal from './ClassPartnershipCrudModel';
 import ClassPartnershipListingUnifiedComp from './ClassPartnershipListingUnifiedComp';

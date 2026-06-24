@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, Truck } from "lucide-react";
-import { showError, showSuccess } from "@shared/utilities/toastHelpers";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateSupplier, useUpdateSupplier, useSupplier, useAllSuppliers } from "../services/suppliers.service.js";
 import { useSelector } from "react-redux";
 

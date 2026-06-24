@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
-import api from "@shared/services/axiosInstance.js";
+import api from "../../../shared/services/axiosInstance.js";
 
 const PaymentCreationOfQarzaWithoutAccount = ({ setVisible, setData }) => {
     const [formData, setFormData] = useState({

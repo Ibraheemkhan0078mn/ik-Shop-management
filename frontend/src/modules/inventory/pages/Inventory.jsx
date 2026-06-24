@@ -4,8 +4,8 @@ import InventoryCreation from "../components/InventoryCreate.jsx";
 import InventoryUpdate from "../components/InventoryUpdate.jsx";
 import { PlusCircle, Search, Pencil, Trash2, Package, CassetteTape } from "lucide-react";
 import InventoryCategory from "../components/InventoryCategory.jsx";
-import ConfirmDialog from "@shared/components/ConfirmationDialog.jsx";
-import api from "@shared/services/api.js";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
+import api from "../../../shared/services/api.js";
 import { useDeleteInventoryMutation } from "../services/inventory.service.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────

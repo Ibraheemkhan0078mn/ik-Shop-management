@@ -1,4 +1,4 @@
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const purchaseApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

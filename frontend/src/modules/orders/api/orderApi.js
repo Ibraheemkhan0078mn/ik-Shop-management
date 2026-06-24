@@ -1,4 +1,4 @@
-import api from "@shared/services/api";
+import api from "../../../shared/services/api.js";
 
 const ordersApi = {
   fetchOrders: (type = "other") => api.get(`/orders?orderType=${type}`),

@@ -1,8 +1,8 @@
 ﻿import React, { useState } from 'react'
 import { useGetMemberByIdQuery } from '../member.rtk.api.js';
-import ScreenTabButton from '@shared/components/ScreenTabButton.jsx';
+import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx';
 import { Edit, Edit2 } from 'lucide-react';
-import { PermissionGuard } from '@shared/components/PermissionGuard.jsx';
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx';
 import MemberCrudModel from './MemberCrudMode.jsx';
 
 export default function MemberProfileOverviewComp({ memberId }) {

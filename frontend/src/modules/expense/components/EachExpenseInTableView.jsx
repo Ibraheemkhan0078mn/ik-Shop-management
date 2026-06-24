@@ -1,9 +1,9 @@
 import React from "react";
 import { Calendar, Edit2, Trash2 } from "lucide-react";
 import axios from "axios";
-import api from "@shared/services/axiosInstance.js";
-import { PermissionGuard } from "@shared/components/PermissionGuard";
-import ConfirmDialog from "@shared/components/ConfirmationDialog";
+import api from "../../../shared/services/axiosInstance.js";
+import { PermissionGuard } from "../../../shared/components/PermissionGuard.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 // Improved table-row component with proper column alignment
 // This now follows real table formatting with consistent spacing

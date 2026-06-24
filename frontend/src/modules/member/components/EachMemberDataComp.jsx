@@ -14,14 +14,14 @@
 import React, { useState } from 'react'
 import { Edit, Trash2 } from 'lucide-react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import boy_empty_user from '@shared/assets/images/boy-user.jpg'
+import boy_empty_user from '../../../shared/assets/images/boy-user.jpg'
 
 import MemberDocumentsComp from './MemberDocuemntsComp.jsx'
 import MemberFinancialHub from './MemberFinancialHub.jsx'
 // import MemberOverview from './MemberOverview.jsx'
 import ClassPartnership from './ClassPartnerShip.jsx'
-import ConfirmDialog from '@shared/components/ConfirmationDialog.jsx'
-import { PermissionGuard } from '@shared/components/PermissionGuard.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmationDialog.jsx'
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx'
 
 import { useGetMemberByIdQuery, useDeleteMemberMutation } from '../member.rtk.api.js'
 import MemberProfileOverviewComp from './MemberProfileoverviewComp.jsx'

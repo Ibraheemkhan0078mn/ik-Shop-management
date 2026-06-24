@@ -5,8 +5,8 @@ import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../s
 import { useUser } from "../../auth/services/auth.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
-import PageHeading from "@shared/components/PageHeading.jsx";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 

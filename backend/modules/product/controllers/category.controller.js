@@ -1,10 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { paginateModel } from '../../../common/services/common.service.js'
-import {
-    createCategorySchema,
-    updateCategorySchema,
-} from "../schema/category.schema.js";
 import { getLocalCategoryModel } from "../../../configs/connect.db.js";
 
 export const getCategories = asyncHandler(async (req, res, next) => {
@@ -45,10 +41,7 @@ export const getPaginationCategories = asyncHandler(async (req, res, next) => {
 export const createCategory = asyncHandler(async (req, res, next) => {
     const CategoryModel = getLocalCategoryModel();
 
-    const validatedData = await createCategorySchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     const { name } = validatedData;
 
@@ -79,10 +72,7 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Category not found", 404));
     }
 
-    const validatedData = await updateCategorySchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     if (validatedData.name && validatedData.name !== category.name) {
         const nameExists = await CategoryModel.findOne({

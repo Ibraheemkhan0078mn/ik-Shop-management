@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { X, Package } from "lucide-react";
 import { toast } from "sonner";
-import { toInputDateFormat } from '@shared/utilities/date.utility.js';
+import { toInputDateFormat } from '../../../shared/utilities/date.utility.js';
 import { useCreateInventoryMutation, useGetInventoryCategoriesQuery } from "../services/inventory.service.js";
 
 const Field = ({ label, children }) => (

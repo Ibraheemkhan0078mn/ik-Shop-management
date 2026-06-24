@@ -1,11 +1,11 @@
 // features/productsModule/pages/ProductCategoriesPage.jsx
 import { useMemo, useState } from "react";
 import { Plus, Edit, Trash2, FolderTree, AlertTriangle } from "lucide-react";
-import PageHeading from "@shared/components/PageHeading.jsx";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useDeleteCategoryMutation, useGetCategoriesQuery } from "../services/category.service";
 import CategoryFormCard from "../components/CategoryFormCard";
-import { showSuccess, showError } from "@shared/utilities/toastHelpers.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductCategoriesPage() {
     const [mode, setMode] = useState("list");

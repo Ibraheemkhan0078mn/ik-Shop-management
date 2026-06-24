@@ -1,6 +1,6 @@
-import Table from "@shared/ui/Table";
+import Table from "../../../shared/ui/Table.jsx";
 import { useParams, useSearchParams } from "react-router-dom";
-import Button from "@shared/ui/Button";
+import Button from "../../../shared/ui/Button.jsx";
 
 const ReportDetailsPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();

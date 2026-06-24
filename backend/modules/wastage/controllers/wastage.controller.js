@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { createWastageSchema, updateWastageSchema } from "../schemas/wastage.schema.js";
 import {
     getLocalWastageModel,
     getLocalProductModel,
@@ -89,10 +88,7 @@ export const getWastage = asyncHandler(async (req, res, next) => {
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
 export const createWastage = asyncHandler(async (req, res, next) => {
-    const validatedData = await createWastageSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     // Auto-calculate item-level totalLoss and document-level totals
     let totalQuantity   = 0;
@@ -136,10 +132,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Cannot edit a wastage that is already ${wastage.status}`, 400));
     }
 
-    const validatedData = await updateWastageSchema.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
-    });
+    const validatedData = req.body || {};
 
     // Recalculate totals if items were updated
     if (validatedData.items && validatedData.items.length > 0) {

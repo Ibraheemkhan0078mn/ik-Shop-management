@@ -9,7 +9,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Trash, ChevronDown, ChevronUp, Plus, Clock } from 'lucide-react';
-import { PermissionGuard } from '@shared/components/PermissionGuard';
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx';
 import { ClassPartnershipPaymentModel } from './ClassPartnershipPaymentModel';
 import ClassPartnershipCrudModal from './ClassPartnershipCrudModel';
 import { useDeleteClassPartnershipMutation, useDeleteClassPartnershipPaymentMutation, useGetClassPartnershipsByPartnerIdQuery } from '../member.rtk.api';

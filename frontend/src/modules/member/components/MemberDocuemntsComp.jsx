@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDeleteMemberDocumentMutation, useGetMemberByIdQuery, useUploadMemberDocumentMutation } from '../member.rtk.api';
-import { PermissionGuard } from '@shared/components/PermissionGuard';
+import { PermissionGuard } from '../../../shared/components/PermissionGuard.jsx';
 const MemberDocumentsComp = ({ memberId }) => {
     const { data: memberData } = useGetMemberByIdQuery(memberId);
 

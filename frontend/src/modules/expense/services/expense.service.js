@@ -1,5 +1,5 @@
 // src/modules/expense/services/expense.service.js
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const expenseApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

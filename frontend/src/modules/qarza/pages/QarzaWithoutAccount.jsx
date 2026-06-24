@@ -4,8 +4,8 @@ import PaymentCreationOfQarzaWithoutAccount from '../components/PaymentCreationO
 import { Clock, DollarSign, Edit2, Home, NotebookTabs, PlusCircle, Trash2, UserCheck } from 'lucide-react'
 import PaymentUpdateOfQarzaWithoutAccount from '../components/PaymentUpdateOfQarzaWithoutAccount'
 import { useSelector } from 'react-redux'
-import ScreenTabButton from '@shared/components/ScreenTabButton.jsx'
-import api from "@shared/services/axiosInstance.js"
+import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
+import api from "../../../shared/services/axiosInstance.js"
 
 const QarzaWithoutAccount = () => {
 

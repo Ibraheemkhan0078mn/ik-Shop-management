@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Printer, Phone, Globe, ShieldCheck, X } from 'lucide-react';
-import logoImage from "@shared/assets/images/boy-user.jpg";
+import logoImage from "../assets/images/boy-user.jpg";
 
 const TransactionReceipt = ({ data, setVisibility }) => {
     const componentRef = useRef();

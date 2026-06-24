@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { Plus, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import PaginatedList from "@shared/components/PaginatedList.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
-import PageHeading from "@shared/components/PageHeading.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
 import { useDeleteOrderReturnMutation, useGetPaginatedOrderReturnsQuery } from "../services/orderReturn.service.js";
 
 const OrderReturnList = () => {

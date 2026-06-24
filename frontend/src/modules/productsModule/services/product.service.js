@@ -12,7 +12,7 @@
 
 
 
-import { baseApi } from "@app/rtkBaseApi.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 export const productApi = baseApi.injectEndpoints({
     endpoints: (build) => ({

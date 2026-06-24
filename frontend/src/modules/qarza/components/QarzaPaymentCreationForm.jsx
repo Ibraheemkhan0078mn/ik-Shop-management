@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import api from "@shared/services/axiosInstance.js";
-import { toInputDateFormat } from "@shared/utilities/date.utility.js";
+import api from "../../../shared/services/axiosInstance.js";
+import { toInputDateFormat } from "../../../shared/utilities/date.utility.js";
 
 export default function QarzaPaymentCreationForm({ getAccountPaymentAndSummary, setQarzaPaymentData, setVisibility, qarzaAccountId }) {
     const [formData, setFormData] = useState({

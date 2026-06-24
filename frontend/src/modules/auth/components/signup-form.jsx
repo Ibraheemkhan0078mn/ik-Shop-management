@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useSignup } from "../services/auth.service";
-import NetworkChecker from "@shared/components/NetworkChecker";
-import imgLogo from "@shared/assets/Chai_fi_cup.png";
+import NetworkChecker from "../../../shared/components/NetworkChecker.jsx";
+import imgLogo from "../../../shared/assets/Chai_fi_cup.png";
 export function SignupForm() {
     const [formData, setFormData] = useState({
         name: "",
