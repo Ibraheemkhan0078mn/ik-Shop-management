@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { X, Users } from "lucide-react";
+import { X, Users, ImagePlus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateCustomer, useUpdateCustomer, useCustomer, useAllCustomers } from "../services/customers.service.js";
+
+const IMAGE_BASE_URL = "http://localhost:5001";
 
 const emptyForm = () => ({
     name: "",
@@ -50,6 +52,8 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
 
     const [form, setForm] = useState(emptyForm());
     const [nameError, setNameError] = useState(false);
+    const [selectedImageFile, setSelectedImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState("");
 
     const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -63,6 +67,8 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
             address: existingCustomer.address ?? "",
             isActive: existingCustomer.isActive ?? true,
         });
+        setSelectedImageFile(null);
+        setImagePreview(existingCustomer.image ? `${IMAGE_BASE_URL}/uploads/${existingCustomer.image}` : "");
     }, [existingCustomer, isUpdate]);
 
     const handleNameChange = (val) => {
@@ -71,27 +77,38 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
         setNameError(exists);
     };
 
+    const handleImageChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setSelectedImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
     const handleSubmit = async () => {
         if (!form.name.trim()) return showError(t("Customer name is required.", "گاہک کا نام ضروری ہے۔"));
         if (nameError) return showError(t("Name already taken.", "نام پہلے سے موجود ہے۔"));
 
-        const payload = {
-            ...form,
-            name: form.name.trim(),
-            image: form.image?.trim() ?? "",
-            phoneNo: form.phoneNo?.trim() ?? "",
-            cnic: form.cnic?.trim() ?? "",
-            address: form.address?.trim() ?? "",
-        };
+        const formData = new FormData();
+        formData.append("name", form.name.trim());
+        formData.append("phoneNo", form.phoneNo?.trim() ?? "");
+        formData.append("cnic", form.cnic?.trim() ?? "");
+        formData.append("address", form.address?.trim() ?? "");
+        formData.append("isActive", String(form.isActive));
+
+        if (selectedImageFile) {
+            formData.append("image", selectedImageFile);
+        }
 
         try {
             if (isUpdate) {
-                await updateCustomer({ id: customerId, ...payload }).unwrap();
+                await updateCustomer({ id: customerId, formData }).unwrap();
                 showSuccess(t("Customer updated!", "گاہک اپڈیٹ ہو گیا۔"));
             } else {
-                await createCustomer(payload).unwrap();
+                await createCustomer(formData).unwrap();
                 showSuccess(t("Customer created!", "گاہک شامل ہو گیا۔"));
                 setForm(emptyForm());
+                setSelectedImageFile(null);
+                setImagePreview("");
             }
             onSuccess?.();
             onClose();
@@ -130,9 +147,25 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
                             {nameError && <span className="text-xs mt-1" style={{ color: "#dc2626" }}>{t("Name already in use", "نام پہلے سے موجود ہے")}</span>}
                         </Field>
 
-                        <Field>
-                            <Label>Image URL</Label>
-                            <Inp value={form.image} placeholder="https://..." onChange={(e) => update("image", e.target.value)} />
+                        <Field className="sm:col-span-2">
+                            <Label>Customer Image</Label>
+                            <div className="flex flex-col gap-3 rounded-2xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                <div className="flex items-center gap-3">
+                                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--accent-2)", color: "#fff" }}>
+                                        <ImagePlus className="w-4 h-4" />
+                                        Choose Image
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                    </label>
+                                    <span className="text-xs" style={{ color: "var(--muted)" }}>{selectedImageFile ? selectedImageFile.name : t("PNG, JPG, JPEG, WEBP", "PNG, JPG, JPEG, WEBP")}</span>
+                                </div>
+                                <div className="flex h-28 items-center justify-center overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)", background: "rgba(15,118,110,0.05)" }}>
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Customer preview" className="h-full w-full object-cover" />
+                                    ) : (
+                                        <span className="text-xs" style={{ color: "var(--muted)" }}>No image selected</span>
+                                    )}
+                                </div>
+                            </div>
                         </Field>
 
                         <Field>

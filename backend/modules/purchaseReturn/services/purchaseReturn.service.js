@@ -2,6 +2,22 @@ import { createPurchaseReturnService, findPurchaseReturnService, findOnePurchase
 import { getLocalPurchaseModel, getLocalBatchModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
+const normalizePurchaseReturnItems = async (items = [], BatchModel) => {
+    if (!Array.isArray(items)) return [];
+
+    const normalizedItems = [];
+
+    for (const item of items) {
+        const batch = item.batch ? await BatchModel.findById(item.batch) : null;
+        normalizedItems.push({
+            ...item,
+            batchNumber: item.batchNumber?.trim() || batch?.batchNumber || "",
+        });
+    }
+
+    return normalizedItems;
+};
+
 const getPurchaseReturns = async (filters = {}) => {
     const { status, supplier, startDate, endDate } = filters;
     let query = {};
@@ -75,8 +91,10 @@ const createPurchaseReturn = async (data, userId) => {
         throw new Error("Purchase not found");
     }
 
+    const normalizedItems = await normalizePurchaseReturnItems(data.items, BatchModel);
+
     // Validate batches and quantities
-    for (const item of data.items) {
+    for (const item of normalizedItems) {
         const batch = await BatchModel.findById(item.batch);
         if (!batch) {
             throw new Error(`Batch not found: ${item.batchNumber}`);
@@ -88,6 +106,7 @@ const createPurchaseReturn = async (data, userId) => {
 
     return await createPurchaseReturnService({
         ...data,
+        items: normalizedItems,
         purchaseReturnNumber,
         createdBy: userId,
     });
@@ -104,9 +123,12 @@ const updatePurchaseReturn = async (id, data) => {
         throw new Error("Only draft purchase returns can be updated");
     }
 
+    let normalizedItems = data.items;
+
     // Validate batches and quantities if items are being updated
     if (data.items) {
-        for (const item of data.items) {
+        normalizedItems = await normalizePurchaseReturnItems(data.items, BatchModel);
+        for (const item of normalizedItems) {
             const batch = await BatchModel.findById(item.batch);
             if (!batch) {
                 throw new Error(`Batch not found: ${item.batchNumber}`);
@@ -117,7 +139,7 @@ const updatePurchaseReturn = async (id, data) => {
         }
     }
 
-    return await updatePurchaseReturnService(id, { ...data, updatedAt: new Date() });
+    return await updatePurchaseReturnService(id, { ...data, items: normalizedItems, updatedAt: new Date() });
 };
 
 const deletePurchaseReturn = async (id) => {

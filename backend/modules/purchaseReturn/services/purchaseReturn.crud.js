@@ -22,7 +22,7 @@ const findByIdPurchaseReturnService = (id) => {
 
 const updatePurchaseReturnService = (id, data) => {
     const PurchaseReturnModel = getLocalPurchaseReturnModel();
-    return PurchaseReturnModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return PurchaseReturnModel.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true });
 };
 
 const deleteOnePurchaseReturnService = (id) => {

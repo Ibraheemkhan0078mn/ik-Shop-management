@@ -1,17 +1,19 @@
-import ProductReturn from "../models/productReturn.model.js";
+import { getLocalProductReturnModel } from "../../../configs/connect.db.js";
 
-const createProductReturnService = (data) => ProductReturn.create(data);
+const ProductReturnModel = getLocalProductReturnModel();
 
-const findProductReturnService = (query = {}) => ProductReturn.find(query);
+const createProductReturnService = (data) => ProductReturnModel.create(data);
 
-const findOneProductReturnService = (query) => ProductReturn.findOne(query);
+const findProductReturnService = (query = {}) => ProductReturnModel.find(query);
 
-const findByIdProductReturnService = (id) => ProductReturn.findById(id);
+const findOneProductReturnService = (query) => ProductReturnModel.findOne(query);
 
-const updateProductReturnService = (id, data) => ProductReturn.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const findByIdProductReturnService = (id) => ProductReturnModel.findById(id);
 
-const deleteOneProductReturnService = (id) => ProductReturn.findByIdAndDelete(id);
+const updateProductReturnService = (id, data) => ProductReturnModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 
-const countProductReturnService = (query) => ProductReturn.countDocuments(query);
+const deleteOneProductReturnService = (id) => ProductReturnModel.findByIdAndDelete(id);
+
+const countProductReturnService = (query) => ProductReturnModel.countDocuments(query);
 
 export { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService };

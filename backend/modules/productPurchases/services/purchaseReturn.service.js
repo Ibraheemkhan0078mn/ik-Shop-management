@@ -1,6 +1,5 @@
 // backend/modules/productPurchases/services/purchaseReturn.service.js
-import mongoose from "mongoose";
-import { getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { getLocalBatchModel, getLocalProductModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 // Helper to adjust batch stock
@@ -10,7 +9,7 @@ async function adjustBatchStock(batchId, delta) {
 }
 
 export async function createPurchaseReturn(data) {
-  const PurchaseReturnModel = mongoose.model("PurchaseReturn", (await import("../models/purchaseReturn.model.js")).default);
+  const PurchaseReturnModel = getLocalPurchaseReturnModel();
   const { purchase, products } = data;
 
   // Adjust stocks for each returned product
@@ -30,12 +29,12 @@ export async function createPurchaseReturn(data) {
 }
 
 export async function getPurchaseReturnById(id) {
-  const PurchaseReturnModel = mongoose.model("PurchaseReturn", (await import("../models/purchaseReturn.model.js")).default);
+  const PurchaseReturnModel = getLocalPurchaseReturnModel();
   return await PurchaseReturnModel.findById(id).populate("purchase").populate("products.productId").populate("products.batchId");
 }
 
 export async function updatePurchaseReturn(id, newData) {
-  const PurchaseReturnModel = mongoose.model("PurchaseReturn", (await import("../models/purchaseReturn.model.js")).default);
+  const PurchaseReturnModel = getLocalPurchaseReturnModel();
   const existing = await PurchaseReturnModel.findById(id);
   if (!existing) throw new Error("PurchaseReturn not found");
 
@@ -64,7 +63,7 @@ export async function updatePurchaseReturn(id, newData) {
 }
 
 export async function deletePurchaseReturn(id) {
-  const PurchaseReturnModel = mongoose.model("PurchaseReturn", (await import("../models/purchaseReturn.model.js")).default);
+  const PurchaseReturnModel = getLocalPurchaseReturnModel();
   const existing = await PurchaseReturnModel.findById(id);
   if (!existing) throw new Error("PurchaseReturn not found");
 

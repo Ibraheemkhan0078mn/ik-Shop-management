@@ -28,7 +28,7 @@ export const customerApi = baseApi.injectEndpoints({
         }),
 
         updateCustomer: build.mutation({
-            query: ({ id, ...body }) => ({ url: `/customers/${id}`, method: "PUT", body }),
+            query: ({ id, formData, ...body }) => ({ url: `/customers/${id}`, method: "PUT", body: formData ?? body }),
             invalidatesTags: (_r, _e, { id }) => [{ type: "Customer", id }, "Customer"],
         }),
 

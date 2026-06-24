@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
+import { deleteProductImage } from "../../product/services/productImage.service.js";
 import {
     customerCreate as customerCreateService,
     getAllCustomers as getAllCustomersService,
@@ -10,6 +11,33 @@ import {
     customerUpdate as customerUpdateService,
     customerDelete as customerDeleteService,
 } from "../services/customer.service.js";
+
+const coerceCustomerBody = (body = {}) => {
+    const coerced = { ...body };
+    for (const [key, value] of Object.entries(coerced)) {
+        if (typeof value !== "string") continue;
+        if (value === "true" || value === "false") {
+            coerced[key] = value === "true";
+            continue;
+        }
+        if (value.trim() === "") continue;
+        const parsed = Number(value);
+        if (!Number.isNaN(parsed)) {
+            coerced[key] = parsed;
+        }
+    }
+    return coerced;
+};
+
+const buildCustomerPayload = (body = {}, fileName) => {
+    const payload = coerceCustomerBody(body);
+    if (fileName) {
+        payload.image = fileName;
+    } else if (payload.image === undefined) {
+        payload.image = "";
+    }
+    return payload;
+};
 
 export const getCustomers = asyncHandler(async (_req, res) => {
     const customers = await getAllCustomersService();
@@ -48,7 +76,7 @@ export const getCustomerById = asyncHandler(async (req, res, next) => {
 });
 
 export const createCustomer = asyncHandler(async (req, res, next) => {
-    const validatedData = req.body || {};
+    const validatedData = buildCustomerPayload(req.body || {}, req.file?.filename);
 
     const { phoneNo, cnic } = validatedData;
     const duplicate = await findCustomerByPhoneOrCnicService({ $or: [{ phoneNo }, { cnic }] });
@@ -69,7 +97,10 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Customer not found", 404));
     }
 
-    const validatedData = req.body || {};
+    const validatedData = buildCustomerPayload(req.body || {}, req.file?.filename);
+    if (!req.file && req.body?.image === undefined) {
+        delete validatedData.image;
+    }
 
     if (validatedData.phoneNo || validatedData.cnic) {
         const duplicate = await findCustomerByPhoneOrCnicService({
@@ -82,6 +113,10 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
         if (duplicate) {
             return next(new ErrorResponse("Customer with this phone or CNIC already exists", 400));
         }
+    }
+
+    if (req.file?.filename && customer.image) {
+        deleteProductImage(customer.image);
     }
 
     customer = await customerUpdateService(id, validatedData);

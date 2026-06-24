@@ -73,6 +73,4 @@ const productReturnSchema = new mongoose.Schema(
     }
 );
 
-const ProductReturn = mongoose.model("ProductReturn", productReturnSchema);
-
-export default ProductReturn;
+export default productReturnSchema;

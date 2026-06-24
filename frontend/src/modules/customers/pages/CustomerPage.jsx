@@ -6,6 +6,8 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
 
+const IMAGE_BASE_URL = "http://localhost:5001";
+
 export default function CustomerPage() {
     const language = useSelector((s) => s.auth?.user?.language ?? "en");
     const [deleteCustomer] = useDeleteCustomer();
@@ -45,6 +47,7 @@ export default function CustomerPage() {
                         <table className="w-full text-sm text-left">
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
+                                    <th className="px-4 py-3 font-semibold">Image</th>
                                     <th className="px-4 py-3 font-semibold">Name</th>
                                     <th className="px-4 py-3 font-semibold">Phone</th>
                                     <th className="px-4 py-3 font-semibold">CNIC</th>
@@ -77,6 +80,15 @@ function CustomerRow({ customer, onEdit, onDelete }) {
 
     return (
         <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-muted)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <td className="px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
+                    {customer?.image ? (
+                        <img src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} alt={customer?.name ?? "Customer"} className="h-full w-full object-cover" />
+                    ) : (
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
+                    )}
+                </div>
+            </td>
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>{customer?.name ?? "—"}</td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.phoneNo ?? "—"}</td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.cnic ?? "—"}</td>

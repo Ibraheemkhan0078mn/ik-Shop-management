@@ -105,14 +105,6 @@ const purchaseReturnSchema = new mongoose.Schema({
     }
 });
 
-purchaseReturnSchema.pre("save", function(next) {
-    // Calculate total quantity and refund amount
-    this.totalQuantity = this.items.reduce((sum, item) => sum + item.quantity, 0);
-    this.totalRefundAmount = this.items.reduce((sum, item) => sum + ((item.quantity * item.purchasePrice) - (item.cut || 0)), 0);
-    this.updatedAt = new Date();
-    next();
-});
 
-const PurchaseReturn = mongoose.model("PurchaseReturn", purchaseReturnSchema);
 
-export default PurchaseReturn;
+export default purchaseReturnSchema;
