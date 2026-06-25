@@ -8,14 +8,10 @@ export const reportFilterSchema = Joi.object({
     categoryId: Joi.string().hex().length(24),
     subCategoryId: Joi.string().hex().length(24),
     supplierId: Joi.string().hex().length(24),
-    memberId: Joi.string().hex().length(24),
     paymentMethod: Joi.string().valid("cash", "online", "credit", "hybrid"),
-    employeeId: Joi.string().hex().length(24),
     search: Joi.string().max(100),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(20),
-    lowStock: Joi.boolean(),
-    nearExpiry: Joi.boolean(),
     type: Joi.string().valid("receivable", "payable"),
     action: Joi.string(),
 });
@@ -33,14 +29,6 @@ export const salesReportSchema = reportFilterSchema.keys({
 // Purchase report validation
 export const purchaseReportSchema = reportFilterSchema.keys({
     supplierId: Joi.string().hex().length(24),
-});
-
-// Inventory report validation
-export const inventoryReportSchema = reportFilterSchema.keys({
-    categoryId: Joi.string().hex().length(24),
-    subCategoryId: Joi.string().hex().length(24),
-    lowStock: Joi.boolean(),
-    nearExpiry: Joi.boolean(),
 });
 
 // Financial report validation
@@ -61,11 +49,6 @@ export const expenseReportSchema = reportFilterSchema.keys({
 
 // Supplier report validation
 export const supplierReportSchema = reportFilterSchema.keys({
-    search: Joi.string().max(100),
-});
-
-// Member report validation
-export const memberReportSchema = reportFilterSchema.keys({
     search: Joi.string().max(100),
 });
 

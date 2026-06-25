@@ -69,17 +69,6 @@ describe('Reports API Endpoints', () => {
         });
     });
 
-    describe('GET /api/reports/inventory', () => {
-        it('should return inventory report data', async () => {
-            const response = await request(app)
-                .get('/api/reports/inventory')
-                .expect('Content-Type', /json/);
-            
-            expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('success', true);
-        });
-    });
-
     describe('GET /api/reports/financial', () => {
         it('should return financial report data', async () => {
             const response = await request(app)

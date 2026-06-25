@@ -71,15 +71,6 @@ export const reportsApi = baseApi.injectEndpoints({
             providesTags: ["Reports"],
         }),
 
-        // Member Report
-        getMemberReport: builder.query({
-            query: (params) => ({
-                url: "/reports/members",
-                params,
-            }),
-            providesTags: ["Reports"],
-        }),
-
         // Wastage Report
         getWastageReport: builder.query({
             query: (params) => ({
@@ -153,12 +144,10 @@ export const {
     useGetDashboardSummaryQuery,
     useGetSalesReportQuery,
     useGetPurchaseReportQuery,
-    useGetInventoryReportQuery,
     useGetFinancialReportQuery,
     useGetCreditDebitReportQuery,
     useGetExpenseReportQuery,
     useGetSupplierReportQuery,
-    useGetMemberReportQuery,
     useGetWastageReportQuery,
     useGetActivityReportQuery,
     useGetTopSellingProductsQuery,

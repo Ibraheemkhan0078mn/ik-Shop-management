@@ -3,12 +3,10 @@ import {
     getDashboardSummaryData,
     getSalesReportData,
     getPurchaseReportData,
-    getInventoryReportData,
     getFinancialReportData,
     getCreditDebitReportData,
     getExpenseReportData,
     getSupplierReportData,
-    getMemberReportData,
     getWastageReportData,
     getActivityReportData,
     getTopSellingProductsData,
@@ -30,9 +28,6 @@ router.get("/sales", getSalesReportData);
 // Purchase Report
 router.get("/purchases", getPurchaseReportData);
 
-// Inventory Report
-router.get("/inventory", getInventoryReportData);
-
 // Financial Report
 router.get("/financial", getFinancialReportData);
 
@@ -44,9 +39,6 @@ router.get("/expenses", getExpenseReportData);
 
 // Supplier Report
 router.get("/suppliers", getSupplierReportData);
-
-// Member Report
-router.get("/members", getMemberReportData);
 
 // Wastage Report
 router.get("/wastage", getWastageReportData);

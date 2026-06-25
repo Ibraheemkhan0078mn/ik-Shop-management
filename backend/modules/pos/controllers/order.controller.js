@@ -12,6 +12,7 @@ import {
 import {
     countHoldOrderService,
 } from "../services/holdOrder.crud.js";
+import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
@@ -106,6 +107,16 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     // Deduct stock for all items
     for (const item of validatedData.items) {
         await adjustStock(item.product, item.batchId, 'decr', item.quantity);
+    }
+
+    // Create staff sale bill if staffId is provided
+    if (validatedData.staffId) {
+        try {
+            await createStaffSaleBillFromPOS(validatedData.staffId, order);
+        } catch (error) {
+            // Log error but don't fail the order creation
+            console.error('Failed to create staff sale bill:', error.message);
+        }
     }
 
     res.status(201).json({ success: true, message: "Order created successfully", order });

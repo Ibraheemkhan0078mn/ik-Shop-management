@@ -50,32 +50,6 @@ export const DEFAULT_PERMISSIONS = [
 
 
 
-  // Teachers
-  'investors-view',
-  'investor-create',
-  'investor-update',
-  'investor-delete',
-  // 'investor-attendance-view',
-  // 'investor-attendance-create',
-  'investor-financial-view',
-  'investor-payment-view',
-  'investor-payment-create',
-  'investor-payment-recalculate',
-  'investor-documents-view',
-  'investor-documents-create',
-  'investor-documents-delete',
-  'investor-investment-view',
-  'investor-investment-create',
-  'investor-investment-update',
-  'investor-investment-delete',
-  // 'investor-class-partnership-view',
-  // 'investor-class-partnership-create',
-  // 'investor-class-partnership-update',
-  // 'investor-class-partnership-delete',
-  'investor-filter',
-
-
-
 
   // Classes
   'classes-view',
@@ -138,14 +112,6 @@ export const DEFAULT_PERMISSIONS = [
   'user-create',
   'user-update',
   'user-delete',
-
-
-
-
-  'inventory-view',
-  "inventory-create",
-  "inventory-update",
-  "inventory-delete",
 
 
 

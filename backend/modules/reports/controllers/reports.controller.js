@@ -4,12 +4,10 @@ import {
     getDashboardSummary,
     getSalesReport,
     getPurchaseReport,
-    getInventoryReport,
     getFinancialReport,
     getCreditDebitReport,
     getExpenseReport,
     getSupplierReport,
-    getMemberReport,
     getWastageReport,
     getActivityReport,
     getTopSellingProducts,
@@ -52,18 +50,6 @@ export const getPurchaseReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Purchase report retrieved successfully",
-        ...report,
-    });
-});
-
-// Inventory Report
-export const getInventoryReportData = asyncHandler(async (req, res, next) => {
-    const filters = req.query;
-    const report = await getInventoryReport(filters);
-
-    res.status(200).json({
-        success: true,
-        message: "Inventory report retrieved successfully",
         ...report,
     });
 });
@@ -112,18 +98,6 @@ export const getSupplierReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Supplier report retrieved successfully",
-        ...report,
-    });
-});
-
-// Member Report
-export const getMemberReportData = asyncHandler(async (req, res, next) => {
-    const filters = req.query;
-    const report = await getMemberReport(filters);
-
-    res.status(200).json({
-        success: true,
-        message: "Member report retrieved successfully",
         ...report,
     });
 });

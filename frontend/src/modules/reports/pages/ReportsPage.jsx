@@ -12,12 +12,10 @@ import { showError } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGetSalesReportQuery,
     useGetPurchaseReportQuery,
-    useGetInventoryReportQuery,
     useGetFinancialReportQuery,
     useGetCreditDebitReportQuery,
     useGetExpenseReportQuery,
     useGetSupplierReportQuery,
-    useGetMemberReportQuery,
     useGetWastageReportQuery,
     useGetActivityReportQuery,
 } from "../services/reports.service.js";
@@ -26,12 +24,10 @@ import { FormField, Input, SearchableSelect } from "../../../shared/components/F
 const REPORT_TYPES = [
     { value: "sales", label: "Sales Report", icon: FileText },
     { value: "purchases", label: "Purchase Report", icon: FileText },
-    { value: "inventory", label: "Inventory Report", icon: FileText },
     { value: "financial", label: "Financial Report", icon: FileText },
     { value: "credit-debit", label: "Credit/Debit Report", icon: FileText },
     { value: "expenses", label: "Expense Report", icon: FileText },
     { value: "suppliers", label: "Supplier Report", icon: FileText },
-    { value: "members", label: "Member Report", icon: FileText },
     { value: "wastage", label: "Wastage Report", icon: FileText },
     { value: "activity", label: "Activity Report", icon: FileText },
 ];
@@ -68,12 +64,10 @@ export default function ReportsPage() {
     // Report queries
     const salesQuery = useGetSalesReportQuery(filters, { skip: selectedReport !== "sales" });
     const purchaseQuery = useGetPurchaseReportQuery(filters, { skip: selectedReport !== "purchases" });
-    const inventoryQuery = useGetInventoryReportQuery(filters, { skip: selectedReport !== "inventory" });
     const financialQuery = useGetFinancialReportQuery(filters, { skip: selectedReport !== "financial" });
     const creditDebitQuery = useGetCreditDebitReportQuery(filters, { skip: selectedReport !== "credit-debit" });
     const expenseQuery = useGetExpenseReportQuery(filters, { skip: selectedReport !== "expenses" });
     const supplierQuery = useGetSupplierReportQuery(filters, { skip: selectedReport !== "suppliers" });
-    const memberQuery = useGetMemberReportQuery(filters, { skip: selectedReport !== "members" });
     const wastageQuery = useGetWastageReportQuery(filters, { skip: selectedReport !== "wastage" });
     const activityQuery = useGetActivityReportQuery(filters, { skip: selectedReport !== "activity" });
 
@@ -81,12 +75,10 @@ export default function ReportsPage() {
         switch (selectedReport) {
             case "sales": return salesQuery;
             case "purchases": return purchaseQuery;
-            case "inventory": return inventoryQuery;
             case "financial": return financialQuery;
             case "credit-debit": return creditDebitQuery;
             case "expenses": return expenseQuery;
             case "suppliers": return supplierQuery;
-            case "members": return memberQuery;
             case "wastage": return wastageQuery;
             case "activity": return activityQuery;
             default: return salesQuery;

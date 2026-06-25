@@ -28,6 +28,9 @@ import AccountsReports from "../modules/reports/pages/AccountsReports.jsx";
 import ReportDetailsPage from "../modules/reports/pages/ReportDetailsPage.jsx";
 import ProductReturnList from "../modules/productReturn/pages/OrderReturnList.jsx";
 import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
+import StaffList from "../modules/staff/pages/StaffList.jsx";
+import StaffForm from "../modules/staff/pages/StaffForm.jsx";
+import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
 
 function AppRoutes() {
     return (
@@ -62,7 +65,6 @@ function AppRoutes() {
 
             <Route path="/qarzaAccount" element={<QarzaAccounts />} />
             <Route path="/EachQarzaAccountRecord/:id" element={<EachQarzaAccountRecords />} />
-            <Route path="/assets" element={<Inventory />} />
             <Route path="/expenses" element={<AllExpenses />} />
             <Route path="/pos" element={<PosPage />} />
             <Route path="/settings/generals" element={<Generals />} />
@@ -80,12 +82,11 @@ function AppRoutes() {
             <Route path="/reports/finance/details" element={<ReportDetailsPage />} />
             <Route path="/reports/profitLoss/details" element={<ReportDetailsPage />} />
 
-            {/* Member Routes */}
-            <Route path="/member" element={<Analytics />} />
-            <Route path="/members" element={<Analytics />} />
-
-            {/* Investor Routes */}
-            <Route path="/investor" element={<Analytics />} />
+            {/* Staff Routes */}
+            <Route path="/staff" element={<StaffList />} />
+            <Route path="/staff/create" element={<StaffForm />} />
+            <Route path="/staff/edit/:id" element={<StaffForm isEdit={true} />} />
+            <Route path="/staff/:id" element={<StaffDetail />} />
 
             {/* Default Route */}
             <Route path="/" element={<Dashboard />} />

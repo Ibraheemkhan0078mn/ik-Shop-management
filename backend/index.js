@@ -19,8 +19,6 @@ import OrderRouter from "./modules/pos/routes/order.router.js";
 import HoldOrderRouter from "./modules/pos/routes/holdOrder.router.js";
 
 import expensesRouter from './modules/expenses/routes/expenses.route.js'
-import memberRoutes from './modules/member/routes/member.route.js'
-import inventoryRoutes from './modules/assets/routes/assets.route.js'
 import permissionRoutes from './modules/permission/route/permission.route.js'
 import qarzaRoutes from './modules/qarza/routes/qarza.route.js'
 import wastageRoutes from './modules/wastage/routes/wastage.router.js'
@@ -30,6 +28,7 @@ import ReportsRouter from './modules/reports/routes/reports.routes.js'
 import ProductReturnRouter from './modules/productReturn/routes/productReturn.routes.js'
 import CustomerRouter from './modules/customer/routes/customer.route.js'
 import DashboardRouter from './modules/dashboard/dashboard.route.js'
+import StaffRouter from './modules/staff/routes/staff.route.js'
 
 dontenv.config();
 const app = express();
@@ -76,11 +75,7 @@ app.use("/api/purchases", PurchaseRouter);
 app.use("/api/orders", OrderRouter);
 app.use("/api/hold-orders", HoldOrderRouter);
 
-
 app.use("/api/expenseRoutes", expensesRouter)
-app.use("/api/memberRoutes", memberRoutes)
-app.use("/api/memberRoute", memberRoutes)  // RTK API uses /memberRoute (no 's')
-app.use("/api/invetoryRoutes", inventoryRoutes)
 app.use("/api/permissionRoutes", permissionRoutes)
 app.use("/api/qarzaRoutes", qarzaRoutes)
 app.use("/api/wastages", wastageRoutes)
@@ -90,6 +85,7 @@ app.use("/api/reports", ReportsRouter)
 app.use("/api/product-returns", ProductReturnRouter)
 app.use("/api/customers", CustomerRouter)
 app.use("/api/dashboard", DashboardRouter)
+app.use("/api/staff", StaffRouter)
 
 app.use(errorHandler);
 

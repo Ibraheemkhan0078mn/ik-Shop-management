@@ -53,7 +53,6 @@
 
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../modules/auth/slices/authSlice.js";
-import memberReducer from "../modules/member/slices/member.slice.js";
 import expenseReducer from "../modules/expense/slices/expense.slice.js";
 
 import storage from "redux-persist/lib/storage";
@@ -70,7 +69,6 @@ const presistConfig = {
 export const store = configureStore({
     reducer: {
         auth: persistReducer(presistConfig, authReducer),
-        member: memberReducer,
         expense: expenseReducer,
         [baseApi.reducerPath]: baseApi.reducer,
     },

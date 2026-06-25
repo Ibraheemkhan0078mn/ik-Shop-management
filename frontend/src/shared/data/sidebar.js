@@ -27,9 +27,7 @@ const t = {
     financeReport: "Finance",
     creditDebits: "Credit & Debits",
     expenses: "Expenses",
-    members: "Members",
-    investors: "Investors",
-    assets: "Assets",
+    staff: "Staff",
     logout: "Logout",
     settings: "Settings"
   },
@@ -54,9 +52,7 @@ const t = {
     financeReport: "فنانس",
     creditDebits: "کریڈٹ اور ڈیبٹس",
     expenses: "اخراجات",
-    members: "ممبرز",
-    investors: "سرمایہ دار",
-    assets: "اثاثے",
+    staff: "اسٹاف",
     logout: "لاگ آؤٹ",
     settings: "سیٹنگز"
   },
@@ -81,9 +77,7 @@ const t = {
     financeReport: "فنانس / Finance",
     creditDebits: "کریڈٹ اور ڈیبٹس / Credit & Debits",
     expenses: "اخراجات / Expenses",
-    members: "ممبرز / Members",
-    investors: "سرمایہ دار / Investors",
-    assets: "اثاثے / Assets",
+    staff: "اسٹاف / Staff",
     logout: "لاگ آؤٹ / Logout",
     settings: "سیٹنگز / Settings"
   }
@@ -147,9 +141,7 @@ const navItems = [
     allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"]
   },
   { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
-  { id: "members", icon: Users, url: "/member", allowedUrls: ["/member", "/members"] },
-  { id: "investors", icon: Users, url: "/investor", allowedUrls: ["/investor"] },
-  { id: "assets", icon: Package, url: "/assets", allowedUrls: ["/assets"] }
+  { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff", "/staff/create", "/staff/edit/:id", "/staff/:id"] }
 ];
 
 // Helper to build sidebar data with translations

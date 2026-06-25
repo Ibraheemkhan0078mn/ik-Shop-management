@@ -5,10 +5,8 @@ import {
     getLocalBatchModel,
     getLocalPurchaseModel,
     getLocalSupplierModel,
-    getLocalMemberModel,
     getLocalExpensesModel,
     getLocalExpenseCategoryModel,
-    getLocalInventoryModel,
     getLocalWastageModel,
     getLocalPurchaseReturnModel,
     getLocalQarzaAccountModel,
@@ -46,7 +44,6 @@ export const getDashboardSummary = async (filters = {}) => {
     const ExpensesModel = getLocalExpensesModel();
     const BatchModel = getLocalBatchModel();
     const QarzaAccountModel = getLocalQarzaAccountModel();
-    const MemberModel = getLocalMemberModel();
     const SupplierModel = getLocalSupplierModel();
     const ProductModel = getLocalProductModel();
 
@@ -101,11 +98,6 @@ export const getDashboardSummary = async (filters = {}) => {
         { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$costPrice"] } } } }
     ]);
 
-    // New Members (today)
-    const newMembers = await MemberModel.countDocuments({
-        createdAt: { $gte: startOfDay, $lt: endOfDay }
-    });
-
     // New Suppliers (today)
     const newSuppliers = await SupplierModel.countDocuments({
         createdAt: { $gte: startOfDay, $lt: endOfDay }
@@ -129,7 +121,6 @@ export const getDashboardSummary = async (filters = {}) => {
         totalPayable: totalPayable[0]?.total || 0,
         todayExpense: expensesTotal,
         inventoryValue: inventoryValue[0]?.total || 0,
-        newMembers,
         newSuppliers,
         lowStockCount,
         pendingCredits
@@ -259,74 +250,6 @@ export const getPurchaseReport = async (filters = {}) => {
             totalPurchases: totals[0]?.totalPurchases || 0,
             totalItems: totals[0]?.totalItems || 0,
             totalPurchaseOrders: total
-        }
-    };
-};
-
-// Inventory Report
-export const getInventoryReport = async (filters = {}) => {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    const { categoryId, subCategoryId, search, lowStock, nearExpiry, page = 1, limit = 20 } = filters;
-
-    const matchQuery = { isActive: true };
-
-    if (lowStock) {
-        matchQuery.quantity = { $gt: 0, $lte: 10 };
-    }
-
-    if (nearExpiry) {
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        matchQuery.expiryDate = { $lte: thirtyDaysFromNow, $gte: new Date() };
-    }
-
-    if (search) {
-        matchQuery.batchNumber = { $regex: search, $options: "i" };
-    }
-
-    const skip = (page - 1) * limit;
-
-    let data = await BatchModel.find(matchQuery)
-        .populate("product", "name defaultSalePrice")
-        .sort({ expiryDate: 1, createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-    // Filter by category/subcategory if provided
-    if (categoryId || subCategoryId) {
-        const productIds = await ProductModel.find({
-            ...(categoryId && { category: categoryId }),
-            ...(subCategoryId && { subCategory: subCategoryId })
-        }).distinct("_id");
-        data = data.filter(batch => productIds.includes(batch.product._id.toString()));
-    }
-
-    const total = await BatchModel.countDocuments(matchQuery);
-
-    // Calculate totals
-    const totals = await BatchModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: null,
-                totalQuantity: { $sum: "$quantity" },
-                totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } },
-                totalBatches: { $sum: 1 }
-            }
-        }
-    ]);
-
-    return {
-        data,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        summary: {
-            totalQuantity: totals[0]?.totalQuantity || 0,
-            totalValue: totals[0]?.totalValue || 0,
-            totalBatches: totals[0]?.totalBatches || 0
         }
     };
 };
@@ -602,60 +525,6 @@ export const getSupplierReport = async (filters = {}) => {
 
     return {
         data: suppliersWithStats,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-    };
-};
-
-// Member Report
-export const getMemberReport = async (filters = {}) => {
-    const MemberModel = getLocalMemberModel();
-    const OrderModel = getLocalOrderModel();
-    const { search, page = 1, limit = 20 } = filters;
-
-    const matchQuery = {};
-    if (search) {
-        matchQuery.$or = [
-            { name: { $regex: search, $options: "i" } },
-            { phoneNo: { $regex: search, $options: "i" } }
-        ];
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-        MemberModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        MemberModel.countDocuments(matchQuery)
-    ]);
-
-    // Get order statistics for each member
-    const membersWithStats = await Promise.all(
-        data.map(async (member) => {
-            const stats = await OrderModel.aggregate([
-                { $match: { customerName: member.name, status: "completed" } },
-                {
-                    $group: {
-                        _id: null,
-                        totalOrders: { $sum: 1 },
-                        totalSpent: { $sum: "$totalAmount" },
-                        lastOrderDate: { $max: "$createdAt" }
-                    }
-                }
-            ]);
-            return {
-                ...member.toObject(),
-                stats: stats[0] || { totalOrders: 0, totalSpent: 0, lastOrderDate: null }
-            };
-        })
-    );
-
-    return {
-        data: membersWithStats,
         total,
         page,
         limit,

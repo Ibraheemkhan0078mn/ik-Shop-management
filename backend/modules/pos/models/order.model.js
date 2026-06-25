@@ -32,6 +32,7 @@ const orderSchema = new mongoose.Schema(
         // Who
         customerName: { type: String, default: "" },
         waiter:       { type: String, default: "" },
+        staffId:      { type: mongoose.Schema.Types.ObjectId, ref: "Staff", default: null },
 
         // Order Type
         orderType: {

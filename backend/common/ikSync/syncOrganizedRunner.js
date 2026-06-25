@@ -1,5 +1,5 @@
-import { getLocalActivityLogModel, getLocalMemberModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalInventoryCategoryModel, getLocalInventoryModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalMemberAttendanceModel, getLocalMemberInvoiceModel, getLocalMemberPaymentModel, getLocalUserModel } from "../../db/localDbConnection.js"
-import { getOnlineActivityLogModel, getOnlineExpenseCatagModel, getOnlineExpenseModel, getOnlineInventoryCategoryModel, getOnlineInventoryModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineReminderModel, getOnlineStudentCounterModel, getOnlineStudentFeeTrasactionModel, getOnlineStudentInvoiceModel, getOnlineStudentMarksModel, getOnlineStudentModel, getOnlineSubjectModel, getOnlineTeacherAttendenceModel, getOnlineTeacherInvoiceModel, getOnlineTeacherModel, getOnlineTeacherSalaryPaymentModel, getOnlineUserModel } from '../../db/onlineDbConnection.js'
+import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel } from "../../db/localDbConnection.js"
+import { getOnlineActivityLogModel, getOnlineExpenseCatagModel, getOnlineExpenseModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineReminderModel, getOnlineStudentCounterModel, getOnlineStudentFeeTrasactionModel, getOnlineStudentInvoiceModel, getOnlineStudentMarksModel, getOnlineStudentModel, getOnlineSubjectModel, getOnlineTeacherAttendenceModel, getOnlineTeacherInvoiceModel, getOnlineTeacherModel, getOnlineTeacherSalaryPaymentModel, getOnlineUserModel } from '../../db/onlineDbConnection.js'
 import { deleteOnlineSync } from "./deleteOnlineSync.js";
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
 import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
@@ -21,17 +21,11 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
 
         let modelArray = [
-            { local: getLocalMemberInvoiceModel(), online: getOnlineTeacherInvoiceModel(), permissionString: ["teacher-financial-view"] },
             { local: getLocalQarzaAccountModel(), online: getOnlineQarzaAccountModel(), permissionString: ["qarzas-with-account-view"] },
             { local: getLocalQarzaPaymentModel(), online: getOnlineQarzaPaymentModel(), permissionString: ["qarza-with-account-payment-view"] },
             { local: getLocalExpensesModel(), online: getOnlineExpenseModel(), permissionString: ["expenses-view"] },
             { local: getLocalUserModel(), online: getOnlineUserModel(), permissionString: ["users-view"] },
-            { local: getLocalMemberModel(), online: getOnlineTeacherModel(), permissionString: ["teachers-view"] },
-            { local: getLocalMemberAttendanceModel(), online: getOnlineTeacherAttendenceModel(), permissionString: ["teachers-attendance-view"] },
             { local: getLocalExpenseCategoryModel(), online: getOnlineExpenseCatagModel(), permissionString: ["expense-category-view"] },
-            { local: getLocalMemberPaymentModel(), online: getOnlineTeacherSalaryPaymentModel(), permissionString: ["teacher-payment-view"] },
-            { local: getLocalInventoryCategoryModel(), online: getOnlineInventoryCategoryModel(), permissionString: ["inventory-view"] },
-            { local: getLocalInventoryModel(), online: getOnlineInventoryModel(), permissionString: ["inventory-view"] },
             { local: getLocalActivityLogModel(), online: getOnlineActivityLogModel(), permissionString: ["activityLogs-view"] }
         ];
 
