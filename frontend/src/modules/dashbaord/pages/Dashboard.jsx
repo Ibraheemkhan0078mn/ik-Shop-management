@@ -3,19 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   TrendingUp, DollarSign, AlertTriangle, Calendar, CheckCircle2,
   ArrowUpRight, ArrowDownRight, Package, ShoppingCart, CreditCard,
-  Wallet, Users, Truck, RefreshCw, Zap,
+  Wallet, Users, Truck, RefreshCw, Zap, PieChart,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  useGetDashboardSummaryQuery,
-  useGetTopSellingProductsQuery,
-  useGetTopCustomersQuery,
-  useGetLowStockProductsQuery,
-  useGetNearExpiryProductsQuery,
-  useGetRecentSalesQuery,
-  useGetRecentPurchasesQuery,
-} from "../../reports/services/reports.service.js";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import api from "../../../shared/services/api.js";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 
 // ─── Reusable Card ─────────────────────────────────────────────────────────
 const Card = ({ children, className = "" }) => (
@@ -73,40 +65,36 @@ const ListItem = ({ icon: Icon, iconColor, primary, secondary, rightTop, rightBo
 export default function Dashboard() {
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ── RTK Queries ──────────────────────────────────────────────────────────
-  const { data: dashboardSummary, isLoading: summaryLoading, error: summaryError, refetch: refetchSummary } = useGetDashboardSummaryQuery();
-  const { data: topProducts, isLoading: topProductsLoading, error: topProductsError, refetch: refetchTopProducts } = useGetTopSellingProductsQuery({ limit: 5 });
-  const { data: topCustomers, isLoading: topCustomersLoading, error: topCustomersError, refetch: refetchTopCustomers } = useGetTopCustomersQuery({ limit: 5 });
-  const { data: lowStock, isLoading: lowStockLoading, error: lowStockError, refetch: refetchLowStock } = useGetLowStockProductsQuery({ limit: 5 });
-  const { data: nearExpiry, isLoading: nearExpiryLoading, error: nearExpiryError, refetch: refetchNearExpiry } = useGetNearExpiryProductsQuery({ limit: 5 });
-  const { data: recentSales, isLoading: recentSalesLoading, error: recentSalesError, refetch: refetchRecentSales } = useGetRecentSalesQuery({ limit: 5 });
-  const { data: recentPurchases, isLoading: recentPurchasesLoading, error: recentPurchasesError, refetch: refetchRecentPurchases } = useGetRecentPurchasesQuery({ limit: 5 });
+  // ── Fetch Dashboard Data ──────────────────────────────────────────────────
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get("/dashboard");
+      setData(response.data.data);
+    } catch (err) {
+      setError(err.message || "Failed to load dashboard data");
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // ── Error Handling ──────────────────────────────────────────────────────
   useEffect(() => {
-    const errors = [
-      { err: summaryError, msg: "Failed to load dashboard summary" },
-      { err: topProductsError, msg: "Failed to load top products" },
-      { err: topCustomersError, msg: "Failed to load top customers" },
-      { err: lowStockError, msg: "Failed to load low stock products" },
-      { err: nearExpiryError, msg: "Failed to load near expiry products" },
-      { err: recentSalesError, msg: "Failed to load recent sales" },
-      { err: recentPurchasesError, msg: "Failed to load recent purchases" },
-    ];
-    errors.forEach(({ err, msg }) => err && toast.error(msg));
-  }, [summaryError, topProductsError, topCustomersError, lowStockError, nearExpiryError, recentSalesError, recentPurchasesError]);
+    fetchDashboardData();
+  }, [refreshKey]);
 
   // ── Refresh ──────────────────────────────────────────────────────────────
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
-    [refetchSummary, refetchTopProducts, refetchTopCustomers, refetchLowStock, refetchNearExpiry, refetchRecentSales, refetchRecentPurchases]
-      .forEach(refetch => refetch());
   };
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  const isLoading = summaryLoading || topProductsLoading || topCustomersLoading || lowStockLoading || nearExpiryLoading || recentSalesLoading || recentPurchasesLoading;
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <RefreshCw className="animate-spin text-[var(--accent-2)]" size={40} />
@@ -114,8 +102,37 @@ export default function Dashboard() {
     );
   }
 
-  const summary = dashboardSummary?.data || {};
-  const chartData = [{ name: 'Today', Sales: summary.todaySales || 0, Purchase: summary.todayPurchase || 0 }];
+  const kpis = data?.kpis || {};
+  
+  // Format chart data
+  const salesChartData = (data?.salesChart || []).map(item => ({
+    date: item._id,
+    sales: item.total,
+    orders: item.count || 0
+  }));
+  
+  const purchaseChartData = (data?.purchaseChart || []).map(item => ({
+    date: item._id,
+    purchases: item.total
+  }));
+  
+  const wastageChartData = (data?.wastageChart || []).map(item => ({
+    date: item._id,
+    wastage: item.total
+  }));
+  
+  const paymentChartData = [
+    { name: 'Cash', value: data?.paymentMethods?.cash || 0, color: '#10b981' },
+    { name: 'Card', value: data?.paymentMethods?.card || 0, color: '#3b82f6' },
+    { name: 'Credit', value: data?.paymentMethods?.credit || 0, color: '#f59e0b' },
+    { name: 'Other', value: data?.paymentMethods?.other || 0, color: '#6b7280' },
+  ].filter(item => item.value > 0);
+  
+  const categoryChartData = (data?.categorySales || []).slice(0, 6).map(item => ({
+    name: item.name,
+    revenue: item.totalRevenue,
+    quantity: item.totalQuantity
+  }));
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -144,68 +161,113 @@ export default function Dashboard() {
 
       {/* ── Stats Grid ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Today's Sales" value={summary.todaySales} icon={DollarSign} color="bg-green-500" />
-        <StatCard title="Today's Purchase" value={summary.todayPurchase} icon={ShoppingCart} color="bg-blue-500" />
-        <StatCard title="Today's Profit" value={summary.todayProfit} icon={TrendingUp} color="bg-purple-500" />
-        <StatCard title="Cash Balance" value={summary.cashBalance} icon={Wallet} color="bg-cyan-500" />
-        <StatCard title="Total Receivable" value={summary.totalReceivable} icon={CreditCard} color="bg-orange-500" />
-        <StatCard title="Total Payable" value={summary.totalPayable} icon={AlertTriangle} color="bg-red-500" />
-        <StatCard title="Today's Expense" value={summary.todayExpense} icon={Package} color="bg-yellow-500" />
-        <StatCard title="Inventory Value" value={summary.inventoryValue} icon={Truck} color="bg-indigo-500" />
+        <StatCard title="Today's Sales" value={kpis.todayRevenue} icon={DollarSign} color="bg-green-500" />
+        <StatCard title="Today's Purchase" value={kpis.todayPurchases} icon={ShoppingCart} color="bg-blue-500" />
+        <StatCard title="Today's Profit" value={kpis.todayRevenue - kpis.todayPurchases - kpis.todayExpenses} icon={TrendingUp} color="bg-purple-500" />
+        <StatCard title="Total Products" value={kpis.totalProducts} icon={Package} color="bg-cyan-500" />
+        <StatCard title="Total Customers" value={kpis.totalCustomers} icon={Users} color="bg-orange-500" />
+        <StatCard title="Total Suppliers" value={kpis.totalSuppliers} icon={Truck} color="bg-red-500" />
+        <StatCard title="Today's Expense" value={kpis.todayExpenses} icon={CreditCard} color="bg-yellow-500" />
+        <StatCard title="Monthly Revenue" value={kpis.monthlyRevenue} icon={Wallet} color="bg-indigo-500" />
+        <StatCard title="Net Profit" value={kpis.netProfit} icon={TrendingUp} color="bg-emerald-500" />
+        <StatCard title="Profit Margin" value={`${kpis.profitMargin}%`} icon={ArrowUpRight} color="bg-teal-500" />
+        <StatCard title="Avg Order Value" value={kpis.avgOrderValue} icon={DollarSign} color="bg-rose-500" />
+        <StatCard title="Inventory Value" value={kpis.totalInventoryValue} icon={Package} color="bg-amber-500" />
       </div>
 
-      {/* ── Chart + Summary ────────────────────────────────────────────── */}
+      {/* ── Charts Row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Chart */}
+        {/* Sales Chart (7 days) */}
         <div className="lg:col-span-2">
           <Card>
-            <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Sales vs Purchase</h3>
+            <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Sales Trend (7 Days)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
+              <BarChart data={salesChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" stroke="var(--muted)" />
+                <XAxis dataKey="date" stroke="var(--muted)" />
                 <YAxis stroke="var(--muted)" />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="Sales" fill="#10b981" />
-                <Bar dataKey="Purchase" fill="#3b82f6" />
+                <Bar dataKey="sales" fill="#10b981" name="Sales (Rs)" />
+                <Bar dataKey="orders" fill="#3b82f6" name="Orders" />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </div>
 
-        {/* Today's Summary */}
+        {/* Payment Methods Pie Chart */}
         <div>
           <Card>
-            <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Today's Summary</h3>
-            <div className="space-y-3">
-              <SummaryRow label="Sales" value={summary.todaySales} />
-              <SummaryRow label="Purchase" value={summary.todayPurchase} />
-              <SummaryRow label="Expense" value={summary.todayExpense} />
-              <SummaryRow label="Profit" value={summary.todayProfit} isProfit />
-              <hr className="border-[var(--border)]" />
-              <SummaryRow label="New Members" value={summary.newMembers} isNumber />
-              <SummaryRow label="New Suppliers" value={summary.newSuppliers} isNumber />
-              <SummaryRow label="Low Stock" value={summary.lowStockCount} isNumber isWarning />
-              <SummaryRow label="Pending Credits" value={summary.pendingCredits} isNumber isDanger />
-            </div>
+            <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Payment Methods</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={paymentChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {paymentChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </RechartsPieChart>
+            </ResponsiveContainer>
           </Card>
         </div>
       </div>
 
-      {/* ── Bottom Grid ────────────────────────────────────────────────── */}
+      {/* ── Second Charts Row ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Purchase vs Wastage Chart */}
+        <Card>
+          <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Purchases vs Wastage (7 Days)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={purchaseChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" stroke="var(--muted)" />
+              <YAxis stroke="var(--muted)" />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="purchases" fill="#3b82f6" name="Purchases (Rs)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Category Sales Chart */}
+        <Card>
+          <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 font-display">Category Sales</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={categoryChartData} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" stroke="var(--muted)" />
+              <YAxis dataKey="name" type="category" width={100} stroke="var(--muted)" />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="revenue" fill="#8b5cf6" name="Revenue (Rs)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      {/* ── Bottom Grid ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Left Column */}
         <div className="space-y-6">
           <SectionCard title="Top Selling Products">
-            {topProducts?.data?.length ? (
-              topProducts.data.map((item, i) => (
+            {data?.topSellingProducts?.length ? (
+              data.topSellingProducts.map((item, i) => (
                 <ListItem
                   key={i}
                   primary={<RankBadge rank={i + 1} />}
-                  secondary={item.product?.name || 'Unknown'}
-                  rightTop={`Rs ${item.totalRevenue?.toLocaleString() || 0}`}
-                  rightBottom={`${item.totalQuantity || 0} sold`}
+                  secondary={item.name || 'Unknown'}
+                  rightTop={`${item.totalQuantity || 0} sold`}
+                  rightBottom={`Rs ${(item.totalRevenue || 0).toLocaleString()}`}
                 />
               ))
             ) : (
@@ -214,14 +276,14 @@ export default function Dashboard() {
           </SectionCard>
 
           <SectionCard title="Top Customers">
-            {topCustomers?.data?.length ? (
-              topCustomers.data.map((item, i) => (
+            {data?.topCustomers?.length ? (
+              data.topCustomers.map((item, i) => (
                 <ListItem
                   key={i}
                   icon={Users}
                   iconColor="text-[var(--muted)]"
-                  primary={item._id || 'Unknown'}
-                  rightTop={`Rs ${item.totalSpent?.toLocaleString() || 0}`}
+                  primary={item.name || 'Unknown'}
+                  rightTop={`Rs ${(item.totalSpent || 0).toLocaleString()}`}
                   rightBottom={`${item.orderCount || 0} orders`}
                 />
               ))
@@ -231,18 +293,41 @@ export default function Dashboard() {
           </SectionCard>
         </div>
 
+        {/* Middle Column */}
+        <div className="space-y-6">
+          <SectionCard title="Financial Summary">
+            <div className="space-y-3">
+              <SummaryRow label="Total Receivables" value={data?.financialSummary?.totalReceivables || 0} isWarning />
+              <SummaryRow label="Receivable Accounts" value={data?.financialSummary?.totalReceivablesCount || 0} isNumber />
+              <hr className="border-[var(--border)]" />
+              <SummaryRow label="Total Payables" value={data?.financialSummary?.totalPayables || 0} isDanger />
+              <SummaryRow label="Payable Accounts" value={data?.financialSummary?.totalPayablesCount || 0} isNumber />
+              <hr className="border-[var(--border)]" />
+              <SummaryRow label="Net Profit" value={data?.financialSummary?.netProfit || 0} isProfit />
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Pending Approvals">
+            <div className="space-y-2">
+              <SummaryRow label="Pending Wastages" value={data?.pendingApprovals?.pendingWastages || 0} isNumber isWarning />
+              <SummaryRow label="Pending Purchase Returns" value={data?.pendingApprovals?.pendingPurchaseReturns || 0} isNumber isWarning />
+              <SummaryRow label="Pending Product Returns" value={data?.pendingApprovals?.pendingProductReturns || 0} isNumber isWarning />
+            </div>
+          </SectionCard>
+        </div>
+
         {/* Right Column */}
         <div className="space-y-6">
           <SectionCard title="Low Stock Products">
-            {lowStock?.data?.length ? (
-              lowStock.data.map((item, i) => (
+            {data?.lowStockAlerts?.length ? (
+              data.lowStockAlerts.slice(0, 5).map((item, i) => (
                 <ListItem
                   key={i}
                   icon={AlertTriangle}
                   iconColor="text-orange-500"
-                  primary={item.product?.name || 'Unknown'}
-                  secondary={`Batch: ${item.batchNumber || 'N/A'}`}
-                  rightTop={`${item.quantity || 0} left`}
+                  primary={item.name || 'Unknown'}
+                  secondary={`Stock: ${item.currentStockLevel || 0}`}
+                  rightTop={`Min: ${item.minStockLevel || 5}`}
                   rightBottom=""
                 />
               ))
@@ -251,22 +336,11 @@ export default function Dashboard() {
             )}
           </SectionCard>
 
-          <SectionCard title="Near Expiry Products">
-            {nearExpiry?.data?.length ? (
-              nearExpiry.data.map((item, i) => (
-                <ListItem
-                  key={i}
-                  icon={Calendar}
-                  iconColor="text-red-500"
-                  primary={item.product?.name || 'Unknown'}
-                  secondary={`Expires: ${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A'}`}
-                  rightTop={`${item.quantity || 0} left`}
-                  rightBottom=""
-                />
-              ))
-            ) : (
-              <EmptyState message="No near expiry items" />
-            )}
+          <SectionCard title="Expiry Alerts">
+            <div className="space-y-2">
+              <SummaryRow label="Expired Batches" value={data?.expiryAlerts?.expiredBatches?.length || 0} isNumber isDanger />
+              <SummaryRow label="Expiring in 30 Days" value={data?.expiryAlerts?.expiringIn30Days?.length || 0} isNumber isWarning />
+            </div>
           </SectionCard>
         </div>
       </div>
@@ -274,15 +348,15 @@ export default function Dashboard() {
       {/* ── Recent Sales & Purchases ──────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectionCard title="Recent Sales" action="View All">
-          {recentSales?.data?.length ? (
-            recentSales.data.map((sale, i) => (
+          {data?.recentOrders?.length ? (
+            data.recentOrders.slice(0, 5).map((sale, i) => (
               <ListItem
                 key={i}
                 icon={CheckCircle2}
                 iconColor="text-green-500"
                 primary={sale.orderNumber || 'N/A'}
-                secondary={sale.customerName || 'Guest'}
-                rightTop={`Rs ${sale.totalAmount?.toLocaleString() || 0}`}
+                secondary={sale.customer?.name || 'Guest'}
+                rightTop={`Rs ${(sale.totalAmount || 0).toLocaleString()}`}
                 rightBottom={sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'N/A'}
               />
             ))
@@ -292,15 +366,15 @@ export default function Dashboard() {
         </SectionCard>
 
         <SectionCard title="Recent Purchases" action="View All">
-          {recentPurchases?.data?.length ? (
-            recentPurchases.data.map((purchase, i) => (
+          {data?.recentPurchases?.length ? (
+            data.recentPurchases.slice(0, 5).map((purchase, i) => (
               <ListItem
                 key={i}
                 icon={ShoppingCart}
                 iconColor="text-blue-500"
                 primary={purchase.invoiceNumber || 'N/A'}
                 secondary={purchase.supplier?.name || 'Unknown'}
-                rightTop={`Rs ${purchase.totalAmount?.toLocaleString() || 0}`}
+                rightTop={`Rs ${(purchase.totalAmount || 0).toLocaleString()}`}
                 rightBottom={purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString() : 'N/A'}
               />
             ))

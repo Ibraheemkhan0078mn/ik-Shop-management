@@ -13,7 +13,7 @@ export async function adjustStock(productId, batchId, operation, quantity) {
     const delta = operation === 'inc' ? quantity : -quantity;
     const ProductModel = getLocalProductModel();
     
-    // Adjust product stock
+    // Adjust product stock 
     await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: delta } });
     
     // Adjust batch stock if batchId provided
