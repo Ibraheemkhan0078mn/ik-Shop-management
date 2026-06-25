@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { adjustStock } from "../../../common/services/stockManager.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Each product line inside a completed order
@@ -71,31 +70,5 @@ const orderSchema = new mongoose.Schema(
     },
     { timestamps: true },
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Hooks to adjust batch stock and product currentStockLevel for POS sales
-// ─────────────────────────────────────────────────────────────────────────────
-
-// On sale creation → deduct stock
-orderSchema.post('save', async function(doc) {
-    if (!doc.isNew) return;
-    for (const item of doc.items) {
-        await adjustStock(item.product, item.batchId, -item.quantity);
-    }
-});
-
-// On order delete → restore stock
-orderSchema.pre('findOneAndDelete', async function() {
-    const doc = await this.model.findOne(this.getQuery()).lean();
-    this._deletedOrder = doc;
-});
-
-orderSchema.post('findOneAndDelete', async function() {
-    const doc = this._deletedOrder;
-    if (!doc) return;
-    for (const item of doc.items) {
-        await adjustStock(item.product, item.batchId, item.quantity);
-    }
-});
 
 export default orderSchema;

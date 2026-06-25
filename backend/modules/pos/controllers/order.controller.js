@@ -1,6 +1,7 @@
 import asyncHandler   from "express-async-handler";
 import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
 import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     orderCreate as orderCreateService,
     getAllOrders as getAllOrdersService,
@@ -102,6 +103,11 @@ export const addOrder = asyncHandler(async (req, res, next) => {
 
     const order = await orderCreateService(validatedData);
 
+    // Deduct stock for all items
+    for (const item of validatedData.items) {
+        await adjustStock(item.product, item.batchId, 'decr', item.quantity);
+    }
+
     res.status(201).json({ success: true, message: "Order created successfully", order });
 });
 
@@ -113,6 +119,11 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
     const order = await getOrderById(req.params.id);
 
     if (!order) return next(new ErrorResponse("Order not found", 404));
+
+    // Restore stock for all items before deletion
+    for (const item of order.items) {
+        await adjustStock(item.product, item.batchId, 'inc', item.quantity);
+    }
 
     await orderDeleteService(req.params.id);
 

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { adjustStock } from "../../../common/services/stockManager.js";
 
 const productReturnItemSchema = new mongoose.Schema({
     productId: {
@@ -77,27 +76,5 @@ const productReturnSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Hooks to adjust batch stock and product currentStockLevel
-//  Customer returns restock on approval
-// ─────────────────────────────────────────────────────────────────────────────
-
-productReturnSchema.pre('findOneAndUpdate', async function() {
-    const update = this.getUpdate();
-    const isApproving = update?.returnStatus === 'approved' || update?.$set?.returnStatus === 'approved';
-    if (isApproving) {
-        const doc = await this.model.findOne(this.getQuery()).lean();
-        this._itemsToRestock = doc ? doc.items : [];
-    }
-});
-
-productReturnSchema.post('findOneAndUpdate', async function() {
-    if (!this._itemsToRestock) return;
-    for (const item of this._itemsToRestock) {
-        // Customer returned product → add back to stock
-        await adjustStock(item.productId, item.batchId, item.quantity);
-    }
-});
 
 export default productReturnSchema;

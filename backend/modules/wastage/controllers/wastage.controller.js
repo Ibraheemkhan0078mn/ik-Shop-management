@@ -3,6 +3,7 @@ import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getLocalWastageModel,
 } from "../../../configs/connect.db.js";
+import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     wastageCreate as wastageCreateService,
     getAllWastages as getAllWastagesService,
@@ -172,6 +173,11 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Only pending wastages can be approved. Current status: ${wastage.status}`, 400));
     }
 
+    // Deduct stock for all items
+    for (const item of wastage.items) {
+        await adjustStock(item.product, item.batch, 'decr', item.quantity);
+    }
+
     const approved = await wastageUpdateService(id, {
         status:     "approved",
         approvedBy: req.user._id,
@@ -243,9 +249,11 @@ export const deleteWastage = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Wastage record not found", 404));
     }
 
-    // Only drafts can be deleted
-    if (wastage.status !== "draft") {
-        return next(new ErrorResponse(`Cannot delete a wastage with status: ${wastage.status}. Only drafts can be deleted.`, 400));
+    // If approved, restore stock before deletion
+    if (wastage.status === "approved") {
+        for (const item of wastage.items) {
+            await adjustStock(item.product, item.batch, 'inc', item.quantity);
+        }
     }
 
     await wastageDeleteService(id);

@@ -1,4 +1,5 @@
 import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
 const getPurchases = async () => {
     return await findPurchaseService()
@@ -109,7 +110,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         });
     }
 
-    return await createPurchaseService({
+    const purchase = await createPurchaseService({
         supplier: purchaseData.supplier,
         date: purchaseData.date,
         invoiceNumber: purchaseData.invoiceNumber,
@@ -122,6 +123,13 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         totalAmount: purchaseData.totalAmount,
         notes: purchaseData.notes,
     });
+
+    // Increment stock for all items
+    for (const item of purchaseItems) {
+        await adjustStock(item.product, item.batch, 'inc', item.quantity);
+    }
+
+    return purchase;
 };
 
 const updatePurchase = async (id, data, BatchModel, ProductModel) => {
@@ -130,18 +138,8 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         throw new Error("Purchase not found");
     }
 
-    for (const old of existing.items) {
-        const oldBatch = await BatchModel.findById(old.batch);
-        if (oldBatch) {
-            oldBatch.quantity -= old.quantity;
-            if (oldBatch.quantity <= 0) {
-                await oldBatch.deleteOne();
-                await ProductModel.findByIdAndUpdate(old.product, { $pull: { batches: oldBatch._id } });
-            } else {
-                await oldBatch.save();
-            }
-        }
-    }
+    // Calculate stock differences
+    const stockAdjustments = calculateStockDiff(existing.items, data.items);
 
     const purchaseItems = [];
     for (const item of data.items) {
@@ -156,7 +154,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             });
             await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
         } else {
-            batch.quantity += item.quantity;
+            batch.quantity = item.quantity;
             batch.purchasePrice = item.price;
             if (item.mfgDate) batch.mfgDate = item.mfgDate;
             if (item.expiryDate) batch.expiryDate = item.expiryDate;
@@ -173,7 +171,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         });
     }
 
-    return await updatePurchaseService(id, {
+    const purchase = await updatePurchaseService(id, {
         supplier: data.supplier, date: data.date,
         invoiceNumber: data.invoiceNumber, items: purchaseItems,
         subtotal: data.subtotal, discount: data.discount,
@@ -181,6 +179,13 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         shippingCost: data.shippingCost, totalAmount: data.totalAmount,
         notes: data.notes,
     });
+
+    // Apply stock adjustments
+    for (const adj of stockAdjustments) {
+        await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
+    }
+
+    return purchase;
 };
 
 const deletePurchase = async (id, BatchModel, ProductModel) => {
@@ -189,17 +194,9 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
         throw new Error("Purchase not found");
     }
 
+    // Decrement stock for all items before deletion
     for (const item of existing.items) {
-        const batch = await BatchModel.findById(item.batch);
-        if (batch) {
-            batch.quantity -= item.quantity;
-            if (batch.quantity <= 0) {
-                await batch.deleteOne();
-                await ProductModel.findByIdAndUpdate(item.product, { $pull: { batches: batch._id } });
-            } else {
-                await batch.save();
-            }
-        }
+        await adjustStock(item.product, item.batch, 'decr', item.quantity);
     }
 
     return await deleteOnePurchaseService(id);

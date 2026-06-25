@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { adjustStock } from "../../../common/services/stockManager.js";
 
 const purchaseReturnItemSchema = new mongoose.Schema({
     product: {
@@ -105,30 +104,5 @@ const purchaseReturnSchema = new mongoose.Schema({
         default: Date.now
     }
 });
-
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Hooks to adjust batch stock and product currentStockLevel
-//  Stock deduction for purchase return only happens on approval
-// ─────────────────────────────────────────────────────────────────────────────
-
-purchaseReturnSchema.pre('findOneAndUpdate', async function() {
-    const update = this.getUpdate();
-    const isApproving = update?.status === 'approved' || update?.$set?.status === 'approved';
-    if (isApproving) {
-        const doc = await this.model.findOne(this.getQuery()).lean();
-        this._itemsToDeduct = doc ? doc.items : [];
-    }
-});
-
-purchaseReturnSchema.post('findOneAndUpdate', async function() {
-    if (!this._itemsToDeduct) return;
-    for (const item of this._itemsToDeduct) {
-        await adjustStock(item.product, item.batch, -item.quantity);
-    }
-});
-
-
 
 export default purchaseReturnSchema;

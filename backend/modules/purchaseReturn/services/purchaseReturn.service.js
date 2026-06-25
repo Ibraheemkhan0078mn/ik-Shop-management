@@ -1,5 +1,6 @@
 import { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService } from "./purchaseReturn.crud.js";
 import { getLocalPurchaseModel, getLocalBatchModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
 const normalizePurchaseReturnItems = async (items = [], BatchModel) => {
     if (!Array.isArray(items)) return [];
@@ -151,6 +152,13 @@ const deletePurchaseReturn = async (id) => {
         throw new Error("Only draft purchase returns can be deleted");
     }
 
+    // If approved, restore stock before deletion
+    if (existing.status === "approved") {
+        for (const item of existing.items) {
+            await adjustStock(item.product, item.batch, 'inc', item.quantity);
+        }
+    }
+
     return await deleteOnePurchaseReturnService(id);
 };
 
@@ -175,6 +183,11 @@ const approvePurchaseReturn = async (id, userId) => {
 
     if (existing.status !== "pending") {
         throw new Error(`Only pending purchase returns can be approved. Current status: ${existing.status}`);
+    }
+
+    // Deduct stock for all items
+    for (const item of existing.items) {
+        await adjustStock(item.product, item.batch, 'decr', item.quantity);
     }
 
     return await updatePurchaseReturnService(id, {

@@ -1,5 +1,6 @@
 import { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService } from "./productReturn.crud.js";
 import { getLocalOrderModel } from "../../../configs/connect.db.js";
+import { adjustStock } from "../../../common/services/stockManager.js";
 
 const generateReturnNumber = async () => {
     const lastReturn = await findProductReturnService({}).sort({ createdAt: -1 }).limit(1);
@@ -90,10 +91,41 @@ const updateProductReturn = async (id, updateData) => {
 };
 
 const deleteProductReturn = async (id) => {
+    const existing = await findByIdProductReturnService(id);
+    if (!existing) {
+        throw new Error("Product return not found");
+    }
+
+    // If approved, decrement stock before deletion
+    if (existing.returnStatus === 'approved') {
+        for (const item of existing.items) {
+            await adjustStock(item.productId, item.batchId, 'decr', item.quantity);
+        }
+    }
+
     return await deleteOneProductReturnService(id);
 };
 
 const updateReturnStatus = async (id, status) => {
+    const existing = await findByIdProductReturnService(id);
+    if (!existing) {
+        throw new Error("Product return not found");
+    }
+
+    // If approving, increment stock for all items
+    if (status === 'approved' && existing.returnStatus !== 'approved') {
+        for (const item of existing.items) {
+            await adjustStock(item.productId, item.batchId, 'inc', item.quantity);
+        }
+    }
+
+    // If rejecting an approved return, decrement stock
+    if (status === 'rejected' && existing.returnStatus === 'approved') {
+        for (const item of existing.items) {
+            await adjustStock(item.productId, item.batchId, 'decr', item.quantity);
+        }
+    }
+
     return await updateProductReturnService(id, { returnStatus: status }).populate("referenceOrderId").populate("items.productId");
 };
 
