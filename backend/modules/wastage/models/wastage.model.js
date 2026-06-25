@@ -31,7 +31,7 @@ const wastageSchema = new mongoose.Schema({
     totalLossAmount: { type: Number },                                          // Sum of all totalLoss
 
     // Approval Flow (optional but recommended for pharmacy)
-    status: { type: String, default: 'draft' },
+    status: { type: String, default: 'pending' },
     // approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date },
     rejectionReason: { type: String },
