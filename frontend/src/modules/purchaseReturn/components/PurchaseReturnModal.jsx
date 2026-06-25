@@ -311,6 +311,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         // Validate all selected items
         for (const [batchId, details] of Object.entries(selectedItems)) {
             if (!details.returnReason) return showError("Please specify return reason for all selected items");
+            if (!details.condition) return showError("Please specify condition for all selected items");
             if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError("Please specify valid return quantity for all selected items");
         }
 

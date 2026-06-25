@@ -68,6 +68,7 @@ const ProductCard = ({ product, onClick }) => {
         {product.name}
       </p>
       <p className="text-sm font-bold text-[var(--accent-2)]">Rs {(Number(product.price) || 0).toLocaleString()}</p>
+      <p className="text-xs text-[var(--muted)]">Stock: {product.currentStockLevel ?? 0}</p>
       {product.category?.name && (
         <span className="text-[10px] text-[var(--muted)] truncate w-full text-center">{product.category.name}</span>
       )}

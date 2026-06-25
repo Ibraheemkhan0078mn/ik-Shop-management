@@ -80,7 +80,8 @@ export default function Products() {
                     <div className="col-span-2">Code</div>
                     <div className="col-span-2">Barcode</div>
                     <div className="col-span-1">Price</div>
-                    <div className="col-span-2">Category</div>
+                    <div className="col-span-1">Stock</div>
+                    <div className="col-span-1">Category</div>
                     <div className="col-span-1">Status</div>
                     <div className="col-span-1">Actions</div>
                 </div>
@@ -97,7 +98,8 @@ export default function Products() {
                         <div className="col-span-2 text-sm text-(--muted)">{item.productCode || "—"}</div>
                         <div className="col-span-2 text-sm text-(--muted)">{item.barcode || "—"}</div>
                         <div className="col-span-1 text-sm text-(--muted)">{item.defaultRetailPrice ?? 0}</div>
-                        <div className="col-span-2 text-sm text-(--muted)">
+                        <div className="col-span-1 text-sm font-medium" style={{ color: (item.currentStockLevel || 0) > 0 ? "var(--accent-2)" : "var(--muted)" }}>{item.currentStockLevel ?? 0}</div>
+                        <div className="col-span-1 text-sm text-(--muted)">
                             {item.category?.name}{item.subCategory?.name && ` > ${item.subCategory.name}`}
                         </div>
                         <div className="col-span-1">
@@ -134,6 +136,7 @@ export default function Products() {
                                     {item.productCode && <span>Code: {item.productCode}</span>}
                                     {item.barcode && <span>Barcode: {item.barcode}</span>}
                                     <span>Price: {item.defaultRetailPrice ?? 0}</span>
+                                    <span>Stock: <span className="font-medium" style={{ color: (item.currentStockLevel || 0) > 0 ? "var(--accent-2)" : "var(--muted)" }}>{item.currentStockLevel ?? 0}</span></span>
                                 </div>
                                 <div className="text-xs text-(--muted)/70 mt-1">
                                     {item.category?.name}{item.subCategory?.name && ` > ${item.subCategory.name}`}
