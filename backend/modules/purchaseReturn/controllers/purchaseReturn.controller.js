@@ -1,34 +1,88 @@
 import asyncHandler from "express-async-handler";
 import { getPurchaseById as getPurchaseDetails } from "../../productPurchases/services/purchase.service.js";
 import { ApiResponse, ApiError } from "../../../common/services/apiResponses.js";
+import { getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 import {
-    getPurchaseReturns,
-    getPaginatedPurchaseReturns,
-    getPurchaseReturnById,
-    createPurchaseReturn,
-    updatePurchaseReturn,
-    deletePurchaseReturn,
-    submitPurchaseReturn,
-    approvePurchaseReturn,
-    rejectPurchaseReturn,
-    generatePurchaseReturnNumber,
-} from "../services/purchaseReturn.service.js"; 
+    createPurchaseReturnService,
+    findPurchaseReturnService,
+    findByIdPurchaseReturnService,
+    updatePurchaseReturnService,
+    deleteOnePurchaseReturnService,
+    countPurchaseReturnService,
+} from "../services/purchaseReturn.crud.js";
+
+const normalizePurchaseReturnItems = async (items = [], BatchModel) => {
+    if (!Array.isArray(items)) return [];
+
+    const normalizedItems = [];
+
+    for (const item of items) {
+        const batch = item.batch ? await BatchModel.findById(item.batch) : null;
+        normalizedItems.push({
+            ...item,
+            batchNumber: item.batchNumber?.trim() || batch?.batchNumber || "",
+        });
+    }
+
+    return normalizedItems;
+};
 
 export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
-    const purchaseReturns = await getPurchaseReturns(req.query);
+    const { status, supplier, startDate, endDate } = req.query;
+    let query = {};
+    if (status) query.status = status;
+    if (supplier) query.supplier = supplier;
+    if (startDate || endDate) {
+        query.returnDate = {};
+        if (startDate) query.returnDate.$gte = new Date(startDate);
+        if (endDate) query.returnDate.$lte = new Date(endDate);
+    }
+
+    const purchaseReturns = await findPurchaseReturnService(query)
+        .populate("purchase", "invoiceNumber")
+        .populate("supplier", "name")
+        .populate("items.product", "name")
+        .populate("items.batch", "batchNumber")
+        .sort({ createdAt: -1 });
+
     return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns);
 });
 
 export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => {
-    const result = await getPaginatedPurchaseReturns(req.query);
-    return ApiResponse(res, 200, "Purchase returns retrieved successfully", result.data, {
-        pagination: result.pagination,
+    const { page = 1, limit = 20, status, supplier } = req.query;
+    let query = {};
+    if (status) query.status = status;
+    if (supplier) query.supplier = supplier;
+
+    const purchaseReturns = await findPurchaseReturnService(query)
+        .populate("purchase", "invoiceNumber")
+        .populate("supplier", "name")
+        .populate("items.product", "name")
+        .populate("items.batch", "batchNumber")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+
+    const total = await countPurchaseReturnService(query);
+
+    return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns, {
+        pagination: {
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(total / limit),
+        },
     });
 });
 
 export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const purchaseReturn = await getPurchaseReturnById(id);
+    const purchaseReturn = await findByIdPurchaseReturnService(id)
+        .populate("purchase")
+        .populate("supplier")
+        .populate("items.product")
+        .populate("items.batch");
     if (!purchaseReturn) {
         throw new Error("Purchase return not found");
     }
@@ -37,32 +91,161 @@ export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
 
 export const createPurchaseReturnData = asyncHandler(async (req, res) => {
     const userId = req.user?._id || req.user?.id || null;
-    const purchaseReturn = await createPurchaseReturn(req.body, userId);
+    const PurchaseModel = getLocalPurchaseModel();
+    const BatchModel = getLocalBatchModel();
+
+    const data = req.body;
+
+    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+    const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+
+    const countValue = await countPurchaseReturnService(dateRange);
+    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+    const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+
+    const purchase = await PurchaseModel.findById(data.purchase);
+    if (!purchase) {
+        throw new Error("Purchase not found");
+    }
+
+    const normalizedItems = await normalizePurchaseReturnItems(data.items, BatchModel);
+
+    for (const item of normalizedItems) {
+        const batch = await BatchModel.findById(item.batch);
+        if (!batch) {
+            throw new Error(`Batch not found: ${item.batchNumber}`);
+        }
+        if (batch.quantity < item.quantity) {
+            throw new Error(`Insufficient quantity in batch ${item.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}`);
+        }
+    }
+
+    const purchaseReturn = await createPurchaseReturnService({
+        ...data,
+        items: normalizedItems,
+        purchaseReturnNumber,
+        createdBy: userId,
+    });
+
+    // If status is approved, deduct stock immediately
+    if (data.status === 'approved') {
+        for (const item of normalizedItems) {
+            await adjustStock(item.product, item.batch, 'decr', item.quantity);
+        }
+    }
+
     return ApiResponse(res, 201, "Purchase return created successfully", purchaseReturn);
 });
 
 export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const updated = await updatePurchaseReturn(id, req.body);
+    const BatchModel = getLocalBatchModel();
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) throw new Error("Purchase return not found");
+
+    let incomingItems = req.body.items;
+
+    if (incomingItems) {
+        // Step 1: Normalize items (resolves batchNumber, batch ref, etc.)
+        incomingItems = await normalizePurchaseReturnItems(incomingItems, BatchModel);
+ 
+        // Step 2: Make sure every batch exists and has enough stock
+        for (const item of incomingItems) {
+            const batch = await BatchModel.findById(item.batch);
+            if (!batch) throw new Error(`Batch "${item.batchNumber}" not found`);
+            if (batch.quantity < item.quantity)
+                throw new Error(`Not enough stock in batch "${item.batchNumber}". Available: ${batch.quantity}, Requested: ${item.quantity}`);
+        }
+
+        // Step 3: Compare old vs new quantities and adjust stock for each item
+        const oldItemsByBatch = Object.fromEntries(
+            existing.items.map(item => [String(item.batch), item.quantity])
+        );
+
+        for (const item of incomingItems) {
+            const oldQty = oldItemsByBatch[String(item.batch)] ?? 0;
+            const diff = Number(item.quantity) - oldQty;
+            console.log((item.quantity), oldQty, diff);
+
+            if (diff === 0) continue;                                        // no change, skip
+            if (diff > 0) await adjustStock(item.product, item.batch, 'decr', diff);   // returning more → reduce stock
+            if (diff < 0) await adjustStock(item.product, item.batch, 'inc', Math.abs(diff)); // returning less → restore stock
+        }
+    }
+
+    const updated = await updatePurchaseReturnService(id, {
+        ...req.body,
+        items: incomingItems,
+        updatedAt: new Date(),
+    });
+
     return ApiResponse(res, 200, "Purchase return updated successfully", updated);
 });
 
 export const deletePurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    await deletePurchaseReturn(id);
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    // if (existing.status !== "pending") {
+    //     throw new Error("Only pending purchase returns can be deleted");
+    // }
+
+    // If approved, restore stock before deletion
+    if (existing.status === "approved") {
+        for (const item of existing.items) {
+            await adjustStock(item.product, item.batch, 'inc', item.quantity);
+        }
+    }
+
+    await deleteOnePurchaseReturnService(id);
     return ApiResponse(res, 200, "Purchase return deleted successfully", {});
 });
 
 export const submitPurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const submitted = await submitPurchaseReturn(id);
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "draft") {
+        throw new Error("Only draft purchase returns can be submitted for approval");
+    }
+
+    const submitted = await updatePurchaseReturnService(id, { status: "pending" });
     return ApiResponse(res, 200, "Purchase return submitted for approval", submitted);
 });
 
 export const approvePurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user?._id || req.user?.id || null;
-    const approved = await approvePurchaseReturn(id, userId);
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "pending") {
+        throw new Error(`Only pending purchase returns can be approved. Current status: ${existing.status}`);
+    }
+
+    for (const item of existing.items) {
+        await adjustStock(item.product, item.batch, 'decr', item.quantity);
+    }
+
+    const approved = await updatePurchaseReturnService(id, {
+        status: "approved",
+        approvedBy: userId,
+        approvedAt: new Date(),
+    });
+
     return ApiResponse(res, 200, "Purchase return approved and stock deducted successfully", approved);
 });
 
@@ -72,7 +255,17 @@ export const rejectPurchaseReturnData = asyncHandler(async (req, res) => {
     if (!rejectionReason) {
         throw new Error("Rejection reason is required");
     }
-    const rejected = await rejectPurchaseReturn(id, rejectionReason);
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "pending") {
+        throw new Error(`Only pending purchase returns can be rejected. Current status: ${existing.status}`);
+    }
+
+    const rejected = await updatePurchaseReturnService(id, { status: "rejected", rejectionReason });
     return ApiResponse(res, 200, "Purchase return rejected successfully", rejected);
 });
 
@@ -83,197 +276,13 @@ export const getPurchaseDetailsForReturn = asyncHandler(async (req, res) => {
 });
 
 export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
-    const purchaseReturnNumber = await generatePurchaseReturnNumber();
+    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+    const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+
+    const countValue = await countPurchaseReturnService(dateRange);
+    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+    const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+
     return ApiResponse(res, 200, "Purchase return number generated", { purchaseReturnNumber });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import asyncHandler from "express-async-handler";
-// import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-// import { getPurchaseById as getPurchaseDetails } from "../../productPurchases/services/purchase.service.js";
-// import { ApiError } from "../../../common/services/apiResponses.js";
-// import {
-//     getPurchaseReturns,
-//     getPaginatedPurchaseReturns,
-//     getPurchaseReturnById,
-//     createPurchaseReturn,
-//     updatePurchaseReturn,
-//     deletePurchaseReturn,
-//     submitPurchaseReturn,
-//     approvePurchaseReturn,
-//     rejectPurchaseReturn,
-//     generatePurchaseReturnNumber,
-//     // Removed getPurchaseById import (now imported as getPurchaseDetails above)
-// } from "../services/purchaseReturn.service.js";
-
-// // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
-// export const getPurchaseReturnsData = asyncHandler(async (req, res, next) => {
-//     const purchaseReturns = await getPurchaseReturns(req.query);
-//     res.status(200).json({
-//         success: true,
-//         message: "Purchase returns retrieved successfully",
-//         data: purchaseReturns,
-//     });
-// });
-
-// // ─── GET PAGINATED ───────────────────────────────────────────────────────────
-// export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res, next) => {
-//     const result = await getPaginatedPurchaseReturns(req.query);
-//     res.status(200).json({
-//         success: true,
-//         message: "Purchase returns retrieved successfully",
-//         ...result,
-//     });
-// });
-
-// // ─── GET BY ID ───────────────────────────────────────────────────────────────
-// export const getPurchaseReturnDataById = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     try {
-//         const purchaseReturn = await getPurchaseReturnById(id);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return retrieved successfully",
-//             data: purchaseReturn,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse("Purchase return not found", 404));
-//     }
-// });
-
-// // ─── CREATE ─────────────────────────────────────────────────────────────────
-// export const createPurchaseReturnData = asyncHandler(async (req, res) => {
-//     const validatedData = req.body || {};
-
-//     try {
-//         const userId = req.user?._id || req.user?.id || null;
-//         const purchaseReturn = await createPurchaseReturn(validatedData, userId);
-//         res.status(201).json({
-//             success: true,
-//             message: "Purchase return created successfully",
-//             data: purchaseReturn,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── UPDATE ─────────────────────────────────────────────────────────────────
-// export const updatePurchaseReturnData = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     const validatedData = req.body || {};
-
-//     try {
-//         const updated = await updatePurchaseReturn(id, validatedData);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return updated successfully",
-//             data: updated,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── DELETE ─────────────────────────────────────────────────────────────────
-// export const deletePurchaseReturnData = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     try {
-//         await deletePurchaseReturn(id);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return deleted successfully",
-//             data: {},
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── SUBMIT FOR APPROVAL (draft → pending) ───────────────────────────────────
-// export const submitPurchaseReturnData = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     try {
-//         const submitted = await submitPurchaseReturn(id);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return submitted for approval",
-//             data: submitted,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── APPROVE ─────────────────────────────────────────────────────────────────
-// export const approvePurchaseReturnData = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     try {
-//         const userId = req.user?._id || req.user?.id || null;
-//         const approved = await approvePurchaseReturn(id, userId);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return approved and stock deducted successfully",
-//             data: approved,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── REJECT ─────────────────────────────────────────────────────────────────
-// export const rejectPurchaseReturnData = asyncHandler(async (req, res, next) => {
-//     const { id } = req.params;
-//     const { rejectionReason } = req.body;
-//     if (!rejectionReason) {
-//         return next(new ErrorResponse("Rejection reason is required", 400));
-//     }
-//     try {
-//         const rejected = await rejectPurchaseReturn(id, rejectionReason);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase return rejected successfully",
-//             data: rejected,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message, 400));
-//     }
-// });
-
-// // ─── GENERATE NUMBER ─────────────────────────────────────────────────────────
-// // ─── GET PURCHASE DETAILS FOR RETURN ────────────────────────────────────────
-// export const getPurchaseDetailsForReturn = asyncHandler(async (req, res, next) => {
-//     const { purchaseId } = req.params;
-//     try {
-//         const purchase = await getPurchaseDetails(purchaseId);
-//         res.status(200).json({
-//             success: true,
-//             message: "Purchase details retrieved successfully",
-//             data: purchase,
-//         });
-//     } catch (error) {
-//         return next(new ErrorResponse(error.message || "Purchase not found", 404));
-//     }
-// });
-
-// // ─── GENERATE NUMBER ─────────────────────────────────────────────────────────
-// export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
-//     const purchaseReturnNumber = await generatePurchaseReturnNumber();
-//     res.status(200).json({ success: true, purchaseReturnNumber });
-// });

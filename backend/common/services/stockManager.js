@@ -31,68 +31,70 @@ export async function adjustStock(productId, batchId, operation, quantity) {
  */
 export function calculateStockDiff(oldItems = [], newItems = []) {
     const adjustments = [];
-    
+
     // Create maps for easier lookup
     const oldMap = new Map();
     const newMap = new Map();
-    
+
     for (const item of oldItems) {
-        const key = `${item.product}-${item.batch || item.batchId}`;
-        oldMap.set(key, { ...item });
+        const productId = item.product?.toString() || item.product;
+        const batchId = item.batch?.toString() || item.batch || item.batchId;
+        const key = `${productId}-${batchId}`;
+        oldMap.set(key, { ...item, productId, batchId, quantity: Number(item.quantity) || 0 });
     }
-    
+
     for (const item of newItems) {
-        const key = `${item.product}-${item.batch || item.batchId}`;
-        newMap.set(key, { ...item });
+        const productId = item.product?.toString() || item.product;
+        const batchId = item.batch?.toString() || item.batch || item.batchId;
+        const key = `${productId}-${batchId}`;
+        newMap.set(key, { ...item, productId, batchId, quantity: Number(item.quantity) || 0 });
     }
-    
+
     // Check for decrements (items removed or reduced)
     for (const [key, oldItem] of oldMap) {
         const newItem = newMap.get(key);
-        const batchId = oldItem.batch || oldItem.batchId;
-        
+
         if (!newItem) {
             // Item removed - decrement full quantity
             adjustments.push({
-                productId: oldItem.product,
-                batchId,
+                productId: oldItem.productId,
+                batchId: oldItem.batchId,
                 operation: 'decr',
                 quantity: oldItem.quantity
             });
         } else if (newItem.quantity < oldItem.quantity) {
             // Quantity reduced - decrement the difference
             adjustments.push({
-                productId: oldItem.product,
-                batchId,
+                productId: oldItem.productId,
+                batchId: oldItem.batchId,
                 operation: 'decr',
                 quantity: oldItem.quantity - newItem.quantity
             });
         }
     }
-    
+
     // Check for increments (items added or increased)
     for (const [key, newItem] of newMap) {
         const oldItem = oldMap.get(key);
-        const batchId = newItem.batch || newItem.batchId;
-        
+
         if (!oldItem) {
             // Item added - increment full quantity
             adjustments.push({
-                productId: newItem.product,
-                batchId,
+                productId: newItem.productId,
+                batchId: newItem.batchId,
                 operation: 'inc',
                 quantity: newItem.quantity
             });
         } else if (newItem.quantity > oldItem.quantity) {
             // Quantity increased - increment the difference
             adjustments.push({
-                productId: newItem.product,
-                batchId,
+                productId: newItem.productId,
+                batchId: newItem.batchId,
                 operation: 'inc',
                 quantity: newItem.quantity - oldItem.quantity
             });
         }
     }
-    
+
     return adjustments;
 }

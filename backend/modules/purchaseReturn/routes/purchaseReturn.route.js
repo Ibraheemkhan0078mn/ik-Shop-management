@@ -6,6 +6,9 @@ import {
     getPurchaseReturnDataById,
     updatePurchaseReturnData,
     deletePurchaseReturnData,
+    submitPurchaseReturnData,
+    approvePurchaseReturnData,
+    rejectPurchaseReturnData,
     getPurchaseDetailsForReturn,
     generatePurchaseReturnNumberData,
 } from "../controllers/purchaseReturn.controller.js";
@@ -21,5 +24,8 @@ router.post("/", createPurchaseReturnData);
 router.get("/:id", getPurchaseReturnDataById);
 router.put("/:id", updatePurchaseReturnData);
 router.delete("/:id", deletePurchaseReturnData);
+router.put("/:id/submit", submitPurchaseReturnData);
+router.put("/:id/approve", approvePurchaseReturnData);
+router.put("/:id/reject", rejectPurchaseReturnData);
 
 export default router;
