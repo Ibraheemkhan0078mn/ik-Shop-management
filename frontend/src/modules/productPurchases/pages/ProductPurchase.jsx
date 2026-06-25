@@ -8,6 +8,7 @@ import PaginatedList                      from "../../../shared/components/Pagin
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
 import PageHeading                        from "../../../shared/components/PageHeading.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductPurchasePage() {
     const language         = useSelector(s => s.auth?.user?.language ?? "en");
@@ -22,7 +23,12 @@ export default function ProductPurchasePage() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this purchase?")) return;
-        await deletePurchase(id);
+        try {
+            await deletePurchase(id).unwrap();
+            showSuccess("Purchase deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete purchase");
+        }
     };
 
     return (

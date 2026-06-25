@@ -7,6 +7,7 @@ import ExpenseModal          from "../components/ExpenseModal.jsx";
 import CategoryModal         from "../components/CategoryModal.jsx";
 import PaginatedList         from "../../../shared/components/PaginatedList.jsx";
 import PageHeading           from "../../../shared/components/PageHeading.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function AllExpense() {
     const language        = useSelector(s => s.auth?.user?.language ?? "en");
@@ -18,7 +19,12 @@ export default function AllExpense() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this expense?")) return;
-        await deleteExpense(id);
+        try {
+            await deleteExpense(id).unwrap();
+            showSuccess("Expense deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete expense");
+        }
     };
 
     return (

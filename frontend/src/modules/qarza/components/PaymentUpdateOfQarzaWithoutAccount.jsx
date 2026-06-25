@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import api from "../../../shared/services/axiosInstance.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const PaymentUpdateOfQarzaWithoutAccount = ({ currentToUpdateData, setVisible, setData }) => {
     const [formData, setFormData] = useState({
@@ -48,16 +49,17 @@ const PaymentUpdateOfQarzaWithoutAccount = ({ currentToUpdateData, setVisible, s
             const dateISO = new Date(new Date(formData.date).setHours(0, 0, 0, 0));
 
             const payload = { ...formData, date: dateISO };
-            const res = await api.put(`/qarzaRoutes/updatePaymentWithoutAccount`, payload); // your backend URL
+            const res = await api.put(`/qarzaRoutes/updatePaymentWithoutAccount`, payload);
 
             if (res.data.success) {
-                setData(res.data.allPayments); // refresh parent list
+                setData(res.data.allPayments);
+                showSuccess("Payment updated successfully");
                 setVisible(false);
             } else {
-                console.error("Error creating payment");
+                showError("Failed to update payment");
             }
         } catch (err) {
-            console.error("Submit Error:", err);
+            showError(err?.response?.data?.message || err?.message || "Failed to update payment");
         }
     };
 

@@ -28,6 +28,8 @@ export const createOrderSchema = yup.object({
     waiter:       yup.string().nullable().default(""),
     note:         yup.string().nullable().default(""),
 
+    orderType: yup.string().oneOf(["retail", "wholesale"]).default("retail"),
+
     paymentMethod: yup.string().oneOf(["cash", "online", "credit", "hybrid", "free"]).default("cash"),
 
     // Cash

@@ -3,6 +3,7 @@ import { Edit, Trash2 } from "lucide-react";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const SubCategories = ({ setVisibility }) => {
     const [deleteSubCategory] = useDeleteSubCategoryMutation();
@@ -11,7 +12,13 @@ const SubCategories = ({ setVisibility }) => {
     const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
 
     const handleDelete = async (id) => {
-        await deleteSubCategory(id);
+        if (!window.confirm("Delete this subcategory?")) return;
+        try {
+            await deleteSubCategory(id).unwrap();
+            showSuccess("Subcategory deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete subcategory");
+        }
     };
 
     const renderItems = (items) => {

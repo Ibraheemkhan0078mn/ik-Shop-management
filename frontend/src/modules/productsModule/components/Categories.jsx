@@ -3,6 +3,7 @@ import { Edit, Trash2 } from "lucide-react";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useDeleteCategoryMutation, useGetCategoriesQuery } from "../services/category.service";
 import CategoryCRUDModal from "./CategoryCRUDModal";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const Categories = ({ setVisibility }) => {
     const [deleteCategory] = useDeleteCategoryMutation();
@@ -11,7 +12,13 @@ const Categories = ({ setVisibility }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
     const handleDelete = async (id) => {
-        await deleteCategory(id);
+        if (!window.confirm("Delete this category?")) return;
+        try {
+            await deleteCategory(id).unwrap();
+            showSuccess("Category deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete category");
+        }
     };
 
     const renderItems = (items) => {

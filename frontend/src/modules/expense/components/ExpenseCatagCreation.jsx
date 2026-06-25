@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { setAllExpenseCatags } from '../slices/expense.slice';
 import api from '../../../shared/services/axiosInstance.js';
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const ExpenseCatagCreation = ({ setVisibility }) => {
     const [category, setCategory] = useState("");
@@ -13,20 +14,21 @@ const ExpenseCatagCreation = ({ setVisibility }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!category.trim()) return;
-
+        if (!category.trim()) return showError("Category name is required");
 
         try {
             setLoading(true);
             let res = await api.post(`/expenseRoutes/expenseCatagCreate`, { catagName: category });
             if (res.data.success) {
+                showSuccess("Category created successfully");
                 setCategory("");
                 dispatch(setAllExpenseCatags(res.data.expenseCatags))
                 setVisibility(false)
+            } else {
+                showError("Failed to create category");
             }
-
         } catch (err) {
-            console.error(err)
+            showError(err?.response?.data?.message || err?.message || "Failed to create category");
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../../shared/services/axiosInstance.js";
 import { toInputDateFormat } from "../../../shared/utilities/date.utility.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function QarzaPaymentCreationForm({ getAccountPaymentAndSummary, setQarzaPaymentData, setVisibility, qarzaAccountId }) {
     const [formData, setFormData] = useState({
@@ -54,12 +55,14 @@ export default function QarzaPaymentCreationForm({ getAccountPaymentAndSummary, 
         try {
             const res = await api.post(`/qarzaRoutes/createQarzaPayment`, formData);
             if (res.data.success) {
+                showSuccess("Payment created successfully");
                 setVisibility(false)
                 getAccountPaymentAndSummary()
-                // setQarzaPaymentData(res.data.qarzaPaymentData)
+            } else {
+                showError("Failed to create payment");
             }
         } catch (err) {
-            console.error(err);
+            showError(err?.response?.data?.message || err?.message || "Failed to create payment");
         }
     };
 

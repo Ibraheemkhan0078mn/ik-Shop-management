@@ -1,7 +1,7 @@
 // ─── components/InventoryCreate.jsx ────────────────────────────────────────
 import React, { useState } from "react";
 import { X, Package } from "lucide-react";
-import { toast } from "sonner";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { toInputDateFormat } from '../../../shared/utilities/date.utility.js';
 import { useCreateInventoryMutation, useGetInventoryCategoriesQuery } from "../services/inventory.service.js";
 
@@ -32,16 +32,19 @@ export default function InventoryCreation({ setVisibility, getInventoryFunc }) {
     };
 
     const handleCreate = async () => {
-        if (!form.name || !form.category) return toast.error("Name and category are required");
+        if (!form.name || !form.category) return showError("Name and category are required");
         try {
             const result = await createInventory(form).unwrap();
             if (result?.success) {
+                showSuccess("Inventory item created successfully");
                 await getInventoryFunc("reset");
                 setVisibility(false);
-            } else toast.error(result?.reason || "Creation failed");
+            } else {
+                showError(result?.reason || result?.message || "Creation failed");
+            }
         } catch (error) {
             console.error(error);
-            toast.error(error?.data?.reason || "Creation failed");
+            showError(error?.data?.reason || error?.data?.message || error?.message || "Creation failed");
         }
     };
 

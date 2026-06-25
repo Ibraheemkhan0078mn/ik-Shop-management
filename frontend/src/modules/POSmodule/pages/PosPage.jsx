@@ -18,7 +18,7 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const toImageUrl = (img) => !img ? null : img.startsWith("http") ? img : `http://localhost:5001${img}`;
+const toImageUrl = (img) => !img ? null : img.startsWith("http") ? img : `http://localhost:5001/uploads/${img}`;
 const isSameLine = (item, id, pt, up, bid) =>
   item._id === id && item.portionType === pt && item.unitPrice === up && item.batchId === bid;
 
@@ -337,7 +337,12 @@ export default function PosPage() {
   };
 
   const handleDeleteHeldOrder = async (id) => {
-    try { await deleteHold(id).unwrap(); } catch { }
+    try {
+      await deleteHold(id).unwrap();
+      showSuccess(language === "en" ? "Held order deleted" : "روکا ہوا آرڈر حذف ہو گیا");
+    } catch (error) {
+      showError(error?.data?.message || error?.message || "Failed to delete held order");
+    }
   };
 
   // ── Checkout ─────────────────────────────────────────────────────────────
@@ -349,6 +354,7 @@ export default function PosPage() {
       paymentMethod, selectedQarzaAccountId, cashReceived,
       onlinePlatform, onlineAmount,
       hybridCash, hybridQarza, hybridQarzaAccountId,
+      orderType,
     } = paymentData;
 
     try {
@@ -367,6 +373,7 @@ export default function PosPage() {
         customerName: paymentMethod === "credit" ? "" : customerName,
         waiter: selectedWaiter,
         paymentMethod,
+        orderType: orderType || "retail",
         status: "completed",
         cashReceived: paymentMethod === "cash" ? Number(cashReceived) || 0 : 0,
         change: paymentMethod === "cash" ? change : 0,
@@ -392,7 +399,12 @@ export default function PosPage() {
       });
 
       if (resumedHoldId) {
-        try { await deleteHold(resumedHoldId).unwrap(); } catch { }
+        try {
+          await deleteHold(resumedHoldId).unwrap();
+        } catch (error) {
+          console.error("Failed to delete held order after checkout:", error);
+          showError(language === "en" ? "Order completed but failed to clear held order" : "آرڈر مکمل ہو گیا لیکن روکا ہوا آرڈر صاف نہیں ہو سکا");
+        }
         setResumedHoldId(null);
         setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
       }
@@ -461,7 +473,11 @@ export default function PosPage() {
       printOrder({ ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber }, "Free Food");
 
       if (resumedHoldId) {
-        try { await deleteHold(resumedHoldId).unwrap(); } catch { }
+        try {
+          await deleteHold(resumedHoldId).unwrap();
+        } catch (error) {
+          console.error("Failed to delete held order after free food:", error);
+        }
         setResumedHoldId(null);
         setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
       }
@@ -469,7 +485,11 @@ export default function PosPage() {
       clearCart();
       toggleModal("freeFood");
       refetchProducts();
-    } catch { }
+      showSuccess(language === "en" ? "Free food order completed!" : "مفت کھانا آرڈر مکمل ہو گیا!");
+    } catch (error) {
+      console.error("Free food error:", error);
+      showError(error?.response?.data?.message || error?.message || "Failed to process free food order.");
+    }
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────

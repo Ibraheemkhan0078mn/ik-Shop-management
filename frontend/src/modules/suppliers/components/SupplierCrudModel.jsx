@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import {
     useCreateSupplier,
     useUpdateSupplier,
-    useSupplier, // agar yeh hook hai to
+    useSupplier,
 } from "../services/suppliers.service.js";
 import FormLayout from "../../../shared/components/FormLayout.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const SupplierCrudModel = ({ setVisibility, id, operation = "create" }) => {
     const { data: supplierData } = useSupplier(id, { skip: operation === "create" });
@@ -105,12 +106,18 @@ const SupplierCrudModel = ({ setVisibility, id, operation = "create" }) => {
     };
 
     async function onSubmit() {
-        if (operation === "update") {
-            await updateSupplier(formData);
-        } else {
-            await createSupplier(formData);
+        try {
+            if (operation === "update") {
+                await updateSupplier(formData).unwrap();
+                showSuccess("Supplier updated successfully");
+            } else {
+                await createSupplier(formData).unwrap();
+                showSuccess("Supplier created successfully");
+            }
+            setVisibility(false);
+        } catch (error) {
+            showError(error?.data?.message || "Operation failed");
         }
-        setVisibility(false);
     }
 
     return (

@@ -5,6 +5,7 @@ import { useDeleteCustomer, useCustomers } from "../services/customers.service.j
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -16,7 +17,12 @@ export default function CustomerPage() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this customer?")) return;
-        await deleteCustomer(id);
+        try {
+            await deleteCustomer(id).unwrap();
+            showSuccess("Customer deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete customer");
+        }
     };
 
     return (

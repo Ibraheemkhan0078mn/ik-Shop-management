@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { toast } from "sonner";
 import api from "../../../shared/services/axiosInstance.js";
 import { PlusCircle } from "lucide-react";
 import ImageCropper from "../../../shared/components/ImageCropper.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const QarzaAccountEdit = ({ getqarzaAccounts, currentToUpdateAccount, setVisibility, setQarzaAccounts }) => {
     const [preview, setPreview] = useState(null);
@@ -112,14 +112,14 @@ const QarzaAccountEdit = ({ getqarzaAccounts, currentToUpdateAccount, setVisibil
             );
 
             if (res.data.success) {
+                showSuccess("Account updated successfully");
                 getqarzaAccounts()
-                // setQarzaAccounts(res.data.accounts);
                 setVisibility(false);
             } else {
-                toast.error("Something went wrong while creating account");
+                showError("Failed to update account");
             }
         } catch (error) {
-            toast.error("Server error");
+            showError(error?.response?.data?.message || error?.message || "Server error");
         }
     };
 

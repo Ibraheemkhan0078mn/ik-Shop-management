@@ -33,6 +33,13 @@ const orderSchema = new mongoose.Schema(
         customerName: { type: String, default: "" },
         waiter:       { type: String, default: "" },
 
+        // Order Type
+        orderType: {
+            type: String,
+            enum: ["retail", "wholesale"],
+            default: "retail",
+        },
+
         // Payment
         paymentMethod: {
             type: String,

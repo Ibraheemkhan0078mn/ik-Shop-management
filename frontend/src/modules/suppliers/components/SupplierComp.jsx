@@ -3,6 +3,7 @@ import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.j
 import { useUser } from "../../auth/services/auth.service.js";
 import PaginatedTable from "../../../shared/components/PaginatedTable.jsx";
 import SupplierCrudModel from "../components/SupplierCrudModel.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function SupplierComp({setVisibility}) {
     const { data: userQuery } = useUser();
@@ -10,6 +11,16 @@ export default function SupplierComp({setVisibility}) {
     const [isAddOpen, setIsAddOpen] = useState(false);
 
     const language = userQuery?.data?.language || userQuery?.language || "en";
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Delete this supplier?")) return;
+        try {
+            await deleteSupplier(id).unwrap();
+            showSuccess("Supplier deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete supplier");
+        }
+    };
 
     const columns = {
         "Supplier Name": "name",
@@ -45,7 +56,7 @@ export default function SupplierComp({setVisibility}) {
                 isUpdate={true}
                 isDelete={true}
                 UpdateComp={SupplierCrudModel}
-                onDelete={(id) => deleteSupplier(id)}
+                onDelete={handleDelete}
                 rtkGetDataQuery={useSuppliers}
             />
         </div>

@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi } from "../api/purchaseReturnApi.js";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 const STATUS_CLASS = {
     draft: "bg-gray-100 text-gray-600",
@@ -29,6 +30,7 @@ export default function PurchaseReturnPage() {
                 const result = await getPaginatedPurchaseReturnsApi(params);
                 setData(result);
             } catch (error) {
+                // Error is already handled in the API function with toast
                 setData({ data: [], total: 0 });
             } finally {
                 setIsLoading(false);
@@ -46,8 +48,13 @@ export default function PurchaseReturnPage() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this purchase return?")) return;
-        await deletePurchaseReturnApi(id);
-        setRefreshKey((v) => v + 1);
+        try {
+            await deletePurchaseReturnApi(id);
+            showSuccess("Purchase return deleted successfully");
+            setRefreshKey((v) => v + 1);
+        } catch (error) {
+            showError(error?.response?.data?.message || error?.message || "Failed to delete purchase return");
+        }
     };
 
     return (

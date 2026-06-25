@@ -6,6 +6,7 @@ import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.j
 import PaginatedList               from "../../../shared/components/PaginatedList.jsx";
 import SupplierModal               from "../components/SupplierModal.jsx";
 import PageHeading                 from "../../../shared/components/PageHeading.jsx";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 export default function SupplierPage() {
     const language           = useSelector(s => s.auth?.user?.language ?? "en");
@@ -16,7 +17,12 @@ export default function SupplierPage() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this supplier?")) return;
-        await deleteSupplier(id);
+        try {
+            await deleteSupplier(id).unwrap();
+            showSuccess("Supplier deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete supplier");
+        }
     };
 
     return (

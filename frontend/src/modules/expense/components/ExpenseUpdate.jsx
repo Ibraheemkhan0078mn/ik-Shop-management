@@ -3,6 +3,7 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "../../../shared/services/axiosInstance.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expenseData }) => {
     const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expens
                 )()
             }
         } catch (error) {
-            console.error(error?.message)
+            showError(error?.response?.data?.message || error?.message || "Failed to fetch categories");
         }
     }, [])
 
@@ -54,20 +55,16 @@ const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expens
         e.preventDefault();
 
         try {
-
             const res = await api.put(`/expenseRoutes/expense`, formData);
-
-
             if (res.data.success) {
+                showSuccess("Expense updated successfully");
                 getExpensesFunc("update")
                 setVisibility(false)
+            } else {
+                showError("Failed to update expense");
             }
-            // Refresh parent page
-
-            // Close modal
-
         } catch (error) {
-            console.error("Error submitting expense:", error);
+            showError(error?.response?.data?.message || error?.message || "Failed to update expense");
         }
     };
 

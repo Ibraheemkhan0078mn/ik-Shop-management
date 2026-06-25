@@ -1,7 +1,7 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState } from "react";
 import { Plus, Eye, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -17,9 +17,9 @@ const OrderReturnList = () => {
         if (window.confirm("Are you sure you want to delete this return?")) {
             try {
                 await deleteOrderReturn(id).unwrap();
-                toast.success("Return deleted successfully");
+                showSuccess("Return deleted successfully");
             } catch (error) {
-                toast.error(error?.data?.message || "Failed to delete return");
+                showError(error?.data?.message || "Failed to delete return");
             }
         }
     };

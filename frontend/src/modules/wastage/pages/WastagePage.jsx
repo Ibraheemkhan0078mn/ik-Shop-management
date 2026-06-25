@@ -6,6 +6,7 @@ import { useDeleteWastage, useWastages } from "../services/wastage.service.js";
 import PaginatedList               from "../../../shared/components/PaginatedList.jsx";
 import WastageModal                from "../components/WastageModal.jsx";
 import PageHeading                 from "../../../shared/components/PageHeading.jsx";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 const STATUS_STYLE = {
     draft:    { background: "rgba(107,114,128,0.1)", color: "#6b7280"  },
@@ -23,7 +24,12 @@ export default function WastagePage() {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Delete this wastage record?")) return;
-        await deleteWastage(id);
+        try {
+            await deleteWastage(id).unwrap();
+            showSuccess("Wastage record deleted successfully");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete wastage record");
+        }
     };
 
     return (

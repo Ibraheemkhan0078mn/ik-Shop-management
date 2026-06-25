@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import api from "../../../shared/services/axiosInstance.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function QarzaPaymentEditForm({ getAccountPaymentAndSummary, currentToUpdateData, setQarzaPaymentData, setVisibility, qarzaAccountId }) {
   const [formData, setFormData] = useState({
@@ -64,12 +65,14 @@ export default function QarzaPaymentEditForm({ getAccountPaymentAndSummary, curr
     try {
       const res = await api.put(`/qarzaRoutes/updateQarzaPayment`, formData);
       if (res.data.success) {
+        showSuccess("Payment updated successfully");
         setVisibility(false)
-        // setQarzaPaymentData(res.data.data)
         getAccountPaymentAndSummary()
+      } else {
+        showError("Failed to update payment");
       }
     } catch (err) {
-      console.error(err);
+      showError(err?.response?.data?.message || err?.message || "Failed to update payment");
     }
   };
 

@@ -1,7 +1,7 @@
 // ─── components/OrderReturnModal.jsx ──────────────────────────────────────
 import React, { useState } from "react";
 import { X, Search, Check, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGenerateReturnNumberQuery,
     useGetOrderForReturnQuery,
@@ -78,7 +78,7 @@ const OrderReturnModal = ({ isOpen, onClose }) => {
 
     const handleSubmit = async () => {
         if (!selectedItems.length) {
-            toast.error("Please select at least one item to return");
+            showError("Please select at least one item to return");
             return;
         }
 
@@ -99,10 +99,10 @@ const OrderReturnModal = ({ isOpen, onClose }) => {
                 notes,
             }).unwrap();
 
-            toast.success("Order return created successfully");
+            showSuccess("Order return created successfully");
             handleClose();
         } catch (error) {
-            toast.error(error?.response?.data?.message || "Failed to create order return");
+            showError(error?.response?.data?.message || error?.data?.message || error?.message || "Failed to create order return");
         }
     };
 

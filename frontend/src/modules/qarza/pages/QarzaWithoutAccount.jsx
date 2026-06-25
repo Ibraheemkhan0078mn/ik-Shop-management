@@ -6,6 +6,7 @@ import PaymentUpdateOfQarzaWithoutAccount from '../components/PaymentUpdateOfQar
 import { useSelector } from 'react-redux'
 import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
 import api from "../../../shared/services/axiosInstance.js"
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js"
 
 const QarzaWithoutAccount = () => {
 
@@ -38,19 +39,16 @@ const QarzaWithoutAccount = () => {
 
 
     useEffect(() => {
-        try {
-            (
-                async function () {
-                    let res = await api.get(`/qarzaRoutes/getQarzaPaymentsWithoutAccount`)
-
-                    if (res.data.success) {
-                        setData(res.data.allPayments)
-                    }
+        (async function () {
+            try {
+                let res = await api.get(`/qarzaRoutes/getQarzaPaymentsWithoutAccount`)
+                if (res.data.success) {
+                    setData(res.data.allPayments)
                 }
-            )()
-        } catch (error) {
-            console.error(error)
-        }
+            } catch (error) {
+                showError(error?.response?.data?.message || error?.message || "Failed to fetch payments")
+            }
+        })()
     }, [])
 
 
@@ -67,11 +65,13 @@ const QarzaWithoutAccount = () => {
 
 
     async function deleteQarzaAccountBtnClick(paymentId) {
+        if (!window.confirm("Delete this payment?")) return;
         try {
             let res = await api.delete(`/qarzaRoutes/deletePaymentWihtoutAccount`, { data: { paymentId } })
             setData(res.data.allPayments)
+            showSuccess("Payment deleted successfully")
         } catch (error) {
-            console.error(error?.message)
+            showError(error?.response?.data?.message || error?.message || "Failed to delete payment")
         }
     }
 

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "../../../shared/services/axiosInstance.js";
 import { toInputDateFormat } from "@shared/utilities/date.utility";
 import { useHotkeys } from "react-hotkeys-hook";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) => {
 
@@ -41,7 +41,7 @@ const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) =>
                 )()
             }
         } catch (error) {
-            console.error(error?.message)
+            showError(error?.response?.data?.message || error?.message || "Failed to fetch categories");
         }
     }, [])
 
@@ -63,21 +63,16 @@ const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) =>
         e.preventDefault();
 
         try {
-
             const res = await api.post(`/expenseRoutes/expense`, formData);
             if (res.data.success) {
+                showSuccess("Expense created successfully");
                 getExpensesFunc("update")
                 setVisibility(false)
             } else {
-                toast.error("something wrong in expense creation")
+                showError("Failed to create expense");
             }
-
-            // Refresh parent page
-
-            // Close modal
-
         } catch (error) {
-            console.error("Error submitting expense:", error);
+            showError(error?.response?.data?.message || error?.message || "Failed to create expense");
         }
     };
 

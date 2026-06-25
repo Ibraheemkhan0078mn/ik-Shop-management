@@ -8,7 +8,7 @@ import {
     FileSpreadsheet,
     File
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGetSalesReportQuery,
     useGetPurchaseReportQuery,
@@ -98,7 +98,7 @@ export default function ReportsPage() {
 
     // Handle errors
     if (error) {
-        toast.error(`Failed to load ${selectedReport} report`);
+        showError(error?.data?.message || error?.message || `Failed to load ${selectedReport} report`);
     }
 
     const handleFilterChange = (key, value) => {

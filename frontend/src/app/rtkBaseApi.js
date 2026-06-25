@@ -14,6 +14,7 @@
 
 import { createApi } from "@reduxjs/toolkit/query/react";
 import api from "../shared/services/api.js"; // tumhara existing Axios instance — same jo baaki jagah use ho raha hai
+import { showError } from "../shared/utilities/toastHelpers.js";
 
 // ── Axios ko RTK Query ke format mein wrap karo ───────────────
 // RTK Query ko { url, method, body, params } format mein call milti hai
@@ -27,6 +28,11 @@ const axiosBaseQuery = () => async ({ url, method = "GET", body, params, headers
         const result = await api({ url, method, data: body, params, headers: reqHeaders });
         return { data: result.data };
     } catch (err) {
+        const errorMessage = err?.response?.data?.message || err?.response?.data?.reason || err?.message || "Request failed";
+        // Show toast error for non-401 errors (401 is handled by interceptor)
+        if (err?.response?.status !== 401) {
+            showError(errorMessage);
+        }
         return {
             error: {
                 status: err.response?.status,

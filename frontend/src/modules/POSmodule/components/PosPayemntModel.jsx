@@ -50,6 +50,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
     const [customerName, setCustomerName] = useState(initialCustomerName);
+    const [orderType, setOrderType] = useState("retail");
 
     // ── Auto-fill cash received with total when modal opens or discount changes
     useEffect(() => {
@@ -108,6 +109,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
         selectedWaiter: initialWaiter,     // Issue 2: waiter restored from held order
         orderDiscount: discountAmt,
         paymentMethod: activeTab,
+        orderType,
         cashReceived: activeTab === "cash" ? cashReceived : "",
         onlinePlatform: activeTab === "online" ? onlinePlatform : "",
         onlineAmount: activeTab === "online" ? onlineAmount : "",
@@ -149,7 +151,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
                         <span className="text-2xl font-extrabold" style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
                     </div>
 
-                    {/* Discount + customer name */}
+                    {/* Discount + customer name + order type */}
                     <div className="grid grid-cols-2 gap-3">
                         <FormField label="Discount (Rs)">
                             <Input type="number" min={0} placeholder="0"
@@ -160,6 +162,32 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
                                 value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                         </FormField>
                     </div>
+                    <FormField label="Order Type">
+                        <div className="flex gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="orderType"
+                                    value="retail"
+                                    checked={orderType === "retail"}
+                                    onChange={(e) => setOrderType(e.target.value)}
+                                    className="w-4 h-4 accent-[var(--accent-2)]"
+                                />
+                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>Retail</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="orderType"
+                                    value="wholesale"
+                                    checked={orderType === "wholesale"}
+                                    onChange={(e) => setOrderType(e.target.value)}
+                                    className="w-4 h-4 accent-[var(--accent-2)]"
+                                />
+                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>Wholesale</span>
+                            </label>
+                        </div>
+                    </FormField>
 
                     {/* Payment method tab bar */}
                     <div className="flex rounded-xl p-1 gap-1" style={{ background: "var(--surface-muted)" }}>
