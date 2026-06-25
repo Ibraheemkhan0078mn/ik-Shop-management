@@ -1,5 +1,4 @@
 import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
-import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 const getPurchases = async () => {
     return await findPurchaseService()
@@ -96,8 +95,6 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
             await batch.save();
         }
 
-        await handleProductStockQuantity(item.product, "create", item.quantity);
-
         purchaseItems.push({
             product: item.product,
             batch: batch._id,
@@ -144,8 +141,6 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 await oldBatch.save();
             }
         }
-        
-        await handleProductStockQuantity(old.product, "delete", old.quantity);
     }
 
     const purchaseItems = [];
@@ -168,8 +163,6 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             if (data.supplier) batch.supplier = data.supplier;
             await batch.save();
         }
-
-        await handleProductStockQuantity(item.product, "create", item.quantity);
 
         purchaseItems.push({
             product: item.product, batch: batch._id,
@@ -207,8 +200,6 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
                 await batch.save();
             }
         }
-        
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     return await deleteOnePurchaseService(id);

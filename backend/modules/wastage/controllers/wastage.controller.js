@@ -2,10 +2,7 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getLocalWastageModel,
-    getLocalProductModel,
-    getLocalBatchModel,
 } from "../../../configs/connect.db.js";
-import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 import {
     wastageCreate as wastageCreateService,
     getAllWastages as getAllWastagesService,
@@ -164,9 +161,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
 
 // ─── APPROVE ─────────────────────────────────────────────────────────────────
 export const approveWastage = asyncHandler(async (req, res, next) => {
-    const ProductModel   = getLocalProductModel();
-    const BatchModel     = getLocalBatchModel();
-    const { id }         = req.params;
+    const { id } = req.params;
 
     const wastage = await getWastageByIdService(id);
     if (!wastage) {
@@ -175,27 +170,6 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
 
     if (wastage.status !== "pending") {
         return next(new ErrorResponse(`Only pending wastages can be approved. Current status: ${wastage.status}`, 400));
-    }
-
-    // Deduct stock for each item: batch stock first, then product stock
-    for (const item of wastage.items) {
-        // Find batch by batchNumber and product
-        const batch = await BatchModel.findOne({
-            batchNumber: item.batchNumber,
-            product: item.product
-        });
-
-        if (batch) {
-            // Deduct from batch stock first
-            batch.quantity -= item.quantity;
-            if (batch.quantity <= 0) {
-                batch.isActive = false;
-            }
-            await batch.save();
-        }
-
-        // Then deduct from product stock
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     const approved = await wastageUpdateService(id, {

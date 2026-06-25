@@ -1,6 +1,5 @@
 import { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService } from "./purchaseReturn.crud.js";
 import { getLocalPurchaseModel, getLocalBatchModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
-import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
 
 const normalizePurchaseReturnItems = async (items = [], BatchModel) => {
     if (!Array.isArray(items)) return [];
@@ -169,7 +168,6 @@ const submitPurchaseReturn = async (id) => {
 };
 
 const approvePurchaseReturn = async (id, userId) => {
-    const BatchModel = getLocalBatchModel();
     const existing = await findByIdPurchaseReturnService(id);
     if (!existing) {
         throw new Error("Purchase return not found");
@@ -177,22 +175,6 @@ const approvePurchaseReturn = async (id, userId) => {
 
     if (existing.status !== "pending") {
         throw new Error(`Only pending purchase returns can be approved. Current status: ${existing.status}`);
-    }
-
-    // Deduct inventory: batch stock first, then product stock
-    for (const item of existing.items) {
-        const batch = await BatchModel.findById(item.batch);
-        if (batch) {
-            // Deduct from batch stock first
-            batch.quantity -= item.quantity;
-            if (batch.quantity <= 0) {
-                batch.isActive = false;
-            }
-            await batch.save();
-        }
-
-        // Then deduct from product stock
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     return await updatePurchaseReturnService(id, {

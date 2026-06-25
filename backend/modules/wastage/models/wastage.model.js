@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import { getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { adjustStock } from "../../../common/services/stockManager.js";
 
 
 const wastageSchema = new mongoose.Schema({
@@ -44,76 +44,37 @@ const wastageSchema = new mongoose.Schema({
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Hooks to adjust batch stock and product currentStockLevel
+//  Stock for wastage must ONLY be deducted when status becomes "approved"
 // ─────────────────────────────────────────────────────────────────────────────
 
-wastageSchema.post('save', async function(doc) {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
-    for (const item of doc.items) {
-        if (!item.batch) continue;
-        
-        // Decrease batch currentStock
-        await BatchModel.findByIdAndUpdate(item.batch, {
-            $inc: { currentStock: -item.quantity }
-        });
-        
-        // Decrease product currentStockLevel
-        await ProductModel.findByIdAndUpdate(item.product, {
-            $inc: { currentStockLevel: -item.quantity }
-        });
+wastageSchema.pre('findOneAndUpdate', async function() {
+    const update = this.getUpdate();
+    const isApproving = update?.status === 'approved' || update?.$set?.status === 'approved';
+    if (isApproving) {
+        const doc = await this.model.findOne(this.getQuery()).lean();
+        this._wastageItemsToDeduct = doc ? doc.items : [];
     }
 });
 
 wastageSchema.post('findOneAndUpdate', async function(doc) {
-    if (!doc) return;
-    
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
-    const prevDoc = await this.model.findById(doc._id);
-    if (!prevDoc) return;
-    
-    for (let i = 0; i < doc.items.length; i++) {
-        const newItem = doc.items[i];
-        const oldItem = prevDoc.items[i];
-        
-        if (!newItem.batch || !oldItem) continue;
-        
-        const qtyDiff = newItem.quantity - oldItem.quantity;
-        
-        if (qtyDiff !== 0) {
-            // Update batch currentStock (negative because wastage reduces stock)
-            await BatchModel.findByIdAndUpdate(newItem.batch, {
-                $inc: { currentStock: -qtyDiff }
-            });
-            
-            // Update product currentStockLevel
-            await ProductModel.findByIdAndUpdate(newItem.product, {
-                $inc: { currentStockLevel: -qtyDiff }
-            });
-        }
+    if (!this._wastageItemsToDeduct) return;
+    for (const item of this._wastageItemsToDeduct) {
+        await adjustStock(item.product, item.batch, -item.quantity);
     }
 });
 
-wastageSchema.post('findOneAndDelete', async function(doc) {
-    if (!doc) return;
-    
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
+// On delete of a draft wastage → no stock change needed (was never deducted)
+// On delete of an approved wastage → restore stock
+wastageSchema.pre('findOneAndDelete', async function() {
+    const doc = await this.model.findOne(this.getQuery()).lean();
+    this._deletedWastage = doc;
+});
+
+wastageSchema.post('findOneAndDelete', async function() {
+    const doc = this._deletedWastage;
+    if (!doc || doc.status !== 'approved') return; // only restore if was approved
     for (const item of doc.items) {
-        if (!item.batch) continue;
-        
-        // Reverse the batch currentStock (add back the wasted quantity)
-        await BatchModel.findByIdAndUpdate(item.batch, {
-            $inc: { currentStock: item.quantity }
-        });
-        
-        // Reverse the product currentStockLevel
-        await ProductModel.findByIdAndUpdate(item.product, {
-            $inc: { currentStockLevel: item.quantity }
-        });
+        await adjustStock(item.product, item.batch, item.quantity);
     }
 });
 

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { adjustStock } from "../../../common/services/stockManager.js";
 
 const purchaseItemSchema = new mongoose.Schema({
     product: {
@@ -98,75 +98,63 @@ const purchaseSchema = new mongoose.Schema(
 //  Hooks to adjust batch stock and product currentStockLevel
 // ─────────────────────────────────────────────────────────────────────────────
 
-purchaseSchema.post('save', async function(doc) {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
-    for (const item of doc.items) {
-        if (!item.batch) continue;
-        
-        // Update batch currentStock
-        await BatchModel.findByIdAndUpdate(item.batch, {
-            $inc: { currentStock: item.quantity }
-        });
-        
-        // Update product currentStockLevel
-        await ProductModel.findByIdAndUpdate(item.product, {
-            $inc: { currentStockLevel: item.quantity }
-        });
+// PRE-SAVE: store old items snapshot for update diff
+purchaseSchema.pre('save', async function() {
+    if (!this.isNew) {
+        const old = await this.constructor.findById(this._id).lean();
+        this._oldItems = old ? old.items : [];
     }
 });
 
-purchaseSchema.post('findOneAndUpdate', async function(doc) {
-    if (!doc) return;
-    
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
-    // Get the previous document to calculate the difference
-    const prevDoc = await this.model.findById(doc._id);
-    if (!prevDoc) return;
-    
-    for (let i = 0; i < doc.items.length; i++) {
-        const newItem = doc.items[i];
-        const oldItem = prevDoc.items[i];
-        
-        if (!newItem.batch || !oldItem) continue;
-        
-        const qtyDiff = newItem.quantity - oldItem.quantity;
-        
-        if (qtyDiff !== 0) {
-            // Update batch currentStock
-            await BatchModel.findByIdAndUpdate(newItem.batch, {
-                $inc: { currentStock: qtyDiff }
-            });
-            
-            // Update product currentStockLevel
-            await ProductModel.findByIdAndUpdate(newItem.product, {
-                $inc: { currentStockLevel: qtyDiff }
-            });
+// PRE-UPDATE: store old items snapshot for update diff
+purchaseSchema.pre('findOneAndUpdate', async function() {
+    const doc = await this.model.findOne(this.getQuery()).lean();
+    this._oldItems = doc ? doc.items : [];
+});
+
+// POST-SAVE: on create → add stock. On update → diff old vs new.
+purchaseSchema.post('save', async function(doc) {
+    if (doc._skipStockHook) return;
+    if (doc.isNew || !doc._oldItems) {
+        // New purchase created → add stock for all items
+        for (const item of doc.items) {
+            await adjustStock(item.product, item.batch, item.quantity);
+        }
+    } else {
+        // Updated purchase → reverse old, apply new
+        for (const old of doc._oldItems) {
+            await adjustStock(old.product, old.batch, -old.quantity);
+        }
+        for (const item of doc.items) {
+            await adjustStock(item.product, item.batch, item.quantity);
         }
     }
 });
 
+// POST-UPDATE: diff old vs new
+purchaseSchema.post('findOneAndUpdate', async function(doc) {
+    if (!doc || doc._skipStockHook) return;
+    if (!this._oldItems) {
+        // No old items found, treat as create
+        for (const item of doc.items) {
+            await adjustStock(item.product, item.batch, item.quantity);
+        }
+    } else {
+        // Updated purchase → reverse old, apply new
+        for (const old of this._oldItems) {
+            await adjustStock(old.product, old.batch, -old.quantity);
+        }
+        for (const item of doc.items) {
+            await adjustStock(item.product, item.batch, item.quantity);
+        }
+    }
+});
+
+// POST-DELETE: reverse all stock
 purchaseSchema.post('findOneAndDelete', async function(doc) {
-    if (!doc) return;
-    
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    
+    if (!doc || doc._skipStockHook) return;
     for (const item of doc.items) {
-        if (!item.batch) continue;
-        
-        // Reverse the batch currentStock
-        await BatchModel.findByIdAndUpdate(item.batch, {
-            $inc: { currentStock: -item.quantity }
-        });
-        
-        // Reverse the product currentStockLevel
-        await ProductModel.findByIdAndUpdate(item.product, {
-            $inc: { currentStockLevel: -item.quantity }
-        });
+        await adjustStock(item.product, item.batch, -item.quantity);
     }
 });
 

@@ -1,7 +1,6 @@
 import asyncHandler   from "express-async-handler";
 import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
-import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
-import { handleProductStockQuantity } from "../../productPurchases/services/ChangeProductStockQuantity.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import {
     orderCreate as orderCreateService,
     getAllOrders as getAllOrdersService,
@@ -79,7 +78,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     const duplicate = await findOrderByNumberService(validatedData.orderNumber);
     if (duplicate) return next(new ErrorResponse("Order number already exists", 400));
 
-    // Deduct inventory: batch stock first, then product stock
+    // Validate batch availability
     for (const item of validatedData.items) {
         if (!item.batchId) {
             return next(new ErrorResponse(`Batch is required for product: ${item.name}`, 400));
@@ -99,13 +98,6 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         if (batch.expiryDate && new Date(batch.expiryDate) < new Date()) {
             return next(new ErrorResponse(`Batch ${batch.batchNumber} has expired`, 400));
         }
-
-        // Deduct from batch stock first
-        batch.quantity -= item.quantity;
-        await batch.save();
-
-        // Then deduct from product stock
-        await handleProductStockQuantity(item.product, "delete", item.quantity);
     }
 
     const order = await orderCreateService(validatedData);
@@ -118,25 +110,9 @@ export const addOrder = asyncHandler(async (req, res, next) => {
 //  Permanently deletes a completed/cancelled order.
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteOrder = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel();
     const order = await getOrderById(req.params.id);
 
     if (!order) return next(new ErrorResponse("Order not found", 404));
-
-    // Restore inventory: add back to batch stock first, then product stock
-    for (const item of order.items) {
-        if (!item.batchId) continue;
-
-        const batch = await BatchModel.findById(item.batchId);
-        if (batch) {
-            // Add back to batch stock first
-            batch.quantity += item.quantity;
-            await batch.save();
-
-            // Then add back to product stock
-            await handleProductStockQuantity(item.product, "create", item.quantity);
-        }
-    }
 
     await orderDeleteService(req.params.id);
 
