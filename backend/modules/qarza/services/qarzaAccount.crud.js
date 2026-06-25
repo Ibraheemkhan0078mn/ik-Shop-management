@@ -7,7 +7,7 @@ const createQarzaAccountService = (data) => {
 
 const findQarzaAccountService = (query = {}) => {
     const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.find(query);
+    return QarzaAccountModel.find(query).sort({ createdAt: -1 });
 };
 
 const findOneQarzaAccountService = (query) => {

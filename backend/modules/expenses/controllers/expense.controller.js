@@ -201,7 +201,7 @@ export const expenseCatagCreate = async (req, res) => {
 
         return res.json({ success: true, expenseCatags: allExpenseCatags })
     } catch (err) {
-        console.log(error)
+        console.log(err)
         return res.json({ success: false, msg: "Error deleting expense" });
     }
 }

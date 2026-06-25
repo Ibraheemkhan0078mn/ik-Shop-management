@@ -10,6 +10,14 @@ import {
     getSupplierReport,
     getWastageReport,
     getActivityReport,
+    getMainBusinessReport,
+    getPurchaseReturnReport,
+    getSaleReturnReport,
+    getInventoryReport,
+    getProductWastageReport,
+    getCustomerReport,
+    getStaffReport,
+    getProfitLossReport,
     getTopSellingProducts,
     getTopCustomers,
     getLowStockProducts,
@@ -27,6 +35,18 @@ export const getDashboardSummaryData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Dashboard summary retrieved successfully",
         data: summary,
+    });
+});
+
+// Main Business Report
+export const getMainBusinessReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getMainBusinessReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Main business report retrieved successfully",
+        ...report,
     });
 });
 
@@ -110,6 +130,90 @@ export const getWastageReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Wastage report retrieved successfully",
+        ...report,
+    });
+});
+
+// Purchase Return Report
+export const getPurchaseReturnReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getPurchaseReturnReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Purchase return report retrieved successfully",
+        ...report,
+    });
+});
+
+// Sale Return Report
+export const getSaleReturnReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getSaleReturnReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Sale return report retrieved successfully",
+        ...report,
+    });
+});
+
+// Inventory Report
+export const getInventoryReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getInventoryReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Inventory report retrieved successfully",
+        ...report,
+    });
+});
+
+// Product Wastage Report
+export const getProductWastageReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getProductWastageReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Product wastage report retrieved successfully",
+        ...report,
+    });
+});
+
+// Customer Report
+export const getCustomerReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getCustomerReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Customer report retrieved successfully",
+        ...report,
+    });
+});
+
+// Staff Report
+export const getStaffReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getStaffReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Staff report retrieved successfully",
+        ...report,
+    });
+});
+
+// Profit & Loss Report
+export const getProfitLossReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getProfitLossReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Profit & loss report retrieved successfully",
         ...report,
     });
 });

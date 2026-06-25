@@ -1,6 +1,7 @@
 import express from "express";
 import {
     getDashboardSummaryData,
+    getMainBusinessReportData,
     getSalesReportData,
     getPurchaseReportData,
     getFinancialReportData,
@@ -9,6 +10,13 @@ import {
     getSupplierReportData,
     getWastageReportData,
     getActivityReportData,
+    getPurchaseReturnReportData,
+    getSaleReturnReportData,
+    getInventoryReportData,
+    getProductWastageReportData,
+    getCustomerReportData,
+    getStaffReportData,
+    getProfitLossReportData,
     getTopSellingProductsData,
     getTopCustomersData,
     getLowStockProductsData,
@@ -22,11 +30,32 @@ const router = express.Router();
 // Dashboard Summary
 router.get("/dashboard/summary", getDashboardSummaryData);
 
+// Main Business Report
+router.get("/main-business", getMainBusinessReportData);
+
 // Sales Report
 router.get("/sales", getSalesReportData);
 
 // Purchase Report
 router.get("/purchases", getPurchaseReportData);
+
+// Purchase Return Report
+router.get("/purchase-returns", getPurchaseReturnReportData);
+
+// Sale Return Report
+router.get("/sale-returns", getSaleReturnReportData);
+
+// Inventory Report
+router.get("/inventory", getInventoryReportData);
+
+// Product Wastage Report
+router.get("/product-wastage", getProductWastageReportData);
+
+// Customer Report
+router.get("/customers", getCustomerReportData);
+
+// Staff Report
+router.get("/staff", getStaffReportData);
 
 // Financial Report
 router.get("/financial", getFinancialReportData);
@@ -39,6 +68,9 @@ router.get("/expenses", getExpenseReportData);
 
 // Supplier Report
 router.get("/suppliers", getSupplierReportData);
+
+// Profit & Loss Report
+router.get("/profit-loss", getProfitLossReportData);
 
 // Wastage Report
 router.get("/wastage", getWastageReportData);

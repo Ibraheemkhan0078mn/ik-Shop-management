@@ -20,6 +20,15 @@ import {
 
 const router = express.Router();
 
+// Staff Salary Payment Routes (must come before /:id)
+router.post("/salary-payment", createSalaryPaymentData);
+router.get("/salary-payment/:staffId", getSalaryPaymentsByStaffData);
+
+// Staff Sale Bill Routes (must come before /:id)
+router.post("/sale-bill", createSaleBillData);
+router.get("/sale-bill/:staffId", getSaleBillsByStaffData);
+router.put("/sale-bill/:id/pay", markSaleBillAsPaidData);
+
 // Staff Routes
 router.post("/", createStaffData);
 router.get("/", getAllStaffData);
@@ -28,14 +37,5 @@ router.put("/:id", updateStaffData);
 router.delete("/:id", deleteStaffData);
 router.post("/:id/documents", addDocumentToStaffData);
 router.delete("/:id/documents/:docId", removeDocumentFromStaffData);
-
-// Staff Salary Payment Routes
-router.post("/salary-payment", createSalaryPaymentData);
-router.get("/salary-payment/:staffId", getSalaryPaymentsByStaffData);
-
-// Staff Sale Bill Routes
-router.post("/sale-bill", createSaleBillData);
-router.get("/sale-bill/:staffId", getSaleBillsByStaffData);
-router.put("/sale-bill/:id/pay", markSaleBillAsPaidData);
 
 export default router;

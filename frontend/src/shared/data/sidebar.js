@@ -1,7 +1,7 @@
 import {
   BarChart3, Wallet, ShoppingCart, Users, DollarSign,
   CreditCard, Package, TrendingUp, Trash2, RotateCcw,
-  Truck, ArrowLeftRight, FileText, Receipt, Boxes
+  Truck, ArrowLeftRight, FileText, Receipt, Boxes, User
 } from "lucide-react";
 
 // Language translations
@@ -21,9 +21,15 @@ const t = {
     customers: "Customers",
     suppliers: "Suppliers",
     reports: "Reports",
+    mainBusinessReport: "Main Business",
+    profitLossReport: "Profit & Loss",
     salesReport: "Sales",
     purchaseReport: "Purchases",
     inventoryReport: "Inventory",
+    customerReport: "Customers",
+    supplierReport: "Suppliers",
+    staffReport: "Staff",
+    expenseReport: "Expenses",
     financeReport: "Finance",
     creditDebits: "Credit & Debits",
     expenses: "Expenses",
@@ -46,9 +52,15 @@ const t = {
     customers: "گاہک",
     suppliers: "سپلائرز",
     reports: "رپورٹس",
+    mainBusinessReport: "مین بزنس",
+    profitLossReport: "منافع اور نقصان",
     salesReport: "سیلز",
     purchaseReport: "خریداری",
     inventoryReport: "انوینٹری",
+    customerReport: "گاہک",
+    supplierReport: "سپلائرز",
+    staffReport: "اسٹاف",
+    expenseReport: "خرچے",
     financeReport: "فنانس",
     creditDebits: "کریڈٹ اور ڈیبٹس",
     expenses: "اخراجات",
@@ -122,16 +134,21 @@ const navItems = [
     icon: TrendingUp,
     url: "/reports",
     allowedUrls: [
-      "/reports", "/reports/sales", "/reports/purchases", "/reports/inventory",
-      "/reports/accounts-and-financials", "/reports/profit-and-loss",
+      "/reports", "/reports/main-business", "/reports/profit-loss", "/reports/sales", "/reports/purchases", "/reports/inventory",
+      "/reports/accounts-and-financials", "/reports/profit-and-loss", "/reports/customers", "/reports/suppliers", "/reports/staff", "/reports/expenses",
       "/reports/sales/details", "/reports/purchases/details", "/reports/inventory/details",
       "/reports/finance/details", "/reports/profitLoss/details"
     ],
     items: [
+      { id: "mainBusinessReport", icon: BarChart3, url: "/reports/main-business" },
+      { id: "profitLossReport", icon: TrendingUp, url: "/reports/profit-loss" },
       { id: "salesReport", icon: Receipt, url: "/reports/sales" },
       { id: "purchaseReport", icon: CreditCard, url: "/reports/purchases" },
       { id: "inventoryReport", icon: Boxes, url: "/reports/inventory" },
-      { id: "financeReport", icon: Wallet, url: "/reports/accounts-and-financials" }
+      { id: "customerReport", icon: Users, url: "/reports/customers" },
+      { id: "supplierReport", icon: Truck, url: "/reports/suppliers" },
+      { id: "staffReport", icon: User, url: "/reports/staff" },
+      { id: "expenseReport", icon: DollarSign, url: "/reports/expenses" }
     ]
   },
   {

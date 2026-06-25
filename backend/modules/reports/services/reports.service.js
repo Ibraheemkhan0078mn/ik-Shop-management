@@ -13,6 +13,11 @@ import {
     getLocalQarzaPaymentModel,
     getLocalActivityLogModel,
     getLocalCategoryModel,
+    getLocalProductReturnModel,
+    getLocalCustomerModel,
+    getLocalStaffModel,
+    getLocalStaffSalaryPaymentModel,
+    getLocalStaffSaleBillModel,
 } from "../../../configs/connect.db.js";
 
 // Helper function to build date filter
@@ -254,6 +259,99 @@ export const getPurchaseReport = async (filters = {}) => {
     };
 };
 
+// Main Business Report
+export const getMainBusinessReport = async (filters = {}) => {
+    const OrderModel = getLocalOrderModel();
+    const PurchaseModel = getLocalPurchaseModel();
+    const ExpensesModel = getLocalExpensesModel();
+    const WastageModel = getLocalWastageModel();
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const ProductReturnModel = getLocalProductReturnModel();
+    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
+    const { fromDate, toDate, period = "today" } = filters;
+
+    let dateFilter = {};
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    }
+
+    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments] = await Promise.all([
+        OrderModel.aggregate([
+            { $match: { ...dateFilter, status: "completed" } },
+            { $group: { _id: null, totalSales: { $sum: "$totalAmount" }, totalDiscount: { $sum: "$discountAmount" }, count: { $sum: 1 } } }
+        ]),
+        PurchaseModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalPurchases: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+        ]),
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalExpenses: { $sum: "$amount" }, count: { $sum: 1 } } }
+        ]),
+        WastageModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalWastage: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } }
+        ]),
+        PurchaseReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalPurchaseReturns: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+        ]),
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalProductReturns: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
+        ]),
+        StaffSalaryPaymentModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalSalaries: { $sum: "$amount" }, count: { $sum: 1 } } }
+        ]),
+    ]);
+
+    const totalSales = sales[0]?.totalSales || 0;
+    const totalPurchases = purchases[0]?.totalPurchases || 0;
+    const totalExpenses = expenses[0]?.totalExpenses || 0;
+    const totalWastage = wastages[0]?.totalWastage || 0;
+    const totalPurchaseReturns = purchaseReturns[0]?.totalPurchaseReturns || 0;
+    const totalProductReturns = productReturns[0]?.totalProductReturns || 0;
+    const totalSalaries = salaryPayments[0]?.totalSalaries || 0;
+
+    const netProfit = totalSales - totalPurchases - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
+
+    return {
+        summary: {
+            totalSales,
+            totalPurchases,
+            totalExpenses,
+            totalSalaries,
+            totalPurchaseReturns,
+            totalProductReturns,
+            totalWastage,
+            netProfit,
+        },
+        details: {
+            salesCount: sales[0]?.count || 0,
+            purchaseCount: purchases[0]?.count || 0,
+            expenseCount: expenses[0]?.count || 0,
+            wastageCount: wastages[0]?.count || 0,
+            purchaseReturnCount: purchaseReturns[0]?.count || 0,
+            productReturnCount: productReturns[0]?.count || 0,
+            salaryPaymentCount: salaryPayments[0]?.count || 0,
+        },
+    };
+};
+
 // Financial Report
 export const getFinancialReport = async (filters = {}) => {
     const OrderModel = getLocalOrderModel();
@@ -404,6 +502,471 @@ export const getCreditDebitReport = async (filters = {}) => {
     };
 };
 
+// Purchase Return Report
+export const getPurchaseReturnReport = async (filters = {}) => {
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const SupplierModel = getLocalSupplierModel();
+    const { fromDate, toDate, supplierId, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        matchQuery.createdAt = dateFilter.createdAt;
+    }
+    if (supplierId) matchQuery.supplier = supplierId;
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        PurchaseReturnModel.find(matchQuery)
+            .populate("supplier", "name")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        PurchaseReturnModel.countDocuments(matchQuery)
+    ]);
+
+    const totals = await PurchaseReturnModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: null, totalAmount: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+    ]);
+
+    const returnsBySupplier = await PurchaseReturnModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: "$supplier", totalAmount: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+        { $lookup: { from: "suppliers", localField: "_id", foreignField: "_id", as: "supplier" } },
+        { $unwind: "$supplier" },
+        { $project: { supplierName: "$supplier.name", totalAmount: 1, count: 1 } }
+    ]);
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalAmount: totals[0]?.totalAmount || 0,
+            totalReturns: totals[0]?.count || 0,
+        },
+        returnsBySupplier,
+    };
+};
+
+// Sale Return Report
+export const getSaleReturnReport = async (filters = {}) => {
+    const ProductReturnModel = getLocalProductReturnModel();
+    const CustomerModel = getLocalCustomerModel();
+    const { fromDate, toDate, customerId, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        matchQuery.createdAt = dateFilter.createdAt;
+    }
+    if (customerId) matchQuery.customer = customerId;
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        ProductReturnModel.find(matchQuery)
+            .populate("customer", "name phone")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        ProductReturnModel.countDocuments(matchQuery)
+    ]);
+
+    const totals = await ProductReturnModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: null, totalRefund: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
+    ]);
+
+    const returnsByCustomer = await ProductReturnModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: "$customer", totalRefund: { $sum: "$refundAmount" }, count: { $sum: 1 } } },
+        { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "customer" } },
+        { $unwind: "$customer" },
+        { $project: { customerName: "$customer.name", totalRefund: 1, count: 1 } }
+    ]);
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalRefund: totals[0]?.totalRefund || 0,
+            totalReturns: totals[0]?.count || 0,
+        },
+        returnsByCustomer,
+    };
+};
+
+// Inventory Report
+export const getInventoryReport = async (filters = {}) => {
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
+    const { categoryId, lowStock, nearExpiry, page = 1, limit = 20 } = filters;
+
+    const matchQuery = { isActive: true };
+    if (lowStock) matchQuery.quantity = { $gt: 0, $lte: 10 };
+    if (nearExpiry) {
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        matchQuery.expiryDate = { $lte: thirtyDaysFromNow, $gte: new Date() };
+    }
+
+    const skip = (page - 1) * limit;
+
+    let data = await BatchModel.find(matchQuery)
+        .populate("product", "name defaultSalePrice")
+        .sort({ expiryDate: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+    if (categoryId) {
+        const productIds = await ProductModel.find({ category: categoryId }).distinct("_id");
+        data = data.filter(batch => productIds.includes(batch.product._id.toString()));
+    }
+
+    const total = await BatchModel.countDocuments(matchQuery);
+
+    const totals = await BatchModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: null, totalQuantity: { $sum: "$quantity" }, totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, totalBatches: { $sum: 1 } } }
+    ]);
+
+    const lowStockCount = await BatchModel.countDocuments({ isActive: true, quantity: { $gt: 0, $lte: 10 } });
+    const nearExpiryCount = await BatchModel.countDocuments({ isActive: true, expiryDate: { $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), $gte: new Date() } });
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalQuantity: totals[0]?.totalQuantity || 0,
+            totalValue: totals[0]?.totalValue || 0,
+            totalBatches: totals[0]?.totalBatches || 0,
+            lowStockCount,
+            nearExpiryCount,
+        },
+    };
+};
+
+// Product Wastage Report
+export const getProductWastageReport = async (filters = {}) => {
+    const WastageModel = getLocalWastageModel();
+    const ProductModel = getLocalProductModel();
+    const { fromDate, toDate, productId, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        matchQuery.createdAt = dateFilter.createdAt;
+    }
+    if (productId) matchQuery.product = productId;
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        WastageModel.find(matchQuery)
+            .populate("product", "name")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        WastageModel.countDocuments(matchQuery)
+    ]);
+
+    const totals = await WastageModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: null, totalQuantity: { $sum: "$quantity" }, totalLoss: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } }
+    ]);
+
+    const wastageByProduct = await WastageModel.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: "$product", totalQuantity: { $sum: "$quantity" }, totalLoss: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } },
+        { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
+        { $unwind: "$product" },
+        { $project: { productName: "$product.name", totalQuantity: 1, totalLoss: 1, count: 1 } },
+        { $sort: { totalLoss: -1 } }
+    ]);
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalQuantity: totals[0]?.totalQuantity || 0,
+            totalLoss: totals[0]?.totalLoss || 0,
+            totalWastages: totals[0]?.count || 0,
+        },
+        wastageByProduct,
+    };
+};
+
+// Customer Report
+export const getCustomerReport = async (filters = {}) => {
+    const CustomerModel = getLocalCustomerModel();
+    const OrderModel = getLocalOrderModel();
+    const { search, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (search) {
+        matchQuery.$or = [
+            { name: { $regex: search, $options: "i" } },
+            { phone: { $regex: search, $options: "i" } }
+        ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        CustomerModel.find(matchQuery)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        CustomerModel.countDocuments(matchQuery)
+    ]);
+
+    const customersWithStats = await Promise.all(
+        data.map(async (customer) => {
+            const orders = await OrderModel.find({ customerName: customer.name, status: "completed" });
+            const totalPurchases = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+            const pendingCredit = await OrderModel.aggregate([
+                { $match: { customerName: customer.name, paymentMethod: "credit", status: "completed" } },
+                { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+            ]);
+            return {
+                ...customer.toObject(),
+                totalOrders: orders.length,
+                totalPurchases,
+                pendingCredit: pendingCredit[0]?.total || 0,
+            };
+        })
+    );
+
+    const topCustomers = await OrderModel.aggregate([
+        { $match: { status: "completed" } },
+        { $group: { _id: "$customerName", totalPurchases: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+        { $sort: { totalPurchases: -1 } },
+        { $limit: 10 }
+    ]);
+
+    return {
+        data: customersWithStats,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalCustomers: total,
+            topCustomers,
+        },
+    };
+};
+
+// Supplier Report
+export const getSupplierReport = async (filters = {}) => {
+    const SupplierModel = getLocalSupplierModel();
+    const PurchaseModel = getLocalPurchaseModel();
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const { search, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (search) {
+        matchQuery.$or = [
+            { name: { $regex: search, $options: "i" } },
+            { phone: { $regex: search, $options: "i" } }
+        ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        SupplierModel.find(matchQuery)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        SupplierModel.countDocuments(matchQuery)
+    ]);
+
+    const suppliersWithStats = await Promise.all(
+        data.map(async (supplier) => {
+            const purchases = await PurchaseModel.find({ supplier: supplier._id });
+            const totalPurchases = purchases.reduce((sum, purchase) => sum + purchase.totalAmount, 0);
+            const pendingPayments = purchases.filter(p => p.paymentStatus !== "paid").reduce((sum, p) => sum + p.totalAmount, 0);
+            const returns = await PurchaseReturnModel.find({ supplier: supplier._id });
+            const totalReturns = returns.reduce((sum, ret) => sum + ret.totalAmount, 0);
+            return {
+                ...supplier.toObject(),
+                totalPurchases,
+                pendingPayments,
+                totalReturns,
+                returnCount: returns.length,
+            };
+        })
+    );
+
+    return {
+        data: suppliersWithStats,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalSuppliers: total,
+        },
+    };
+};
+
+// Staff Report
+export const getStaffReport = async (filters = {}) => {
+    const StaffModel = getLocalStaffModel();
+    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
+    const StaffSaleBillModel = getLocalStaffSaleBillModel();
+    const { role, status, page = 1, limit = 20 } = filters;
+
+    const matchQuery = {};
+    if (role) matchQuery.role = role;
+    if (status) matchQuery.status = status;
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        StaffModel.find(matchQuery)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        StaffModel.countDocuments(matchQuery)
+    ]);
+
+    const staffWithStats = await Promise.all(
+        data.map(async (staff) => {
+            const salaryPayments = await StaffSalaryPaymentModel.find({ staffId: staff._id });
+            const totalPaid = salaryPayments.reduce((sum, payment) => sum + payment.amount, 0);
+            const saleBills = await StaffSaleBillModel.find({ staffId: staff._id });
+            const totalEarned = saleBills.reduce((sum, bill) => sum + bill.earnedAmount, 0);
+            const pendingSalary = staff.salaryType === "fixed" ? (staff.monthlySalary || 0) - totalPaid : 0;
+            const pendingBills = saleBills.filter(b => !b.isPaid).reduce((sum, bill) => sum + bill.earnedAmount, 0);
+            return {
+                ...staff.toObject(),
+                totalPaid,
+                totalEarned,
+                pendingSalary,
+                pendingBills,
+                paymentCount: salaryPayments.length,
+                billCount: saleBills.length,
+            };
+        })
+    );
+
+    const topPerformers = await StaffSaleBillModel.aggregate([
+        { $group: { _id: "$staffId", totalEarned: { $sum: "$earnedAmount" }, billCount: { $sum: 1 } } },
+        { $sort: { totalEarned: -1 } },
+        { $limit: 10 },
+        { $lookup: { from: "staff", localField: "_id", foreignField: "_id", as: "staff" } },
+        { $unwind: "$staff" },
+        { $project: { staffName: "$staff.fullName", totalEarned: 1, billCount: 1 } }
+    ]);
+
+    return {
+        data: staffWithStats,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        summary: {
+            totalStaff: total,
+            topPerformers,
+        },
+    };
+};
+
+// Profit & Loss Report
+export const getProfitLossReport = async (filters = {}) => {
+    const OrderModel = getLocalOrderModel();
+    const PurchaseModel = getLocalPurchaseModel();
+    const ExpensesModel = getLocalExpensesModel();
+    const WastageModel = getLocalWastageModel();
+    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
+    const ProductReturnModel = getLocalProductReturnModel();
+    const { fromDate, toDate, period = "month" } = filters;
+
+    let dateFilter = {};
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    }
+
+    const [revenue, costOfGoodsSold, expenses, wastages, salaries, refunds] = await Promise.all([
+        OrderModel.aggregate([
+            { $match: { ...dateFilter, status: "completed" } },
+            { $group: { _id: null, total: { $sum: "$totalAmount" }, discount: { $sum: "$discountAmount" } } }
+        ]),
+        PurchaseModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]),
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]),
+        WastageModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$costPrice"] } } } }
+        ]),
+        StaffSalaryPaymentModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]),
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: "$refundAmount" } } }
+        ]),
+    ]);
+
+    const totalRevenue = revenue[0]?.total || 0;
+    const totalDiscount = revenue[0]?.discount || 0;
+    const netRevenue = totalRevenue - totalDiscount;
+    const totalCOGS = costOfGoodsSold[0]?.total || 0;
+    const totalExpenses = expenses[0]?.total || 0;
+    const totalWastage = wastages[0]?.total || 0;
+    const totalSalaries = salaries[0]?.total || 0;
+    const totalRefunds = refunds[0]?.total || 0;
+
+    const grossProfit = netRevenue - totalCOGS;
+    const operatingExpenses = totalExpenses + totalWastage + totalSalaries;
+    const netProfit = grossProfit - operatingExpenses - totalRefunds;
+    const profitMargin = netRevenue > 0 ? ((netProfit / netRevenue) * 100).toFixed(2) : 0;
+
+    return {
+        summary: {
+            totalRevenue,
+            totalDiscount,
+            netRevenue,
+            totalCOGS,
+            grossProfit,
+            totalExpenses,
+            totalWastage,
+            totalSalaries,
+            totalRefunds,
+            operatingExpenses,
+            netProfit,
+            profitMargin: parseFloat(profitMargin),
+        },
+    };
+};
+
 // Expense Report
 export const getExpenseReport = async (filters = {}) => {
     const ExpensesModel = getLocalExpensesModel();
@@ -475,60 +1038,6 @@ export const getExpenseReport = async (filters = {}) => {
             totalExpenses: overallTotal[0]?.total || 0,
             categoryBreakdown: categoryTotals
         }
-    };
-};
-
-// Supplier Report
-export const getSupplierReport = async (filters = {}) => {
-    const SupplierModel = getLocalSupplierModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const { search, page = 1, limit = 20 } = filters;
-
-    const matchQuery = {};
-    if (search) {
-        matchQuery.$or = [
-            { name: { $regex: search, $options: "i" } },
-            { phoneNo: { $regex: search, $options: "i" } }
-        ];
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-        SupplierModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        SupplierModel.countDocuments(matchQuery)
-    ]);
-
-    // Get purchase statistics for each supplier
-    const suppliersWithStats = await Promise.all(
-        data.map(async (supplier) => {
-            const stats = await PurchaseModel.aggregate([
-                { $match: { supplier: supplier._id } },
-                {
-                    $group: {
-                        _id: null,
-                        totalPurchases: { $sum: "$totalAmount" },
-                        purchaseCount: { $sum: 1 },
-                        lastPurchaseDate: { $max: "$createdAt" }
-                    }
-                }
-            ]);
-            return {
-                ...supplier.toObject(),
-                stats: stats[0] || { totalPurchases: 0, purchaseCount: 0, lastPurchaseDate: null }
-            };
-        })
-    );
-
-    return {
-        data: suppliersWithStats,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
     };
 };
 

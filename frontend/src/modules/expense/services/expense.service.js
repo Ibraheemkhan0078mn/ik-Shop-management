@@ -16,7 +16,7 @@ export const expenseApi = baseApi.injectEndpoints({
         // paginated list with page/limit for PaginatedList
         getExpensesPaginated: build.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
-                url: "/expenses/pagination",
+                url: "/expenseRoutes/pagination",
                 params: { page, limit, ...filters },
             }),
             providesTags: ["Expense"],

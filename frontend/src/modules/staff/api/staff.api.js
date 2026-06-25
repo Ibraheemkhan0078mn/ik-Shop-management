@@ -11,7 +11,9 @@ export const staffApi = baseApi.injectEndpoints({
             providesTags: ["Staff"],
         }),
         getStaffById: builder.query({
-            query: (id) => `/staff/${id}`,
+            query: (id) => ({
+                url: `/staff/${id}`,
+            }),
             providesTags: (result, error, id) => [{ type: "Staff", id }],
         }),
         createStaff: builder.mutation({
@@ -55,7 +57,9 @@ export const staffApi = baseApi.injectEndpoints({
 
         // Salary Payments
         getSalaryPayments: builder.query({
-            query: (staffId) => `/staff/salary-payment/${staffId}`,
+            query: (staffId) => ({
+                url: `/staff/salary-payment/${staffId}`,
+            }),
             providesTags: (result, error, staffId) => [{ type: "SalaryPayment", id: staffId }],
         }),
         createSalaryPayment: builder.mutation({
@@ -69,7 +73,9 @@ export const staffApi = baseApi.injectEndpoints({
 
         // Sale Bills
         getSaleBills: builder.query({
-            query: (staffId) => `/staff/sale-bill/${staffId}`,
+            query: (staffId) => ({
+                url: `/staff/sale-bill/${staffId}`,
+            }),
             providesTags: (result, error, staffId) => [{ type: "SaleBill", id: staffId }],
         }),
         createSaleBill: builder.mutation({

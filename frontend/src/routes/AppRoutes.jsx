@@ -20,6 +20,8 @@ import PosPage from "../modules/POSmodule/pages/PosPage.jsx";
 import ProductCategoriesPage from "../modules/productsModule/pages/ProductCategoriesPage.jsx";
 import ProductSubCategoriesPage from "../modules/productsModule/pages/ProductSubCategoriesPage.jsx";
 import ReportsPage from "../modules/reports/pages/ReportsPage.jsx";
+import MainBusinessReport from "../modules/reports/pages/MainBusinessReport.jsx";
+import ProfitLossReport from "../modules/reports/pages/ProfitLossReport.jsx";
 import SalesReports from "../modules/reports/pages/SalesReports.jsx";
 import PurchasesReports from "../modules/reports/pages/PurchasesReports.jsx";
 import InventoryReports from "../modules/reports/pages/InventoryReports.jsx";
@@ -70,7 +72,9 @@ function AppRoutes() {
             <Route path="/settings/generals" element={<Generals />} />
 
             {/* Reports Routes */}
-            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/reports" element={<MainBusinessReport />} />
+            <Route path="/reports/main-business" element={<MainBusinessReport />} />
+            <Route path="/reports/profit-loss" element={<ProfitLossReport />} />
             <Route path="/reports/sales" element={<SalesReports />} />
             <Route path="/reports/purchases" element={<PurchasesReports />} />
             <Route path="/reports/inventory" element={<InventoryReports />} />

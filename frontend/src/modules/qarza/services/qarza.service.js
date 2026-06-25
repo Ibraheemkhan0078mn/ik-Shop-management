@@ -13,7 +13,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         getQarzaAccountsPaginated: build.query({
             query: ({ page = 1, limit = 20, ...filters } = {}) => ({
-                url: "/qarza/pagination",
+                url: "/qarzaRoutes/pagination",
                 params: { page, limit, ...filters },
             }),
             providesTags: ["Qarza"],
@@ -57,6 +57,22 @@ export const qarzaApi = baseApi.injectEndpoints({
             providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
         }),
 
+        getAccountPaymentsPaginated: build.query({
+            query: ({ qarzaAccountId, page = 1, limit = 20 } = {}) => ({
+                url: "/qarzaRoutes/payments/pagination",
+                params: { qarzaAccountId, page, limit },
+            }),
+            providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
+        }),
+
+        getAccountPaymentsSummary: build.query({
+            query: (qarzaAccountId) => ({
+                url: "/qarzaRoutes/payments/summary",
+                params: { qarzaAccountId },
+            }),
+            providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
+        }),
+
         createQarzaPayment: build.mutation({
             query: (body) => ({
                 url: "/qarzaRoutes/createQarzaPayment",
@@ -93,6 +109,8 @@ export const {
     useUpdateQarzaAccountMutation:     useUpdateQarzaAccount,
     useDeleteQarzaAccountMutation:     useDeleteQarzaAccount,
     useGetAccountPaymentsQuery:       useAccountPayments,
+    useGetAccountPaymentsPaginatedQuery: useAccountPaymentsPaginated,
+    useGetAccountPaymentsSummaryQuery: useAccountPaymentsSummary,
     useCreateQarzaPaymentMutation:     useCreateQarzaPayment,
     useUpdateQarzaPaymentMutation:     useUpdateQarzaPayment,
     useDeleteQarzaPaymentMutation:     useDeleteQarzaPayment,
