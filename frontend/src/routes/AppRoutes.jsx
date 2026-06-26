@@ -36,6 +36,7 @@ import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
 import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
+import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
 
 function AppRoutes() {
     return (
@@ -67,6 +68,7 @@ function AppRoutes() {
             <Route path="/EachQarzaAccountRecord/:id" element={<ProtectedRoute><EachQarzaAccountRecords /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
+            <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
             <Route path="/settings/generals" element={<ProtectedRoute><Generals /></ProtectedRoute>} />
 
             {/* Reports Routes */}

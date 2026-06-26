@@ -46,6 +46,35 @@ export const getOrders = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/paginated
+//  Returns paginated orders for POS history
+// ─────────────────────────────────────────────────────────────────────────────
+export const getPaginatedOrders = asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const OrderModel = getLocalOrderModel();
+    
+    const orders = await OrderModel.find()
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(skip);
+
+    const total = await OrderModel.countDocuments();
+
+    res.status(200).json({
+        success: true,
+        message: "Orders fetched successfully",
+        data: orders,
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  POST /orders
 //  Creates a new completed order.
 //  Accepts both qty/quantity and price/unitPrice field names from the frontend.

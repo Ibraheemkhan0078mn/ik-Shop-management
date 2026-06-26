@@ -1,5 +1,7 @@
 import { useState }           from "react";
 import { ShoppingCart, Trash2, RotateCcw, Pause } from "lucide-react";
+import { usePaginatedOrders } from "../../orders/services/orders.service.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PosCartSidebar
@@ -11,7 +13,7 @@ import { ShoppingCart, Trash2, RotateCcw, Pause } from "lucide-react";
 //
 //  Props from PosPage:
 //    cart, subtotal, resumedHoldId
-//    holdOrders, orderHistory, showHeldOrders, setShowHeldOrders
+//    holdOrders, showHeldOrders, setShowHeldOrders
 //    user
 //    incQty, decQty, removeFromCart, setCartItemQty, openPortionModal
 //    onCheckout, onHold, handleResumeOrder, handleDeleteHeldOrder
@@ -21,7 +23,6 @@ export default function PosCartSidebar({
     subtotal = 0,
     resumedHoldId = null,
     holdOrders = [],
-    orderHistory = [],
     showHeldOrders,
     setShowHeldOrders,
     user,
@@ -148,7 +149,7 @@ export default function PosCartSidebar({
             {/* ── Held Orders / History Drawer ──────────────────────────── */}
             {showHeldOrders && (
                 <div
-                    className="fixed inset-y-0 right-[400px] w-80 z-50 backdrop-blur-lg shadow-2xl flex flex-col"
+                    className="fixed inset-y-0 right-[400px] w-96 z-50 backdrop-blur-lg shadow-2xl flex flex-col rounded-l-2xl overflow-hidden"
                     style={{ background: "var(--surface)", borderLeft: "1px solid var(--border)" }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -173,7 +174,7 @@ export default function PosCartSidebar({
                     </div>
 
                     {/* Tab content */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-4">
 
                         {activeTab === "held" && (
                             holdOrders.length === 0
@@ -191,11 +192,20 @@ export default function PosCartSidebar({
                         )}
 
                         {activeTab === "history" && (
-                            orderHistory.length === 0
-                                ? <p className="text-center text-sm mt-8" style={{ color: "var(--muted)" }}>No history yet</p>
-                                : orderHistory.slice(0, 30).map((order) => (
-                                    <HistoryCard key={order._id || order.id} order={order} />
-                                ))
+                            <PaginatedList
+                                rtkQuery={usePaginatedOrders}
+                                limit={20}
+                                dataKey="data"
+                                wrapperClassName="h-full"
+                                className="space-y-2"
+                                renderItems={(orders) => (
+                                    orders.length === 0
+                                        ? <p className="text-center text-sm mt-8" style={{ color: "var(--muted)" }}>No history yet</p>
+                                        : orders.map((order) => (
+                                            <HistoryCard key={order._id || order.id} order={order} />
+                                        ))
+                                )}
+                            />
                         )}
                     </div>
                 </div>

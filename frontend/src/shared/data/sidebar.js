@@ -9,9 +9,6 @@ const t = {
   en: {
     quickList: "Quick List",
     dashboard: "Dashboard",
-    sales: "Sales",
-    pos: "POS",
-    orderReturn: "Order Return",
     products: "Products",
     categories: "Categories",
     subCategories: "Sub Categories",
@@ -42,9 +39,6 @@ const t = {
   ur: {
     quickList: "فوری لسٹ",
     dashboard: "ڈیش بورڈ",
-    sales: "سیلز",
-    pos: "پوائنٹ آف سیلز",
-    orderReturn: "آرڈر واپسی",
     products: "پروڈکٹس",
     categories: "زمرے",
     subCategories: "ذیلی زمرے",
@@ -75,9 +69,6 @@ const t = {
   ur_en: {
     quickList: "فوری لسٹ / Quick List",
     dashboard: "ڈیش بورڈ / Dashboard",
-    sales: "سیلز / Sales",
-    pos: "پوائنٹ آف سیلز / POS",
-    orderReturn: "آرڈر واپسی / Order Return",
     products: "پروڈکٹس / Products",
     categories: "زمرے / Categories",
     subCategories: "ذیلی زمرے / Sub Categories",
@@ -109,16 +100,6 @@ const navItems = [
     icon: BarChart3, 
     url: "/dashboard", 
     allowedUrls: ["/dashboard", "/dashboard/analytics"] 
-  },
-  {
-    id: "sales",
-    icon: ShoppingCart,
-    url: "/pos",
-    allowedUrls: ["/pos", "/product-return"],
-    items: [
-      { id: "pos", icon: ShoppingCart, url: "/pos", permissions: "Sale" },
-      { id: "orderReturn", icon: ArrowLeftRight, url: "/product-return" }
-    ]
   },
   {
     id: "products",

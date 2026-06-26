@@ -1,6 +1,7 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState } from "react";
-import { Plus, Eye, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Eye, Trash2, ArrowLeft } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
@@ -8,6 +9,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import { useDeleteOrderReturnMutation, useGetPaginatedOrderReturnsQuery } from "../services/orderReturn.service.js";
 
 const OrderReturnList = () => {
+    const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
     const [selectedReturn, setSelectedReturn] = useState(null);
     const [deleteOrderReturn] = useDeleteOrderReturnMutation();
@@ -48,13 +50,24 @@ const OrderReturnList = () => {
                     heading="Order Returns"
                     subheading="Manage all order returns"
                 >
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:opacity-90 transition-opacity"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Return
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg transition"
+                            style={{ background: "var(--surface-muted)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                            Back
+                        </button>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg transition"
+                            style={{ background: "var(--accent-2)", color: "white" }}
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Return
+                        </button>
+                    </div>
                 </PageHeading>
             </div>
 

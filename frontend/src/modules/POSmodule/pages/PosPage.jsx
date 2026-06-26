@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
@@ -10,12 +11,10 @@ import PosCartSidebar from "../components/PosCartSidebar.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
 import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
-import SplitBillModal from "../components/SplitBillModal.jsx";
-import FreeFoodModal from "../components/FreeFoodModal.jsx";
 import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
-import ProductReturnModal from "../../productReturn/components/OrderReturnModal.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { printOrder } from "../../../shared/utilities/printOrder.js";
+import { ArrowLeft } from "lucide-react";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const toImageUrl = (img) => !img ? null : img.startsWith("http") ? img : `http://localhost:5001/uploads/${img}`;
@@ -78,6 +77,7 @@ const ProductCard = ({ product, onClick }) => {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function PosPage() {
+  const navigate = useNavigate();
   // ── Auth ──────────────────────────────────────────────────────────────────
   const authUser = useSelector(s => s.auth);
   const user = authUser?.role ? authUser : { role: "admin", permissions: { deleteOrders: true } };
@@ -92,8 +92,8 @@ export default function PosPage() {
 
   // ── Modal States ──────────────────────────────────────────────────────────
   const [modals, setModals] = useState({
-    batch: false, portion: false, payment: false, split: false,
-    freeFood: false, qarza: false, heldOrders: false, productReturn: false,
+    batch: false, portion: false, payment: false,
+    qarza: false, heldOrders: false,
   });
   const toggleModal = (key) => setModals(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -105,9 +105,6 @@ export default function PosPage() {
   // ── RTK Queries ───────────────────────────────────────────────────────────
   const { data: productsRaw, refetch: refetchProducts } = useProducts();
   const products = productsRaw?.data || productsRaw || [];
-
-  const ordersQuery = useOrders();
-  const orderHistory = ordersQuery.data?.data || ordersQuery.data || [];
 
   const holdOrdersQuery = useHoldOrders();
   const holdOrders = holdOrdersQuery.data?.data || holdOrdersQuery.data || [];
@@ -422,76 +419,10 @@ export default function PosPage() {
   };
 
   // ── Split Bill ────────────────────────────────────────────────────────────
-  const handleSplitBill = (personCount) => {
-    if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
-    if (!personCount || personCount < 1) return showError(language === "en" ? "Enter a valid number!" : "درست تعداد درج کریں!");
-
-    const perPerson = subtotal / personCount;
-    const html = `
-      <html><head><title>Split Bill</title>
-      <style>body{font-family:Arial;padding:12px}.c{text-align:center}</style></head>
-      <body><h2 class="c">Split Bill</h2><p>Date: ${new Date().toLocaleString()}</p>
-      <p>Total: Rs ${subtotal.toFixed(0)}</p><p>Split between ${personCount} people</p>
-      <h3 class="c">Each person pays: Rs ${perPerson.toFixed(0)}</h3>
-      <hr/><p class="c">Thank you!</p></body></html>
-    `;
-
-    const printWindow = window.open("", "PRINT", "height=600,width=400");
-    if (!printWindow) return showError("Please allow popups to print.");
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 200);
-    toggleModal("split");
-  };
+  // Removed - functionality no longer needed
 
   // ── Free Food ─────────────────────────────────────────────────────────────
-  const handleFreeFood = async (managerCode, customerName = "", selectedWaiter = "") => {
-    if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
-    if (!managerCode.trim()) return showError(language === "en" ? "Enter Manager Code!" : "منیجر کا کوڈ درج کریں!");
-
-    try {
-      const verifyRes = await api.post("/settings/verify-manager", { code: managerCode });
-      if (verifyRes.data.status === "error") return showError(verifyRes.data.data.message);
-      showSuccess(verifyRes.data.data);
-
-      const { data } = await api.get("/orders/generate-number");
-      const orderBody = {
-        orderNumber: data.orderNumber,
-        createdAt: new Date().toISOString(),
-        subtotal,
-        discountAmount: subtotal,
-        totalAmount: 0,
-        items: buildOrderItems(cart),
-        customerName: customerName || "N/A",
-        waiter: selectedWaiter,
-        note: "FREE FOOD — Manager Approved",
-        paymentMethod: "free",
-        status: "completed",
-      };
-
-      const res = await addOrder(orderBody).unwrap();
-      printOrder({ ...orderBody, ...res.order, orderNumber: res.order?.orderNumber || data.orderNumber }, "Free Food");
-
-      if (resumedHoldId) {
-        try {
-          await deleteHold(resumedHoldId).unwrap();
-        } catch (error) {
-          console.error("Failed to delete held order after free food:", error);
-        }
-        setResumedHoldId(null);
-        setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
-      }
-
-      clearCart();
-      toggleModal("freeFood");
-      refetchProducts();
-      showSuccess(language === "en" ? "Free food order completed!" : "مفت کھانا آرڈر مکمل ہو گیا!");
-    } catch (error) {
-      console.error("Free food error:", error);
-      showError(error?.response?.data?.message || error?.message || "Failed to process free food order.");
-    }
-  };
+  // Removed - functionality no longer needed
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -499,9 +430,18 @@ export default function PosPage() {
       {/* ── Left: Product Grid ──────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden p-4 gap-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-[var(--accent-2)] font-display tracking-tight">
-            Point of Sale
-          </h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-lg transition"
+              style={{ background: "var(--surface-muted)", color: "var(--ink)", border: "1px solid var(--border)" }}
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-[var(--accent-2)] font-display tracking-tight">
+              Point of Sale
+            </h1>
+          </div>
           <div className="flex gap-2">
             <ActionButton
               onClick={() => toggleModal("heldOrders")}
@@ -510,22 +450,16 @@ export default function PosPage() {
               Held Orders ({holdOrders.length})
             </ActionButton>
             <ActionButton
-              onClick={() => toggleModal("productReturn")}
+              onClick={() => navigate("/product-return")}
               className="bg-red-100 text-red-700 border-red-200 hover:bg-red-200"
             >
               Product Return
             </ActionButton>
             <ActionButton
-              onClick={() => toggleModal("freeFood")}
-              className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+              onClick={() => navigate("/order-history")}
+              className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
             >
-              Free Food
-            </ActionButton>
-            <ActionButton
-              onClick={() => toggleModal("split")}
-              className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200"
-            >
-              Split Bill
+              Order History
             </ActionButton>
           </div>
         </div>
@@ -558,7 +492,6 @@ export default function PosPage() {
         subtotal={subtotal}
         resumedHoldId={resumedHoldId}
         holdOrders={holdOrders}
-        orderHistory={orderHistory}
         showHeldOrders={modals.heldOrders}
         setShowHeldOrders={() => toggleModal("heldOrders")}
         user={user}
@@ -613,22 +546,6 @@ export default function PosPage() {
         />
       )}
 
-      {modals.split && (
-        <SplitBillModal
-          onClose={() => toggleModal("split")}
-          onConfirm={handleSplitBill}
-          language={language}
-        />
-      )}
-
-      {modals.freeFood && (
-        <FreeFoodModal
-          onClose={() => toggleModal("freeFood")}
-          onConfirm={handleFreeFood}
-          language={language}
-        />
-      )}
-
       {modals.qarza && (
         <QarzaAccountCreation
           setQarzaAccountCreationFormPopupVisibility={() => toggleModal("qarza")}
@@ -637,13 +554,6 @@ export default function PosPage() {
             setLocalQarza(prev => [...prev, newAccount]);
             refetchQarza();
           }}
-        />
-      )}
-
-      {modals.productReturn && (
-        <ProductReturnModal
-          isOpen={modals.productReturn}
-          onClose={() => toggleModal("productReturn")}
         />
       )}
 
