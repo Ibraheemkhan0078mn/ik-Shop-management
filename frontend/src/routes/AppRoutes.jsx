@@ -2,6 +2,9 @@ import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import Login from "../modules/auth/pages/Login.jsx";
 import Signup from "../modules/auth/pages/Signup.jsx";
+import Profile from "../modules/auth/pages/Profile.jsx";
+import UserManagement from "../modules/auth/pages/UserManagement.jsx";
+import ProtectedRoute from "../shared/components/ProtectedRoute.jsx";
 import Products from "../modules/productsModule/pages/Products.jsx";
 import Analytics from "../modules/dashbaord/pages/Analytics.jsx";
 import Dashboard from "../modules/dashbaord/pages/Dashboard.jsx";
@@ -42,59 +45,58 @@ function AppRoutes() {
             <Route path="/signup" element={<Signup />} />
 
             {/* Dashboard Routes */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/analytics" element={<Analytics />} />
-            <Route path="/quick-list" element={<QuickActions />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/categories" element={<ProductCategoriesPage />} />
-            <Route path="/products/sub-categories" element={<ProductSubCategoriesPage />} />
-            <Route path="/products/view/:id" element={<ViewProductPage />} />
-            <Route path="/products/batches" element={<Products />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/quick-list" element={<ProtectedRoute><QuickActions /></ProtectedRoute>} />
+            <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/products/categories" element={<ProtectedRoute><ProductCategoriesPage /></ProtectedRoute>} />
+            <Route path="/products/sub-categories" element={<ProtectedRoute><ProductSubCategoriesPage /></ProtectedRoute>} />
+            <Route path="/products/view/:id" element={<ProtectedRoute><ViewProductPage /></ProtectedRoute>} />
+            <Route path="/products/batches" element={<ProtectedRoute><Products /></ProtectedRoute>} />
 
 
 
 
-            <Route path="/purchases" element={<ProductPurchase />} />
-            <Route path="/suppliers" element={<SupplierPage />} />
-            <Route path="/purchase-returns" element={<PurchaseReturnPage />} />
-            <Route path="/product-return" element={<ProductReturnList />} />
-            <Route path="/customers" element={<CustomerPage />} />
-            <Route path="/wastage" element={<WastagePage />} />
-
-
-
-
-
-            <Route path="/qarzaAccount" element={<QarzaAccounts />} />
-            <Route path="/EachQarzaAccountRecord/:id" element={<EachQarzaAccountRecords />} />
-            <Route path="/expenses" element={<AllExpenses />} />
-            <Route path="/pos" element={<PosPage />} />
-            <Route path="/settings/generals" element={<Generals />} />
+            <Route path="/purchases" element={<ProtectedRoute><ProductPurchase /></ProtectedRoute>} />
+            <Route path="/suppliers" element={<ProtectedRoute><SupplierPage /></ProtectedRoute>} />
+            <Route path="/purchase-returns" element={<ProtectedRoute><PurchaseReturnPage /></ProtectedRoute>} />
+            <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
+            <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
+            <Route path="/qarzaAccount" element={<ProtectedRoute><QarzaAccounts /></ProtectedRoute>} />
+            <Route path="/EachQarzaAccountRecord/:id" element={<ProtectedRoute><EachQarzaAccountRecords /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
+            <Route path="/settings/generals" element={<ProtectedRoute><Generals /></ProtectedRoute>} />
 
             {/* Reports Routes */}
-            <Route path="/reports" element={<MainBusinessReport />} />
-            <Route path="/reports/main-business" element={<MainBusinessReport />} />
-            <Route path="/reports/profit-loss" element={<ProfitLossReport />} />
-            <Route path="/reports/sales" element={<SalesReports />} />
-            <Route path="/reports/purchases" element={<PurchasesReports />} />
-            <Route path="/reports/inventory" element={<InventoryReports />} />
-            <Route path="/reports/accounts-and-financials" element={<AccountsReports />} />
-            <Route path="/reports/profit-and-loss" element={<ProfitLossReports />} />
-            <Route path="/reports/sales/details" element={<ReportDetailsPage />} />
-            <Route path="/reports/purchases/details" element={<ReportDetailsPage />} />
-            <Route path="/reports/inventory/details" element={<ReportDetailsPage />} />
-            <Route path="/reports/finance/details" element={<ReportDetailsPage />} />
-            <Route path="/reports/profitLoss/details" element={<ReportDetailsPage />} />
+            <Route path="/reports" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
+            <Route path="/reports/main-business" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
+            <Route path="/reports/profit-loss" element={<ProtectedRoute><ProfitLossReport /></ProtectedRoute>} />
+            <Route path="/reports/sales" element={<ProtectedRoute><SalesReports /></ProtectedRoute>} />
+            <Route path="/reports/purchases" element={<ProtectedRoute><PurchasesReports /></ProtectedRoute>} />
+            <Route path="/reports/inventory" element={<ProtectedRoute><InventoryReports /></ProtectedRoute>} />
+            <Route path="/reports/accounts-and-financials" element={<ProtectedRoute><AccountsReports /></ProtectedRoute>} />
+            <Route path="/reports/profit-and-loss" element={<ProtectedRoute><ProfitLossReports /></ProtectedRoute>} />
+            <Route path="/reports/sales/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
+            <Route path="/reports/purchases/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
+            <Route path="/reports/inventory/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
+            <Route path="/reports/finance/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
+            <Route path="/reports/profitLoss/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
 
             {/* Staff Routes */}
-            <Route path="/staff" element={<StaffList />} />
-            <Route path="/staff/create" element={<StaffForm />} />
-            <Route path="/staff/edit/:id" element={<StaffForm isEdit={true} />} />
-            <Route path="/staff/:id" element={<StaffDetail />} />
+            <Route path="/staff" element={<ProtectedRoute><StaffList /></ProtectedRoute>} />
+            <Route path="/staff/create" element={<ProtectedRoute><StaffForm /></ProtectedRoute>} />
+            <Route path="/staff/edit/:id" element={<ProtectedRoute><StaffForm isEdit={true} /></ProtectedRoute>} />
+            <Route path="/staff/:id" element={<ProtectedRoute><StaffDetail /></ProtectedRoute>} />
+
+            {/* Auth Routes */}
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
 
             {/* Default Route */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="*" element={<Link to={"/dashboard"}>go back</Link>} />
+            <Route path="/" element={<Login />} />
+            <Route path="*" element={<Link to={"/login"}>go back</Link>} />
             {/* </Route> */}
         </Routes>
     );

@@ -1,6 +1,6 @@
 import asyncHandler   from "express-async-handler";
 import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
-import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     orderCreate as orderCreateService,
@@ -52,7 +52,7 @@ export const getOrders = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
+    const ProductModel = getLocalProductModel(); 
 
     // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
     const normalizedItems = req.body.items.map((item) => {

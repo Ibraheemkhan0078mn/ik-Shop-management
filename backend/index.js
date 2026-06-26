@@ -9,6 +9,7 @@ import errorHandler from "./common/middlewares/error.middleware.js";
 import { uploadDir } from "./common/services/uploadDirectory.js";
 
 import AuthRouter from "./modules/auth/routes/auth.router.js";
+import UserRouter from "./modules/auth/routes/user.router.js";
 import ProductRouter from "./modules/product/routes/product.router.js";
 import BatchRouter from "./modules/productPurchases/routes/batch.router.js";
 import CategoryRouter from "./modules/product/routes/category.router.js";
@@ -66,6 +67,7 @@ app.use("/uploads", express.static(uploadDir));
 // );
 
 app.use("/api/auth", AuthRouter);
+app.use("/api/users", UserRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/batches", BatchRouter);
 app.use("/api/categories", CategoryRouter);

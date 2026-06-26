@@ -1,7 +1,7 @@
 import {
   BarChart3, Wallet, ShoppingCart, Users, DollarSign,
   CreditCard, Package, TrendingUp, Trash2, RotateCcw,
-  Truck, ArrowLeftRight, FileText, Receipt, Boxes, User
+  Truck, ArrowLeftRight, FileText, Receipt, Boxes, User, UserCircle
 } from "lucide-react";
 
 // Language translations
@@ -35,7 +35,9 @@ const t = {
     expenses: "Expenses",
     staff: "Staff",
     logout: "Logout",
-    settings: "Settings"
+    settings: "Settings",
+    profile: "Profile",
+    users: "Users"
   },
   ur: {
     quickList: "فوری لسٹ",
@@ -66,7 +68,9 @@ const t = {
     expenses: "اخراجات",
     staff: "اسٹاف",
     logout: "لاگ آؤٹ",
-    settings: "سیٹنگز"
+    settings: "سیٹنگز",
+    profile: "پروفائل",
+    users: "صارفین"
   },
   ur_en: {
     quickList: "فوری لسٹ / Quick List",
@@ -91,7 +95,9 @@ const t = {
     expenses: "اخراجات / Expenses",
     staff: "اسٹاف / Staff",
     logout: "لاگ آؤٹ / Logout",
-    settings: "سیٹنگز / Settings"
+    settings: "سیٹنگز / Settings",
+    profile: "پروفائل / Profile",
+    users: "صارفین / Users"
   }
 };
 
@@ -158,7 +164,9 @@ const navItems = [
     allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"]
   },
   { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
-  { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff", "/staff/create", "/staff/edit/:id", "/staff/:id"] }
+  { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff", "/staff/create", "/staff/edit/:id", "/staff/:id"] },
+  { id: "profile", icon: UserCircle, url: "/profile", allowedUrls: ["/profile"] },
+  { id: "users", icon: Users, url: "/users", allowedUrls: ["/users"] }
 ];
 
 // Helper to build sidebar data with translations

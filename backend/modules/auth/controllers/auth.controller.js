@@ -23,14 +23,14 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Invalid credentials", 401));
     }
 
-    req.session.userId = user._id;
-
     res.status(200).json({
         success: true,
         message: "User logged in successfully",
         data: {
             id: user._id,
             name: user.name,
+            email: user.email,
+            phoneNo: user.phoneNo,
             role: user.role,
         },
     });
@@ -38,21 +38,30 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 
 export const registerUser = asyncHandler(async (req, res, next) => {
     const validatedData = req.body || {};
-    const { email } = validatedData;
+    const { email, password, confirmPassword } = validatedData;
+
+    if (password !== confirmPassword) {
+        return next(new ErrorResponse("Passwords do not match", 400));
+    }
+
     const userExists = await findUserByEmailService(email);
     if (userExists) {
         return next(
             new ErrorResponse("User already exists with this email", 400),
         );
     }
-    const user = await userCreateService(validatedData);
-    req.session.userId = user._id;
+
+    const { confirmPassword: _, ...userData } = validatedData;
+    const user = await userCreateService(userData);
+
     res.status(201).json({
         success: true,
         message: "User registered successfully",
         data: {
             id: user._id,
             name: user.name,
+            email: user.email,
+            phoneNo: user.phoneNo,
             role: user.role,
         },
     });
@@ -60,25 +69,22 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 
 export const getMe = asyncHandler(async (req, res, next) => {
     const UserModel = getLocalUserModel();
+    const { userId } = req.query;
 
-    // if (!req.session.userId) {
-    //     return next(
-    //         new ErrorResponse("Not authorized to access this route", 401),
-    //     );
-    // }
+    if (!userId) {
+        return next(new ErrorResponse("User ID is required", 400));
+    }
 
-    // const user = await UserModel.findById(req.session.userId).select(
-    //     "-password",
-    // );
+    const user = await UserModel.findById(userId).select("-password");
 
-    // if (!user) {
-    //     return next(new ErrorResponse("User not found", 404));
-    // }
+    if (!user) {
+        return next(new ErrorResponse("User not found", 404));
+    }
 
     res.status(200).json({
         success: true,
         message: "User fetched successfully",
-        // user,
+        data: user,
     });
 });
 

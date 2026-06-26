@@ -10,12 +10,14 @@ function App() {
 
   const [sideBarShow, setSidebarShow] = useState(true)
   const location = useLocation();
-  const notAllowedSideRoutes = ["login", 'register', "pos"]
+  const notAllowedSideRoutes = ["/", "login", "signup", "pos"]
 
   useEffect(() => {
-    const shouldShowSidebar = !notAllowedSideRoutes.some((item) => location.pathname.includes(item));
-    setSidebarShow(shouldShowSidebar);
-  }, [location.pathname])
+    if (location.pathname == "/") {
+      const shouldShowSidebar = !notAllowedSideRoutes.some((item) => location.pathname.includes(item));
+      setSidebarShow(shouldShowSidebar);
+    }
+  }, [location.pathname ])
 
 
 
@@ -27,7 +29,7 @@ function App() {
   return (
     <div className="flex  w-screen">
       <Toaster position="top-center" />
-      {sideBarShow && <Sidebar />}
+      {(location.pathname !== "/") && <Sidebar />}
 
       {/* <LoadingBar height={3} color="#3b82f6" ref={loadingRef} /> */}
       <div className="p-5 flex-1 w-[70%]">
