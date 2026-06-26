@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const productReturnItemSchema = new mongoose.Schema({
     productId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
+        ref: "Products",
         required: true,
     },
     batchId: {
@@ -43,7 +43,7 @@ const productReturnSchema = new mongoose.Schema(
         },
         referenceOrderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Order",
+            ref: "Orders",
             required: true,
         },
         referenceOrderNumber: {

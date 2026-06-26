@@ -31,7 +31,7 @@ import InventoryReports from "../modules/reports/pages/InventoryReports.jsx";
 import ProfitLossReports from "../modules/reports/pages/ProfitLossReports.jsx";
 import AccountsReports from "../modules/reports/pages/AccountsReports.jsx";
 import ReportDetailsPage from "../modules/reports/pages/ReportDetailsPage.jsx";
-import ProductReturnList from "../modules/productReturn/pages/OrderReturnList.jsx";
+import ProductReturnList from "../modules/orderReturn/pages/OrderReturnList.jsx";
 import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
 import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";

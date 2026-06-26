@@ -4,11 +4,11 @@ export const ordersApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
         getOrders: build.query({
             query: () => ({ url: "/orders" }),
-            providesTags: ["Order"],
+            providesTags: ["Orders"],
         }),
         getPaginatedOrders: build.query({
             query: ({ page = 1, limit = 20 }) => ({ url: "/orders/paginated", params: { page, limit } }),
-            providesTags: ["Order"],
+            providesTags: ["Orders"],
         }),
         generateOrderNumber: build.query({
             query: () => ({ url: "/orders/generate-number" }),
@@ -16,11 +16,11 @@ export const ordersApi = baseApi.injectEndpoints({
         }),
         createOrder: build.mutation({
             query: (orderData) => ({ url: "/orders", method: "POST", body: orderData }),
-            invalidatesTags: ["Order", "OrderNumber"],
+            invalidatesTags: ["Orders", "OrderNumber"],
         }),
         deleteOrder: build.mutation({
             query: (id) => ({ url: `/orders/${id}`, method: "DELETE" }),
-            invalidatesTags: ["Order"],
+            invalidatesTags: ["Orders"],
         }),
     }),
 });

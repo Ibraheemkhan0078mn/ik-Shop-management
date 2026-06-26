@@ -8,7 +8,7 @@ const generateReturnNumber = async () => {
     const newNumber = lastNumber + 1;
     return `RET-${String(newNumber).padStart(6, "0")}`;
 };
-
+  
 const getOrderByNumber = async (orderNumber) => {
     const OrderModel = getLocalOrderModel();
     return await OrderModel.findOne({ orderNumber });
@@ -17,7 +17,8 @@ const getOrderByNumber = async (orderNumber) => {
 const createProductReturn = async (returnData) => {
     const returnNumber = await generateReturnNumber();
     const totalRefundAmount = returnData.items.reduce((sum, item) => sum + item.refundAmount, 0);
-    return await createProductReturnService({
+    
+    const createdReturn = await createProductReturnService({
         returnNumber,
         referenceOrderId: returnData.referenceOrderId,
         referenceOrderNumber: returnData.referenceOrderNumber,
@@ -26,6 +27,13 @@ const createProductReturn = async (returnData) => {
         customerName: returnData.customerName,
         notes: returnData.notes,
     });
+
+    // Increment stock for all returned items
+    for (const item of returnData.items) {
+        await adjustStock(item.productId, item.batchId, 'inc', item.quantity);
+    }
+
+    return createdReturn;
 };
 
 const getAllProductReturns = async (filters = {}) => {
@@ -87,6 +95,56 @@ const getProductReturnById = async (id) => {
 };
 
 const updateProductReturn = async (id, updateData) => {
+    const existing = await findByIdProductReturnService(id);
+    if (!existing) {
+        throw new Error("Product return not found");
+    }
+
+    // Calculate stock adjustments based on item changes
+    if (updateData.items) {
+        const oldItemsMap = new Map();
+        const newItemsMap = new Map();
+
+        // Build old items map using productId and batchId as key
+        for (const item of existing.items) {
+            const key = `${item.productId}_${item.batchId}`;
+            oldItemsMap.set(key, item);
+        }
+
+        // Build new items map using productId and batchId as key
+        for (const item of updateData.items) {
+            const key = `${item.productId}_${item.batchId}`;
+            newItemsMap.set(key, item);
+        }
+
+        // Handle removed items - decrement stock
+        for (const [key, oldItem] of oldItemsMap) {
+            if (!newItemsMap.has(key)) {
+                await adjustStock(oldItem.productId, oldItem.batchId, 'decr', oldItem.quantity);
+            }
+        }
+
+        // Handle added items - increment stock
+        for (const [key, newItem] of newItemsMap) {
+            if (!oldItemsMap.has(key)) {
+                await adjustStock(newItem.productId, newItem.batchId, 'inc', newItem.quantity);
+            }
+        }
+
+        // Handle quantity changes
+        for (const [key, newItem] of newItemsMap) {
+            const oldItem = oldItemsMap.get(key);
+            if (oldItem && oldItem.quantity !== newItem.quantity) {
+                const diff = newItem.quantity - oldItem.quantity;
+                if (diff > 0) {
+                    await adjustStock(newItem.productId, newItem.batchId, 'inc', diff);
+                } else {
+                    await adjustStock(newItem.productId, newItem.batchId, 'decr', Math.abs(diff));
+                }
+            }
+        }
+    }
+
     return await updateProductReturnService(id, updateData).populate("referenceOrderId").populate("items.productId");
 };
 
