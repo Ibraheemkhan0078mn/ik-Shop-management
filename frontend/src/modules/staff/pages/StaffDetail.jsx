@@ -1,32 +1,55 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText } from "lucide-react";
+import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useGetSaleBillsQuery, useCreateSaleBillMutation, useMarkSaleBillAsPaidMutation } from "../api/staff.api.js";
+import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation } from "../api/staff.api.js";
+import api from "../../../shared/services/api.js";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [activeTab, setActiveTab] = useState("profile");
     const [showPaymentForm, setShowPaymentForm] = useState(false);
-    const [showBillForm, setShowBillForm] = useState(false);
+    const [orders, setOrders] = useState([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
+    const [ordersPagination, setOrdersPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
     const { data: staffData, isLoading, refetch } = useGetStaffByIdQuery(id);
     const { data: paymentsData } = useGetSalaryPaymentsQuery(id);
-    const { data: billsData } = useGetSaleBillsQuery(id);
 
     const [addDocument] = useAddDocumentMutation();
     const [removeDocument] = useRemoveDocumentMutation();
     const [createSalaryPayment] = useCreateSalaryPaymentMutation();
-    const [createSaleBill] = useCreateSaleBillMutation();
-    const [markBillAsPaid] = useMarkSaleBillAsPaidMutation();
 
     const [paymentForm, setPaymentForm] = useState({ amount: "", month: "", notes: "" });
-    const [billForm, setBillForm] = useState({ items: [{ name: "", quantity: 1, price: 0 }], percentage: 10, notes: "" });
 
     const staff = staffData?.data;
     const payments = paymentsData?.data || [];
-    const bills = billsData?.data || [];
+
+    // Fetch POS orders for this staff
+    const fetchStaffOrders = async (page = 1) => {
+        setOrdersLoading(true);
+        try {
+            const response = await api.get(`/staff/sale-bill/${id}?page=${page}&limit=20`);
+            setOrders(response.data.data || []);
+            setOrdersPagination({
+                page: response.data.page || 1,
+                limit: response.data.limit || 20,
+                total: response.data.total || 0,
+                totalPages: response.data.totalPages || 0,
+            });
+        } catch (error) {
+            console.error("Failed to fetch staff orders:", error);
+        } finally {
+            setOrdersLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "bills" && staff?.salaryType === "percentage") {
+            fetchStaffOrders(1);
+        }
+    }, [activeTab, staff]);
 
     const handleAddDocument = async (e) => {
         e.preventDefault();
@@ -66,60 +89,6 @@ export default function StaffDetail() {
         } catch (error) {
             toast.error("Failed to record payment");
         }
-    };
-
-    const handleCreateBill = async (e) => {
-        e.preventDefault();
-        const totalAmount = billForm.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-        const earnedAmount = (totalAmount * billForm.percentage) / 100;
-        try {
-            await createSaleBill({
-                staffId: id,
-                items: billForm.items,
-                totalAmount,
-                percentage: billForm.percentage,
-                earnedAmount,
-                source: "manual",
-                notes: billForm.notes,
-            }).unwrap();
-            toast.success("Sale bill created successfully");
-            setShowBillForm(false);
-            setBillForm({ items: [{ name: "", quantity: 1, price: 0 }], percentage: 10, notes: "" });
-            refetch();
-        } catch (error) {
-            toast.error("Failed to create sale bill");
-        }
-    };
-
-    const handleMarkPaid = async (billId) => {
-        try {
-            await markBillAsPaid(billId).unwrap();
-            toast.success("Bill marked as paid");
-            refetch();
-        } catch (error) {
-            toast.error("Failed to mark bill as paid");
-        }
-    };
-
-    const addBillItem = () => {
-        setBillForm(prev => ({
-            ...prev,
-            items: [...prev.items, { name: "", quantity: 1, price: 0 }]
-        }));
-    };
-
-    const updateBillItem = (index, field, value) => {
-        setBillForm(prev => ({
-            ...prev,
-            items: prev.items.map((item, i) => i === index ? { ...item, [field]: value } : item)
-        }));
-    };
-
-    const removeBillItem = (index) => {
-        setBillForm(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index)
-        }));
     };
 
     if (isLoading) {
@@ -358,127 +327,62 @@ export default function StaffDetail() {
                 </div>
             )}
 
-            {/* Bills Tab */}
+            {/* Bills Tab - POS Orders */}
             {activeTab === "bills" && staff.salaryType === "percentage" && (
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">Create Sale Bill</h3>
-                            <button
-                                onClick={() => setShowBillForm(!showBillForm)}
-                                className="btn-add"
-                            >
-                                <Plus size={16} /> {showBillForm ? "Cancel" : "Add Bill"}
-                            </button>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">POS Orders</h3>
+                            <ShoppingCart size={20} className="text-[var(--accent-2)]" />
                         </div>
-                        {showBillForm && (
-                            <form onSubmit={handleCreateBill} className="space-y-4">
-                                <div className="space-y-2">
-                                    {billForm.items.map((item, index) => (
-                                        <div key={index} className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Item Name"
-                                                value={item.name}
-                                                onChange={(e) => updateBillItem(index, 'name', e.target.value)}
-                                                required
-                                                className="flex-1 px-3 py-2 border border-[var(--border)] rounded-md"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Qty"
-                                                value={item.quantity}
-                                                onChange={(e) => updateBillItem(index, 'quantity', Number(e.target.value))}
-                                                required
-                                                min="1"
-                                                className="w-20 px-3 py-2 border border-[var(--border)] rounded-md"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Price"
-                                                value={item.price}
-                                                onChange={(e) => updateBillItem(index, 'price', Number(e.target.value))}
-                                                required
-                                                min="0"
-                                                className="w-24 px-3 py-2 border border-[var(--border)] rounded-md"
-                                            />
-                                            {billForm.items.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeBillItem(index)}
-                                                    className="p-2 hover:bg-red-50 rounded-md"
-                                                >
-                                                    <Trash2 size={16} className="text-red-500" />
-                                                </button>
-                                            )}
+                        {ordersLoading ? (
+                            <p className="text-[var(--muted)]">Loading orders...</p>
+                        ) : orders.length ? (
+                            <div className="space-y-3">
+                                {orders.map((order) => (
+                                    <div key={order._id} className="p-4 border border-[var(--border)] rounded-md">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                                <p className="font-medium text-[var(--ink)]">Order #{order.orderNumber}</p>
+                                                <p className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleString()}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-[var(--accent-2)]">Rs {order.totalAmount?.toLocaleString() || 0}</p>
+                                                <p className="text-xs text-[var(--muted)]">
+                                                    Earned: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
+                                                </p>
+                                            </div>
                                         </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={addBillItem}
-                                        className="text-sm text-[var(--accent-2)] hover:underline"
-                                    >
-                                        + Add Item
-                                    </button>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input
-                                        type="number"
-                                        placeholder="Percentage (%)"
-                                        value={billForm.percentage}
-                                        onChange={(e) => setBillForm(prev => ({ ...prev, percentage: Number(e.target.value) }))}
-                                        required
-                                        min="0"
-                                        max="100"
-                                        className="px-3 py-2 border border-[var(--border)] rounded-md"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Notes"
-                                        value={billForm.notes}
-                                        onChange={(e) => setBillForm(prev => ({ ...prev, notes: e.target.value }))}
-                                        className="px-3 py-2 border border-[var(--border)] rounded-md"
-                                    />
-                                </div>
-                                <button type="submit" className="btn-add">
-                                    <FileText size={16} /> Create Bill
-                                </button>
-                            </form>
-                        )}
-                    </div>
-
-                    <div className="card p-6">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Sale Bills</h3>
-                        {bills.length ? (
-                            <div className="space-y-2">
-                                {bills.map((bill) => (
-                                    <div key={bill._id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md">
-                                        <div>
-                                            <p className="font-medium text-[var(--ink)]">Rs {bill.totalAmount}</p>
-                                            <p className="text-sm text-[var(--muted)]">
-                                                Earned: Rs {bill.earnedAmount} ({bill.percentage}%) - {bill.source}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                bill.isPaid ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
-                                            }`}>
-                                                {bill.isPaid ? 'Paid' : 'Pending'}
-                                            </span>
-                                            {!bill.isPaid && (
-                                                <button
-                                                    onClick={() => handleMarkPaid(bill._id)}
-                                                    className="btn-add text-sm"
-                                                >
-                                                    Mark Paid
-                                                </button>
-                                            )}
+                                        <div className="text-sm text-[var(--muted)]">
+                                            <p>Items: {order.items?.length || 0}</p>
+                                            <p>Payment: {order.paymentMethod}</p>
                                         </div>
                                     </div>
                                 ))}
+                                {ordersPagination.totalPages > 1 && (
+                                    <div className="flex justify-center gap-2 mt-4">
+                                        <button
+                                            onClick={() => fetchStaffOrders(ordersPagination.page - 1)}
+                                            disabled={ordersPagination.page === 1}
+                                            className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50"
+                                        >
+                                            Previous
+                                        </button>
+                                        <span className="px-3 py-1">
+                                            Page {ordersPagination.page} of {ordersPagination.totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => fetchStaffOrders(ordersPagination.page + 1)}
+                                            disabled={ordersPagination.page === ordersPagination.totalPages}
+                                            className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">No sale bills</p>
+                            <p className="text-[var(--muted)]">No POS orders found for this staff member</p>
                         )}
                     </div>
                 </div>

@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
+import { 
+  useQarzaAccounts, 
+  useCreateQarzaPayment 
+} from "../../qarza/services/qarza.service.js";
 import { useOrders, useAddOrder } from "../../orders/services/orders.service.js";
 import { useHoldOrders, useCreateHoldOrder, useDeleteHoldOrder, useUpdateHoldOrder } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
@@ -86,7 +89,7 @@ export default function PosPage() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [cart, setCart] = useState([]);
   const [resumedHoldId, setResumedHoldId] = useState(null);
-  const [resumedHoldMeta, setResumedHoldMeta] = useState({ customerName: "", waiter: "", discountAmount: 0 });
+  const [resumedHoldMeta, setResumedHoldMeta] = useState({ customerName: "", waiter: "", discountAmount: 0, staffId: "" });
   const [stickyBatches, setStickyBatches] = useState({});
   const [localQarza, setLocalQarza] = useState([]);
 
@@ -114,6 +117,7 @@ export default function PosPage() {
   const [createHold] = useCreateHoldOrder();
   const [updateHold] = useUpdateHoldOrder();
   const [deleteHold] = useDeleteHoldOrder();
+  const [createQarzaPayment] = useCreateQarzaPayment();
 
   // ── Qarza ──────────────────────────────────────────────────────────────────
   const { data: fetchedQarza = [], refetch: refetchQarza } = useQarzaAccounts();
@@ -279,6 +283,7 @@ export default function PosPage() {
         totalAmount: total,
         customerName: resumedHoldMeta.customerName || "",
         waiter: resumedHoldMeta.waiter || "",
+        staffId: resumedHoldMeta.staffId || "",
       };
 
       if (resumedHoldId) {
@@ -290,7 +295,7 @@ export default function PosPage() {
 
       clearCart();
       setResumedHoldId(null);
-      setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0 });
+      setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0, staffId: "" });
       showSuccess(language === "en" ? "Order held!" : "آرڈر روک دیا گیا!");
     } catch (err) {
       console.error("Hold error:", err);
@@ -330,6 +335,7 @@ export default function PosPage() {
       customerName: holdOrder.customerName || "",
       waiter: holdOrder.waiter || "",
       discountAmount: holdOrder.discountAmount || 0,
+      staffId: holdOrder.staffId || "",
     });
     toggleModal("heldOrders");
   };
@@ -348,7 +354,7 @@ export default function PosPage() {
     if (!cart.length) return showError(language === "en" ? "Cart is empty!" : "کارٹ خالی ہے!");
 
     const {
-      customerName, selectedWaiter, orderDiscount,
+      customerName, selectedWaiter, selectedStaffId, orderDiscount,
       paymentMethod, selectedQarzaAccountId, cashReceived,
       onlinePlatform, onlineAmount,
       hybridCash, hybridQarza, hybridQarzaAccountId,
@@ -370,6 +376,7 @@ export default function PosPage() {
         items: buildOrderItems(cart),
         customerName: paymentMethod === "credit" ? "" : customerName,
         waiter: selectedWaiter,
+        staffId: selectedStaffId || null,
         paymentMethod,
         orderType: orderType || "retail",
         status: "completed",
@@ -381,9 +388,47 @@ export default function PosPage() {
         hybridCash: paymentMethod === "hybrid" ? Number(hybridCash) || 0 : 0,
         hybridQarza: paymentMethod === "hybrid" ? Number(hybridQarza) || 0 : 0,
         hybridQarzaAccount: paymentMethod === "hybrid" ? hybridQarzaAccountId : null,
+        isPosOrder: true, // Flag to identify POS orders
       };
 
       const res = await addOrder(orderBody).unwrap();
+
+      // Create qarza payment if credit or hybrid payment
+      if (paymentMethod === "credit" && selectedQarzaAccountId) {
+        try {
+          await createQarzaPayment({
+            qarzaAccountId: selectedQarzaAccountId,
+            amount: total,
+            type: "debit", // Debit from qarza account (customer owes money)
+            date: new Date().toISOString(),
+            notes: `POS Order: ${res.order.orderNumber} - ${customerName || "Customer"}`,
+            orderId: res.order._id,
+            orderNumber: res.order.orderNumber,
+            source: "pos",
+          }).unwrap();
+        } catch (qarzaError) {
+          console.error("Qarza payment error:", qarzaError);
+          showError("Order created but failed to record qarza payment");
+        }
+      }
+
+      if (paymentMethod === "hybrid" && hybridQarzaAccountId && Number(hybridQarza) > 0) {
+        try {
+          await createQarzaPayment({
+            qarzaAccountId: hybridQarzaAccountId,
+            amount: Number(hybridQarza),
+            type: "debit",
+            date: new Date().toISOString(),
+            notes: `POS Order (Hybrid): ${res.order.orderNumber} - Cash: Rs ${hybridCash}, Qarza: Rs ${hybridQarza} - ${customerName || "Customer"}`,
+            orderId: res.order._id,
+            orderNumber: res.order.orderNumber,
+            source: "pos",
+          }).unwrap();
+        } catch (qarzaError) {
+          console.error("Qarza payment error:", qarzaError);
+          showError("Order created but failed to record qarza payment");
+        }
+      }
 
       const selectedAccount = qarzaAccounts.find(a => a._id === selectedQarzaAccountId);
       printOrder({
@@ -517,6 +562,7 @@ export default function PosPage() {
           initialCustomerName={resumedHoldMeta.customerName}
           initialWaiter={resumedHoldMeta.waiter}
           initialDiscount={resumedHoldMeta.discountAmount}
+          initialStaffId={resumedHoldMeta.staffId}
         />
       )}
 

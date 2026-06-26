@@ -187,20 +187,24 @@ export const createSaleBill = async (billData) => {
 };
 
 export const getSaleBillsByStaff = async (staffId, filters = {}) => {
-    const StaffSaleBillModel = getLocalStaffSaleBillModel();
+    const OrderModel = getLocalOrderModel();
     const { page = 1, limit = 20 } = filters;
     
-    const matchQuery = { staffId };
+    const matchQuery = { 
+        staffId,
+        isPosOrder: true,
+        status: 'completed'
+    };
     
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        StaffSaleBillModel.find(matchQuery)
+        OrderModel.find(matchQuery)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate('posOrderId'),
-        StaffSaleBillModel.countDocuments(matchQuery)
+            .populate('items.product'),
+        OrderModel.countDocuments(matchQuery)
     ]);
     
     return {

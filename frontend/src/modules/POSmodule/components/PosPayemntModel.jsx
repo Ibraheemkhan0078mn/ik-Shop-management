@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus } from "lucide-react";
 import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
-import { useAccountPayments } from "../../qarza/services/qarza.service.js";
+import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
+import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Online payment platform options
@@ -41,16 +42,20 @@ const PAYMENT_TABS = [
 //    language       — "en" or "ur"
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onCreateQarza, language = "en",
-    initialCustomerName = "", initialWaiter = "", initialDiscount = 0 }) {
+    initialCustomerName = "", initialWaiter = "", initialDiscount = 0, initialStaffId = "" }) {
 
     // Fetch qarza accounts (credit accounts) from the API
-    const { data: qarzaAccounts = [] } = useAccountPayments();
+    const { data: qarzaAccounts = [] } = useQarzaAccounts();
+
+    // Fetch staff list
+    const { data: staffList = [] } = useGetStaffListQuery({ limit: 100 });
 
     // ── Shared form fields ─────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
     const [customerName, setCustomerName] = useState(initialCustomerName);
     const [orderType, setOrderType] = useState("retail");
+    const [selectedStaffId, setSelectedStaffId] = useState(initialStaffId);
 
     // ── Auto-fill cash received with total when modal opens or discount changes
     useEffect(() => {
@@ -91,6 +96,12 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
         label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
     }));
 
+    // ── Staff dropdown options ────────────────────────────────────────────
+    const staffOptions = Array.isArray(staffList) ? staffList.map((s) => ({
+        value: s._id,
+        label: s.name + (s.phone ? ` · ${s.phone}` : ""),
+    })) : [];
+
     // ── Checkout button enabled/disabled logic per tab ─────────────────────
     const canCheckout = useMemo(() => {
         if (total === 0) return true;  // 100% discount — always allow
@@ -107,6 +118,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
     const buildPayload = () => ({
         customerName,
         selectedWaiter: initialWaiter,     // Issue 2: waiter restored from held order
+        selectedStaffId,
         orderDiscount: discountAmt,
         paymentMethod: activeTab,
         orderType,
@@ -151,7 +163,7 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
                         <span className="text-2xl font-extrabold" style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
                     </div>
 
-                    {/* Discount + customer name + order type */}
+                    {/* Discount + customer name + order type + staff */}
                     <div className="grid grid-cols-2 gap-3">
                         <FormField label="Discount (Rs)">
                             <Input type="number" min={0} placeholder="0"
@@ -162,6 +174,10 @@ export default function PosPaymentModal({ subtotal = 0, onCheckout, onClose, onC
                                 value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                         </FormField>
                     </div>
+                    <FormField label="Attending Staff">
+                        <SearchableSelect options={staffOptions} value={selectedStaffId}
+                            onChange={setSelectedStaffId} placeholder="Select staff member..." />
+                    </FormField>
                     <FormField label="Order Type">
                         <div className="flex gap-3">
                             <label className="flex items-center gap-2 cursor-pointer">

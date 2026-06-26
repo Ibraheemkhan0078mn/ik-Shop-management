@@ -238,7 +238,7 @@ export const qarzaAccountDelete = async (req, res) => {
 
 export const createQarzaPayment = async (req, res) => {
     try {
-        const { qarzaAccountId, amount, type, date, notes } = req.body;
+        const { qarzaAccountId, amount, type, date, notes, orderId, orderNumber, source } = req.body;
         let QarzaAccountModel = getLocalQarzaAccountModel();
         let QarzaPayment = getLocalQarzaPaymentModel();
 
@@ -253,6 +253,9 @@ export const createQarzaPayment = async (req, res) => {
             type,
             date: new Date(date),
             notes,
+            orderId: orderId || null,
+            orderNumber: orderNumber || "",
+            source: source || "manual",
         });
         if (!createdQarzaPayment) {
             return res.json({ success: false, msg: "The payment is not created" })

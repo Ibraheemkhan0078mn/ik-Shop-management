@@ -138,15 +138,14 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         await adjustStock(item.product, item.batchId, 'decr', item.quantity);
     }
 
-    // Create staff sale bill if staffId is provided
-    if (validatedData.staffId) {
-        try {
-            await createStaffSaleBillFromPOS(validatedData.staffId, order);
-        } catch (error) {
-            // Log error but don't fail the order creation
-            console.error('Failed to create staff sale bill:', error.message);
-        }
-    }
+    // No longer creating separate staff sale bills - POS orders will be rendered in staff section
+    // if (validatedData.staffId) {
+    //     try {
+    //         await createStaffSaleBillFromPOS(validatedData.staffId, order);
+    //     } catch (error) {
+    //         console.error('Failed to create staff sale bill:', error.message);
+    //     }
+    // }
 
     res.status(201).json({ success: true, message: "Order created successfully", order });
 });

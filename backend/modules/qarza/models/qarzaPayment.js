@@ -23,7 +23,20 @@ const QarzaPaymentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-   
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+    },
+    orderNumber: {
+      type: String,
+      default: "",
+    },
+    source: {
+      type: String,
+      enum: ["pos", "manual", "other"],
+      default: "manual",
+    },
   },
   { timestamps: true }
 );

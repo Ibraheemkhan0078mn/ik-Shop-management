@@ -67,6 +67,10 @@ const orderSchema = new mongoose.Schema(
             enum: ["completed", "cancelled"],
             default: "completed",
         },
+        isPosOrder: {
+            type: Boolean,
+            default: false,
+        },
         note: { type: String, default: "" },
     },
     { timestamps: true },
