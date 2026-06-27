@@ -80,7 +80,8 @@ export const baseApi = createApi({
         "Staff",
         "SalaryPayment",
         "SaleBill",
-        "User"
+        "User",
+        "Dashboard"
     ],
 
     // Endpoints blank — har module injectEndpoints se khud add karega
