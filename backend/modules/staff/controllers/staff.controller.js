@@ -8,6 +8,10 @@ import {
     deleteStaff,
     addDocumentToStaff,
     removeDocumentFromStaff,
+    getAttendanceByDate,
+    createOrUpdateAttendance,
+    getAttendanceHistory,
+    getActiveStaff,
 } from "../services/staff.service.js";
 
 // Create Staff
@@ -102,6 +106,73 @@ export const removeImageFromStaffData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Image removed successfully",
+        data: staff,
+    });
+});
+
+// Get Attendance by Date
+export const getAttendanceByDateData = asyncHandler(async (req, res, next) => {
+    const { date } = req.query;
+    const attendance = await getAttendanceByDate(date);
+
+    res.status(200).json({
+        success: true,
+        message: "Attendance retrieved successfully",
+        data: attendance,
+    });
+});
+
+// Create or Update Attendance
+export const createOrUpdateAttendanceData = asyncHandler(async (req, res, next) => {
+    const { date, staff, status, lateHours } = req.body;
+    const userId = req.user?._id;
+console.log(req.body, "the body of staff attendance update")
+    console.log('Received attendance data:', { date, staff, status, lateHours });
+
+    // Validate required fields
+    if (!staff) {
+        console.error('Staff ID is missing from request body');
+        return next(new ErrorResponse("Staff ID is required", 400));
+    }
+    if (!status) {
+        return next(new ErrorResponse("Status is required", 400));
+    }
+    if (!date) {
+        return next(new ErrorResponse("Date is required", 400));
+    }
+
+    const attendance = await createOrUpdateAttendance(
+        date,
+        { staff, status, lateHours },
+        userId
+    );
+
+    res.status(200).json({
+        success: true,
+        message: "Attendance saved successfully",
+        data: attendance,
+    });
+});
+
+// Get Attendance History
+export const getAttendanceHistoryData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const result = await getAttendanceHistory(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Attendance history retrieved successfully",
+        ...result,
+    });
+});
+
+// Get Active Staff
+export const getActiveStaffData = asyncHandler(async (req, res, next) => {
+    const staff = await getActiveStaff();
+
+    res.status(200).json({
+        success: true,
+        message: "Active staff retrieved successfully",
         data: staff,
     });
 });

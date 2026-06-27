@@ -36,6 +36,7 @@ import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
 import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
+import StaffAttendance from "../modules/staff/pages/StaffAttendance.jsx";
 import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
 
 function AppRoutes() {
@@ -91,6 +92,7 @@ function AppRoutes() {
             <Route path="/staff/create" element={<ProtectedRoute><StaffForm /></ProtectedRoute>} />
             <Route path="/staff/edit/:id" element={<ProtectedRoute><StaffForm isEdit={true} /></ProtectedRoute>} />
             <Route path="/staff/:id" element={<ProtectedRoute><StaffDetail /></ProtectedRoute>} />
+            <Route path="/staff/attendance" element={<ProtectedRoute><StaffAttendance /></ProtectedRoute>} />
 
             {/* Auth Routes */}
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

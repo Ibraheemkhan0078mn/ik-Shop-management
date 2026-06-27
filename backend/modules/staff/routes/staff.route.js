@@ -8,6 +8,10 @@ import {
     deleteStaffData,
     addImagesToStaffData,
     removeImageFromStaffData,
+    getAttendanceByDateData,
+    createOrUpdateAttendanceData,
+    getAttendanceHistoryData,
+    getActiveStaffData,
 } from "../controllers/staff.controller.js";
 import {
     createSalaryPaymentData,
@@ -31,6 +35,12 @@ router.delete("/salary-payment/:id", deleteSalaryPaymentData);
 router.post("/sale-bill", createSaleBillData);
 router.get("/sale-bill/:staffId", getSaleBillsByStaffData);
 router.put("/sale-bill/:id/pay", markSaleBillAsPaidData);
+
+// Staff Attendance Routes (must come before /:id)
+router.get("/attendance/by-date", getAttendanceByDateData);
+router.post("/attendance", createOrUpdateAttendanceData);
+router.get("/attendance/history", getAttendanceHistoryData);
+router.get("/active", getActiveStaffData);
 
 // Staff Routes
 router.post("/", createStaffData);

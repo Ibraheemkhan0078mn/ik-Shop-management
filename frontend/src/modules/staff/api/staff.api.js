@@ -119,6 +119,36 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, id) => [{ type: "SaleBill", id }],
         }),
+
+        // Attendance
+        getActiveStaff: builder.query({
+            query: () => ({
+                url: "/staff/active",
+            }),
+            providesTags: ["Staff"],
+        }),
+        getAttendanceByDate: builder.query({
+            query: (date) => ({
+                url: "/staff/attendance/by-date",
+                params: { date },
+            }),
+            providesTags: (result, error, date) => [{ type: "Attendance", id: date }],
+        }),
+        createOrUpdateAttendance: builder.mutation({
+            query: (data) => ({
+                url: "/staff/attendance",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: (result, error, { date }) => [{ type: "Attendance", id: date }],
+        }),
+        getAttendanceHistory: builder.query({
+            query: (params) => ({
+                url: "/staff/attendance/history",
+                params,
+            }),
+            providesTags: ["Attendance"],
+        }),
     }),
 });
 
@@ -138,4 +168,8 @@ export const {
     useGetSaleBillsQuery,
     useCreateSaleBillMutation,
     useMarkSaleBillAsPaidMutation,
+    useGetActiveStaffQuery,
+    useGetAttendanceByDateQuery,
+    useCreateOrUpdateAttendanceMutation,
+    useGetAttendanceHistoryQuery,
 } = staffApi;

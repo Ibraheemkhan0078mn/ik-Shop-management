@@ -22,6 +22,7 @@ import customerSchema from "../modules/customer/models/customer.model.js";
 import staffSchema from "../modules/staff/models/staff.model.js";
 import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment.model.js";
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
+import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
 
 let UserModel = null;
@@ -47,6 +48,7 @@ let CustomerModel = null;
 let StaffModel = null;
 let StaffSalaryPaymentModel = null;
 let StaffSaleBillModel = null;
+let StaffAttendanceModel = null;
 
 export const connectDb = async () => {
     console.log("the connection is running")
@@ -84,6 +86,7 @@ export const connectDb = async () => {
     StaffModel = LocalConnection.model("Staff", staffSchema)
     StaffSalaryPaymentModel = LocalConnection.model("StaffSalaryPayment", staffSalaryPaymentSchema)
     StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
+    StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
 
 };
 
@@ -112,3 +115,4 @@ export const getLocalHoldOrderModel = () => HoldOrderModel || null;
 export const getLocalStaffModel = () => StaffModel || null;
 export const getLocalStaffSalaryPaymentModel = () => StaffSalaryPaymentModel || null;
 export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
+export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;

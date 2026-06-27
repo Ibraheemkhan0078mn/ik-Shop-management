@@ -1,8 +1,10 @@
+import mongoose from "mongoose";
 import {
     getLocalStaffModel,
     getLocalStaffSalaryPaymentModel,
     getLocalStaffSaleBillModel,
     getLocalOrderModel,
+    getLocalStaffAttendanceModel,
 } from "../../../configs/connect.db.js";
 
 // Create staff sale bill from POS order
@@ -237,3 +239,138 @@ export const markSaleBillAsPaid = async (billId) => {
     }
     return bill;
 };
+
+// Staff Attendance operations
+export const getAttendanceByDate = async (date) => {
+    const StaffAttendanceModel = getLocalStaffAttendanceModel();
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const attendance = await StaffAttendanceModel.findOne({
+        date: { $gte: startOfDay, $lte: endOfDay }
+    }).populate('attendance.staff');
+
+    return attendance;
+};
+
+export const createOrUpdateAttendance = async (date, attendanceData, userId) => {
+    const StaffAttendanceModel = getLocalStaffAttendanceModel();
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    console.log('Attendance data received:', attendanceData);
+    console.log('Staff ID type:', typeof attendanceData.staff);
+    console.log('Staff ID value:', attendanceData.staff);
+
+    if (!attendanceData.staff) {
+        console.error('Staff ID is missing or undefined');
+        throw new Error('Staff ID is required');
+    }
+
+    // Convert to ObjectId for Mongoose
+    const staffObjectId = new mongoose.Types.ObjectId(attendanceData.staff);
+    console.log('Converted to ObjectId:', staffObjectId);
+
+    let attendance = await StaffAttendanceModel.findOne({
+        date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (attendance) {
+        // Update existing attendance
+        const staffIndex = attendance.attendance.findIndex(
+            a => a.staff.toString() === staffObjectId.toString()
+        );
+
+        if (staffIndex >= 0) {
+            // Update existing staff attendance - explicitly set staff to preserve ObjectId
+            attendance.attendance[staffIndex].status = attendanceData.status;
+            attendance.attendance[staffIndex].lateHours = attendanceData.lateHours || 0;
+            attendance.attendance[staffIndex].markedAt = new Date();
+            attendance.attendance[staffIndex].staff = staffObjectId;
+            
+            console.log('Updated attendance item:', attendance.attendance[staffIndex]);
+        } else {
+            // Add new staff attendance
+            attendance.attendance.push({
+                staff: staffObjectId,
+                status: attendanceData.status,
+                lateHours: attendanceData.lateHours || 0,
+                markedAt: new Date()
+            });
+        }
+
+        console.log('Attendance array before save (update):', attendance.attendance);
+        await attendance.save();
+    } else {
+        // Create new attendance record
+        console.log('Creating new attendance record with:', {
+            date: startOfDay,
+            staffId: staffObjectId,
+            status: attendanceData.status,
+            lateHours: attendanceData.lateHours
+        });
+        
+        const newAttendance = new StaffAttendanceModel({
+            date: startOfDay,
+            attendance: [{
+                staff: staffObjectId,
+                status: attendanceData.status,
+                lateHours: attendanceData.lateHours || 0,
+                markedAt: new Date()
+            }],
+            createdBy: userId
+        });
+        
+        console.log('Attendance object before save:', newAttendance);
+        console.log('Attendance array:', newAttendance.attendance);
+        
+        attendance = await newAttendance.save();
+    }
+
+    return attendance;
+};
+
+export const getAttendanceHistory = async (filters = {}) => {
+    const StaffAttendanceModel = getLocalStaffAttendanceModel();
+    const { page = 1, limit = 20, startDate, endDate } = filters;
+
+    const matchQuery = {};
+
+    if (startDate && endDate) {
+        matchQuery.date = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        StaffAttendanceModel.find(matchQuery)
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('attendance.staff')
+            .populate('createdBy', 'fullName'),
+        StaffAttendanceModel.countDocuments(matchQuery)
+    ]);
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+    };
+};
+
+export const getActiveStaff = async () => {
+    const StaffModel = getLocalStaffModel();
+    const staff = await StaffModel.find({ status: 'active' }).sort({ fullName: 1 });
+    return staff;
+};
+

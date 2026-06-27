@@ -1,5 +1,5 @@
 import asyncHandler from "express-async-handler";
-import {
+import { 
     getDashboardData,
     getSalesRevenueKPIs,
     getInventoryAlertKPIs,
