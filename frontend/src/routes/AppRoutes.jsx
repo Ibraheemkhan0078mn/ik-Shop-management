@@ -37,6 +37,8 @@ import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
 import StaffAttendance from "../modules/staff/pages/StaffAttendance.jsx";
+import StaffReport from "../modules/reports/pages/StaffReport.jsx";
+import GiantInventoryReport from "../modules/reports/pages/GiantInventoryReport.jsx";
 import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
 
 function AppRoutes() {
@@ -79,8 +81,10 @@ function AppRoutes() {
             <Route path="/reports/sales" element={<ProtectedRoute><SalesReports /></ProtectedRoute>} />
             <Route path="/reports/purchases" element={<ProtectedRoute><PurchasesReports /></ProtectedRoute>} />
             <Route path="/reports/inventory" element={<ProtectedRoute><InventoryReports /></ProtectedRoute>} />
+            <Route path="/reports/giant-inventory" element={<ProtectedRoute><GiantInventoryReport /></ProtectedRoute>} />
             <Route path="/reports/accounts-and-financials" element={<ProtectedRoute><AccountsReports /></ProtectedRoute>} />
             <Route path="/reports/profit-and-loss" element={<ProtectedRoute><ProfitLossReports /></ProtectedRoute>} />
+            <Route path="/reports/staff" element={<ProtectedRoute><StaffReport /></ProtectedRoute>} />
             <Route path="/reports/sales/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
             <Route path="/reports/purchases/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
             <Route path="/reports/inventory/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />

@@ -18,6 +18,7 @@ import {
     getLocalStaffModel,
     getLocalStaffSalaryPaymentModel,
     getLocalStaffSaleBillModel,
+    getLocalStaffAttendanceModel,
 } from "../../../configs/connect.db.js";
 
 // Helper function to build date filter
@@ -608,9 +609,39 @@ export const getSaleReturnReport = async (filters = {}) => {
 export const getInventoryReport = async (filters = {}) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
-    const { categoryId, lowStock, nearExpiry, page = 1, limit = 20 } = filters;
+    const OrderModel = getLocalOrderModel();
+    const PurchaseModel = getLocalPurchaseModel();
+    const WastageModel = getLocalWastageModel();
+    const ProductReturnModel = getLocalProductReturnModel();
+    const CategoryModel = getLocalCategoryModel();
+    
+    const { 
+        categoryId, 
+        lowStock, 
+        nearExpiry, 
+        page = 1, 
+        limit = 20,
+        fromDate,
+        toDate,
+        productName,
+        productCode,
+        tag,
+        sortBy = 'createdAt'
+    } = filters;
 
     const matchQuery = { isActive: true };
+    
+    // Build date filter
+    let dateFilter = {};
+    if (fromDate && toDate) {
+        const startDate = new Date(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
+    }
+
+    // Apply filters
     if (lowStock) matchQuery.quantity = { $gt: 0, $lte: 10 };
     if (nearExpiry) {
         const thirtyDaysFromNow = new Date();
@@ -620,39 +651,209 @@ export const getInventoryReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    let data = await BatchModel.find(matchQuery)
-        .populate("product", "name defaultSalePrice")
-        .sort({ expiryDate: 1, createdAt: -1 })
+    // Get all products with their data
+    let productQuery = { isActive: true };
+    if (categoryId) productQuery.category = categoryId;
+    if (productName) productQuery.name = { $regex: productName, $options: 'i' };
+    if (productCode) productQuery.code = { $regex: productCode, $options: 'i' };
+
+    const products = await ProductModel.find(productQuery)
+        .populate('category', 'name')
+        .sort({ [sortBy]: sortBy === 'expiryDate' ? 1 : -1 })
         .skip(skip)
         .limit(limit);
 
-    if (categoryId) {
-        const productIds = await ProductModel.find({ category: categoryId }).distinct("_id");
-        data = data.filter(batch => productIds.includes(batch.product._id.toString()));
+    const totalProducts = await ProductModel.countDocuments(productQuery);
+
+    // Get statistics for each product
+    const productsWithStats = await Promise.all(
+        products.map(async (product) => {
+            // Get all batches for this product
+            const batches = await BatchModel.find({ product: product._id, isActive: true });
+            const currentStock = batches.reduce((sum, batch) => sum + batch.quantity, 0);
+            const minStockLevel = product.minStockLevel || 0;
+            const maxStockLevel = product.maxStockLevel || 0;
+            
+            // Get earliest expiry date
+            const expiryDates = batches
+                .filter(b => b.expiryDate)
+                .map(b => new Date(b.expiryDate))
+                .sort((a, b) => a - b);
+            const expiryDate = expiryDates.length > 0 ? expiryDates[0] : null;
+
+            // Get total purchased quantity
+            const purchaseFilter = {
+                'items.product': product._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            const purchases = await PurchaseModel.find(purchaseFilter);
+            const totalPurchased = purchases.reduce((sum, purchase) => {
+                const item = purchase.items.find(i => i.product.toString() === product._id.toString());
+                return sum + (item ? item.quantity : 0);
+            }, 0);
+
+            // Get total sold quantity
+            const orderFilter = {
+                'items.product': product._id,
+                status: 'completed',
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            const orders = await OrderModel.find(orderFilter);
+            const totalSold = orders.reduce((sum, order) => {
+                const item = order.items.find(i => i.product.toString() === product._id.toString());
+                return sum + (item ? item.quantity : 0);
+            }, 0);
+
+            // Get total returned quantity
+            const returnFilter = {
+                'items.product': product._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            const returns = await ProductReturnModel.find(returnFilter);
+            const totalReturned = returns.reduce((sum, ret) => {
+                const item = ret.items.find(i => i.product.toString() === product._id.toString());
+                return sum + (item ? item.quantity : 0);
+            }, 0);
+
+            // Get total wasted quantity
+            const wastageFilter = {
+                product: product._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            const wastages = await WastageModel.find(wastageFilter);
+            const totalWasted = wastages.reduce((sum, w) => sum + w.quantity, 0);
+
+            // Auto-tag the product
+            let assignedTag = null;
+            const now = new Date();
+            
+            if (expiryDate && expiryDate < now) {
+                assignedTag = 'expired';
+            } else if (expiryDate && (expiryDate - now) / (1000 * 60 * 60 * 24) <= 30) {
+                assignedTag = 'near_expiry';
+            } else if (currentStock === 0) {
+                assignedTag = 'dead_stock';
+            } else if (currentStock <= minStockLevel && minStockLevel > 0) {
+                assignedTag = 'low_stock';
+            } else if (currentStock >= maxStockLevel && maxStockLevel > 0) {
+                assignedTag = 'overstock';
+            } else if (totalSold > (totalPurchased * 0.7)) {
+                assignedTag = 'fast_selling';
+            } else if (totalReturned > (totalSold * 0.2)) {
+                assignedTag = 'high_return';
+            }
+
+            // Apply tag filter if specified
+            if (tag && assignedTag !== tag) {
+                return null;
+            }
+
+            return {
+                ...product.toObject(),
+                currentStock,
+                minStockLevel,
+                maxStockLevel,
+                totalPurchased,
+                totalSold,
+                totalReturned,
+                totalWasted,
+                expiryDate,
+                tag: assignedTag,
+            };
+        })
+    );
+
+    // Filter out null values (from tag filtering)
+    const filteredProducts = productsWithStats.filter(p => p !== null);
+    const filteredTotal = filteredProducts.length;
+
+    // Calculate sales and return rankings
+    const sortedBySales = [...filteredProducts].sort((a, b) => b.totalSold - a.totalSold);
+    const sortedByReturns = [...filteredProducts].sort((a, b) => b.totalReturned - a.totalReturned);
+
+    const salesRankMap = {};
+    sortedBySales.forEach((p, index) => {
+        salesRankMap[p._id.toString()] = index + 1;
+    });
+
+    const returnRankMap = {};
+    sortedByReturns.forEach((p, index) => {
+        returnRankMap[p._id.toString()] = index + 1;
+    });
+
+    // Add ranks to products
+    const finalProducts = filteredProducts.map(p => ({
+        ...p,
+        salesRank: salesRankMap[p._id.toString()],
+        returnRank: returnRankMap[p._id.toString()],
+    }));
+
+    // Calculate summary totals by tag
+    const tagCounts = {
+        dead_stock: 0,
+        expired: 0,
+        low_stock: 0,
+        fast_selling: 0,
+        overstock: 0,
+        high_return: 0,
+        near_expiry: 0,
+    };
+
+    finalProducts.forEach(p => {
+        if (p.tag && tagCounts[p.tag] !== undefined) {
+            tagCounts[p.tag]++;
+        }
+    });
+
+    // Sort based on sortBy parameter
+    let sortedProducts = [...finalProducts];
+    if (sortBy === 'tag') {
+        // Sort by tag priority: expired > near_expiry > dead_stock > high_return > low_stock > overstock > fast_selling > none
+        const tagPriority = {
+            expired: 1,
+            near_expiry: 2,
+            dead_stock: 3,
+            high_return: 4,
+            low_stock: 5,
+            overstock: 6,
+            fast_selling: 7,
+        };
+        sortedProducts.sort((a, b) => {
+            const aPriority = a.tag ? tagPriority[a.tag] || 8 : 8;
+            const bPriority = b.tag ? tagPriority[b.tag] || 8 : 8;
+            return aPriority - bPriority;
+        });
+    } else if (sortBy === 'highest_sales') {
+        sortedProducts.sort((a, b) => b.totalSold - a.totalSold);
+    } else if (sortBy === 'lowest_sales') {
+        sortedProducts.sort((a, b) => a.totalSold - b.totalSold);
+    } else if (sortBy === 'most_returned') {
+        sortedProducts.sort((a, b) => b.totalReturned - a.totalReturned);
+    } else if (sortBy === 'expiry_date') {
+        sortedProducts.sort((a, b) => {
+            if (!a.expiryDate) return 1;
+            if (!b.expiryDate) return -1;
+            return new Date(a.expiryDate) - new Date(b.expiryDate);
+        });
+    } else if (sortBy === 'stock_level') {
+        sortedProducts.sort((a, b) => a.currentStock - b.currentStock);
     }
 
-    const total = await BatchModel.countDocuments(matchQuery);
-
-    const totals = await BatchModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: null, totalQuantity: { $sum: "$quantity" }, totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, totalBatches: { $sum: 1 } } }
-    ]);
-
-    const lowStockCount = await BatchModel.countDocuments({ isActive: true, quantity: { $gt: 0, $lte: 10 } });
-    const nearExpiryCount = await BatchModel.countDocuments({ isActive: true, expiryDate: { $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), $gte: new Date() } });
-
     return {
-        data,
-        total,
+        data: sortedProducts,
+        total: filteredTotal,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(filteredTotal / limit),
         summary: {
-            totalQuantity: totals[0]?.totalQuantity || 0,
-            totalValue: totals[0]?.totalValue || 0,
-            totalBatches: totals[0]?.totalBatches || 0,
-            lowStockCount,
-            nearExpiryCount,
+            totalProducts: filteredTotal,
+            deadStockCount: tagCounts.dead_stock,
+            expiredCount: tagCounts.expired,
+            lowStockCount: tagCounts.low_stock,
+            fastSellingCount: tagCounts.fast_selling,
+            overstockCount: tagCounts.overstock,
+            highReturnCount: tagCounts.high_return,
+            nearExpiryCount: tagCounts.near_expiry,
         },
     };
 };
@@ -830,13 +1031,42 @@ export const getStaffReport = async (filters = {}) => {
     const StaffModel = getLocalStaffModel();
     const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
     const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    const { role, status, page = 1, limit = 20 } = filters;
+    const StaffAttendanceModel = getLocalStaffAttendanceModel();
+    const OrderModel = getLocalOrderModel();
+    
+    const { 
+        role, 
+        status, 
+        page = 1, 
+        limit = 20,
+        fromDate,
+        toDate,
+        staffId,
+        orderType 
+    } = filters;
 
     const matchQuery = {};
     if (role) matchQuery.role = role;
     if (status) matchQuery.status = status;
+    if (staffId) matchQuery._id = staffId;
 
     const skip = (page - 1) * limit;
+
+    // Build date filter for orders and attendance
+    let dateFilter = {};
+    if (fromDate && toDate) {
+        const startDate = new Date(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
+    }
+
+    // Build order type filter
+    let orderTypeFilter = {};
+    if (orderType && orderType !== 'both') {
+        orderTypeFilter = { orderType: orderType };
+    }
 
     const [data, total] = await Promise.all([
         StaffModel.find(matchQuery)
@@ -848,42 +1078,110 @@ export const getStaffReport = async (filters = {}) => {
 
     const staffWithStats = await Promise.all(
         data.map(async (staff) => {
-            const salaryPayments = await StaffSalaryPaymentModel.find({ staffId: staff._id });
+            // Get salary payments with date filter
+            const salaryPayments = await StaffSalaryPaymentModel.find({ 
+                staffId: staff._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            });
             const totalPaid = salaryPayments.reduce((sum, payment) => sum + payment.amount, 0);
-            const saleBills = await StaffSaleBillModel.find({ staffId: staff._id });
-            const totalEarned = saleBills.reduce((sum, bill) => sum + bill.earnedAmount, 0);
-            const pendingSalary = staff.salaryType === "fixed" ? (staff.monthlySalary || 0) - totalPaid : 0;
-            const pendingBills = saleBills.filter(b => !b.isPaid).reduce((sum, bill) => sum + bill.earnedAmount, 0);
+            
+            // Get advance/deductions
+            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
+            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
+
+            // Get orders handled by this staff
+            const orderFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
+                ...orderTypeFilter,
+                'staffId': staff._id
+            };
+            
+            const orders = await OrderModel.find(orderFilter);
+            const totalOrders = orders.length;
+            
+            // Calculate sales amounts
+            const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+            const retailSales = orders
+                .filter(o => o.orderType === 'retail')
+                .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+            const wholesaleSales = orders
+                .filter(o => o.orderType === 'wholesale')
+                .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+            // Get attendance data
+            const attendanceFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            
+            const attendanceRecords = await StaffAttendanceModel.find(attendanceFilter);
+            let totalPresentDays = 0;
+            let totalAbsentDays = 0;
+            let totalWorkingHours = 0;
+
+            attendanceRecords.forEach(record => {
+                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
+                if (staffAttendance) {
+                    if (staffAttendance.status === 'present') {
+                        totalPresentDays++;
+                    } else if (staffAttendance.status === 'absent') {
+                        totalAbsentDays++;
+                    }
+                    // Calculate working hours (assuming 8 hours per present day)
+                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
+                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
+                    }
+                }
+            });
+
+            // Calculate net payable
+            const monthlySalary = staff.salaryType === 'fixed' ? (staff.monthlySalary || 0) : 0;
+            const netPayable = monthlySalary - totalPaid - deductions + advance;
+
             return {
                 ...staff.toObject(),
-                totalPaid,
-                totalEarned,
-                pendingSalary,
-                pendingBills,
+                totalOrders,
+                totalSales,
+                retailSales,
+                wholesaleSales,
+                totalPresentDays,
+                totalAbsentDays,
+                totalWorkingHours,
+                salaryPaid: totalPaid,
+                advance,
+                deductions,
+                netPayable,
                 paymentCount: salaryPayments.length,
-                billCount: saleBills.length,
             };
         })
     );
 
-    const topPerformers = await StaffSaleBillModel.aggregate([
-        { $group: { _id: "$staffId", totalEarned: { $sum: "$earnedAmount" }, billCount: { $sum: 1 } } },
-        { $sort: { totalEarned: -1 } },
-        { $limit: 10 },
-        { $lookup: { from: "staff", localField: "_id", foreignField: "_id", as: "staff" } },
-        { $unwind: "$staff" },
-        { $project: { staffName: "$staff.fullName", totalEarned: 1, billCount: 1 } }
-    ]);
+    // Calculate summary totals
+    const grandTotalSales = staffWithStats.reduce((sum, staff) => sum + staff.totalSales, 0);
+    const grandTotalOrders = staffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
+    const grandTotalSalaryPaid = staffWithStats.reduce((sum, staff) => sum + staff.salaryPaid, 0);
+
+    // Calculate performance rank based on total sales
+    const rankedStaff = [...staffWithStats].sort((a, b) => b.totalSales - a.totalSales);
+    rankedStaff.forEach((staff, index) => {
+        staff.rank = index + 1;
+    });
+
+    // Re-sort by original order
+    const finalData = data.map(staff => 
+        rankedStaff.find(r => r._id.toString() === staff._id.toString())
+    );
 
     return {
-        data: staffWithStats,
+        data: finalData,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
             totalStaff: total,
-            topPerformers,
+            grandTotalSales,
+            grandTotalOrders,
+            grandTotalSalaryPaid,
         },
     };
 };
