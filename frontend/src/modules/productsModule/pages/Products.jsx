@@ -1,10 +1,11 @@
 // features/products/pages/Products.jsx
-import { useState } from "react";
-import { Edit, Trash2, AlertTriangle, PackageX } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Edit, Trash2, AlertTriangle, PackageX, Filter } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
+import ProductFilterPanel from "../components/ProductFilterPanel.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
@@ -31,7 +32,19 @@ export default function Products() {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
+    // Filter state
+    const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+    const [activeFilters, setActiveFilters] = useState({});
+    const [currentPage, setCurrentPage] = useState(1);
+    const [uniqueBrands, setUniqueBrands] = useState([]);
+
     const language = userQuery?.data?.language || userQuery?.language || "en";
+
+    // Handle filter changes
+    const handleFiltersChange = useCallback((newFilters) => {
+        setActiveFilters(newFilters);
+        setCurrentPage(1); // Reset to page 1 when filters change
+    }, []);
 
     const openEdit = (id) => { setSelectedProductId(id); setModalMode("update"); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setModalMode("create"); setSelectedProductId(null); };
@@ -218,6 +231,13 @@ export default function Products() {
                     subheading={language === "en" ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}
                 >
                     <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <button
+                            onClick={() => setFilterPanelOpen(true)}
+                            className="px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--ink)] font-medium text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all flex items-center gap-2"
+                        >
+                            <Filter size={16} />
+                            {language === "en" ? "Filters" : "فلٹرز"}
+                        </button>
                         <button onClick={() => { setModalMode("create"); setIsModalOpen(true); }} className="btn-add">
                             {language === "en" ? "+ Add Product" : "+ مصنوعات شامل کریں"}
                         </button>
@@ -226,8 +246,23 @@ export default function Products() {
             </div>
 
             <div className="flex-1  overflow-hidden">
-                <PaginatedList rtkQuery={useProducts} limit={20} dataKey="data" wrapperClassName="h-full" renderItems={renderItems} />
+                <PaginatedList
+                    rtkQuery={useProducts}
+                    limit={20}
+                    dataKey="data"
+                    wrapperClassName="h-full"
+                    renderItems={renderItems}
+                    queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
+                />
             </div>
+
+            {/* Filter Panel */}
+            <ProductFilterPanel
+                isOpen={filterPanelOpen}
+                onClose={() => setFilterPanelOpen(false)}
+                onFiltersChange={handleFiltersChange}
+                brands={uniqueBrands}
+            />
         </div>
     );
 }

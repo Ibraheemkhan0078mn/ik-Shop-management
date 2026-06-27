@@ -19,12 +19,13 @@ import PosCartSidebar from "../components/PosCartSidebar.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
 import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
+import PosFilterSidebar from "../components/PosFilterSidebar.jsx";
 import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
-import { ArrowLeft, ClipboardList, RotateCcw, History } from "lucide-react";
+import { ArrowLeft, ClipboardList, RotateCcw, History, Filter } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,12 @@ export default function PosPage() {
     heldOrders: false,
   });
 
+  // ── Filter State ───────────────────────────────────────────────────────────
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
+  const [activeFilters, setActiveFilters] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [uniqueBrands, setUniqueBrands] = useState([]);
+
   const toggleModal = (modalName) =>
     setOpenModals((prev) => ({ ...prev, [modalName]: !prev[modalName] }));
 
@@ -133,14 +140,16 @@ export default function PosPage() {
   });
 
   // ── API Queries ───────────────────────────────────────────────────────────
-  const { data: productsResponse, refetch: refetchProducts } = useProducts();
-  const allProducts = productsResponse?.data || productsResponse || [];
-
   const { data: heldOrdersResponse } = useHoldOrders();
   const heldOrders = heldOrdersResponse?.data || heldOrdersResponse || [];
 
   const { data: fetchedQarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
   const qarzaAccounts = localQarzaAccounts.length ? localQarzaAccounts : fetchedQarzaAccounts;
+
+  // ── Filter Handlers ───────────────────────────────────────────────────────
+  const handleFiltersChange = useCallback((newFilters) => {
+    setActiveFilters(newFilters);
+  }, []);
 
   // ── API Mutations ─────────────────────────────────────────────────────────
   const [addOrder] = useAddOrder();
@@ -565,7 +574,17 @@ export default function PosPage() {
   return (
     <div className="flex h-screen bg-[var(--app-bg)] overflow-hidden">
 
-      {/* ── Left: Products Panel ─────────────────────────────────────────── */}
+      {/* ── Left: Filter Sidebar ───────────────────────────────────────────── */}
+      {filterSidebarOpen && (
+        <PosFilterSidebar
+          isOpen={filterSidebarOpen}
+          onClose={() => setFilterSidebarOpen(false)}
+          onFiltersChange={handleFiltersChange}
+          brands={uniqueBrands}
+        />
+      )}
+
+      {/* ── Middle: Products Panel ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden p-3 sm:p-4 gap-3">
 
         {/* Header Row */}
@@ -581,6 +600,19 @@ export default function PosPage() {
               }}
             >
               <ArrowLeft size={20} />
+            </button>
+            <button
+              onClick={() => setFilterSidebarOpen(!filterSidebarOpen)}
+              className={`p-2 rounded-lg transition ${
+                filterSidebarOpen
+                  ? "bg-[var(--accent-2)] text-white"
+                  : "bg-[var(--surface-muted)] text-[var(--ink)]"
+              }`}
+              style={{
+                border: "1px solid var(--border)",
+              }}
+            >
+              <Filter size={20} />
             </button>
             <h1 className="text-xl font-bold text-[var(--accent-2)] font-display tracking-tight">
               Point of Sale
@@ -622,6 +654,7 @@ export default function PosPage() {
             dataKey="data"
             wrapperClassName="h-full"
             className="p-3"
+            queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
             renderItems={(products) => (
               <div className="flex flex-col h-full">
                 <table className="w-full text-sm border-collapse">

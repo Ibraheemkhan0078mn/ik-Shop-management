@@ -79,10 +79,75 @@ const getProducts = async () => {
 };
 
 const getPaginationProduct = async (filters = {}) => {
-    const { page = 1, limit = 20 } = filters;
+    const { page = 1, limit = 20, ...filterParams } = filters;
     const skip = (page - 1) * limit;
 
-    const products = await findProductService({})
+    // Build MongoDB query from filter parameters
+    const query = {};
+
+    // Category filter (multiple selection)
+    if (filterParams.category && Array.isArray(filterParams.category)) {
+        query.category = { $in: filterParams.category };
+    } else if (filterParams.category) {
+        query.category = filterParams.category;
+    }
+
+    // Subcategory filter (multiple selection)
+    if (filterParams.subCategory && Array.isArray(filterParams.subCategory)) {
+        query.subCategory = { $in: filterParams.subCategory };
+    } else if (filterParams.subCategory) {
+        query.subCategory = filterParams.subCategory;
+    }
+
+    // Brand filter (multiple selection)
+    if (filterParams.brandName && Array.isArray(filterParams.brandName)) {
+        query.brandName = { $in: filterParams.brandName };
+    } else if (filterParams.brandName) {
+        query.brandName = filterParams.brandName;
+    }
+
+    // Price range filter
+    if (filterParams.minPrice !== undefined || filterParams.maxPrice !== undefined) {
+        query.defaultRetailPrice = {};
+        if (filterParams.minPrice !== undefined) {
+            query.defaultRetailPrice.$gte = Number(filterParams.minPrice);
+        }
+        if (filterParams.maxPrice !== undefined) {
+            query.defaultRetailPrice.$lte = Number(filterParams.maxPrice);
+        }
+    }
+
+    // Stock status filter
+    if (filterParams.stockStatus) {
+        switch (filterParams.stockStatus) {
+            case 'in_stock':
+                query.currentStockLevel = { $gt: 0 };
+                break;
+            case 'out_of_stock':
+                query.currentStockLevel = { $lte: 0 };
+                break;
+            case 'low_stock':
+                query.currentStockLevel = { $gt: 0, $lt: 5 };
+                break;
+        }
+    }
+
+    // Active status filter
+    if (filterParams.isActive !== undefined) {
+        query.isActive = filterParams.isActive === 'true' || filterParams.isActive === true;
+    }
+
+    // Search text filter (name or barcode)
+    if (filterParams.searchText) {
+        const searchRegex = new RegExp(filterParams.searchText, 'i');
+        query.$or = [
+            { name: searchRegex },
+            { barcode: searchRegex },
+            { productCode: searchRegex }
+        ];
+    }
+
+    const products = await findProductService(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
@@ -90,7 +155,7 @@ const getPaginationProduct = async (filters = {}) => {
         .populate("category")
         .populate("subCategory");
 
-    const total = await countProductService({});
+    const total = await countProductService(query);
     const data = await attachBatchSellingPrice(products);
 
     return {

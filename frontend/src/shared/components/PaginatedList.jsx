@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 //  usePaginatedFetch - RTK Query version
 //  Uses RTK Query hook for auto-updating on CRUD operations
 // ─────────────────────────────────────────────────────────────────
-export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null }) => {
+export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null, queryArgs = {} }) => {
     const [currentPage, setCurrentPage] = useState(1)
     const [filter, setFilter] = useState({})
 
@@ -13,6 +13,7 @@ export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null }) => {
         page: currentPage,
         limit,
         ...filter,
+        ...queryArgs,
     })
 
     const extractData = (res) => {
@@ -74,9 +75,10 @@ const PaginatedList = ({
     dataKey = null,
     className = "",
     wrapperClassName = "",
+    queryArgs = {},
 }) => {
     const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter } =
-        usePaginatedFetch({ rtkQuery, limit, dataKey })
+        usePaginatedFetch({ rtkQuery, limit, dataKey, queryArgs })
 
     const filterStr = JSON.stringify(filter)
 
