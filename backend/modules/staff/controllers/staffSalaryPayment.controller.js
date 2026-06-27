@@ -3,6 +3,7 @@ import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     createSalaryPayment,
     getSalaryPaymentsByStaff,
+    deleteSalaryPayment,
 } from "../services/staff.service.js";
 
 // Create Salary Payment
@@ -27,5 +28,17 @@ export const getSalaryPaymentsByStaffData = asyncHandler(async (req, res, next) 
         success: true,
         message: "Salary payments retrieved successfully",
         ...result,
+    });
+});
+
+// Delete Salary Payment
+export const deleteSalaryPaymentData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const payment = await deleteSalaryPayment(id);
+
+    res.status(200).json({
+        success: true,
+        message: "Salary payment deleted successfully",
+        data: payment,
     });
 });

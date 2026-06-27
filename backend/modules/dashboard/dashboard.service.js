@@ -14,18 +14,19 @@ import {
 } from "../../configs/connect.db.js";
 
 export const getDashboardData = async () => {
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const ExpenseModel = getLocalExpensesModel();
-    const ProductModel = getLocalProductModel();
-    const CustomerModel = getLocalCustomerModel();
-    const SupplierModel = getLocalSupplierModel();
-    const BatchModel = getLocalBatchModel();
-    const WastageModel = getLocalWastageModel();
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
-    const ProductReturnModel = getLocalProductReturnModel();
-    const CategoryModel = getLocalCategoryModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
+    try {
+        const OrderModel = getLocalOrderModel();
+        const PurchaseModel = getLocalPurchaseModel();
+        const ExpenseModel = getLocalExpensesModel();
+        const ProductModel = getLocalProductModel();
+        const CustomerModel = getLocalCustomerModel();
+        const SupplierModel = getLocalSupplierModel();
+        const BatchModel = getLocalBatchModel();
+        const WastageModel = getLocalWastageModel();
+        const PurchaseReturnModel = getLocalPurchaseReturnModel();
+        const ProductReturnModel = getLocalProductReturnModel();
+        const CategoryModel = getLocalCategoryModel();
+        const QarzaAccountModel = getLocalQarzaAccountModel();
 
     const now = new Date();
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
@@ -255,4 +256,57 @@ export const getDashboardData = async () => {
             netProfit,
         },
     };
+    } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        return {
+            kpis: {
+                todaySales: 0,
+                todayRevenue: 0,
+                todayPurchases: 0,
+                todayExpenses: 0,
+                totalProducts: 0,
+                totalCustomers: 0,
+                totalSuppliers: 0,
+                monthlyRevenue: 0,
+                monthlyPurchases: 0,
+                monthlyExpenses: 0,
+                netProfit: 0,
+                profitMargin: 0,
+                avgOrderValue: 0,
+                totalInventoryValue: 0,
+                totalInventoryQuantity: 0,
+            },
+            lowStockAlerts: [],
+            expiryAlerts: {
+                expiredBatches: [],
+                expiringIn30Days: [],
+            },
+            recentOrders: [],
+            recentPurchases: [],
+            topSellingProducts: [],
+            topCustomers: [],
+            salesChart: [],
+            purchaseChart: [],
+            wastageChart: [],
+            categorySales: [],
+            paymentMethods: {
+                cash: 0,
+                card: 0,
+                credit: 0,
+                other: 0
+            },
+            pendingApprovals: {
+                pendingWastages: 0,
+                pendingPurchaseReturns: 0,
+                pendingProductReturns: 0,
+            },
+            financialSummary: {
+                totalReceivables: 0,
+                totalReceivablesCount: 0,
+                totalPayables: 0,
+                totalPayablesCount: 0,
+                netProfit: 0,
+            },
+        };
+    }
 };

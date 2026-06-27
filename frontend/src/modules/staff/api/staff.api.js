@@ -8,6 +8,9 @@ export const staffApi = baseApi.injectEndpoints({
                 url: "/staff",
                 params,
             }),
+            transformResponse: (r)=>{
+                return r;
+            },
             providesTags: ["Staff"],
         }),
         getStaffById: builder.query({
@@ -47,6 +50,22 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, { id }) => [{ type: "Staff", id }],
         }),
+        addImages: builder.mutation({
+            query: ({ id, formData }) => ({
+                url: `/staff/${id}/images`,
+                method: "POST",
+                body: formData,
+                formData: true,
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "Staff", id }],
+        }),
+        removeImage: builder.mutation({
+            query: ({ id, imageId }) => ({
+                url: `/staff/${id}/images/${imageId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "Staff", id }],
+        }),
         removeDocument: builder.mutation({
             query: ({ id, docId }) => ({
                 url: `/staff/${id}/documents/${docId}`,
@@ -69,6 +88,13 @@ export const staffApi = baseApi.injectEndpoints({
                 body: data,
             }),
             invalidatesTags: (result, error, { staffId }) => [{ type: "SalaryPayment", id: staffId }],
+        }),
+        deleteSalaryPayment: builder.mutation({
+            query: (paymentId) => ({
+                url: `/staff/salary-payment/${paymentId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: (result, error, paymentId) => [{ type: "SalaryPayment" }],
         }),
 
         // Sale Bills
@@ -104,8 +130,11 @@ export const {
     useDeleteStaffMutation,
     useAddDocumentMutation,
     useRemoveDocumentMutation,
+    useAddImagesMutation,
+    useRemoveImageMutation,
     useGetSalaryPaymentsQuery,
     useCreateSalaryPaymentMutation,
+    useDeleteSalaryPaymentMutation,
     useGetSaleBillsQuery,
     useCreateSaleBillMutation,
     useMarkSaleBillAsPaidMutation,

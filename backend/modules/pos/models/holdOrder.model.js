@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 //  Each product line inside a held (paused) order
 // ─────────────────────────────────────────────────────────────────────────────
 const holdItemSchema = new mongoose.Schema({
-    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Products", required: true },
     name: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },

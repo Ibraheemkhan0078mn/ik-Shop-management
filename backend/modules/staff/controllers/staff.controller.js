@@ -71,27 +71,37 @@ export const deleteStaffData = asyncHandler(async (req, res, next) => {
     });
 });
 
-// Add Document to Staff
-export const addDocumentToStaffData = asyncHandler(async (req, res, next) => {
+// Add Images to Staff
+export const addImagesToStaffData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
-    const documentData = req.body;
-    const staff = await addDocumentToStaff(id, documentData);
+    
+    if (!req.files || req.files.length === 0) {
+        return next(new ErrorResponse("No images uploaded", 400));
+    }
+
+    const imageData = req.files.map(file => ({
+        imageType: "document",
+        imageName: file.filename,
+        uploadedAt: new Date()
+    }));
+
+    const staff = await addDocumentToStaff(id, imageData);
 
     res.status(200).json({
         success: true,
-        message: "Document added successfully",
+        message: "Images added successfully",
         data: staff,
     });
 });
 
-// Remove Document from Staff
-export const removeDocumentFromStaffData = asyncHandler(async (req, res, next) => {
-    const { id, docId } = req.params;
-    const staff = await removeDocumentFromStaff(id, docId);
+// Remove Image from Staff
+export const removeImageFromStaffData = asyncHandler(async (req, res, next) => {
+    const { id, imageId } = req.params;
+    const staff = await removeDocumentFromStaff(id, imageId);
 
     res.status(200).json({
         success: true,
-        message: "Document removed successfully",
+        message: "Image removed successfully",
         data: staff,
     });
 });

@@ -33,9 +33,9 @@ export default function PortionModal({
     const basePrice = Number(product.originalPrice) || Number(product.unitPrice) || 0;
 
     const PORTIONS = [
-        { key: "full",   label: language === "en" ? "Full"         : "پورا",       price: basePrice          },
-        { key: "half",   label: language === "en" ? "Half"         : "آدھا",       price: basePrice / 2      },
-        { key: "custom", label: language === "en" ? "Custom Price" : "کسٹم قیمت",  price: null               },
+        { key: "full", label: language === "en" ? "Full" : "پورا", price: basePrice },
+        { key: "half", label: language === "en" ? "Half" : "آدھا", price: basePrice / 2 },
+        { key: "custom", label: language === "en" ? "Custom Price" : "کسٹم قیمت", price: null },
     ];
 
     return (

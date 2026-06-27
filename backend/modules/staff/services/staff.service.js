@@ -121,11 +121,11 @@ export const deleteStaff = async (staffId) => {
     return staff;
 };
 
-export const addDocumentToStaff = async (staffId, documentData) => {
+export const addDocumentToStaff = async (staffId, imageData) => {
     const StaffModel = getLocalStaffModel();
     const staff = await StaffModel.findByIdAndUpdate(
         staffId,
-        { $push: { documents: documentData } },
+        { $push: { documents: { $each: imageData } } },
         { new: true }
     );
     if (!staff) {
@@ -177,6 +177,15 @@ export const getSalaryPaymentsByStaff = async (staffId, filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit)
     };
+};
+
+export const deleteSalaryPayment = async (paymentId) => {
+    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
+    const payment = await StaffSalaryPaymentModel.findByIdAndDelete(paymentId);
+    if (!payment) {
+        throw new Error('Salary payment not found');
+    }
+    return payment;
 };
 
 // Staff Sale Bill operations

@@ -72,13 +72,21 @@ export const getMe = asyncHandler(async (req, res, next) => {
     const { userId } = req.query;
 
     if (!userId) {
-        return next(new ErrorResponse("User ID is required", 400));
+        return res.status(200).json({
+            success: false,
+            message: "User ID is required",
+            data: null,
+        });
     }
 
     const user = await UserModel.findById(userId).select("-password");
 
     if (!user) {
-        return next(new ErrorResponse("User not found", 404));
+        return res.status(200).json({
+            success: false,
+            message: "User not found",
+            data: null,
+        });
     }
 
     res.status(200).json({
