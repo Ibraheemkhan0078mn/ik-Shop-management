@@ -41,7 +41,7 @@ const staffSaleBillSchema = new mongoose.Schema({
     },
     source: {
         type: String,
-        enum: ['manual', 'pos'],
+        // enum: ['manual', 'pos'],
         default: 'manual'
     },
     posOrderId: {

@@ -13,6 +13,12 @@ import {
     updatePurchase,
     deletePurchase,
 } from "../services/purchase.service.js";
+import {
+    createPurchasePayment,
+    getPurchasePayments,
+    getPurchasePaymentById,
+    deletePurchasePayment,
+} from "../services/purchasePayment.service.js";
 
 export const getPurchasesData = asyncHandler(async (req, res, next) => {
     const purchases = await getPurchases();
@@ -257,6 +263,88 @@ export const deletePurchaseData = asyncHandler(async (req, res) => {
         res.status(200).json({ success: true, message: "Purchase deleted successfully" });
     } catch (error) {
         return res.status(404).json({ success: false, message: error.message });
+    }
+});
+
+export const updatePurchaseStatus = asyncHandler(async (req, res) => {
+    const { getLocalPurchaseModel, getLocalBatchModel } = await import("../../../configs/connect.db.js");
+    const PurchaseModel = getLocalPurchaseModel();
+    const BatchModel = getLocalBatchModel();
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['ordered', 'delivered', 'rejected'].includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
+    const purchase = await PurchaseModel.findById(id);
+    if (!purchase) {
+        return res.status(404).json({ success: false, message: "Purchase not found" });
+    }
+
+    purchase.status = status;
+
+    // If status is delivered, increment stock for all items
+    if (status === 'delivered') {
+        for (const item of purchase.items) {
+            const batch = await BatchModel.findById(item.batch);
+            if (batch) {
+                batch.quantity += item.quantity;
+                await batch.save();
+            }
+        }
+    }
+
+    await purchase.save();
+
+    res.status(200).json({
+        success: true,
+        message: `Purchase status updated to ${status}`,
+        data: purchase,
+    });
+});
+
+export const createPurchasePaymentData = asyncHandler(async (req, res) => {
+    try {
+        const paymentData = {
+            ...req.body,
+            createdBy: req.user?._id,
+        };
+        const payment = await createPurchasePayment(paymentData);
+        res.status(201).json({
+            success: true,
+            message: "Purchase payment recorded successfully",
+            data: payment,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
+    try {
+        const payments = await getPurchasePayments(req.params.purchaseId);
+        res.status(200).json({
+            success: true,
+            message: "Purchase payments retrieved successfully",
+            data: payments,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const deletePurchasePaymentData = asyncHandler(async (req, res) => {
+    try {
+        const result = await deletePurchasePayment(req.params.paymentId);
+        res.status(200).json({
+            success: true,
+            message: result.message,
+            data: result,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
     }
 });
 

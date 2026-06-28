@@ -375,3 +375,213 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
         return res.json({ success: false, msg: "Error getting payment summary" });
     }
 };
+
+export const getCreditsDebitsReport = async (req, res) => {
+    try {
+        const {
+            startDate,
+            endDate,
+            accountId,
+            accountType,
+            transactionType,
+            direction,
+            source,
+            status
+        } = req.query;
+
+        const QarzaAccountModel = getLocalQarzaAccountModel();
+        const QarzaPaymentModel = getLocalQarzaPaymentModel();
+
+        // Build account filter
+        let accountFilter = {};
+        if (accountId) {
+            accountFilter._id = accountId;
+        }
+        if (accountType) {
+            accountFilter.type = accountType;
+        }
+
+        // Get accounts
+        const accounts = await QarzaAccountModel.find(accountFilter);
+
+        // Build payment filter
+        let paymentFilter = {};
+        if (startDate || endDate) {
+            paymentFilter.date = {};
+            if (startDate) paymentFilter.date.$gte = new Date(startDate);
+            if (endDate) paymentFilter.date.$lte = new Date(endDate);
+        }
+        if (accountId) {
+            paymentFilter.qarzaAccountId = accountId;
+        }
+        if (source) {
+            paymentFilter.source = source;
+        }
+        if (transactionType) {
+            // For transaction type, we need to check notes or source
+            if (transactionType === 'cash') {
+                paymentFilter.$or = [
+                    { source: 'manual' },
+                    { notes: /cash/i }
+                ];
+            } else if (transactionType === 'credit') {
+                paymentFilter.$or = [
+                    { source: 'purchase' },
+                    { notes: /credit/i }
+                ];
+            } else if (transactionType === 'hybrid') {
+                paymentFilter.notes = /hybrid/i;
+            }
+        }
+        if (direction) {
+            if (direction === 'incoming') {
+                paymentFilter.type = 'cashin';
+            } else if (direction === 'outgoing') {
+                paymentFilter.type = 'debit';
+            }
+        }
+
+        // Get all payments for filtered accounts
+        const accountIds = accounts.map(a => a._id);
+        if (accountIds.length > 0) {
+            paymentFilter.qarzaAccountId = { $in: accountIds };
+        }
+
+        const payments = await QarzaPaymentModel.find(paymentFilter).sort({ date: -1 });
+
+        // Calculate summary for each account
+        const accountSummaries = accounts.map(account => {
+            const accountPayments = payments.filter(p => p.qarzaAccountId.toString() === account._id.toString());
+            
+            const totalDebit = accountPayments.filter(p => p.type === 'debit').reduce((sum, p) => sum + p.amount, 0);
+            const totalCredit = accountPayments.filter(p => p.type === 'cashin').reduce((sum, p) => sum + p.amount, 0);
+            
+            // Calculate cash, credit, hybrid amounts
+            const cashAmount = accountPayments.filter(p => p.source === 'manual' || p.notes?.includes('cash')).reduce((sum, p) => sum + p.amount, 0);
+            const creditAmount = accountPayments.filter(p => p.source === 'purchase' || p.notes?.includes('credit')).reduce((sum, p) => sum + p.amount, 0);
+            const hybridAmount = accountPayments.filter(p => p.notes?.includes('hybrid')).reduce((sum, p) => sum + p.amount, 0);
+            
+            const currentBalance = account.balance || 0;
+            const lastTransaction = accountPayments.length > 0 ? accountPayments[0].date : null;
+
+            // Determine tag
+            let tag = 'cleared';
+            if (currentBalance < 0) {
+                tag = 'advance';
+            } else if (currentBalance > 10000) {
+                tag = 'overdue';
+            } else if (currentBalance > 0) {
+                tag = 'partial';
+            }
+
+            return {
+                account: {
+                    _id: account._id,
+                    name: account.name,
+                    type: account.type,
+                    phoneNo: account.phoneNo,
+                    address: account.address
+                },
+                totalDebit,
+                totalCredit,
+                cashAmount,
+                creditAmount,
+                hybridAmount,
+                currentBalance,
+                lastTransaction,
+                tag,
+                transactionCount: accountPayments.length
+            };
+        });
+
+        // Calculate overall summary
+        const totalAccounts = accounts.length;
+        const totalCreditAmount = accountSummaries.reduce((sum, a) => sum + a.totalCredit, 0);
+        const totalDebitAmount = accountSummaries.reduce((sum, a) => sum + a.totalDebit, 0);
+        const totalBalanceDue = totalCreditAmount - totalDebitAmount;
+        const totalCashTransactions = accountSummaries.reduce((sum, a) => sum + a.cashAmount, 0);
+        const totalCreditTransactions = accountSummaries.reduce((sum, a) => sum + a.creditAmount, 0);
+        const totalHybridTransactions = accountSummaries.reduce((sum, a) => sum + a.hybridAmount, 0);
+
+        return res.json({
+            success: true,
+            data: {
+                summary: {
+                    totalAccounts,
+                    totalCreditAmount,
+                    totalDebitAmount,
+                    totalBalanceDue,
+                    totalCashTransactions,
+                    totalCreditTransactions,
+                    totalHybridTransactions
+                },
+                accounts: accountSummaries
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting credits/debits report" });
+    }
+};
+
+export const getAccountLedger = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        const QarzaAccountModel = getLocalQarzaAccountModel();
+        const QarzaPaymentModel = getLocalQarzaPaymentModel();
+
+        const account = await QarzaAccountModel.findById(accountId);
+        if (!account) {
+            return res.json({ success: false, msg: "Account not found" });
+        }
+
+        let paymentFilter = { qarzaAccountId: accountId };
+        if (startDate || endDate) {
+            paymentFilter.date = {};
+            if (startDate) paymentFilter.date.$gte = new Date(startDate);
+            if (endDate) paymentFilter.date.$lte = new Date(endDate);
+        }
+
+        const payments = await QarzaPaymentModel.find(paymentFilter).sort({ date: 1 });
+
+        // Calculate running balance
+        let runningBalance = 0;
+        const ledger = payments.map(payment => {
+            const amount = payment.type === 'cashin' ? payment.amount : -payment.amount;
+            runningBalance += amount;
+            
+            return {
+                date: payment.date,
+                description: payment.notes || '',
+                source: payment.source,
+                transactionType: payment.source === 'manual' ? 'cash' : (payment.source === 'purchase' ? 'credit' : 'hybrid'),
+                direction: payment.type === 'cashin' ? 'incoming' : 'outgoing',
+                debitAmount: payment.type === 'debit' ? payment.amount : 0,
+                creditAmount: payment.type === 'cashin' ? payment.amount : 0,
+                runningBalance,
+                orderNumber: payment.orderNumber || '',
+                orderId: payment.orderId || null
+            };
+        });
+
+        return res.json({
+            success: true,
+            data: {
+                account: {
+                    _id: account._id,
+                    name: account.name,
+                    type: account.type,
+                    phoneNo: account.phoneNo,
+                    address: account.address,
+                    currentBalance: account.balance
+                },
+                ledger
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting account ledger" });
+    }
+};

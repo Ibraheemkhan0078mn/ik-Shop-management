@@ -89,6 +89,20 @@ const purchaseSchema = new mongoose.Schema(
         notes: {
             type: String,
         },
+        status: {
+            type: String,
+            enum: ["ordered", "delivered", "rejected"],
+            default: "ordered",
+        },
+        paymentStatus: {
+            type: String,
+            enum: ["pending", "partial", "full"],
+            default: "pending",
+        },
+        paidAmount: {
+            type: Number,
+            default: 0,
+        },
     },
     { timestamps: true },
 );

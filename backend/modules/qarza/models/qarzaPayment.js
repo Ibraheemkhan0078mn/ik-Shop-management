@@ -34,7 +34,6 @@ const QarzaPaymentSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["pos", "manual", "other"],
       default: "manual",
     },
   },

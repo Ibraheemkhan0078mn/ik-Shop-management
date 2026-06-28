@@ -122,12 +122,12 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         shippingCost: purchaseData.shippingCost,
         totalAmount: purchaseData.totalAmount,
         notes: purchaseData.notes,
+        status: 'ordered',
+        paymentStatus: 'pending',
+        paidAmount: 0,
     });
 
-    // Increment stock for all items
-    for (const item of purchaseItems) {
-        await adjustStock(item.product, item.batch, 'inc', item.quantity);
-    }
+    // Don't increment stock for pre-orders - stock is incremented when status changes to 'delivered'
 
     return purchase;
 };

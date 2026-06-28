@@ -1,10 +1,33 @@
-import React from "react";
-import { X, FileText, Calendar, Package, DollarSign, Receipt, Hash, Truck } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, FileText, Calendar, Package, DollarSign, Receipt, Hash, Truck, Trash2 } from "lucide-react";
+import { useGetPurchasePayments } from "../services/purchases.service.js";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ViewPurchaseDetail({ purchase, onClose, language = "en" }) {
     if (!purchase) return null;
 
     const formattedDate = new Date(purchase.date || purchase.createdAt).toLocaleDateString();
+    const { data: payments, refetch: refetchPayments } = useGetPurchasePayments(purchase._id);
+
+    const handleDeletePayment = async (paymentId) => {
+        if (!window.confirm("Are you sure you want to delete this payment?")) return;
+        
+        try {
+            const response = await fetch(`http://localhost:5001/api/purchases/payments/${paymentId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+            const data = await response.json();
+            if (data.success) {
+                showSuccess("Payment deleted successfully");
+                refetchPayments();
+            } else {
+                showError(data.message || "Failed to delete payment");
+            }
+        } catch (error) {
+            showError("Failed to delete payment");
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -148,6 +171,78 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                         <tr>
                                             <td colSpan="5" className="px-5 py-8 text-center text-(--muted)">
                                                 {language === "en" ? "No items recorded in this purchase." : "اس خریداری میں کوئی اشیاء ریکارڈ نہیں کی گئیں۔"}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Payment Details Section */}
+                    <div className="border border-(--border) rounded-2xl overflow-hidden bg-(--surface)">
+                        <div className="px-5 py-4 border-b border-(--border) bg-(--surface-muted)">
+                            <h3 className="text-base font-semibold text-(--ink) flex items-center gap-2">
+                                <DollarSign size={18} className="text-(--accent-2)" />
+                                {language === "en" ? "Payment Details" : "ادائیگی کی تفصیلات"}
+                                <span className="ml-auto text-xs bg-(--surface) px-2 py-1 rounded-lg border border-(--border) text-(--muted)">
+                                    {payments?.data?.length || 0} {language === "en" ? "payments" : "ادائیگیاں"}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-(--surface) border-b border-(--border) text-(--muted) uppercase tracking-wider text-xs">
+                                    <tr>
+                                        <th className="px-5 py-3 font-semibold">{language === "en" ? "Date" : "تاریخ"}</th>
+                                        <th className="px-5 py-3 font-semibold">{language === "en" ? "Method" : "طریقہ"}</th>
+                                        <th className="px-5 py-3 font-semibold text-right">{language === "en" ? "Amount" : "رقم"}</th>
+                                        <th className="px-5 py-3 font-semibold">{language === "en" ? "Credit Account" : "کریڈٹ اکاؤنٹ"}</th>
+                                        <th className="px-5 py-3 font-semibold text-center">{language === "en" ? "Actions" : "ایکشنز"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-(--border)">
+                                    {payments?.data?.length > 0 ? (
+                                        payments.data.map((payment) => (
+                                            <tr key={payment._id} className="hover:bg-(--surface-muted)/50 transition-colors">
+                                                <td className="px-5 py-4">
+                                                    <p className="font-medium text-(--ink)">
+                                                        {new Date(payment.paymentDate).toLocaleDateString()}
+                                                    </p>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                                        payment.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
+                                                        payment.paymentMethod === 'credit' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-purple-100 text-purple-800'
+                                                    }`}>
+                                                        {payment.paymentMethod}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4 text-right font-bold text-(--ink)">
+                                                    {payment.amount?.toLocaleString()} Rs
+                                                    {payment.cashAmount > 0 && <span className="text-xs text-(--muted) block">Cash: {payment.cashAmount?.toLocaleString()}</span>}
+                                                    {payment.creditAmount > 0 && <span className="text-xs text-(--muted) block">Credit: {payment.creditAmount?.toLocaleString()}</span>}
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    {payment.creditAccount?.name || "—"}
+                                                </td>
+                                                <td className="px-5 py-4 text-center">
+                                                    <button
+                                                        onClick={() => handleDeletePayment(payment._id)}
+                                                        className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                                        title={language === "en" ? "Delete Payment" : "ادائیگی حذف کریں"}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-5 py-8 text-center text-(--muted)">
+                                                {language === "en" ? "No payments recorded for this purchase." : "اس خریداری کے لیے کوئی ادائیگی ریکارڈ نہیں کی گئی۔"}
                                             </td>
                                         </tr>
                                     )}

@@ -127,7 +127,7 @@ const navItems = [
       "/reports", "/reports/main-business", "/reports/profit-loss", "/reports/sales", "/reports/purchases", "/reports/inventory", "/reports/giant-inventory",
       "/reports/accounts-and-financials", "/reports/profit-and-loss", "/reports/customers", "/reports/suppliers", "/reports/staff", "/reports/expenses",
       "/reports/sales/details", "/reports/purchases/details", "/reports/inventory/details",
-      "/reports/finance/details", "/reports/profitLoss/details"
+      "/reports/finance/details", "/reports/profitLoss/details", "/reports/credits-debits"
     ],
     items: [
       { id: "mainBusinessReport", icon: BarChart3, url: "/reports/main-business" },
@@ -139,7 +139,8 @@ const navItems = [
       { id: "customerReport", icon: Users, url: "/reports/customers" },
       { id: "supplierReport", icon: Truck, url: "/reports/suppliers" },
       { id: "staffReport", icon: User, url: "/reports/staff" },
-      { id: "expenseReport", icon: DollarSign, url: "/reports/expenses" }
+      { id: "expenseReport", icon: DollarSign, url: "/reports/expenses" },
+      { id: "creditDebits", icon: Wallet, url: "/reports/credits-debits" }
     ]
   },
   {

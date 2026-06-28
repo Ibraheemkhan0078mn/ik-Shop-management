@@ -1,12 +1,13 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus }                           from "lucide-react";
+import { Plus, Check, X, DollarSign } from "lucide-react";
 import { useSelector }                    from "react-redux";
 import { useNavigate }                    from "react-router-dom";
-import { useDeletePurchase, usePurchases } from "../services/purchases.service.js";
+import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
 import PaginatedList                      from "../../../shared/components/PaginatedList.jsx";
 import PurchaseModal                      from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
+import PurchasePaymentModal               from "../components/PurchasePaymentModal.jsx";
 import PageHeading                        from "../../../shared/components/PageHeading.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
@@ -14,9 +15,11 @@ export default function ProductPurchasePage() {
     const language         = useSelector(s => s.auth?.user?.language ?? "en");
     const navigate         = useNavigate();
     const [deletePurchase] = useDeletePurchase();
+    const [updateStatus] = useUpdatePurchaseStatus();
 
     const [modal,        setModal]        = useState(null);
     const [viewPurchase, setViewPurchase] = useState(null);
+    const [paymentModal, setPaymentModal] = useState(null);
 
     const listRef = useRef(null);
 
@@ -28,6 +31,17 @@ export default function ProductPurchasePage() {
             showSuccess("Purchase deleted successfully");
         } catch (error) {
             showError(error?.data?.message || "Failed to delete purchase");
+        }
+    };
+
+    const handleStatusUpdate = async (id, status, e) => {
+        e.stopPropagation();
+        if (!window.confirm(`Mark purchase as ${status}?`)) return;
+        try {
+            await updateStatus({ id, status }).unwrap();
+            showSuccess(`Purchase marked as ${status}`);
+        } catch (error) {
+            showError(error?.data?.message || 'Failed to update status');
         }
     };
 
@@ -46,6 +60,16 @@ export default function ProductPurchasePage() {
                     purchase={viewPurchase}
                     language={language}
                     onClose={() => setViewPurchase(null)}
+                />
+            )}
+            {paymentModal && (
+                <PurchasePaymentModal
+                    purchase={paymentModal}
+                    onClose={() => setPaymentModal(null)}
+                    onSuccess={() => {
+                        setPaymentModal(null);
+                        listRef.current?.refetch();
+                    }}
                 />
             )}
 
@@ -79,6 +103,8 @@ export default function ProductPurchasePage() {
                                     <th className="px-4 py-3 font-semibold text-center">Items</th>
                                     <th className="px-4 py-3 font-semibold text-right">Total</th>
                                     <th className="px-4 py-3 font-semibold">Date</th>
+                                    <th className="px-4 py-3 font-semibold">Status</th>
+                                    <th className="px-4 py-3 font-semibold">Payment</th>
                                     <th className="px-4 py-3 font-semibold text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -90,6 +116,8 @@ export default function ProductPurchasePage() {
                                         onView={() => setViewPurchase(p)}
                                         onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: p._id }); }}
                                         onDelete={e => handleDelete(p._id, e)}
+                                        onStatusUpdate={handleStatusUpdate}
+                                        onPayment={() => setPaymentModal(p)}
                                     />
                                 ))}
                             </tbody>
@@ -106,8 +134,28 @@ export default function ProductPurchasePage() {
     );
 }
 
-function PurchaseRow({ purchase, onView, onEdit, onDelete }) {
+function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPayment }) {
     const date = new Date(purchase?.date ?? purchase?.createdAt).toLocaleDateString();
+    const status = purchase?.status || 'ordered';
+    const paymentStatus = purchase?.paymentStatus || 'pending';
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'ordered': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'delivered': return 'bg-green-100 text-green-800 border-green-300';
+            case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
+            default: return 'bg-gray-100 text-gray-800 border-gray-300';
+        }
+    };
+
+    const getPaymentStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-gray-100 text-gray-800 border-gray-300';
+            case 'partial': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'full': return 'bg-green-100 text-green-800 border-green-300';
+            default: return 'bg-gray-100 text-gray-800 border-gray-300';
+        }
+    };
 
     return (
         <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
@@ -124,7 +172,41 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3 text-ink-muted">{date}</td>
             <td className="px-4 py-3">
-                <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}>
+                    {status}
+                </span>
+            </td>
+            <td className="px-4 py-3">
+                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(paymentStatus)}`}>
+                    {paymentStatus}
+                </span>
+            </td>
+            <td className="px-4 py-3">
+                <div className="flex justify-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                    {status === 'ordered' && (
+                        <>
+                            <button 
+                                onClick={e => onStatusUpdate(purchase._id, 'delivered', e)}
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                Delivered
+                            </button>
+                            <button 
+                                onClick={e => onStatusUpdate(purchase._id, 'rejected', e)}
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
+                                <X className="w-3 h-3" />
+                                Rejected
+                            </button>
+                        </>
+                    )}
+                    {status === 'delivered' && paymentStatus !== 'full' && (
+                        <button 
+                            onClick={onPayment}
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                                Pay
+                            </button>
+                    )}
                     <button onClick={onEdit}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
                         Edit
