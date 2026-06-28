@@ -289,7 +289,7 @@ export const getMainBusinessReport = async (filters = {}) => {
         dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
     }
 
-    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments] = await Promise.all([
+    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, salesByPaymentMethod, expensesByCategory, productReturnsByReason, purchaseReturnsBySupplier, wastagesByProduct, salariesByStaff, salesList, purchasesList, expensesList, wastagesList, purchaseReturnsList, productReturnsList, salaryPaymentsList] = await Promise.all([
         OrderModel.aggregate([
             { $match: { ...dateFilter, status: "completed" } },
             { $group: { _id: null, totalSales: { $sum: "$totalAmount" }, totalDiscount: { $sum: "$discountAmount" }, count: { $sum: 1 } } }
@@ -318,6 +318,39 @@ export const getMainBusinessReport = async (filters = {}) => {
             { $match: dateFilter },
             { $group: { _id: null, totalSalaries: { $sum: "$amount" }, count: { $sum: 1 } } }
         ]),
+        OrderModel.aggregate([
+            { $match: { ...dateFilter, status: "completed" } },
+            { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+        ]),
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$category", total: { $sum: "$amount" }, count: { $sum: 1 } } }
+        ]),
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$reason", total: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
+        ]),
+        PurchaseReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$supplierName", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+        ]),
+        WastageModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$productName", total: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 }, totalQuantity: { $sum: "$quantity" } } }
+        ]),
+        StaffSalaryPaymentModel.aggregate([
+            { $match: dateFilter },
+            { $lookup: { from: "staff", localField: "staffId", foreignField: "_id", as: "staff" } },
+            { $unwind: "$staff" },
+            { $group: { _id: "$staff.name", total: { $sum: "$amount" }, count: { $sum: 1 } } }
+        ]),
+        OrderModel.find({ ...dateFilter, status: "completed" }).select('orderNumber totalAmount paymentMethod customerName createdAt').sort({ createdAt: -1 }).limit(100),
+        PurchaseModel.find(dateFilter).select('invoiceNumber totalAmount supplierName createdAt').sort({ createdAt: -1 }).limit(100),
+        ExpensesModel.find(dateFilter).select('title amount category description createdAt').sort({ createdAt: -1 }).limit(100),
+        WastageModel.find(dateFilter).select('quantity costPrice productName createdAt').sort({ createdAt: -1 }).limit(100),
+        PurchaseReturnModel.find(dateFilter).select('returnNumber totalAmount supplierName createdAt').sort({ createdAt: -1 }).limit(100),
+        ProductReturnModel.find(dateFilter).select('returnNumber refundAmount customerName createdAt').sort({ createdAt: -1 }).limit(100),
+        StaffSalaryPaymentModel.find(dateFilter).select('amount staffId paymentDate').populate('staffId', 'name').sort({ paymentDate: -1 }).limit(100),
     ]);
 
     const totalSales = sales[0]?.totalSales || 0;
@@ -350,6 +383,98 @@ export const getMainBusinessReport = async (filters = {}) => {
             productReturnCount: productReturns[0]?.count || 0,
             salaryPaymentCount: salaryPayments[0]?.count || 0,
         },
+        breakdowns: {
+            salesByPaymentMethod: salesByPaymentMethod.map(item => ({
+                method: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalSales > 0 ? ((item.total / totalSales) * 100).toFixed(1) : 0
+            })),
+            expensesByCategory: expensesByCategory.map(item => ({
+                category: item._id || 'uncategorized',
+                total: item.total,
+                count: item.count,
+                percentage: totalExpenses > 0 ? ((item.total / totalExpenses) * 100).toFixed(1) : 0
+            })),
+            productReturnsByReason: productReturnsByReason.map(item => ({
+                reason: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalProductReturns > 0 ? ((item.total / totalProductReturns) * 100).toFixed(1) : 0
+            })),
+            purchaseReturnsBySupplier: purchaseReturnsBySupplier.map(item => ({
+                supplierName: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalPurchaseReturns > 0 ? ((item.total / totalPurchaseReturns) * 100).toFixed(1) : 0
+            })),
+            wastagesByProduct: wastagesByProduct.map(item => ({
+                productName: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                totalQuantity: item.totalQuantity,
+                percentage: totalWastage > 0 ? ((item.total / totalWastage) * 100).toFixed(1) : 0
+            })),
+            salariesByStaff: salariesByStaff.map(item => ({
+                staffName: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalSalaries > 0 ? ((item.total / totalSalaries) * 100).toFixed(1) : 0
+            }))
+        },
+        transactions: {
+            sales: salesList.map(sale => ({
+                id: sale._id,
+                orderNumber: sale.orderNumber,
+                amount: sale.totalAmount,
+                paymentMethod: sale.paymentMethod,
+                customerName: sale.customerName,
+                date: sale.createdAt
+            })),
+            purchases: purchasesList.map(purchase => ({
+                id: purchase._id,
+                invoiceNumber: purchase.invoiceNumber,
+                amount: purchase.totalAmount,
+                supplierName: purchase.supplierName,
+                date: purchase.createdAt
+            })),
+            expenses: expensesList.map(expense => ({
+                id: expense._id,
+                title: expense.title,
+                amount: expense.amount,
+                category: expense.category,
+                description: expense.description,
+                date: expense.createdAt
+            })),
+            wastages: wastagesList.map(wastage => ({
+                id: wastage._id,
+                productName: wastage.productName,
+                quantity: wastage.quantity,
+                costPrice: wastage.costPrice,
+                totalLoss: wastage.quantity * wastage.costPrice,
+                date: wastage.createdAt
+            })),
+            purchaseReturns: purchaseReturnsList.map(ret => ({
+                id: ret._id,
+                returnNumber: ret.returnNumber,
+                amount: ret.totalAmount,
+                supplierName: ret.supplierName,
+                date: ret.createdAt
+            })),
+            productReturns: productReturnsList.map(ret => ({
+                id: ret._id,
+                returnNumber: ret.returnNumber,
+                amount: ret.refundAmount,
+                customerName: ret.customerName,
+                date: ret.createdAt
+            })),
+            salaryPayments: salaryPaymentsList.map(payment => ({
+                id: payment._id,
+                amount: payment.amount,
+                staffName: payment.staffId?.name || 'Unknown',
+                date: payment.paymentDate
+            }))
+        }
     };
 };
 
