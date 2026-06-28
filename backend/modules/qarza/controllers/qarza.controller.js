@@ -140,7 +140,7 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
-        let { qarzaAccountId } = req.query;
+        let { qarzaAccountId, source } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -148,12 +148,17 @@ export const getPaginatedQarzaPayments = async (req, res) => {
 
         const QarzaPaymentModel = getLocalQarzaPaymentModel();
         
-        let payments = await QarzaPaymentModel.find({ qarzaAccountId })
+        let query = { qarzaAccountId };
+        if (source && source !== 'all') {
+            query.source = source;
+        }
+        
+        let payments = await QarzaPaymentModel.find(query)
             .sort({ date: -1 })
             .limit(limit)
             .skip(skip);
 
-        let total = await QarzaPaymentModel.countDocuments({ qarzaAccountId });
+        let total = await QarzaPaymentModel.countDocuments(query);
 
         return res.json({ 
             success: true, 
@@ -403,7 +408,7 @@ export const getCreditsDebitsReport = async (req, res) => {
             if (startDate) paymentFilter.date.$gte = new Date(startDate);
             if (endDate) paymentFilter.date.$lte = new Date(endDate);
         }
-        if (source) {
+        if (source && source !== 'all') {
             paymentFilter.source = source;
         }
         if (transactionType) {
@@ -414,7 +419,7 @@ export const getCreditsDebitsReport = async (req, res) => {
                 ];
             } else if (transactionType === 'credit') {
                 paymentFilter.$or = [
-                    { source: 'purchase' },
+                    { source: 'purchaseProducts' },
                     { notes: /credit/i }
                 ];
             } else if (transactionType === 'hybrid') {
@@ -507,15 +512,21 @@ export const getCreditsDebitsReport = async (req, res) => {
             accountSummaries.sort((a, b) => a.remainingBalance - b.remainingBalance);
         }
 
-        // Pagination
-        const total = accountSummaries.length;
-        const skip = (page - 1) * limit;
-        const paginatedAccounts = accountSummaries.slice(skip, skip + parseInt(limit));
+        // Filter by status if specified
+        let filteredSummaries = accountSummaries;
+        if (status && status !== 'all') {
+            filteredSummaries = accountSummaries.filter(a => a.accountStatus === status);
+        }
 
-        // Calculate KPI
-        const totalAccounts = accounts.length;
-        const totalDebitOnMe = accountSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0); // Others owe me (they paid in advance)
-        const totalDebitOnOthers = accountSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0); // I owe others (need to pay)
+        // Pagination
+        const total = filteredSummaries.length;
+        const skip = (page - 1) * limit;
+        const paginatedAccounts = filteredSummaries.slice(skip, skip + parseInt(limit));
+
+        // Calculate KPI based on filtered results
+        const totalAccounts = filteredSummaries.length;
+        const totalDebitOnMe = filteredSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0); // Others owe me (they paid in advance)
+        const totalDebitOnOthers = filteredSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0); // I owe others (need to pay)
         const finalAmount = totalDebitOnOthers - totalDebitOnMe; // Positive = I need to receive, Negative = Others owe me
 
         return res.json({

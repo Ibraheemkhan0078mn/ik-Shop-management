@@ -61,7 +61,7 @@ export const createPurchasePayment = async (paymentData) => {
                 type: 'cashin', // We're receiving credit, so it's cashin
                 date: paymentData.paymentDate,
                 notes: `Purchase payment: ${purchase.invoiceNumber}`,
-                source: 'purchase',
+                source: 'purchaseProducts',
             });
 
             // Update credit account balance (increase balance since we owe them)
@@ -87,7 +87,7 @@ export const createPurchasePayment = async (paymentData) => {
                 type: 'debit', // They owe us, so it's debit
                 date: paymentData.paymentDate,
                 notes: `Excess payment from purchase: ${purchase.invoiceNumber}`,
-                source: 'purchase',
+                source: 'purchaseProducts',
             });
 
             // Update credit account balance (decrease since they owe us)

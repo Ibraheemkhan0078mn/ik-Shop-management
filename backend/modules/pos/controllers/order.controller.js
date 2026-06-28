@@ -82,6 +82,8 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
 export const addOrder = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
+    const QarzaAccountModel = getLocalQarzaAccountModel();
+    const QarzaPaymentModel = getLocalQarzaPaymentModel();
 
     // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
     const normalizedItems = req.body.items.map((item) => {
@@ -136,6 +138,44 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     // Deduct stock for all items
     for (const item of validatedData.items) {
         await adjustStock(item.product, item.batchId, 'decr', item.quantity);
+    }
+
+    // Create qarza payment for credit/hybrid payments
+    const paymentMethod = validatedData.paymentMethod;
+    if (paymentMethod === 'credit' && validatedData.qarzaAccount) {
+        const creditAccount = await QarzaAccountModel.findById(validatedData.qarzaAccount);
+        if (creditAccount) {
+            await QarzaPaymentModel.create({
+                qarzaAccountId: validatedData.qarzaAccount,
+                amount: validatedData.totalAmount,
+                type: 'debit', // They owe us, so it's debit
+                date: new Date(),
+                notes: `POS Order: ${validatedData.orderNumber}`,
+                source: 'pos',
+                orderId: order._id,
+                orderNumber: validatedData.orderNumber
+            });
+            // Update credit account balance
+            creditAccount.balance += validatedData.totalAmount;
+            await creditAccount.save();
+        }
+    } else if (paymentMethod === 'hybrid' && validatedData.hybridQarzaAccount && validatedData.hybridQarza > 0) {
+        const creditAccount = await QarzaAccountModel.findById(validatedData.hybridQarzaAccount);
+        if (creditAccount) {
+            await QarzaPaymentModel.create({
+                qarzaAccountId: validatedData.hybridQarzaAccount,
+                amount: validatedData.hybridQarza,
+                type: 'debit', // They owe us, so it's debit
+                date: new Date(),
+                notes: `POS Order (Hybrid): ${validatedData.orderNumber}`,
+                source: 'pos',
+                orderId: order._id,
+                orderNumber: validatedData.orderNumber
+            });
+            // Update credit account balance
+            creditAccount.balance += validatedData.hybridQarza;
+            await creditAccount.save();
+        }
     }
 
     // No longer creating separate staff sale bills - POS orders will be rendered in staff section

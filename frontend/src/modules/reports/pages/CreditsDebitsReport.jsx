@@ -8,16 +8,17 @@ export default function CreditsDebitsReport() {
     const [reportData, setReportData] = useState(null);
     const [showLedger, setShowLedger] = useState(false);
     const [ledgerData, setLedgerData] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     // Filters
     const [filters, setFilters] = useState({
         startDate: '',
         endDate: '',
-        accountId: '',
         accountType: '',
         transactionType: '',
         direction: '',
         source: '',
+        status: 'all',
         sortBy: 'all',
         datePreset: 'all'
     });
@@ -379,7 +380,7 @@ export default function CreditsDebitsReport() {
                     <Filter className="w-4 h-4" style={{ color: 'var(--muted)' }} />
                     <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Filters</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div>
                         <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Date Preset</label>
                         <select
@@ -395,40 +396,20 @@ export default function CreditsDebitsReport() {
                         </select>
                     </div>
                     {filters.datePreset === 'custom' && (
-                        <>
-                            <div>
-                                <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Start Date</label>
-                                <input
-                                    type="date"
-                                    value={filters.startDate}
-                                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>End Date</label>
-                                <input
-                                    type="date"
-                                    value={filters.endDate}
-                                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
-                                />
-                            </div>
-                        </>
+                        <div className="relative">
+                            <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Date Range</label>
+                            <button
+                                onClick={() => setShowDatePicker(true)}
+                                className="w-full px-3 py-2 rounded-lg border text-sm text-left focus:outline-none focus:ring-2 flex items-center gap-2"
+                                style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                            >
+                                <Calendar className="w-4 h-4" style={{ color: 'var(--muted)' }} />
+                                {filters.startDate && filters.endDate 
+                                    ? `${filters.startDate} - ${filters.endDate}`
+                                    : 'Select dates'}
+                            </button>
+                        </div>
                     )}
-                    <div>
-                        <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Account</label>
-                        <select
-                            value={filters.accountId}
-                            onChange={(e) => setFilters({ ...filters, accountId: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
-                        >
-                            <option value="all">All Accounts</option>
-                            {accounts.map(account => (
-                                <option key={account._id} value={account._id}>{account.name}</option>
-                            ))}
-                        </select>
-                    </div>
                     <div>
                         <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Account Type</label>
                         <select
@@ -440,6 +421,32 @@ export default function CreditsDebitsReport() {
                             <option value="personal">Personal</option>
                             <option value="business">Business</option>
                             <option value="others">Others</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Status</label>
+                        <select
+                            value={filters.status}
+                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                        >
+                            <option value="all">All Status</option>
+                            <option value="to_pay">To Pay</option>
+                            <option value="to_receive">To Receive</option>
+                            <option value="cleared">Cleared</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Source</label>
+                        <select
+                            value={filters.source}
+                            onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                        >
+                            <option value="all">All Sources</option>
+                            <option value="pos">POS</option>
+                            <option value="purchaseProducts">Purchase</option>
+                            <option value="manual">Manual</option>
                         </select>
                     </div>
                     <div>
@@ -463,6 +470,54 @@ export default function CreditsDebitsReport() {
                 >
                     {loading ? 'Loading...' : 'Apply Filters'}
                 </button>
+
+                {/* Date Picker Popup */}
+                {showDatePicker && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="rounded-xl p-6" style={{ background: 'var(--surface)', minWidth: '400px' }}>
+                            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--ink)' }}>Select Date Range</h3>
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={filters.startDate}
+                                        onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>End Date</label>
+                                    <input
+                                        type="date"
+                                        value={filters.endDate}
+                                        onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowDatePicker(false)}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium border"
+                                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowDatePicker(false);
+                                        fetchReport();
+                                    }}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                                    style={{ background: 'var(--accent-2)' }}
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Account List */}

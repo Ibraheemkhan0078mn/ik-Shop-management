@@ -27,9 +27,10 @@ export default function EachQarzaAccountRecords() {
 
     const [modal, setModal] = useState(null);
     const [page, setPage] = useState(1);
+    const [sourceFilter, setSourceFilter] = useState('all');
     const limit = 20;
 
-    const { data: paymentsData, isLoading } = useAccountPaymentsPaginated({ qarzaAccountId: id, page, limit });
+    const { data: paymentsData, isLoading } = useAccountPaymentsPaginated({ qarzaAccountId: id, page, limit, source: sourceFilter });
 
     const refresh = useCallback(() => { setPage(1); }, []);
 
@@ -69,6 +70,17 @@ export default function EachQarzaAccountRecords() {
                     <Plus className="w-4 h-4" />
                     {language === "en" ? "Add Payment" : "ادائیگی شامل کریں"}
                 </button>
+                <select
+                    value={sourceFilter}
+                    onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
+                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
+                    style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
+                >
+                    <option value="all">All Sources</option>
+                    <option value="pos">POS</option>
+                    <option value="purchaseProducts">Purchase</option>
+                    <option value="manual">Manual</option>
+                </select>
             </div>
 
             {/* summary cards */}
