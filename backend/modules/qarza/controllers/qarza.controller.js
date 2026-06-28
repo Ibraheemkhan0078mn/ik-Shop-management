@@ -386,39 +386,27 @@ export const getCreditsDebitsReport = async (req, res) => {
             transactionType,
             direction,
             source,
-            status
+            status,
+            sortBy,
+            page = 1,
+            limit = 20
         } = req.query;
+        console.log(req.query, "the query")
 
         const QarzaAccountModel = getLocalQarzaAccountModel();
         const QarzaPaymentModel = getLocalQarzaPaymentModel();
 
-        // Build account filter
-        let accountFilter = {};
-        if (accountId) {
-            accountFilter._id = accountId;
-        }
-        if (accountType) {
-            accountFilter.type = accountType;
-        }
-
-        // Get accounts
-        const accounts = await QarzaAccountModel.find(accountFilter);
-
-        // Build payment filter
+        // Build payment filter based on date range
         let paymentFilter = {};
         if (startDate || endDate) {
             paymentFilter.date = {};
             if (startDate) paymentFilter.date.$gte = new Date(startDate);
             if (endDate) paymentFilter.date.$lte = new Date(endDate);
         }
-        if (accountId) {
-            paymentFilter.qarzaAccountId = accountId;
-        }
         if (source) {
             paymentFilter.source = source;
         }
         if (transactionType) {
-            // For transaction type, we need to check notes or source
             if (transactionType === 'cash') {
                 paymentFilter.$or = [
                     { source: 'manual' },
@@ -441,37 +429,57 @@ export const getCreditsDebitsReport = async (req, res) => {
             }
         }
 
-        // Get all payments for filtered accounts
-        const accountIds = accounts.map(a => a._id);
-        if (accountIds.length > 0) {
-            paymentFilter.qarzaAccountId = { $in: accountIds };
-        }
+        console.log(paymentFilter)
 
+        // Get all payments matching filters
         const payments = await QarzaPaymentModel.find(paymentFilter).sort({ date: -1 });
 
-        // Calculate summary for each account
+        console.log(payments, "the payemnt in qarza report")
+        // Get unique account IDs from payments
+        const accountIdsFromPayments = [...new Set(payments.map(p => p.qarzaAccountId.toString()))];
+
+        // Build account filter
+        let accountFilter = {};
+        if (accountId) {
+            accountFilter._id = accountId;
+        } else if (startDate || endDate) {
+            // If date filter is applied, only show accounts with transactions in that period
+            accountFilter._id = { $in: accountIdsFromPayments };
+        }
+        if (accountType) {
+            accountFilter.type = accountType;
+        }
+
+        // Get accounts
+        const accounts = await QarzaAccountModel.find(accountFilter);
+
+        // Calculate summary for each account based on actual payments
         const accountSummaries = accounts.map(account => {
             const accountPayments = payments.filter(p => p.qarzaAccountId.toString() === account._id.toString());
             
-            const totalDebit = accountPayments.filter(p => p.type === 'debit').reduce((sum, p) => sum + p.amount, 0);
-            const totalCredit = accountPayments.filter(p => p.type === 'cashin').reduce((sum, p) => sum + p.amount, 0);
+            // Calculate from actual payments
+            const totalPaid = accountPayments.filter(p => p.type === 'cashin').reduce((sum, p) => sum + p.amount, 0);
+            const totalToPay = accountPayments.filter(p => p.type === 'debit').reduce((sum, p) => sum + p.amount, 0);
+            const remainingBalance = totalToPay - totalPaid; // Positive = need to pay, Negative = they owe us
             
-            // Calculate cash, credit, hybrid amounts
-            const cashAmount = accountPayments.filter(p => p.source === 'manual' || p.notes?.includes('cash')).reduce((sum, p) => sum + p.amount, 0);
-            const creditAmount = accountPayments.filter(p => p.source === 'purchase' || p.notes?.includes('credit')).reduce((sum, p) => sum + p.amount, 0);
-            const hybridAmount = accountPayments.filter(p => p.notes?.includes('hybrid')).reduce((sum, p) => sum + p.amount, 0);
-            
-            const currentBalance = account.balance || 0;
             const lastTransaction = accountPayments.length > 0 ? accountPayments[0].date : null;
 
-            // Determine tag
+            // Determine status based on actual payment calculation
+            let accountStatus = 'cleared';
+            if (remainingBalance > 0) {
+                accountStatus = 'to_pay'; // We need to pay them
+            } else if (remainingBalance < 0) {
+                accountStatus = 'to_receive'; // They need to pay us
+            }
+
+            // Determine tag based on remaining balance
             let tag = 'cleared';
-            if (currentBalance < 0) {
-                tag = 'advance';
-            } else if (currentBalance > 10000) {
-                tag = 'overdue';
-            } else if (currentBalance > 0) {
-                tag = 'partial';
+            if (remainingBalance < 0) {
+                tag = 'advance'; // They paid in advance
+            } else if (remainingBalance > 10000) {
+                tag = 'overdue'; // Large amount pending
+            } else if (remainingBalance > 0) {
+                tag = 'partial'; // Some balance remaining
             }
 
             return {
@@ -482,40 +490,50 @@ export const getCreditsDebitsReport = async (req, res) => {
                     phoneNo: account.phoneNo,
                     address: account.address
                 },
-                totalDebit,
-                totalCredit,
-                cashAmount,
-                creditAmount,
-                hybridAmount,
-                currentBalance,
+                totalPaid,
+                totalToPay,
+                remainingBalance,
                 lastTransaction,
                 tag,
+                accountStatus,
                 transactionCount: accountPayments.length
             };
         });
 
-        // Calculate overall summary
+        // Sort accounts
+        if (sortBy === 'to_pay') {
+            accountSummaries.sort((a, b) => b.remainingBalance - a.remainingBalance);
+        } else if (sortBy === 'to_receive') {
+            accountSummaries.sort((a, b) => a.remainingBalance - b.remainingBalance);
+        }
+
+        // Pagination
+        const total = accountSummaries.length;
+        const skip = (page - 1) * limit;
+        const paginatedAccounts = accountSummaries.slice(skip, skip + parseInt(limit));
+
+        // Calculate KPI
         const totalAccounts = accounts.length;
-        const totalCreditAmount = accountSummaries.reduce((sum, a) => sum + a.totalCredit, 0);
-        const totalDebitAmount = accountSummaries.reduce((sum, a) => sum + a.totalDebit, 0);
-        const totalBalanceDue = totalCreditAmount - totalDebitAmount;
-        const totalCashTransactions = accountSummaries.reduce((sum, a) => sum + a.cashAmount, 0);
-        const totalCreditTransactions = accountSummaries.reduce((sum, a) => sum + a.creditAmount, 0);
-        const totalHybridTransactions = accountSummaries.reduce((sum, a) => sum + a.hybridAmount, 0);
+        const totalDebitOnMe = accountSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0); // Others owe me (they paid in advance)
+        const totalDebitOnOthers = accountSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0); // I owe others (need to pay)
+        const finalAmount = totalDebitOnOthers - totalDebitOnMe; // Positive = I need to receive, Negative = Others owe me
 
         return res.json({
             success: true,
             data: {
-                summary: {
+                kpi: {
                     totalAccounts,
-                    totalCreditAmount,
-                    totalDebitAmount,
-                    totalBalanceDue,
-                    totalCashTransactions,
-                    totalCreditTransactions,
-                    totalHybridTransactions
+                    totalDebitOnMe,
+                    totalDebitOnOthers,
+                    finalAmount
                 },
-                accounts: accountSummaries
+                accounts: paginatedAccounts,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
             }
         });
     } catch (err) {

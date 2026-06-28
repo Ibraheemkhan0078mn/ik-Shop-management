@@ -1,5 +1,5 @@
-import asyncHandler   from "express-async-handler";
-import ErrorResponse  from "../../../common/utils/ErrorResponse.js";
+import asyncHandler from "express-async-handler";
+import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
@@ -20,8 +20,8 @@ import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.j
 // ─────────────────────────────────────────────────────────────────────────────
 export const generateOrderNumber = asyncHandler(async (req, res) => {
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
-    const endOfDay   = new Date(new Date().setHours(23, 59, 59, 999));
-    const dateRange  = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+    const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
 
     // Count from BOTH collections so hold numbers and order numbers never clash
     const [orderCount, holdCount] = await Promise.all([
@@ -29,7 +29,7 @@ export const generateOrderNumber = asyncHandler(async (req, res) => {
         countHoldOrderService(dateRange),
     ]);
 
-    const dateStr     = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
     const orderNumber = `ORD-${dateStr}-${String(orderCount + holdCount + 1).padStart(4, "0")}`;
 
     res.status(200).json({ success: true, orderNumber });
@@ -55,7 +55,7 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
 
     const OrderModel = getLocalOrderModel();
-    
+
     const orders = await OrderModel.find()
         .sort({ createdAt: -1 })
         .limit(limit)
@@ -81,25 +81,25 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
     const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel(); 
+    const ProductModel = getLocalProductModel();
 
     // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
     const normalizedItems = req.body.items.map((item) => {
-        const qty       = Number(item.quantity  ?? item.qty      ?? 1);
-        const price     = Number(item.unitPrice  ?? item.price    ?? 0);
+        const qty = Number(item.quantity ?? item.qty ?? 1);
+        const price = Number(item.unitPrice ?? item.price ?? 0);
         const origPrice = Number(item.originalPrice ?? item.unitPrice ?? item.price ?? 0);
-        const total     = item.lineTotal != null ? Number(item.lineTotal) : price * qty;
+        const total = item.lineTotal != null ? Number(item.lineTotal) : price * qty;
 
         return {
-            product:       item.product || item._id,
-            name:          item.name,
-            quantity:      qty,
-            unitPrice:     price,
+            product: item.product || item._id,
+            name: item.name,
+            quantity: qty,
+            unitPrice: price,
             originalPrice: origPrice,
-            lineTotal:     total,
-            portionType:   item.portionType || "full",
-            batchId:       item.batchId     ?? null,
-            batchNumber:   item.batchNumber ?? null,
+            lineTotal: total,
+            portionType: item.portionType || "full",
+            batchId: item.batchId ?? null,
+            batchNumber: item.batchNumber ?? null,
         };
     });
 

@@ -531,7 +531,7 @@ export default function PosPage() {
       }
 
       // Print receipt
-      const creditQarzaAccount = qarzaAccounts.find((a) => a._id === selectedQarzaAccountId);
+      const creditQarzaAccount = qarzaAccounts?.accounts?.find((a) => a._id === selectedQarzaAccountId);
       printOrder({
         ...orderPayload,
         ...createdOrder,

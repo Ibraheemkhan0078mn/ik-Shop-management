@@ -54,8 +54,8 @@ let StaffAttendanceModel = null;
 
 export const connectDb = async () => {
     console.log("the connection is running")
-    const LocalConnection = await mongoose 
-        .createConnection( "mongodb://localhost:27017/shop-management", { dbName: "IMS-NEW" })
+    const LocalConnection = await mongoose
+        .createConnection("mongodb://localhost:27017/shop-management", { dbName: "IMS-NEW" })
         .asPromise();
 
     if (LocalConnection.host) {

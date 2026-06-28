@@ -282,7 +282,7 @@ export default function PosPaymentModal({
         if (total > 0) setCashReceived(String(total.toFixed(0)));
     }, [total]);
 
-    const qarzaOptions = qarzaAccounts.map((a) => ({
+    const qarzaOptions = qarzaAccounts?.accounts?.map((a) => ({
         value: a._id,
         label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
     }));
