@@ -3,7 +3,10 @@ import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
 import session from "express-session";
 import cors from "cors";
-
+import dotenv from 'dotenv'
+dotenv.config({
+     quiet: true
+})
 import { connectDb } from "./configs/connect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
 import { uploadDir } from "./common/services/uploadDirectory.js";
@@ -38,7 +41,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(
     cors(
         {
-            origin: ["http://localhost:5173", "http://localhost:5174"],
+            origin: [process.env.frontend_url, "http://localhost:5174"],
             credentials: true,
             methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
         }
