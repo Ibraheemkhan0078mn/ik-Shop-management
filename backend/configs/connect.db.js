@@ -56,9 +56,9 @@ let StaffAttendanceModel = null;
 export const connectDb = async () => {
     console.log("the connection is running")
     dns.setServers(['8.8.8.8', '8.8.4.4']);
-
+// mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0
     const LocalConnection = await mongoose
-        .createConnection("mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0", { dbName: "IMS-NEW" })
+        .createConnection("mongodb://localhost:27017", { dbName: "IMS-NEW" })
         .asPromise();
 
     if (LocalConnection.host) {
