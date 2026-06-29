@@ -261,6 +261,378 @@ export const getPurchaseReport = async (filters = {}) => {
 };
 
 // Main Business Report
+// Sales KPI Report
+export const getSalesKPIReport = async (filters = {}) => {
+    const OrderModel = getLocalOrderModel();
+    const ProductModel = getLocalProductModel();
+    const StaffModel = getLocalStaffModel();
+    const ProductReturnModel = getLocalProductReturnModel();
+    const { fromDate, toDate, period, compareWithPrevious } = filters;
+
+    // Helper to get previous period dates
+    const getPreviousPeriodDates = (currentPeriod) => {
+        const now = new Date();
+        if (currentPeriod === "today") {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return {
+                start: new Date(yesterday.setHours(0, 0, 0, 0)),
+                end: new Date(yesterday.setHours(23, 59, 59, 999))
+            };
+        } else if (currentPeriod === "week") {
+            const startOfLastWeek = new Date(now);
+            startOfLastWeek.setDate(startOfLastWeek.getDate() - startOfLastWeek.getDay() - 7);
+            const endOfLastWeek = new Date(startOfLastWeek);
+            endOfLastWeek.setDate(endOfLastWeek.getDate() + 6);
+            return { start: startOfLastWeek, end: endOfLastWeek };
+        } else if (currentPeriod === "month") {
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            return { start: lastMonth, end: endOfLastMonth };
+        } else if (currentPeriod === "quarter") {
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+            const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+            return { start: lastQuarterStart, end: lastQuarterEnd };
+        } else if (currentPeriod === "year") {
+            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+            return { start: lastYearStart, end: lastYearEnd };
+        }
+        return null;
+    };
+
+    let dateFilter = {};
+    let previousDateFilter = {};
+
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("today");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("week");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("month");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "quarter") {
+        const now = new Date();
+        const quarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), quarter * 3, 1);
+        const endOfQuarter = new Date(now.getFullYear(), quarter * 3 + 3, 0);
+        dateFilter = { createdAt: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("quarter");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("year");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        dateFilter = { createdAt: { $gte: start, $lte: end } };
+        if (compareWithPrevious && daysDiff > 0) {
+            const prevStart = new Date(start);
+            prevStart.setDate(prevStart.getDate() - daysDiff);
+            const prevEnd = new Date(end);
+            prevEnd.setDate(prevEnd.getDate() - daysDiff);
+            previousDateFilter = { createdAt: { $gte: prevStart, $lte: prevEnd } };
+        }
+    }
+
+    const orderFilter = { ...dateFilter, status: "completed" };
+    const previousOrderFilter = compareWithPrevious ? { ...previousDateFilter, status: "completed" } : null;
+
+    // Debug: log the filter to check
+    console.log('Sales KPI Report - dateFilter:', dateFilter);
+    console.log('Sales KPI Report - orderFilter:', orderFilter);
+
+    const [
+        totalSales,
+        totalOrders,
+        totalUnitsSold,
+        totalDiscount,
+        salesByPaymentMethod,
+        salesByOrderType,
+        salesByStaff,
+        topProducts,
+        salesByCategory,
+        salesByCustomer,
+        salesByDate,
+        productReturns,
+        staffList,
+        previousTotalSales,
+        previousSalesByDate
+    ] = await Promise.all([
+        // Total revenue
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]),
+        // Total transactions
+        OrderModel.countDocuments(orderFilter),
+        // Total units sold
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $unwind: "$items" },
+            { $group: { _id: null, totalUnits: { $sum: "$items.quantity" } } }
+        ]),
+        // Total discounts
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { _id: null, totalDiscount: { $sum: "$discountAmount" } } }
+        ]),
+        // Sales by payment method
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+            { $sort: { total: -1 } }
+        ]),
+        // Sales by order type (retail vs wholesale)
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { _id: "$orderType", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+        ]),
+        // Sales by staff
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $lookup: { from: "staff", localField: "staffId", foreignField: "_id", as: "staff" } },
+            { $unwind: { path: "$staff", preserveNullAndEmptyArrays: true } },
+            { $group: { _id: { id: "$staff._id", name: "$staff.name" }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+            { $sort: { total: -1 } }
+        ]),
+        // Top selling products
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $unwind: "$items" },
+            { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
+            { $unwind: "$product" },
+            { $group: { 
+                _id: { productId: "$items.product", name: "$items.name", category: "$product.category", costPrice: "$product.costPrice" }, 
+                totalRevenue: { $sum: "$items.lineTotal" }, 
+                totalUnits: { $sum: "$items.quantity" },
+                count: { $sum: 1 },
+                totalCost: { $sum: { $multiply: ["$items.quantity", "$product.costPrice"] } }
+            } },
+            { $sort: { totalRevenue: -1 } },
+            { $limit: 20 }
+        ]),
+        // Sales by category (from products)
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $unwind: "$items" },
+            { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
+            { $unwind: "$product" },
+            { $group: { 
+                _id: "$product.category", 
+                total: { $sum: "$items.lineTotal" }, 
+                count: { $sum: 1 },
+                units: { $sum: "$items.quantity" }
+            } },
+            { $sort: { total: -1 } }
+        ]),
+        // Sales by customer
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { 
+                _id: "$customerName", 
+                total: { $sum: "$totalAmount" }, 
+                count: { $sum: 1 },
+                orderType: { $first: "$orderType" },
+                lastPurchase: { $max: "$createdAt" }
+            } },
+            { $sort: { total: -1 } },
+            { $limit: 20 }
+        ]),
+        // Sales by date (for trend chart)
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { 
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
+                total: { $sum: "$totalAmount" },
+                count: { $sum: 1 }
+            } },
+            { $sort: { _id: 1 } }
+        ]),
+        // Product returns for the period
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalReturns: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
+        ]),
+        // Get all staff for reference
+        StaffModel.find({}).select('name _id').lean(),
+        // Previous period total for comparison
+        previousOrderFilter ? OrderModel.aggregate([
+            { $match: previousOrderFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]) : Promise.resolve([{ total: 0 }]),
+        // Previous period sales by date
+        previousOrderFilter ? OrderModel.aggregate([
+            { $match: previousOrderFilter },
+            { $group: { 
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
+                total: { $sum: "$totalAmount" },
+                count: { $sum: 1 }
+            } },
+            { $sort: { _id: 1 } }
+        ]) : Promise.resolve([])
+    ]);
+
+    const totalRevenue = totalSales[0]?.total || 0;
+    const totalUnits = totalUnitsSold[0]?.totalUnits || 0;
+    const totalDiscountAmount = totalDiscount[0]?.totalDiscount || 0;
+    const totalReturnsAmount = productReturns[0]?.totalReturns || 0;
+    const returnCount = productReturns[0]?.count || 0;
+    const previousRevenue = previousTotalSales[0]?.total || 0;
+
+    // Calculate derived metrics
+    const netSales = totalRevenue - totalDiscountAmount;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const returnRate = totalOrders > 0 ? (returnCount / totalOrders) * 100 : 0;
+
+    // Calculate trend percentage
+    const revenueTrend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+    // Calculate gross profit (assuming cost price from products)
+    const productCosts = await OrderModel.aggregate([
+        { $match: orderFilter },
+        { $unwind: "$items" },
+        { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
+        { $unwind: "$product" },
+        { $group: { 
+            _id: null, 
+            totalCost: { $sum: { $multiply: ["$items.quantity", "$product.costPrice"] } } 
+        } }
+    ]);
+    const totalCost = productCosts[0]?.totalCost || 0;
+    const grossProfit = totalRevenue - totalCost;
+    const grossProfitMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(2) : 0;
+
+    // Calculate daily average
+    let daysCount = 1;
+    if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        daysCount = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+    } else if (period === "today") {
+        daysCount = 1;
+    } else if (period === "week") {
+        daysCount = 7;
+    } else if (period === "month") {
+        daysCount = 30;
+    } else if (period === "quarter") {
+        daysCount = 90;
+    } else if (period === "year") {
+        daysCount = 365;
+    }
+    const dailyAverage = totalRevenue / daysCount;
+
+    // Calculate cash collected (for reconciliation)
+    const cashCollected = salesByPaymentMethod.find(m => m._id === 'cash')?.total || 0;
+
+    return {
+        summary: {
+            totalRevenue,
+            netSales,
+            grossProfit,
+            grossProfitMargin: parseFloat(grossProfitMargin),
+            totalOrders,
+            totalUnitsSold: totalUnits,
+            totalDiscount: totalDiscountAmount,
+            totalReturns: totalReturnsAmount,
+            returnRate: parseFloat(returnRate.toFixed(2)),
+            averageOrderValue,
+            dailyAverage,
+            revenueTrend: parseFloat(revenueTrend.toFixed(2)),
+            previousRevenue,
+            cashCollected
+        },
+        breakdowns: {
+            byPaymentMethod: salesByPaymentMethod.map(item => ({
+                method: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalRevenue > 0 ? ((item.total / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            byOrderType: salesByOrderType.map(item => ({
+                type: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalRevenue > 0 ? ((item.total / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            byStaff: salesByStaff.map(item => ({
+                staffId: item._id?.id,
+                staffName: item._id?.name || 'Unknown',
+                total: item.total,
+                count: item.count,
+                averageOrderValue: item.count > 0 ? item.total / item.count : 0,
+                percentage: totalRevenue > 0 ? ((item.total / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            byCategory: salesByCategory.map(item => ({
+                category: item._id || 'uncategorized',
+                total: item.total,
+                count: item.count,
+                units: item.units,
+                percentage: totalRevenue > 0 ? ((item.total / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            topProducts: topProducts.map(item => ({
+                productId: item._id?.productId,
+                productName: item._id?.name,
+                category: item._id?.category,
+                totalRevenue: item.totalRevenue,
+                totalUnits: item.totalUnits,
+                count: item.count,
+                totalCost: item.totalCost,
+                profit: item.totalRevenue - (item.totalCost || 0),
+                profitMargin: item.totalRevenue > 0 ? (((item.totalRevenue - (item.totalCost || 0)) / item.totalRevenue) * 100).toFixed(2) : 0,
+                percentage: totalRevenue > 0 ? ((item.totalRevenue / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            topCustomers: salesByCustomer.map(item => ({
+                customerName: item._id || 'Walk-in',
+                total: item.total,
+                count: item.count,
+                orderType: item.orderType,
+                averageOrderValue: item.count > 0 ? item.total / item.count : 0,
+                lastPurchase: item.lastPurchase,
+                percentage: totalRevenue > 0 ? ((item.total / totalRevenue) * 100).toFixed(1) : 0
+            })),
+            salesByDate: salesByDate.map(item => ({
+                date: item._id,
+                total: item.total,
+                count: item.count
+            })),
+            previousSalesByDate: previousSalesByDate.map(item => ({
+                date: item._id,
+                total: item.total,
+                count: item.count
+            }))
+        }
+    };
+};
+
 // Expense KPI Report
 export const getExpenseKPIReport = async (filters = {}) => {
     const ExpensesModel = getLocalExpensesModel();

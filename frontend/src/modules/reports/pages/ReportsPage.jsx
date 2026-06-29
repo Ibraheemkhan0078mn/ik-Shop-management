@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     FileText,
     Download,
@@ -51,6 +52,7 @@ function Card({ children, className = "" }) {
 }
 
 export default function ReportsPage() {
+    const navigate = useNavigate();
     const [selectedReport, setSelectedReport] = useState("sales");
     const [filters, setFilters] = useState({
         fromDate: "",
@@ -61,6 +63,15 @@ export default function ReportsPage() {
         limit: 20,
     });
     const [showFilters, setShowFilters] = useState(false);
+
+    // Navigate to new sales report when sales is selected
+    const handleReportChange = (value) => {
+        if (value === "sales") {
+            navigate("/reports/sales");
+        } else {
+            setSelectedReport(value);
+        }
+    };
 
     // Report queries
     const salesQuery = useGetSalesReportQuery(filters, { skip: selectedReport !== "sales" });
@@ -263,7 +274,7 @@ export default function ReportsPage() {
                 <SearchableSelect
                     options={REPORT_TYPES}
                     value={selectedReport}
-                    onChange={setSelectedReport}
+                    onChange={handleReportChange}
                     placeholder="Select a report..."
                 />
             </div>

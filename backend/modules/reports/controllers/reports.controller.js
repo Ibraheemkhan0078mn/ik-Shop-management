@@ -25,6 +25,7 @@ import {
     getRecentSales,
     getRecentPurchases,
     getExpenseKPIReport,
+    getSalesKPIReport,
 } from "../services/reports.service.js";
 
 // Dashboard Summary
@@ -59,6 +60,20 @@ export const getExpenseKPIReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Expense KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+// Sales KPI Report
+export const getSalesKPIReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    console.log('Sales KPI Report Controller - filters:', filters);
+    const report = await getSalesKPIReport(filters);
+    console.log('Sales KPI Report Controller - report result:', JSON.stringify(report, null, 2));
+
+    res.status(200).json({
+        success: true,
+        message: "Sales KPI report retrieved successfully",
         data: report,
     });
 });
