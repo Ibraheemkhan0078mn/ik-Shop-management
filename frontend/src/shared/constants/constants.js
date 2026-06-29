@@ -1,5 +1,5 @@
 
-export const backendBaseUrl= "http://localhost:5001/api"
+export const backendBaseUrl= import.meta.env.VITE_BACKEND_API_URL
 
 
 
