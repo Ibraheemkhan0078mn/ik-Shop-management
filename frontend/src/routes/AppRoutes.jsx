@@ -1,7 +1,6 @@
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import Login from "../modules/auth/pages/Login.jsx";
-import Signup from "../modules/auth/pages/Signup.jsx";
+import AuthPage from "../modules/auth/pages/AuthPage.jsx";
 import Profile from "../modules/auth/pages/Profile.jsx";
 import UserManagement from "../modules/auth/pages/UserManagement.jsx";
 import ProtectedRoute from "../shared/components/ProtectedRoute.jsx";
@@ -51,8 +50,7 @@ function AppRoutes() {
     return (
         <Routes>
 
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/" element={<AuthPage />} />
 
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -111,7 +109,7 @@ function AppRoutes() {
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
 
             {/* Default Route */}
-            <Route path="/" element={<Login />} />
+            {/* <Route path="/" element={<Login />} /> */}
             <Route path="*" element={<Link to={"/login"}>go back</Link>} />
             {/* </Route> */}
         </Routes>

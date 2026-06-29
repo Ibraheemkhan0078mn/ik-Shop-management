@@ -4,9 +4,7 @@ import { login, logout } from "../slices/authSlice.js";
 import { useLoginMutation, useSignupMutation, useLogoutMutation, useGetUserQuery } from "../api/authApi.js";
 import { toast } from "sonner";
 
-export const useUser = () => {
-    return useGetUserQuery();
-};
+export const useUser = () => useGetUserQuery();
 
 export const useLogin = () => {
     const navigate = useNavigate();
@@ -20,7 +18,8 @@ export const useLogin = () => {
             toast.success("Login Successful");
             navigate("/dashboard");
         } catch (error) {
-            toast.error(error.response?.data?.message || "Login Failed");
+            const errorMessage = error.response?.data?.message || error.data?.message || "Login Failed";
+            toast.error(errorMessage);
         }
     };
 
@@ -39,7 +38,8 @@ export const useSignup = () => {
             toast.success("Signup Successful");
             navigate("/dashboard");
         } catch (error) {
-            toast.error(error.response?.data?.message || "Signup Failed");
+            const errorMessage = error.response?.data?.message || error.data?.message || "Signup Failed";
+            toast.error(errorMessage);
         }
     };
 
@@ -53,12 +53,14 @@ export const useLogout = () => {
 
     const handleLogout = async () => {
         try {
+            localStorage.removeItem("savedCredentials");
             await logoutMutation().unwrap();
             dispatch(logout());
             navigate("/login");
             toast.success("Logout Successful");
         } catch (error) {
-            toast.error(error.response?.data?.message || "Logout Failed");
+            const errorMessage = error.response?.data?.message || error.data?.message || "Logout Failed";
+            toast.error(errorMessage);
         }
     };
 
