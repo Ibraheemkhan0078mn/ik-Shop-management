@@ -24,6 +24,7 @@ import {
     getNearExpiryProducts,
     getRecentSales,
     getRecentPurchases,
+    getExpenseKPIReport,
 } from "../services/reports.service.js";
 
 // Dashboard Summary
@@ -47,6 +48,18 @@ export const getMainBusinessReportData = asyncHandler(async (req, res, next) => 
         success: true,
         message: "Main business report retrieved successfully",
         ...report,
+    });
+});
+
+// Expense KPI Report
+export const getExpenseKPIReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getExpenseKPIReport(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Expense KPI report retrieved successfully",
+        data: report,
     });
 });
 

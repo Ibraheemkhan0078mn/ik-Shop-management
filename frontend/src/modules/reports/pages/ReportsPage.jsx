@@ -20,6 +20,7 @@ import {
     useGetActivityReportQuery,
 } from "../services/reports.service.js";
 import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
+import ExpenseKPIReport from "./ExpenseKPIReport.jsx";
 
 const REPORT_TYPES = [
     { value: "sales", label: "Sales Report", icon: FileText },
@@ -339,20 +340,27 @@ export default function ReportsPage() {
                 </button>
             </div>
 
-            {/* Loading State */}
-            {isLoading ? (
-                <Card>
-                    <div className="flex items-center justify-center py-12">
-                        <RefreshCw className="animate-spin text-cyan-600" size={40} />
-                    </div>
-                </Card>
+            {/* Expense Report - has its own loading state */}
+            {selectedReport === "expenses" ? (
+                <ExpenseKPIReport />
             ) : (
                 <>
-                    {/* Summary Cards */}
-                    {renderSummaryCards()}
+                    {/* Loading State */}
+                    {isLoading ? (
+                        <Card>
+                            <div className="flex items-center justify-center py-12">
+                                <RefreshCw className="animate-spin text-cyan-600" size={40} />
+                            </div>
+                        </Card>
+                    ) : (
+                        <>
+                            {/* Summary Cards */}
+                            {renderSummaryCards()}
 
-                    {/* Data Table */}
-                    {renderTable()}
+                            {/* Data Table */}
+                            {renderTable()}
+                        </>
+                    )}
                 </>
             )}
         </div>

@@ -261,6 +261,102 @@ export const getPurchaseReport = async (filters = {}) => {
 };
 
 // Main Business Report
+// Expense KPI Report
+export const getExpenseKPIReport = async (filters = {}) => {
+    const ExpensesModel = getLocalExpensesModel();
+    const { fromDate, toDate, period } = filters;
+
+    let dateFilter = {};
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (fromDate && toDate) {
+        dateFilter = { createdAt: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+    }
+
+    const [totalExpenses, expenseCount, expensesByCategory, expensesByType, highestExpense, lowestExpense, expenseList] = await Promise.all([
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]),
+        ExpensesModel.countDocuments(dateFilter),
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$category", total: { $sum: "$amount" }, count: { $sum: 1 } } },
+            { $sort: { total: -1 } }
+        ]),
+        ExpensesModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: "$type", total: { $sum: "$amount" }, count: { $sum: 1 } } },
+            { $sort: { total: -1 } }
+        ]),
+        ExpensesModel.findOne(dateFilter).sort({ amount: -1 }),
+        ExpensesModel.findOne(dateFilter).sort({ amount: 1 }),
+        ExpensesModel.find(dateFilter).select('amount type date notes category createdAt').sort({ createdAt: -1 }).limit(100),
+    ]);
+
+    const totalAmount = totalExpenses[0]?.total || 0;
+    const averageExpense = expenseCount > 0 ? totalAmount / expenseCount : 0;
+
+    // Calculate daily average
+    let daysCount = 1;
+    if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        daysCount = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+    } else if (period === "today") {
+        daysCount = 1;
+    } else if (period === "week") {
+        daysCount = 7;
+    } else if (period === "month") {
+        daysCount = 30;
+    }
+    const dailyAverage = totalAmount / daysCount;
+
+    return {
+        summary: {
+            totalExpenses: totalAmount,
+            expenseCount,
+            averageExpense,
+            dailyAverage,
+            highestExpense: highestExpense?.amount || 0,
+            lowestExpense: lowestExpense?.amount || 0,
+        },
+        breakdowns: {
+            byCategory: expensesByCategory.map(item => ({
+                category: item._id || 'uncategorized',
+                total: item.total,
+                count: item.count,
+                percentage: totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0
+            })),
+            byType: expensesByType.map(item => ({
+                type: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0
+            }))
+        },
+        transactions: expenseList.map(expense => ({
+            id: expense._id,
+            amount: expense.amount,
+            type: expense.type,
+            category: expense.category,
+            notes: expense.notes,
+            date: expense.date || expense.createdAt,
+        }))
+    };
+};
+
 export const getMainBusinessReport = async (filters = {}) => {
     const OrderModel = getLocalOrderModel();
     const PurchaseModel = getLocalPurchaseModel();

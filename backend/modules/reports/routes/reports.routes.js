@@ -23,6 +23,7 @@ import {
     getNearExpiryProductsData,
     getRecentSalesData,
     getRecentPurchasesData,
+    getExpenseKPIReportData,
 } from "../controllers/reports.controller.js";
 
 const router = express.Router();
@@ -65,6 +66,9 @@ router.get("/credit-debit", getCreditDebitReportData);
 
 // Expense Report
 router.get("/expenses", getExpenseReportData);
+
+// Expense KPI Report
+router.get("/expenses-kpi", getExpenseKPIReportData);
 
 // Supplier Report
 router.get("/suppliers", getSupplierReportData);
