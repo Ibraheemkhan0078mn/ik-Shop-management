@@ -131,11 +131,9 @@ const navItems = [
     ],
     items: [
       { id: "mainBusinessReport", icon: BarChart3, url: "/reports/main-business" },
-      { id: "profitLossReport", icon: TrendingUp, url: "/reports/profit-loss" },
       { id: "salesReport", icon: Receipt, url: "/reports/sales" },
       { id: "purchaseReport", icon: CreditCard, url: "/reports/purchases" },
-      { id: "inventoryReport", icon: Boxes, url: "/reports/inventory" },
-      { id: "giantInventoryReport", icon: Boxes, url: "/reports/giant-inventory" },
+      { id: "inventoryReport", icon: Boxes, url: "/reports/giant-inventory" },
       { id: "customerReport", icon: Users, url: "/reports/customers" },
       { id: "supplierReport", icon: Truck, url: "/reports/suppliers" },
       { id: "staffReport", icon: User, url: "/reports/staff" },

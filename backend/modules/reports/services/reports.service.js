@@ -633,6 +633,749 @@ export const getSalesKPIReport = async (filters = {}) => {
     };
 };
 
+// Purchase KPI Report
+export const getPurchaseKPIReport = async (filters = {}) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    const SupplierModel = getLocalSupplierModel();
+    const ProductModel = getLocalProductModel();
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const { fromDate, toDate, period, compareWithPrevious } = filters;
+
+    // Helper to get previous period dates (same as sales report)
+    const getPreviousPeriodDates = (currentPeriod) => {
+        const now = new Date();
+        if (currentPeriod === "today") {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return {
+                start: new Date(yesterday.setHours(0, 0, 0, 0)),
+                end: new Date(yesterday.setHours(23, 59, 59, 999))
+            };
+        } else if (currentPeriod === "week") {
+            const startOfLastWeek = new Date(now);
+            startOfLastWeek.setDate(startOfLastWeek.getDate() - startOfLastWeek.getDay() - 7);
+            const endOfLastWeek = new Date(startOfLastWeek);
+            endOfLastWeek.setDate(endOfLastWeek.getDate() + 6);
+            return { start: startOfLastWeek, end: endOfLastWeek };
+        } else if (currentPeriod === "month") {
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            return { start: lastMonth, end: endOfLastMonth };
+        } else if (currentPeriod === "quarter") {
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+            const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+            return { start: lastQuarterStart, end: lastQuarterEnd };
+        } else if (currentPeriod === "year") {
+            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+            return { start: lastYearStart, end: lastYearEnd };
+        }
+        return null;
+    };
+
+    let dateFilter = {};
+    let previousDateFilter = {};
+
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { date: { $gte: startOfDay, $lte: endOfDay } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("today");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { date: { $gte: startOfWeek, $lte: endOfWeek } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("week");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { date: { $gte: startOfMonth, $lte: endOfMonth } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("month");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "quarter") {
+        const now = new Date();
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
+        dateFilter = { date: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("quarter");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { date: { $gte: startOfYear, $lte: endOfYear } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("year");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        dateFilter = { date: { $gte: start, $lte: end } };
+        if (compareWithPrevious) {
+            const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            const prevStart = new Date(start);
+            prevStart.setDate(prevStart.getDate() - daysDiff);
+            const prevEnd = new Date(end);
+            prevEnd.setDate(prevEnd.getDate() - daysDiff);
+            previousDateFilter = { date: { $gte: prevStart, $lte: prevEnd } };
+        }
+    }
+
+    console.log('Purchase KPI Report - dateFilter:', dateFilter);
+
+    const purchaseFilter = { ...dateFilter };
+    const previousPurchaseFilter = compareWithPrevious ? { ...previousDateFilter } : null;
+
+    const [
+        totalPurchases,
+        totalPurchaseOrders,
+        totalItemsReceived,
+        totalUnpaid,
+        totalPurchaseReturns,
+        purchasesBySupplier,
+        purchasesByDate,
+        previousTotalPurchases,
+        previousPurchasesByDate,
+        purchaseReturnsBySupplier,
+        supplierList
+    ] = await Promise.all([
+        // Total amount purchased
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]),
+        // Total purchase orders
+        PurchaseModel.countDocuments(purchaseFilter),
+        // Total items received
+        PurchaseModel.aggregate([
+            { $match: { ...purchaseFilter, status: "delivered" } },
+            { $unwind: "$items" },
+            { $group: { _id: null, totalItems: { $sum: "$items.quantity" } } }
+        ]),
+        // Total unpaid amount
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }
+        ]),
+        // Total purchase returns
+        PurchaseReturnModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
+        ]),
+        // Purchases by supplier
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
+            { $unwind: "$supplierInfo" },
+            { $group: { 
+                _id: "$supplier", 
+                supplierName: { $first: "$supplierInfo.name" },
+                total: { $sum: "$totalAmount" }, 
+                count: { $sum: 1 },
+                totalItems: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } },
+                unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } }
+            } },
+            { $sort: { total: -1 } }
+        ]),
+        // Purchases by date
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]),
+        // Previous period total
+        previousPurchaseFilter ? PurchaseModel.aggregate([
+            { $match: previousPurchaseFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]) : Promise.resolve([{ total: 0 }]),
+        // Previous period by date
+        previousPurchaseFilter ? PurchaseModel.aggregate([
+            { $match: previousPurchaseFilter },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]) : Promise.resolve([]),
+        // Purchase returns by supplier
+        PurchaseReturnModel.aggregate([
+            { $match: purchaseFilter },
+            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
+            { $unwind: "$supplierInfo" },
+            { $group: { 
+                _id: "$supplier", 
+                supplierName: { $first: "$supplierInfo.name" },
+                total: { $sum: "$totalAmount" }, 
+                count: { $sum: 1 }
+            } },
+            { $sort: { total: -1 } }
+        ]),
+        // Supplier list for performance
+        SupplierModel.find({ isActive: true }).select("name type email phone address")
+    ]);
+
+    const totalAmount = totalPurchases[0]?.total || 0;
+    const previousTotalAmount = previousTotalPurchases[0]?.total || 0;
+    const purchaseTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
+    const averageOrderValue = totalPurchaseOrders > 0 ? totalAmount / totalPurchaseOrders : 0;
+
+    return {
+        summary: {
+            totalAmountPurchased: totalAmount,
+            totalPurchaseOrders,
+            totalItemsReceived: totalItemsReceived[0]?.totalItems || 0,
+            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
+            averageOrderValue,
+            totalPurchaseReturns: totalPurchaseReturns[0]?.totalReturns || 0,
+            purchaseTrend
+        },
+        breakdowns: {
+            bySupplier: purchasesBySupplier.map(item => ({
+                supplierId: item._id,
+                supplierName: item.supplierName,
+                totalAmount: item.total,
+                orderCount: item.count,
+                totalItems: item.totalItems,
+                averageOrderValue: item.count > 0 ? item.total / item.count : 0,
+                outstandingPayable: item.unpaid,
+                percentage: totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0
+            })),
+            byDate: purchasesByDate.map(item => ({
+                date: item._id,
+                total: item.total,
+                count: item.count
+            })),
+            previousByDate: previousPurchasesByDate.map(item => ({
+                date: item._id,
+                total: item.total,
+                count: item.count
+            })),
+            purchaseReturnsBySupplier: purchaseReturnsBySupplier.map(item => ({
+                supplierId: item._id,
+                supplierName: item.supplierName,
+                total: item.total,
+                count: item.count,
+                percentage: totalPurchaseReturns[0]?.totalReturns > 0 ? ((item.total / totalPurchaseReturns[0].totalReturns) * 100).toFixed(1) : 0
+            })),
+            supplierList: supplierList.map(s => ({
+                id: s._id,
+                name: s.name,
+                type: s.type,
+                email: s.email,
+                phone: s.phone,
+                address: s.address
+            }))
+        }
+    };
+};
+
+// Supplier KPI Report
+export const getSupplierKPIReport = async (filters = {}) => {
+    const PurchaseModel = getLocalPurchaseModel();
+    const SupplierModel = getLocalSupplierModel();
+    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const { fromDate, toDate, period, compareWithPrevious } = filters;
+
+    // Helper to get previous period dates (same as sales/purchase reports)
+    const getPreviousPeriodDates = (currentPeriod) => {
+        const now = new Date();
+        if (currentPeriod === "today") {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return {
+                start: new Date(yesterday.setHours(0, 0, 0, 0)),
+                end: new Date(yesterday.setHours(23, 59, 59, 999))
+            };
+        } else if (currentPeriod === "week") {
+            const startOfLastWeek = new Date(now);
+            startOfLastWeek.setDate(startOfLastWeek.getDate() - startOfLastWeek.getDay() - 7);
+            const endOfLastWeek = new Date(startOfLastWeek);
+            endOfLastWeek.setDate(endOfLastWeek.getDate() + 6);
+            return { start: startOfLastWeek, end: endOfLastWeek };
+        } else if (currentPeriod === "month") {
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            return { start: lastMonth, end: endOfLastMonth };
+        } else if (currentPeriod === "quarter") {
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+            const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+            return { start: lastQuarterStart, end: lastQuarterEnd };
+        } else if (currentPeriod === "year") {
+            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+            return { start: lastYearStart, end: lastYearEnd };
+        }
+        return null;
+    };
+
+    let dateFilter = {};
+    let previousDateFilter = {};
+
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { date: { $gte: startOfDay, $lte: endOfDay } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("today");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { date: { $gte: startOfWeek, $lte: endOfWeek } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("week");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { date: { $gte: startOfMonth, $lte: endOfMonth } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("month");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "quarter") {
+        const now = new Date();
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
+        dateFilter = { date: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("quarter");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { date: { $gte: startOfYear, $lte: endOfYear } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("year");
+            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        dateFilter = { date: { $gte: start, $lte: end } };
+        if (compareWithPrevious) {
+            const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            const prevStart = new Date(start);
+            prevStart.setDate(prevStart.getDate() - daysDiff);
+            const prevEnd = new Date(end);
+            prevEnd.setDate(prevEnd.getDate() - daysDiff);
+            previousDateFilter = { date: { $gte: prevStart, $lte: prevEnd } };
+        }
+    }
+
+    console.log('Supplier KPI Report - dateFilter:', dateFilter);
+
+    const purchaseFilter = { ...dateFilter };
+    const previousPurchaseFilter = compareWithPrevious ? { ...previousDateFilter } : null;
+
+    const [
+        totalSuppliers,
+        activeSuppliers,
+        totalPurchases,
+        totalPurchaseAmount,
+        totalUnpaid,
+        totalReturns,
+        supplierPerformance,
+        supplierPurchaseHistory,
+        supplierReturns,
+        supplierPaymentStatus,
+        previousTotalPurchaseAmount
+    ] = await Promise.all([
+        // Total suppliers
+        SupplierModel.countDocuments({}),
+        // Active suppliers
+        SupplierModel.countDocuments({ isActive: true }),
+        // Total purchases
+        PurchaseModel.countDocuments(purchaseFilter),
+        // Total purchase amount
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]),
+        // Total unpaid
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }
+        ]),
+        // Total returns
+        PurchaseReturnModel.aggregate([
+            { $match: purchaseFilter },
+            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
+        ]),
+        // Supplier performance (orders, delivery, quality)
+        SupplierModel.aggregate([
+            { $match: { isActive: true } },
+            { $lookup: { from: "productpurchases", localField: "_id", foreignField: "supplier", as: "purchases" } },
+            { $addFields: {
+                totalOrders: { $size: "$purchases" },
+                totalSpent: { $sum: "$purchases.totalAmount" }
+            }},
+            { $sort: { totalSpent: -1 } }
+        ]),
+        // Supplier purchase history (detailed)
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
+            { $unwind: "$supplierInfo" },
+            { $project: {
+                _id: 1,
+                invoiceNumber: 1,
+                date: 1,
+                supplierName: "$supplierInfo.name",
+                supplierId: "$supplier",
+                totalAmount: 1,
+                status: 1,
+                paymentStatus: 1,
+                paidAmount: 1,
+                itemCount: { $size: "$items" }
+            }},
+            { $sort: { date: -1 } }
+        ]),
+        // Supplier returns
+        PurchaseReturnModel.aggregate([
+            { $match: purchaseFilter },
+            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
+            { $unwind: "$supplierInfo" },
+            { $group: {
+                _id: "$supplier",
+                supplierName: { $first: "$supplierInfo.name" },
+                totalReturns: { $sum: "$totalAmount" },
+                returnCount: { $sum: 1 }
+            }},
+            { $sort: { totalReturns: -1 } }
+        ]),
+        // Supplier payment status (aging)
+        PurchaseModel.aggregate([
+            { $match: purchaseFilter },
+            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
+            { $unwind: "$supplierInfo" },
+            { $group: {
+                _id: "$supplier",
+                supplierName: { $first: "$supplierInfo.name" },
+                totalInvoiced: { $sum: "$totalAmount" },
+                totalPaid: { $sum: "$paidAmount" },
+                outstandingBalance: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } },
+                orderCount: { $sum: 1 }
+            }},
+            { $sort: { outstandingBalance: -1 } }
+        ]),
+        // Previous period total
+        previousPurchaseFilter ? PurchaseModel.aggregate([
+            { $match: previousPurchaseFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]) : Promise.resolve([{ total: 0 }])
+    ]);
+
+    const totalAmount = totalPurchaseAmount[0]?.total || 0;
+    const previousTotalAmount = previousTotalPurchaseAmount[0]?.total || 0;
+    const purchaseTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
+    const averageOrderValue = totalPurchases > 0 ? totalAmount / totalPurchases : 0;
+
+    return {
+        summary: {
+            totalSuppliers,
+            activeSuppliers,
+            totalPurchaseOrders: totalPurchases,
+            totalPurchaseAmount: totalAmount,
+            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
+            totalReturns: totalReturns[0]?.totalReturns || 0,
+            averageOrderValue,
+            purchaseTrend
+        },
+        breakdowns: {
+            supplierPerformance: supplierPerformance.map(s => ({
+                supplierId: s._id,
+                supplierName: s.name,
+                supplierType: s.type,
+                totalOrders: s.totalOrders,
+                totalSpent: s.totalSpent,
+                averageOrderValue: s.totalOrders > 0 ? s.totalSpent / s.totalOrders : 0,
+                performanceRating: s.totalOrders > 10 ? 'High' : s.totalOrders > 5 ? 'Medium' : 'Low'
+            })),
+            purchaseHistory: supplierPurchaseHistory,
+            returnsBySupplier: supplierReturns.map(r => ({
+                supplierId: r._id,
+                supplierName: r.supplierName,
+                totalReturns: r.totalReturns,
+                returnCount: r.returnCount
+            })),
+            paymentStatus: supplierPaymentStatus.map(p => ({
+                supplierId: p._id,
+                supplierName: p.supplierName,
+                totalInvoiced: p.totalInvoiced,
+                totalPaid: p.totalPaid,
+                outstandingBalance: p.outstandingBalance,
+                orderCount: p.orderCount,
+                paymentStatus: p.outstandingBalance === 0 ? 'Paid' : p.outstandingBalance > 0 ? 'Partial' : 'Unpaid'
+            }))
+        }
+    };
+};
+
+// Customer KPI Report
+export const getCustomerKPIReport = async (filters = {}) => {
+    const OrderModel = getLocalOrderModel();
+    const CustomerModel = getLocalCustomerModel();
+    const ProductReturnModel = getLocalProductReturnModel();
+    const { fromDate, toDate, period, compareWithPrevious } = filters;
+
+    // Helper to get previous period dates (same as other reports)
+    const getPreviousPeriodDates = (currentPeriod) => {
+        const now = new Date();
+        if (currentPeriod === "today") {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return {
+                start: new Date(yesterday.setHours(0, 0, 0, 0)),
+                end: new Date(yesterday.setHours(23, 59, 59, 999))
+            };
+        } else if (currentPeriod === "week") {
+            const startOfLastWeek = new Date(now);
+            startOfLastWeek.setDate(startOfLastWeek.getDate() - startOfLastWeek.getDay() - 7);
+            const endOfLastWeek = new Date(startOfLastWeek);
+            endOfLastWeek.setDate(endOfLastWeek.getDate() + 6);
+            return { start: startOfLastWeek, end: endOfLastWeek };
+        } else if (currentPeriod === "month") {
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            return { start: lastMonth, end: endOfLastMonth };
+        } else if (currentPeriod === "quarter") {
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+            const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+            return { start: lastQuarterStart, end: lastQuarterEnd };
+        } else if (currentPeriod === "year") {
+            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+            return { start: lastYearStart, end: lastYearEnd };
+        }
+        return null;
+    };
+
+    let dateFilter = {};
+    let previousDateFilter = {};
+
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("today");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("week");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("month");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "quarter") {
+        const now = new Date();
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
+        dateFilter = { createdAt: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("quarter");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+        if (compareWithPrevious) {
+            const prev = getPreviousPeriodDates("year");
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
+        }
+    } else if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        dateFilter = { createdAt: { $gte: start, $lte: end } };
+        if (compareWithPrevious) {
+            const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            const prevStart = new Date(start);
+            prevStart.setDate(prevStart.getDate() - daysDiff);
+            const prevEnd = new Date(end);
+            prevEnd.setDate(prevEnd.getDate() - daysDiff);
+            previousDateFilter = { createdAt: { $gte: prevStart, $lte: prevEnd } };
+        }
+    }
+
+    console.log('Customer KPI Report - dateFilter:', dateFilter);
+
+    const orderFilter = { ...dateFilter, status: "completed" };
+    const previousOrderFilter = compareWithPrevious ? { ...previousDateFilter, status: "completed" } : null;
+
+    const [
+        totalCustomers,
+        activeCustomers,
+        totalOrders,
+        totalSales,
+        totalUnpaid,
+        totalReturns,
+        customerPerformance,
+        customerPurchaseHistory,
+        customerReturns,
+        customerPaymentStatus,
+        previousTotalSales
+    ] = await Promise.all([
+        // Total customers
+        CustomerModel.countDocuments({}),
+        // Active customers (with orders in last 90 days)
+        CustomerModel.countDocuments({ lastPurchaseDate: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } }),
+        // Total orders
+        OrderModel.countDocuments(orderFilter),
+        // Total sales
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]),
+        // Total unpaid (credit)
+        OrderModel.aggregate([
+            { $match: { ...orderFilter, paymentMethod: "credit" } },
+            { $group: { _id: null, unpaid: { $sum: "$totalAmount" } } }
+        ]),
+        // Total returns
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
+        ]),
+        // Customer performance (orders, spending, frequency)
+        CustomerModel.aggregate([
+            { $lookup: { from: "orders", localField: "_id", foreignField: "customer", as: "orders" } },
+            { $addFields: {
+                totalOrders: { $size: "$orders" },
+                totalSpent: { $sum: "$orders.totalAmount" },
+                lastPurchaseDate: { $max: "$orders.createdAt" }
+            }},
+            { $sort: { totalSpent: -1 } }
+        ]),
+        // Customer purchase history (detailed)
+        OrderModel.aggregate([
+            { $match: orderFilter },
+            { $lookup: { from: "customers", localField: "customer", foreignField: "_id", as: "customerInfo" } },
+            { $unwind: "$customerInfo" },
+            { $project: {
+                _id: 1,
+                orderNumber: 1,
+                createdAt: 1,
+                customerName: "$customerInfo.name",
+                customerId: "$customer",
+                totalAmount: 1,
+                paymentMethod: 1,
+                orderType: 1,
+                itemCount: { $size: "$items" }
+            }},
+            { $sort: { createdAt: -1 } }
+        ]),
+        // Customer returns
+        ProductReturnModel.aggregate([
+            { $match: dateFilter },
+            { $lookup: { from: "orders", localField: "order", foreignField: "_id", as: "orderInfo" } },
+            { $lookup: { from: "customers", localField: "orderInfo.customer", foreignField: "_id", as: "customerInfo" } },
+            { $unwind: "$customerInfo" },
+            { $group: {
+                _id: "$customerInfo._id",
+                customerName: { $first: "$customerInfo.name" },
+                totalReturns: { $sum: "$totalAmount" },
+                returnCount: { $sum: 1 }
+            }},
+            { $sort: { totalReturns: -1 } }
+        ]),
+        // Customer payment status (receivables)
+        OrderModel.aggregate([
+            { $match: { ...orderFilter, paymentMethod: "credit" } },
+            { $lookup: { from: "customers", localField: "customer", foreignField: "_id", as: "customerInfo" } },
+            { $unwind: "$customerInfo" },
+            { $group: {
+                _id: "$customer",
+                customerName: { $first: "$customerInfo.name" },
+                totalCredit: { $sum: "$totalAmount" },
+                orderCount: { $sum: 1 }
+            }},
+            { $sort: { totalCredit: -1 } }
+        ]),
+        // Previous period total
+        previousOrderFilter ? OrderModel.aggregate([
+            { $match: previousOrderFilter },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]) : Promise.resolve([{ total: 0 }])
+    ]);
+
+    const totalAmount = totalSales[0]?.total || 0;
+    const previousTotalAmount = previousTotalSales[0]?.total || 0;
+    const salesTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
+    const averageOrderValue = totalOrders > 0 ? totalAmount / totalOrders : 0;
+
+    return {
+        summary: {
+            totalCustomers,
+            activeCustomers,
+            totalOrders,
+            totalSales: totalAmount,
+            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
+            totalReturns: totalReturns[0]?.totalReturns || 0,
+            averageOrderValue,
+            salesTrend
+        },
+        breakdowns: {
+            customerPerformance: customerPerformance.map(c => ({
+                customerId: c._id,
+                customerName: c.name,
+                totalOrders: c.totalOrders,
+                totalSpent: c.totalSpent,
+                averageOrderValue: c.totalOrders > 0 ? c.totalSpent / c.totalOrders : 0,
+                lastPurchaseDate: c.lastPurchaseDate,
+                customerSegment: c.totalSpent > 100000 ? 'VIP' : c.totalSpent > 50000 ? 'Premium' : c.totalSpent > 10000 ? 'Regular' : 'One-time'
+            })),
+            purchaseHistory: customerPurchaseHistory,
+            returnsByCustomer: customerReturns.map(r => ({
+                customerId: r._id,
+                customerName: r.customerName,
+                totalReturns: r.totalReturns,
+                returnCount: r.returnCount
+            })),
+            paymentStatus: customerPaymentStatus.map(p => ({
+                customerId: p._id,
+                customerName: p.customerName,
+                totalCredit: p.totalCredit,
+                orderCount: p.orderCount,
+                creditStatus: p.totalCredit > 50000 ? 'High Risk' : p.totalCredit > 20000 ? 'Medium Risk' : 'Low Risk'
+            }))
+        }
+    };
+};
+
 // Expense KPI Report
 export const getExpenseKPIReport = async (filters = {}) => {
     const ExpensesModel = getLocalExpensesModel();

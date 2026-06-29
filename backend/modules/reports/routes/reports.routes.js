@@ -25,6 +25,9 @@ import {
     getRecentPurchasesData,
     getExpenseKPIReportData,
     getSalesKPIReportData,
+    getPurchaseKPIReportData,
+    getSupplierKPIReportData,
+    getCustomerKPIReportData,
 } from "../controllers/reports.controller.js";
 
 const router = express.Router();
@@ -73,6 +76,15 @@ router.get("/expenses-kpi", getExpenseKPIReportData);
 
 // Sales KPI Report
 router.get("/sales-kpi", getSalesKPIReportData);
+
+// Purchase KPI Report
+router.get("/purchases-kpi", getPurchaseKPIReportData);
+
+// Supplier KPI Report
+router.get("/suppliers-kpi", getSupplierKPIReportData);
+
+// Customer KPI Report
+router.get("/customers-kpi", getCustomerKPIReportData);
 
 // Supplier Report
 router.get("/suppliers", getSupplierReportData);

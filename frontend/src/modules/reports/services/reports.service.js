@@ -89,6 +89,33 @@ export const reportsApi = baseApi.injectEndpoints({
             providesTags: ["Reports"],
         }),
 
+        // Purchase KPI Report
+        getPurchaseKPIReport: builder.query({
+            query: (params) => ({
+                url: "/reports/purchases-kpi",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
+        // Supplier KPI Report
+        getSupplierKPIReport: builder.query({
+            query: (params) => ({
+                url: "/reports/suppliers-kpi",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
+        // Customer KPI Report
+        getCustomerKPIReport: builder.query({
+            query: (params) => ({
+                url: "/reports/customers-kpi",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
         // Supplier Report
         getSupplierReport: builder.query({
             query: (params) => ({
@@ -231,6 +258,9 @@ export const {
     useGetExpenseReportQuery,
     useGetExpenseKPIReportQuery,
     useGetSalesKPIReportQuery,
+    useGetPurchaseKPIReportQuery,
+    useGetSupplierKPIReportQuery,
+    useGetCustomerKPIReportQuery,
     useGetSupplierReportQuery,
     useGetPurchaseReturnReportQuery,
     useGetSaleReturnReportQuery,

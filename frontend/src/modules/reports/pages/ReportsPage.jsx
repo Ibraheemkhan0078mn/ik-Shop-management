@@ -64,10 +64,16 @@ export default function ReportsPage() {
     });
     const [showFilters, setShowFilters] = useState(false);
 
-    // Navigate to new sales report when sales is selected
+    // Navigate to new sales/purchases/suppliers/customers reports when selected
     const handleReportChange = (value) => {
         if (value === "sales") {
             navigate("/reports/sales");
+        } else if (value === "purchases") {
+            navigate("/reports/purchases");
+        } else if (value === "suppliers") {
+            navigate("/reports/suppliers");
+        } else if (value === "customers") {
+            navigate("/reports/customers");
         } else {
             setSelectedReport(value);
         }

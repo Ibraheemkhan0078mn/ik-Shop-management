@@ -26,6 +26,9 @@ import {
     getRecentPurchases,
     getExpenseKPIReport,
     getSalesKPIReport,
+    getPurchaseKPIReport,
+    getSupplierKPIReport,
+    getCustomerKPIReport,
 } from "../services/reports.service.js";
 
 // Dashboard Summary
@@ -74,6 +77,48 @@ export const getSalesKPIReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Sales KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+// Purchase KPI Report
+export const getPurchaseKPIReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    console.log('Purchase KPI Report Controller - filters:', filters);
+    const report = await getPurchaseKPIReport(filters);
+    console.log('Purchase KPI Report Controller - report result:', JSON.stringify(report, null, 2));
+
+    res.status(200).json({
+        success: true,
+        message: "Purchase KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+// Supplier KPI Report
+export const getSupplierKPIReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    console.log('Supplier KPI Report Controller - filters:', filters);
+    const report = await getSupplierKPIReport(filters);
+    console.log('Supplier KPI Report Controller - report result:', JSON.stringify(report, null, 2));
+
+    res.status(200).json({
+        success: true,
+        message: "Supplier KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+// Customer KPI Report
+export const getCustomerKPIReportData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    console.log('Customer KPI Report Controller - filters:', filters);
+    const report = await getCustomerKPIReport(filters);
+    console.log('Customer KPI Report Controller - report result:', JSON.stringify(report, null, 2));
+
+    res.status(200).json({
+        success: true,
+        message: "Customer KPI report retrieved successfully",
         data: report,
     });
 });

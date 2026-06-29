@@ -42,6 +42,9 @@ import GiantInventoryReport from "../modules/reports/pages/GiantInventoryReport.
 import CreditsDebitsReport from "../modules/reports/pages/CreditsDebitsReport.jsx";
 import ExpenseKPIReport from "../modules/reports/pages/ExpenseKPIReport.jsx";
 import SalesKPIReport from "../modules/reports/pages/SalesKPIReport.jsx";
+import PurchaseKPIReport from "../modules/reports/pages/PurchaseKPIReport.jsx";
+import SupplierKPIReport from "../modules/reports/pages/SupplierKPIReport.jsx";
+import CustomerKPIReport from "../modules/reports/pages/CustomerKPIReport.jsx";
 import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
 
 function AppRoutes() {
@@ -80,17 +83,16 @@ function AppRoutes() {
             {/* Reports Routes */}
             <Route path="/reports" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
             <Route path="/reports/main-business" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
-            <Route path="/reports/profit-loss" element={<ProtectedRoute><ProfitLossReport /></ProtectedRoute>} />
             {/* <Route path="/reports/sales" element={<ProtectedRoute><SalesReports /></ProtectedRoute>} /> */}
-            <Route path="/reports/purchases" element={<ProtectedRoute><PurchasesReports /></ProtectedRoute>} />
-            <Route path="/reports/inventory" element={<ProtectedRoute><InventoryReports /></ProtectedRoute>} />
+            {/* <Route path="/reports/purchases" element={<ProtectedRoute><PurchasesReports /></ProtectedRoute>} /> */}
             <Route path="/reports/giant-inventory" element={<ProtectedRoute><GiantInventoryReport /></ProtectedRoute>} />
-            <Route path="/reports/accounts-and-financials" element={<ProtectedRoute><AccountsReports /></ProtectedRoute>} />
-            <Route path="/reports/profit-and-loss" element={<ProtectedRoute><ProfitLossReports /></ProtectedRoute>} />
             <Route path="/reports/staff" element={<ProtectedRoute><StaffReport /></ProtectedRoute>} />
             <Route path="/reports/credits-debits" element={<ProtectedRoute><CreditsDebitsReport /></ProtectedRoute>} />
             <Route path="/reports/expenses" element={<ProtectedRoute><ExpenseKPIReport /></ProtectedRoute>} />
             <Route path="/reports/sales" element={<ProtectedRoute><SalesKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/purchases" element={<ProtectedRoute><PurchaseKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/suppliers" element={<ProtectedRoute><SupplierKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/customers" element={<ProtectedRoute><CustomerKPIReport /></ProtectedRoute>} />
             <Route path="/reports/sales/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
             <Route path="/reports/purchases/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
             <Route path="/reports/inventory/details" element={<ProtectedRoute><ReportDetailsPage /></ProtectedRoute>} />
