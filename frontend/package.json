@@ -1,53 +1,54 @@
 {
-    "name": "Stock Pilot (The Smart IMS)",
-    "version": "1.0.0",
-    "description": "Stock Pilot frontend (Vite)",
-    "scripts": {
-        "dev": "vite",
-        "start": "vite",
-        "build": "vite build",
-        "preview": "vite preview",
-        "lint": "echo \"No linting configured\"",
-        "knip": "knip"
-    },
-    "keywords": [],
-    "author": {
-        "name": "Faiz Ullah Khan",
-        "email": "faizullahofficial0@gmail.com"
-    },
-    "license": "MIT",
-    "devDependencies": {
-        "@types/node": "^25.0.8",
-        "baseline-browser-mapping": "^2.9.17",
-        "tw-animate-css": "^1.3.6",
-        "typescript": "^5.9.3",
-        "vite": "^7.2.2"
-    },
-    "dependencies": {
-        "@reduxjs/toolkit": "^2.8.2",
-        "@tailwindcss/vite": "^4.1.11",
-        "@tanstack/react-table": "^8.21.3",
-        "@vitejs/plugin-react": "^5.1.0",
-        "@zxing/browser": "^0.1.5",
-        "axios": "^1.11.0",
-        "html5-qrcode": "^2.3.8",
-        "jspdf": "^3.0.3",
-        "jspdf-autotable": "^5.0.2",
-        "lucide-react": "^0.539.0",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0",
-        "react-easy-crop": "^5.5.6",
-        "react-hot-toast": "^2.6.0",
-        "react-hotkeys-hook": "^5.2.4",
-        "react-redux": "^9.2.0",
-        "react-router-dom": "^7.7.1",
-        "react-select": "^5.10.2",
-        "react-toastify": "^11.0.5",
-        "react-top-loading-bar": "^3.0.2",
-        "recharts": "^2.15.4",
-        "redux-persist": "^6.0.0",
-        "sonner": "^2.0.7",
-        "tailwind-merge": "^3.3.1",
-        "tailwindcss": "^4.1.11"
-    }
+  "name": "IK-Stock-Management",
+  "version": "1.0.0",
+  "description": "Stock Management frontend (Vite)",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo \"No linting configured\"",
+    "knip": "knip"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Faiz Ullah Khan",
+    "email": "faizullahofficial0@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^25.0.8",
+    "baseline-browser-mapping": "^2.9.17",
+    "tw-animate-css": "^1.3.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
+    "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/react-table": "^8.21.3",
+    "@vitejs/plugin-react": "^5.1.0",
+    "@zxing/browser": "^0.1.5",
+    "axios": "^1.11.0",
+    "html5-qrcode": "^2.3.8",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.539.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-easy-crop": "^5.5.6",
+    "react-hot-toast": "^2.6.0",
+    "react-hotkeys-hook": "^5.2.4",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.7.1",
+    "react-select": "^5.10.2",
+    "react-toastify": "^11.0.5",
+    "react-top-loading-bar": "^3.0.2",
+    "recharts": "^2.15.4",
+    "redux-persist": "^6.0.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11"
+  }
 }
