@@ -1,14 +1,15 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Check, X, DollarSign } from "lucide-react";
-import { useSelector }                    from "react-redux";
-import { useNavigate }                    from "react-router-dom";
+import { Plus, Printer, Download } from "lucide-react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
-import PaginatedList                      from "../../../shared/components/PaginatedList.jsx";
-import PurchaseModal                      from "../components/PurchaseModal.jsx";
-import ViewPurchaseDetail                 from "../components/ViewPurchaseDetail.jsx";
-import PurchasePaymentModal               from "../components/PurchasePaymentModal.jsx";
-import PageHeading                        from "../../../shared/components/PageHeading.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PurchaseModal from "../components/PurchaseModal.jsx";
+import ViewPurchaseDetail from "../components/ViewPurchaseDetail.jsx";
+import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductPurchasePage() {
@@ -77,14 +78,22 @@ export default function ProductPurchasePage() {
                 <PageHeading
                     heading={language === "en" ? "Purchases" : "خریداری"}
                     subheading={language === "en" ? "Manage your purchases" : "اپنی خریداری کا انتظام کریں"}
-                >
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                            <Plus className="w-4 h-4" />
-                            {language === "en" ? "Add Purchase" : "خرید شامل کریں"}
-                        </button>
-                    </div>
-                </PageHeading>
+                    leftActions={
+                        <div onClick={() => setModal({ mode: "create" })}>
+                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Purchase" : "خرید شامل کریں"} />
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
             </div>
 
             {/* ── list ── */}

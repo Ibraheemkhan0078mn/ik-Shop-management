@@ -1,15 +1,16 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
 import { useState } from "react";
-import { useNavigate }           from "react-router-dom";
-import { Plus, Edit2, Trash2, Phone, MapPin, Wallet } from "lucide-react";
-import { useSelector }           from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { Plus, Printer, Download, MapPin, Edit2, Trash2 } from "lucide-react";
+import { useSelector } from "react-redux";
 import { useQarzaAccountsPaginated, useDeleteQarzaAccount } from "../services/qarza.service.js";
-import QarzaAccountModal         from "../components/QarzaAccountModal.jsx";
+import QarzaAccountModal from "../components/QarzaAccountModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import emptyImage                from "../../../shared/assets/images/boy-user.jpg";
-import { backendBaseUrl }        from "../../../shared/constants/constants.js";
-import PaginatedList             from "../../../shared/components/PaginatedList.jsx";
-import PageHeading               from "../../../shared/components/PageHeading.jsx";
+import emptyImage from "../../../shared/assets/images/boy-user.jpg";
+import { backendBaseUrl } from "../../../shared/constants/constants.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 
 export default function QarzaAccounts() {
     const navigate   = useNavigate();
@@ -48,12 +49,22 @@ export default function QarzaAccounts() {
                 <PageHeading
                     heading={language === "en" ? "Credit & Debits" : "کریڈٹ اور ڈیبٹس"}
                     subheading={language === "en" ? "Manage credit and debit accounts" : "کریڈٹ اور ڈیبٹ اکاؤنٹس کا انتظام کریں"}
-                >
-                    <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                        <Plus className="w-4 h-4" />
-                        {language === "en" ? "Add Account" : "اکاؤنٹ شامل کریں"}
-                    </button>
-                </PageHeading>
+                    leftActions={
+                        <div onClick={() => setModal({ mode: "create" })}>
+                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Account" : "اکاؤنٹ شامل کریں"} />
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
             </div>
 
             <PaginatedList

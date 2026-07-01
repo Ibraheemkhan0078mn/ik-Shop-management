@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Printer, Download } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
@@ -33,14 +34,22 @@ export default function CustomerPage() {
                 <PageHeading
                     heading={language === "en" ? "Customers" : "گاہک"}
                     subheading={language === "en" ? "Manage your customers" : "اپنے گاہکوں کا انتظام کریں"}
-                >
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                            <Plus className="w-4 h-4" />
-                            {language === "en" ? "Add Customer" : "گاہک شامل کریں"}
-                        </button>
-                    </div>
-                </PageHeading>
+                    leftActions={
+                        <div onClick={() => setModal({ mode: "create" })}>
+                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Customer" : "گاہک شامل کریں"} />
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
             </div>
 
             <PaginatedList

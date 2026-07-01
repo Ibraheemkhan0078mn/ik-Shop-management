@@ -1,14 +1,15 @@
 // src/modules/expense/pages/AllExpense.jsx
 import { useState } from "react";
-import { Plus, Tag, Edit2, Trash2, Calendar, BarChart3 } from "lucide-react";
-import { useSelector }      from "react-redux";
+import { Plus, Tag, Printer, Download, BarChart3, Calendar, Edit2, Trash2 } from "lucide-react";
+import { useSelector } from "react-redux";
 import { useDeleteExpense, useExpensesPaginated } from "../services/expense.service.js";
-import ExpenseModal          from "../components/ExpenseModal.jsx";
-import CategoryModal         from "../components/CategoryModal.jsx";
-import PaginatedList         from "../../../shared/components/PaginatedList.jsx";
-import PageHeading           from "../../../shared/components/PageHeading.jsx";
+import ExpenseModal from "../components/ExpenseModal.jsx";
+import CategoryModal from "../components/CategoryModal.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import ExpenseKPIReport      from "../../reports/pages/ExpenseKPIReport.jsx";
+import ExpenseKPIReport from "../../reports/pages/ExpenseKPIReport.jsx";
 
 export default function AllExpense() {
     const language        = useSelector(s => s.auth?.user?.language ?? "en");
@@ -44,18 +45,27 @@ export default function AllExpense() {
                 <PageHeading
                     heading={language === "en" ? "Expenses" : "اخراجات"}
                     subheading={language === "en" ? "Manage your expenses" : "اپنی اخراجات کا انتظام کریں"}
-                >
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button className="btn-add" onClick={() => setModal("create")}>
-                            <Plus className="w-4 h-4" />
-                            {language === "en" ? "Add Expense" : "اخراجات شامل کریں"}
-                        </button>
-                        <button className="btn-add" onClick={() => setCatModal(true)}>
-                            <Tag className="w-4 h-4" />
-                            {language === "en" ? "Categories" : "زمرے"}
-                        </button>
-                    </div>
-                </PageHeading>
+                    leftActions={
+                        <>
+                            <div onClick={() => setModal("create")}>
+                                <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Expense" : "اخراجات شامل کریں"} />
+                            </div>
+                            <div onClick={() => setCatModal(true)}>
+                                <ScreenTabButton lucideIcon={Tag} text={language === "en" ? "Categories" : "زمرے"} />
+                            </div>
+                        </>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
                 
                 {/* Tab Navigation */}
                 <div className="flex gap-2 mt-4 border-b border-edge">

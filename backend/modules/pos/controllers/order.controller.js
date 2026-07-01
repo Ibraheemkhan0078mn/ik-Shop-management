@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     orderCreate as orderCreateService,
@@ -80,7 +80,7 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
 //  Accepts both qty/quantity and price/unitPrice field names from the frontend.
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel();
+    const BatchModel = getLocalBatchModel(); 
     const ProductModel = getLocalProductModel();
     const QarzaAccountModel = getLocalQarzaAccountModel();
     const QarzaPaymentModel = getLocalQarzaPaymentModel();

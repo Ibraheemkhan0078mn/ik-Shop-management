@@ -1,8 +1,9 @@
 // features/productsModule/pages/ProductSubCategoriesPage.jsx
 import { useState } from "react";
-import { Plus, Edit, Trash2, Layers3, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Layers3, AlertTriangle, Printer, Download } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryFormCard from "../components/SubCategoryFormCard";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -134,13 +135,25 @@ export default function ProductSubCategoriesPage() {
             ) : (
                 <>
                     <div className="flex-none">
-                        <PageHeading heading="Product Subcategories" subheading="Manage subcategories for better product organization">
-                            <div className="flex flex-wrap items-center gap-3 mt-4">
-                                <button onClick={() => setMode("create")} className="btn-add">
-                                    <Plus size={16} /> Add Subcategory
-                                </button>
-                            </div>
-                        </PageHeading>
+                        <PageHeading
+                            heading="Product Subcategories"
+                            subheading="Manage subcategories for better product organization"
+                            leftActions={
+                                <div onClick={() => setMode("create")}>
+                                    <ScreenTabButton lucideIcon={Plus} text="Add Subcategory" />
+                                </div>
+                            }
+                            rightActions={
+                                <>
+                                    <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                        <Printer size={18} />
+                                    </button>
+                                    <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                        <Download size={18} />
+                                    </button>
+                                </>
+                            }
+                        />
                     </div>
                     <div className="flex-1 overflow-hidden">
                         <PaginatedList

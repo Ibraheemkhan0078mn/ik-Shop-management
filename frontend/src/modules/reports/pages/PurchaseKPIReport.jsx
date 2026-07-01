@@ -24,6 +24,8 @@ import {
 } from "recharts";
 import { useGetPurchaseKPIReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -106,41 +108,25 @@ export default function PurchaseKPIReport() {
                 }
             `}</style>
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold" style={{ color: 'var(--ink)' }}>Purchase Report</h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
-                        Comprehensive purchase analytics and supplier performance metrics
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 no-print">
-                    <button
-                        onClick={handleRefresh}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                        style={{ background: 'var(--surface)', color: 'var(--ink)', border: '1px solid var(--border)' }}
-                    >
-                        <RefreshCw size={16} />
-                        Refresh
-                    </button>
-                    <button
-                        onClick={handlePrint}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                        style={{ background: 'var(--surface)', color: 'var(--ink)', border: '1px solid var(--border)' }}
-                    >
-                        <Printer size={16} />
-                        Print
-                    </button>
-                    <button
-                        onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                        style={{ background: 'var(--primary)', color: 'white' }}
-                    >
-                        <Download size={16} />
-                        Export
-                    </button>
-                </div>
-            </div>
+            <PageHeading
+                heading="Purchase Report"
+                subheading="Comprehensive purchase analytics and supplier performance metrics"
+                leftActions={
+                    <div onClick={handleRefresh}>
+                        <ScreenTabButton lucideIcon={RefreshCw} text="Refresh" />
+                    </div>
+                }
+                rightActions={
+                    <>
+                        <button onClick={handlePrint} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
+                            <Printer size={18} />
+                        </button>
+                        <button onClick={handleExport} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
+                            <Download size={18} />
+                        </button>
+                    </>
+                }
+            />
 
             {isLoading ? (
                 <div className="flex items-center justify-center py-12">

@@ -1,10 +1,11 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX } from "lucide-react";
+import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX, Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { getPaginatedOrderReturns, deleteOrderReturn as deleteOrderReturnApi } from "../api/orderReturn.api.js";
 
 // Status → badge classes, built only from tokens already defined in index.css.
@@ -115,36 +116,39 @@ const OrderReturnList = () => {
             )}
 
             {/* ── Heading section ── */}
-          <div className="flex-none flex items-center gap-3 px-6 pt-4">
-    <button
-        onClick={() => navigate(-1)}
-        title="Back"
-        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-edge text-ink-subtle hover:text-primary hover:border-edge-brand hover:bg-primary-hover transition-colors"
-    >
-        <ArrowLeft className="w-4 h-4" />
-    </button>
-    <PageHeading heading="Order Returns" subheading="Manage all order returns" />
-</div>
-
-
-
-
-
-            {/* ── Action button section ── */}
-         <div className="flex-none px-6 pt-2 pb-4">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-        <button onClick={() => setShowModal(true)} className="btn-add">
-            <Plus className="w-4 h-4" />
-            New Return
-        </button>
-        <p className="text-sm text-ink-subtle">
-            {pagination.total} return{pagination.total === 1 ? "" : "s"} total
-        </p>
-    </div>
-</div>
+            <div className="flex-none px-6 pt-4">
+                <PageHeading
+                    heading="Order Returns"
+                    subheading="Manage all order returns"
+                    leftActions={
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate(-1)}
+                                title="Back"
+                                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-edge text-ink-subtle hover:text-primary hover:border-edge-brand hover:bg-primary-hover transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                            </button>
+                            <div onClick={() => setShowModal(true)}>
+                                <ScreenTabButton lucideIcon={Plus} text="New Return" />
+                            </div>
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
+            </div>
 
             {/* ── Table section ── */}
-<div className="flex-1 overflow-hidden pb-6">
+            <div className="flex-1 overflow-hidden pb-6">
     <div className="h-full flex flex-col rounded-2xl border border-edge bg-(--surface) shadow-[0_14px_30px_rgba(64,45,28,0.1)] overflow-hidden">
                     {loading ? (
                         <LoadingState />

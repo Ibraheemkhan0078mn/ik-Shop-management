@@ -1,11 +1,12 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
-import { useState }   from "react";
-import { Plus }                    from "lucide-react";
-import { useSelector }             from "react-redux";
+import { useState } from "react";
+import { Plus, Printer, Download } from "lucide-react";
+import { useSelector } from "react-redux";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
-import PaginatedList               from "../../../shared/components/PaginatedList.jsx";
-import SupplierModal               from "../components/SupplierModal.jsx";
-import PageHeading                 from "../../../shared/components/PageHeading.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import SupplierModal from "../components/SupplierModal.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 export default function SupplierPage() {
@@ -39,14 +40,22 @@ export default function SupplierPage() {
                 <PageHeading
                     heading={language === "en" ? "Suppliers" : "سپلائرز"}
                     subheading={language === "en" ? "Manage your suppliers" : "اپنے سپلائرز کا انتظام کریں"}
-                >
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                            <Plus className="w-4 h-4" />
-                            {language === "en" ? "Add Supplier" : "سپلائر شامل کریں"}
-                        </button>
-                    </div>
-                </PageHeading>
+                    leftActions={
+                        <div onClick={() => setModal({ mode: "create" })}>
+                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Supplier" : "سپلائر شامل کریں"} />
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
             </div>
 
             <PaginatedList

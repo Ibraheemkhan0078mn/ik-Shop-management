@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Calendar, Download, Printer, RefreshCw, TrendingUp, TrendingDown, PieChart } from "lucide-react";
 import { useGetProfitLossReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 
 const PERIOD_OPTIONS = [
     { value: "month", label: "This Month" },
@@ -45,35 +47,25 @@ export default function ProfitLossReport() {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Profit & Loss Report</h1>
-                    <p className="text-sm text-gray-500">Revenue minus all costs analysis</p>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={handleRefresh}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                        <RefreshCw size={16} />
-                        Refresh
-                    </button>
-                    <button
-                        onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                        <Download size={16} />
-                        Export
-                    </button>
-                    <button
-                        onClick={handlePrint}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
-                    >
-                        <Printer size={16} />
-                        Print
-                    </button>
-                </div>
-            </div>
+            <PageHeading
+                heading="Profit & Loss Report"
+                subheading="Revenue minus all costs analysis"
+                leftActions={
+                    <div onClick={handleRefresh}>
+                        <ScreenTabButton lucideIcon={RefreshCw} text="Refresh" />
+                    </div>
+                }
+                rightActions={
+                    <>
+                        <button onClick={handleExport} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Download size={18} />
+                        </button>
+                        <button onClick={handlePrint} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Printer size={18} />
+                        </button>
+                    </>
+                }
+            />
 
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
                 <div className="flex items-center gap-4">

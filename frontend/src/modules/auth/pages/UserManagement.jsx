@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Printer, Download, Edit2, Trash2 } from "lucide-react";
 import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from "../services/user.service.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const PERMISSIONS = [
@@ -106,6 +108,25 @@ export default function UserManagement() {
 
     return (
         <div style={{ color: "var(--ink)" }}>
+            <PageHeading
+                heading="User Management"
+                subheading="Manage staff and user accounts"
+                leftActions={
+                    <div onClick={openCreateModal}>
+                        <ScreenTabButton lucideIcon={Plus} text="Add User" />
+                    </div>
+                }
+                rightActions={
+                    <>
+                        <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Printer size={18} />
+                        </button>
+                        <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Download size={18} />
+                        </button>
+                    </>
+                }
+            />
             {modal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.5)" }}>
                     <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>

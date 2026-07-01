@@ -1,12 +1,13 @@
 // features/products/pages/Products.jsx
 import { useState, useCallback } from "react";
-import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Printer, Download } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
 import ProductFilterPanel from "../components/ProductFilterPanel.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
@@ -246,18 +247,28 @@ export default function Products() {
             <div className="flex-none">
                 <PageHeading
                     heading={isEn ? "Products" : "مصنوعات"}
-                    subheading={isEn ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}>
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button onClick={() => setFilterPanelOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:border-(--accent-2) hover:text-(--accent-2)"
-                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                            <Filter size={15} /> {isEn ? "Filters" : "فلٹرز"}
-                        </button>
-                        <button onClick={() => { setModalMode("create"); setIsModalOpen(true); }} className="btn-add">
-                            {isEn ? "+ Add Product" : "+ مصنوعات شامل کریں"}
-                        </button>
-                    </div>
-                </PageHeading>
+                    subheading={isEn ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}
+                    leftActions={
+                        <>
+                            <div onClick={() => setFilterPanelOpen(true)}>
+                                <ScreenTabButton lucideIcon={Filter} text={isEn ? "Filters" : "فلٹرز"} />
+                            </div>
+                            <div onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
+                                <ScreenTabButton lucideIcon={Package} text={isEn ? "Add Product" : "مصنوعات شامل کریں"} />
+                            </div>
+                        </>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
             </div>
 
             <div className="flex-1 overflow-hidden">

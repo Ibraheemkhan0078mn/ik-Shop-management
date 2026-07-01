@@ -1,9 +1,11 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
 import { useCallback, useEffect, useState } from "react";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Printer, Download } from "lucide-react";
 import { useSelector } from "react-redux";
 import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi, approvePurchaseReturnApi } from "../api/purchaseReturnApi.js";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
@@ -87,19 +89,30 @@ export default function PurchaseReturnPage() {
                 />
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Purchase Return" : "خریداری واپسی شامل کریں"}
-                </button>
-                <button
-                    onClick={() => setApprovalModal(true)}
-                    className="px-4 py-2 text-sm rounded-lg font-medium transition flex items-center gap-2 bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
-                >
-                    <CheckCircle className="w-4 h-4" />
-                    {language === "en" ? "Approve Purchase Return" : "خریداری واپسی منظور کریں"}
-                </button>
-            </div>
+            <PageHeading
+                heading={language === "en" ? "Purchase Returns" : "خریداری واپسی"}
+                subheading={language === "en" ? "Manage purchase return records" : "خریداری واپسی ریکارڈز کا انتظام کریں"}
+                leftActions={
+                    <>
+                        <div onClick={() => setModal({ mode: "create" })}>
+                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Purchase Return" : "خریداری واپسی شامل کریں"} />
+                        </div>
+                        <div onClick={() => setApprovalModal(true)}>
+                            <ScreenTabButton lucideIcon={CheckCircle} text={language === "en" ? "Approve Purchase Return" : "خریداری واپسی منظور کریں"} />
+                        </div>
+                    </>
+                }
+                rightActions={
+                    <>
+                        <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Printer size={18} />
+                        </button>
+                        <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <Download size={18} />
+                        </button>
+                    </>
+                }
+            />
 
                 <PaginatedList
                     rtkQuery={usePurchaseReturnsQuery}

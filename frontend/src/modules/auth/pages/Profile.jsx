@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { useGetUserQuery } from "../api/authApi.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
 
 export default function Profile() {
     const userId = useSelector(s => s.auth?.id);
@@ -36,7 +37,7 @@ export default function Profile() {
 
     return (
         <div style={{ color: "var(--ink)" }}>
-            <h1 className="text-2xl font-bold mb-6">Profile</h1>
+            <PageHeading heading="Profile" subheading="View and manage your profile information" />
             
             <div className="max-w-2xl space-y-6">
                 <div className="p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
