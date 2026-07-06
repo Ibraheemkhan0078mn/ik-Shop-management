@@ -56,11 +56,14 @@ export const useLogout = () => {
             localStorage.removeItem("savedCredentials");
             await logoutMutation().unwrap();
             dispatch(logout());
-            navigate("/login");
+            navigate("/");
             toast.success("Logout Successful");
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.data?.message || "Logout Failed";
             toast.error(errorMessage);
+            // Even if API fails, clear local state and navigate
+            dispatch(logout());
+            navigate("/");
         }
     };
 

@@ -83,7 +83,8 @@ export default function AuthPage() {
         rememberMe
           ? localStorage.setItem(SAVED_CREDS_KEY, JSON.stringify({ email: formData.email, password: formData.password, rememberMe: true }))
           : localStorage.removeItem(SAVED_CREDS_KEY);
-        await loginUser({ email: formData.email, password: formData.password, role: formData.role });
+        let response=await loginUser({ email: formData.email, password: formData.password, role: formData.role });
+     console.log(response, "The data")
       } else {
         if (formData.password !== formData.confirmPassword) {
           toast.error("Passwords do not match");
@@ -187,7 +188,7 @@ export default function AuthPage() {
 
       {/* ── RIGHT FORM PANEL ── */}
       <div
-        className="w-full lg:w-[55%] flex items-center justify-center p-6 lg:p-16 app-enter"
+        className="w-full lg:w-[55%] h-[100vh] flex items-center justify-center p-6 lg:p-16 app-enter"
         style={{ background: "var(--surface)" }}
       >
         <div className="w-full max-w-md">
