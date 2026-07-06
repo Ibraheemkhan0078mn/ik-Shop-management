@@ -1,5 +1,5 @@
 // src/pages/AuthPage.jsx
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLogin, useSignup } from "../services/auth.service.js";
 import { Eye, EyeOff, BarChart3, Shield, Zap, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +26,8 @@ export default function AuthPage() {
   const [rememberMe,       setRememberMe]        = useState(false);
   const [isSubmitting,     setIsSubmitting]      = useState(false);
   const [formData,         setFormData]          = useState(EMPTY_FORM);
+  const emailInputRef       = React.useRef(null);
+  const nameInputRef       = React.useRef(null);
 
   useEffect(() => {
     try {
@@ -41,13 +43,36 @@ export default function AuthPage() {
     }
   }, []);
 
+  // Separate useEffect for auto-focus to avoid conflicts
+  useEffect(() => {
+    // Auto-focus on mount and mode change - email for login, name for signup
+    setTimeout(() => {
+      if (isLoginMode) {
+        emailInputRef.current?.focus();
+      } else {
+        nameInputRef.current?.focus();
+      }
+    }, 150);
+  }, [isLoginMode]);
+
   const updateField = (field) => (e) =>
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
 
   const toggleAuthMode = () => {
-    setIsLoginMode(prev => !prev);
+    const newMode = !isLoginMode;
+    setIsLoginMode(newMode);
     setFormData(EMPTY_FORM);
     setShowPassword(false);
+    // Auto-focus after mode switch
+    setTimeout(() => {
+      if (!newMode) {
+        // Switching to signup - focus name
+        nameInputRef.current?.focus();
+      } else {
+        // Switching to login - focus email
+        emailInputRef.current?.focus();
+      }
+    }, 100);
   };
 
   const submitAuth = async (e) => {
@@ -78,7 +103,7 @@ export default function AuthPage() {
 
       {/* ── LEFT PANEL ── */}
       <div
-        className="lg:w-[45%] min-h-[300px] lg:min-h-screen flex flex-col justify-between p-8 lg:p-16 relative overflow-hidden"
+        className="hidden lg:flex lg:w-[45%] min-h-[300px] lg:min-h-screen flex-col justify-between p-8 lg:p-16 relative overflow-hidden"
         style={{ background: "linear-gradient(160deg, #0f1923 0%, #0f2d29 60%, #0b3d35 100%)" }}
       >
         {/* subtle grid overlay */}
@@ -162,7 +187,7 @@ export default function AuthPage() {
 
       {/* ── RIGHT FORM PANEL ── */}
       <div
-        className="lg:w-[55%] flex items-center justify-center p-6 lg:p-16 app-enter"
+        className="w-full lg:w-[55%] flex items-center justify-center p-6 lg:p-16 app-enter"
         style={{ background: "var(--surface)" }}
       >
         <div className="w-full max-w-md">
@@ -177,10 +202,10 @@ export default function AuthPage() {
 
           {/* Heading */}
           <div className="mb-8">
-            <h2 className="font-display text-3xl font-bold mb-2" style={{ color: "var(--ink)" }}>
+            <h2 id="auth-heading" className="font-display text-3xl font-bold mb-2" style={{ color: "var(--ink)" }}>
               {isLoginMode ? "Sign in" : "Create account"}
             </h2>
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
+            <p id="auth-subheading" className="text-sm" style={{ color: "var(--muted)" }}>
               {isLoginMode ? "Enter your credentials to continue" : "Fill in your details to get started"}
             </p>
           </div>
@@ -191,6 +216,8 @@ export default function AuthPage() {
             {!isLoginMode && (
               <FormField label="Full Name">
                 <input
+                  ref={nameInputRef}
+                  id="auth-name-input"
                   className="input-search"
                   type="text" required placeholder="John Doe"
                   value={formData.name} onChange={updateField("name")}
@@ -200,6 +227,8 @@ export default function AuthPage() {
 
             <FormField label="Email Address">
               <input
+                ref={emailInputRef}
+                id="auth-email-input"
                 className="input-search"
                 type="email" required placeholder="john@example.com"
                 value={formData.email} onChange={updateField("email")}
@@ -209,6 +238,7 @@ export default function AuthPage() {
             {!isLoginMode && (
               <FormField label="Phone Number">
                 <input
+                  id="auth-phone-input"
                   className="input-search"
                   type="tel" placeholder="+1 234 567 890"
                   value={formData.phoneNo} onChange={updateField("phoneNo")}
@@ -219,12 +249,14 @@ export default function AuthPage() {
             <FormField label="Password">
               <div className="relative">
                 <input
+                  id="auth-password-input"
                   className="input-search pr-11"
                   type={showPassword ? "text" : "password"}
                   required placeholder="••••••••"
                   value={formData.password} onChange={updateField("password")}
                 />
                 <button
+                  id="auth-password-toggle"
                   type="button"
                   onClick={() => setShowPassword(p => !p)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
@@ -238,6 +270,7 @@ export default function AuthPage() {
             {!isLoginMode && (
               <FormField label="Confirm Password">
                 <input
+                  id="auth-confirm-password-input"
                   className="input-search"
                   type="password" required placeholder="••••••••"
                   value={formData.confirmPassword} onChange={updateField("confirmPassword")}
@@ -246,16 +279,22 @@ export default function AuthPage() {
             )}
 
             <FormField label="Role">
-              <select className="input-search" value={formData.role} onChange={updateField("role")}>
+              <select id="auth-role-select" className="input-search" value={formData.role} onChange={updateField("role")} disabled={!isLoginMode}>
                 <option value="admin">Admin</option>
                 <option value="staff">Staff</option>
               </select>
+              {!isLoginMode && (
+                <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                  Note: Registration is restricted to admin role only. Contact existing admin for account creation.
+                </p>
+              )}
             </FormField>
 
             {isLoginMode && (
               <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
+                    id="auth-remember-me"
                     type="checkbox" checked={rememberMe}
                     onChange={e => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded"
@@ -270,6 +309,7 @@ export default function AuthPage() {
             )}
 
             <button
+              id="auth-submit-button"
               type="submit"
               disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm text-white transition-all duration-200 mt-2 disabled:opacity-60"
@@ -284,6 +324,7 @@ export default function AuthPage() {
           <p className="mt-6 text-center text-sm" style={{ color: "var(--muted)" }}>
             {isLoginMode ? "Don't have an account? " : "Already have an account? "}
             <button
+              id="auth-toggle-button"
               type="button"
               onClick={toggleAuthMode}
               className="font-semibold hover:underline text-primary"

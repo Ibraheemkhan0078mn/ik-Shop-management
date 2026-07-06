@@ -131,8 +131,12 @@ export default function Products() {
                         </div>
                         <div className="col-span-1"><StatusBadge active={item.isActive} /></div>
                         <div className="col-span-1 flex items-center gap-1.5">
-                            <IconBtn onClick={() => openEdit(item._id)} icon={Edit} hoverClass="hover:border-(--accent-2) hover:text-(--accent-2)" />
-                            <IconBtn onClick={() => openDeleteConfirm(item)} icon={Trash2} hoverClass="hover:border-red-400 hover:text-red-500" />
+                            <button id={`products-edit-${item._id}`} onClick={() => openEdit(item._id)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
+                                <Edit size={15} />
+                            </button>
+                            <button id={`products-delete-${item._id}`} onClick={() => openDeleteConfirm(item)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                <Trash2 size={15} />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -166,12 +170,12 @@ export default function Products() {
                                 </div>
                             </div>
                             <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                                <button onClick={() => openEdit(item._id)}
+                                <button id={`products-mobile-edit-${item._id}`} onClick={() => openEdit(item._id)}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
                                     style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
                                     <Edit size={14} /> Edit
                                 </button>
-                                <button onClick={() => openDeleteConfirm(item)}
+                                <button id={`products-mobile-delete-${item._id}`} onClick={() => openDeleteConfirm(item)}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
                                     style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
                                     <Trash2 size={14} /> Delete
@@ -186,11 +190,11 @@ export default function Products() {
 
     return (
         <div className="h-screen flex flex-col overflow-hidden">
-            {isModalOpen && <ProductCRUDModal mode={modalMode} productId={selectedProductId} open={isModalOpen} onClose={closeModal} />}
+            {isModalOpen && <ProductCRUDModal id="products-crud-modal" mode={modalMode} productId={selectedProductId} open={isModalOpen} onClose={closeModal} />}
 
             {/* Delete modal */}
             {deleteTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 app-overlay app-enter">
+                <div id="products-delete-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 app-overlay app-enter">
                     <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ background: "var(--surface)" }}>
                         {deleteTarget.step === "confirm" ? (
                             <>
@@ -204,10 +208,10 @@ export default function Products() {
                                     </p>
                                 </div>
                                 <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <button onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
+                                    <button id="products-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
                                         style={{ background: "var(--app-bg)", color: "var(--muted)" }}>Cancel</button>
-                                    <button onClick={handleConfirmDelete} disabled={deleteLoading}
+                                    <button id="products-delete-confirm" onClick={handleConfirmDelete} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
                                         {deleteLoading ? "Deleting…" : "Delete"}
                                     </button>
@@ -230,10 +234,10 @@ export default function Products() {
                                     </div>
                                 </div>
                                 <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <button onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
+                                    <button id="products-hard-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
                                         style={{ background: "var(--app-bg)", color: "var(--muted)" }}>Cancel</button>
-                                    <button onClick={handleConfirmHardDelete} disabled={deleteLoading}
+                                    <button id="products-hard-delete-confirm" onClick={handleConfirmHardDelete} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
                                         {deleteLoading ? "Deleting…" : "Delete with Batches"}
                                     </button>
@@ -246,24 +250,25 @@ export default function Products() {
 
             <div className="flex-none">
                 <PageHeading
+                    id="products-page-heading"
                     heading={isEn ? "Products" : "مصنوعات"}
                     subheading={isEn ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}
                     leftActions={
                         <>
-                            <div onClick={() => setFilterPanelOpen(true)}>
+                            <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
                                 <ScreenTabButton lucideIcon={Filter} text={isEn ? "Filters" : "فلٹرز"} />
                             </div>
-                            <div onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
+                            <div id="products-add-button" onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
                                 <ScreenTabButton lucideIcon={Package} text={isEn ? "Add Product" : "مصنوعات شامل کریں"} />
                             </div>
                         </>
                     }
                     rightActions={
                         <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <button id="products-print-button" onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
                                 <Printer size={18} />
                             </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                            <button id="products-export-button" onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
                                 <Download size={18} />
                             </button>
                         </>
