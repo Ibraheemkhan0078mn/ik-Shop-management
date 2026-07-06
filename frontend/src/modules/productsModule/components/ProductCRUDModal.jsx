@@ -8,6 +8,7 @@ import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import SubCategoryCRUDModal from "./SubCategoryCRUDModal.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -120,6 +121,29 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
   }, []);
 
+  // Handle category creation callback
+  const handleCategoryCreated = useCallback((newCategory) => {
+    console.log('Category created:', newCategory);
+    // Invalidate the categories query to refetch
+    // The RTK Query will automatically refetch when the component re-renders
+    // Set the newly created category as selected
+    if (newCategory?._id || newCategory?.data?._id) {
+      const categoryId = newCategory._id || newCategory.data._id;
+      updateField('category', categoryId);
+    }
+  }, [updateField]);
+
+  // Handle subcategory creation callback
+  const handleSubCategoryCreated = useCallback((newSubCategory) => {
+    console.log('Subcategory created:', newSubCategory);
+    // Invalidate the subcategories query to refetch
+    // Set the newly created subcategory as selected
+    if (newSubCategory?._id || newSubCategory?.data?._id) {
+      const subCategoryId = newSubCategory._id || newSubCategory.data._id;
+      updateField('subCategory', subCategoryId);
+    }
+  }, [updateField]);
+
   const handleImageChange = useCallback(
     (file) => {
       if (!file) return;
@@ -224,8 +248,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   return (
     <>
       {isBarcodeOpen && <Scanner isOpen={isBarcodeOpen} setIsOpen={setIsBarcodeOpen} valueSetter={(v) => updateField("barcode", v)} />}
-      {showCategoryDialog && <CategoryCRUDModal setVisibility={setShowCategoryDialog} operation="create" />}
-      {showSubCategoryDialog && <SubCategoryCrudModel catagId={form.category} setVisibility={setShowSubCategoryDialog} />}
+      {showCategoryDialog && <CategoryCRUDModal mode="create" open={showCategoryDialog} onClose={setShowCategoryDialog} onCategoryCreated={handleCategoryCreated} />}
+      {showSubCategoryDialog && <SubCategoryCRUDModal categoryId={form.category} mode="create" open={showSubCategoryDialog} onClose={setShowSubCategoryDialog} onSubCategoryCreated={handleSubCategoryCreated} />}
 
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
         <div className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">

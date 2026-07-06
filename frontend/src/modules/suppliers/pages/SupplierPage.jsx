@@ -71,7 +71,6 @@ export default function SupplierPage() {
                                 <tr className="text-xs uppercase tracking-wider"
                                     style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
                                     <th className="px-4 py-3 font-semibold">Name</th>
-                                    <th className="px-4 py-3 font-semibold">Contact</th>
                                     <th className="px-4 py-3 font-semibold">Type</th>
                                     <th className="px-4 py-3 font-semibold">Phone</th>
                                     <th className="px-4 py-3 font-semibold">Email</th>
@@ -112,9 +111,6 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
 
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>
                 {supplier?.name ?? "—"}
-            </td>
-            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>
-                {supplier?.contactPerson ?? "—"}
             </td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--ink)" }}>
                 {supplier?.type ?? "—"}

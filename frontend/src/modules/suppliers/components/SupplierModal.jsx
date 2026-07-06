@@ -14,7 +14,7 @@ import { useSelector } from "react-redux";
 const TYPES = ["Distributor", "Wholesaler", "Manufacturer", "Other"];
 
 const emptyForm = () => ({
-    name: "", contactPerson: "", type: "Other",
+    name: "", type: "Other",
     phone: "", email: "", address: "",
     taxId: "", notes: "", isActive: true,
 });
@@ -92,7 +92,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
         if (!isUpdate || !existingSupplier) return;
         setForm({
             name:          existingSupplier.name          ?? "",
-            contactPerson: existingSupplier.contactPerson ?? "",
             type:          existingSupplier.type          ?? "Other",
             phone:         existingSupplier.phone         ?? "",
             email:         existingSupplier.email         ?? "",
@@ -118,7 +117,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
         const payload = {
             ...form,
             name:          form.name.trim(),
-            contactPerson: form.contactPerson.trim(),
             phone:         form.phone.trim(),
             email:         form.email.trim(),
             address:       form.address.trim(),
@@ -202,12 +200,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                             <Sel value={form.type} onChange={e => update("type", e.target.value)}>
                                 {TYPES.map(tp => <option key={tp} value={tp}>{tp}</option>)}
                             </Sel>
-                        </Field>
-
-                        <Field>
-                            <Label>Contact Person</Label>
-                            <Inp value={form.contactPerson} placeholder="John Doe"
-                                onChange={e => update("contactPerson", e.target.value)} />
                         </Field>
 
                         <Field>

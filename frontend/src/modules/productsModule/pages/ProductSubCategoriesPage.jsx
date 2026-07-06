@@ -5,7 +5,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
-import SubCategoryFormCard from "../components/SubCategoryFormCard";
+import SubCategoryCRUDModal from "../components/SubCategoryCRUDModal";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductSubCategoriesPage() {
@@ -14,6 +14,7 @@ export default function ProductSubCategoriesPage() {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteSubCategory] = useDeleteSubCategoryMutation();
+    const [showModal, setShowModal] = useState(false);
 
     const handleDelete = async () => {
         if (!deleteTarget) return;
@@ -29,7 +30,23 @@ export default function ProductSubCategoriesPage() {
         setDeleteLoading(false);
     };
 
-    const closeForm = () => { setMode("list"); setSelectedSubCategoryId(null); };
+    const handleCreate = () => {
+        setSelectedSubCategoryId(null);
+        setMode("create");
+        setShowModal(true);
+    };
+
+    const handleEdit = (id) => {
+        setSelectedSubCategoryId(id);
+        setMode("edit");
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setMode("list");
+        setSelectedSubCategoryId(null);
+    };
 
     const renderItems = (items) => {
         if (!items?.length) return null;
@@ -56,7 +73,7 @@ export default function ProductSubCategoriesPage() {
                         <div className="col-span-3 text-sm text-(--muted) truncate">{item.category?.name || "—"}</div>
                         <div className="col-span-3 text-sm text-(--muted) truncate">{item.description || "—"}</div>
                         <div className="col-span-2 flex items-center gap-2">
-                            <button onClick={() => { setSelectedSubCategoryId(item._id); setMode("edit"); }} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
+                            <button onClick={() => handleEdit(item._id)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
                                 <Edit size={16} />
                             </button>
                             <button onClick={() => setDeleteTarget({ id: item._id, name: item.name })} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all">
@@ -80,7 +97,7 @@ export default function ProductSubCategoriesPage() {
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-(--border)">
-                            <button onClick={() => { setSelectedSubCategoryId(item._id); setMode("edit"); }} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
+                            <button onClick={() => handleEdit(item._id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
                                 <Edit size={16} /> Edit
                             </button>
                             <button onClick={() => setDeleteTarget({ id: item._id, name: item.name })} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
@@ -95,6 +112,14 @@ export default function ProductSubCategoriesPage() {
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
+            {/* SubCategory CRUD Modal */}
+            <SubCategoryCRUDModal
+                mode={mode}
+                subCategoryId={selectedSubCategoryId}
+                open={showModal}
+                onClose={handleCloseModal}
+            />
+
             {/* Delete Modal */}
             {deleteTarget && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -118,54 +143,37 @@ export default function ProductSubCategoriesPage() {
                 </div>
             )}
 
-            {(mode === "create" || mode === "edit") ? (
-                <>
-                    <div className="flex-none">
-                        <PageHeading heading="Product Subcategories" subheading="Manage subcategories for better product organization" />
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4">
-                        <SubCategoryFormCard
-                            mode={mode}
-                            subCategoryId={selectedSubCategoryId}
-                            onClose={closeForm}
-                            onSaved={closeForm}
-                        />
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="flex-none">
-                        <PageHeading
-                            heading="Product Subcategories"
-                            subheading="Manage subcategories for better product organization"
-                            leftActions={
-                                <div onClick={() => setMode("create")}>
-                                    <ScreenTabButton lucideIcon={Plus} text="Add Subcategory" />
-                                </div>
-                            }
-                            rightActions={
-                                <>
-                                    <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                        <Printer size={18} />
-                                    </button>
-                                    <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                        <Download size={18} />
-                                    </button>
-                                </>
-                            }
-                        />
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                        <PaginatedList
-                            rtkQuery={useGetSubCategoriesQuery}
-                            limit={10}
-                            dataKey="data"
-                            wrapperClassName="h-full"
-                            renderItems={renderItems}
-                        />
-                    </div>
-                </>
-            )}
+            {/* List mode */}
+            <div className="flex-none">
+                <PageHeading
+                    heading="Product Subcategories"
+                    subheading="Manage subcategories for better product organization"
+                    leftActions={
+                        <div onClick={handleCreate}>
+                            <ScreenTabButton lucideIcon={Plus} text="Add Subcategory" />
+                        </div>
+                    }
+                    rightActions={
+                        <>
+                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Printer size={18} />
+                            </button>
+                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
+                                <Download size={18} />
+                            </button>
+                        </>
+                    }
+                />
+            </div>
+            <div className="flex-1 overflow-hidden">
+                <PaginatedList
+                    rtkQuery={useGetSubCategoriesQuery}
+                    limit={10}
+                    dataKey="data"
+                    wrapperClassName="h-full"
+                    renderItems={renderItems}
+                />
+            </div>
         </div>
     );
 }
