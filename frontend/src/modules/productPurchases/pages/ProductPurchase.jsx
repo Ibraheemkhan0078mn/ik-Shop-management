@@ -1,6 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Printer, Download } from "lucide-react";
+import { Plus, Printer, Download, Check, X, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
@@ -98,6 +98,7 @@ export default function ProductPurchasePage() {
 
             {/* ── list ── */}
             <PaginatedList
+                ref={listRef}
                 rtkQuery={usePurchases}
                 limit={20}
                 dataKey="data"
@@ -144,9 +145,11 @@ export default function ProductPurchasePage() {
 }
 
 function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPayment }) {
-    const date = new Date(purchase?.date ?? purchase?.createdAt).toLocaleDateString();
-    const status = purchase?.status || 'ordered';
-    const paymentStatus = purchase?.paymentStatus || 'pending';
+    const purchaseId = purchase?._id ?? "";
+    const dateStr = purchase?.date ?? purchase?.createdAt ?? "";
+    const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
+    const status = purchase?.status ?? 'ordered';
+    const paymentStatus = purchase?.paymentStatus ?? 'pending';
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -195,13 +198,13 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
                     {status === 'ordered' && (
                         <>
                             <button 
-                                onClick={e => onStatusUpdate(purchase._id, 'delivered', e)}
+                                onClick={e => onStatusUpdate(purchaseId, 'delivered', e)}
                                 className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
                                 <Check className="w-3 h-3" />
                                 Delivered
                             </button>
                             <button 
-                                onClick={e => onStatusUpdate(purchase._id, 'rejected', e)}
+                                onClick={e => onStatusUpdate(purchaseId, 'rejected', e)}
                                 className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
                                 <X className="w-3 h-3" />
                                 Rejected

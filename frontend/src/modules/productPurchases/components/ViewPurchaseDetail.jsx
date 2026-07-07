@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { X, FileText, Calendar, Package, DollarSign, Receipt, Hash, Truck, Trash2 } from "lucide-react";
+import { X, FileText, Calendar, Package, DollarSign, Receipt, Hash, Truck, Trash2, Edit2 } from "lucide-react";
 import { useGetPurchasePayments } from "../services/purchases.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PurchasePaymentModal from "./PurchasePaymentModal.jsx";
 
 export default function ViewPurchaseDetail({ purchase, onClose, language = "en" }) {
     if (!purchase) return null;
 
     const formattedDate = new Date(purchase.date || purchase.createdAt).toLocaleDateString();
-    const { data: payments, refetch: refetchPayments } = useGetPurchasePayments(purchase._id);
+    const { data: payments, refetch: refetchPayments, isLoading: paymentsLoading } = useGetPurchasePayments(purchase._id);
+    const [editingPayment, setEditingPayment] = useState(null);
+
+    // Handle both data structures: payments.data or payments directly
+    const paymentsList = Array.isArray(payments) ? payments : (payments?.data || []);
+
+    // Debug: log payments to see what we're getting
+    console.log('Payments data:', payments);
+    console.log('Payments list:', paymentsList);
 
     const handleDeletePayment = async (paymentId) => {
         if (!window.confirm("Are you sure you want to delete this payment?")) return;
@@ -29,8 +38,26 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
         }
     };
 
+    const handleEditPayment = (payment) => {
+        setEditingPayment(payment);
+    };
+
+    const handlePaymentSuccess = () => {
+        setEditingPayment(null);
+        refetchPayments();
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <>
+            {editingPayment && (
+                <PurchasePaymentModal
+                    purchase={purchase}
+                    payment={editingPayment}
+                    onClose={() => setEditingPayment(null)}
+                    onSuccess={handlePaymentSuccess}
+                />
+            )}
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-(--surface) w-full max-w-5xl rounded-3xl shadow-2xl border border-(--border) overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
 
                 {/* Header */}
@@ -186,12 +213,17 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                 <DollarSign size={18} className="text-(--accent-2)" />
                                 {language === "en" ? "Payment Details" : "ادائیگی کی تفصیلات"}
                                 <span className="ml-auto text-xs bg-(--surface) px-2 py-1 rounded-lg border border-(--border) text-(--muted)">
-                                    {payments?.data?.length || 0} {language === "en" ? "payments" : "ادائیگیاں"}
+                                    {paymentsLoading ? "Loading..." : `${paymentsList?.length || 0} ${language === "en" ? "payments" : "ادائیگیاں"}`}
                                 </span>
                             </h3>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        {paymentsLoading ? (
+                            <div className="px-5 py-8 text-center text-(--muted)">
+                                Loading payments...
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-(--surface) border-b border-(--border) text-(--muted) uppercase tracking-wider text-xs">
                                     <tr>
@@ -203,8 +235,8 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-(--border)">
-                                    {payments?.data?.length > 0 ? (
-                                        payments.data.map((payment) => (
+                                    {paymentsList?.length > 0 ? (
+                                        paymentsList.map((payment) => (
                                             <tr key={payment._id} className="hover:bg-(--surface-muted)/50 transition-colors">
                                                 <td className="px-5 py-4">
                                                     <p className="font-medium text-(--ink)">
@@ -229,13 +261,22 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                                     {payment.creditAccount?.name || "—"}
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
-                                                    <button
-                                                        onClick={() => handleDeletePayment(payment._id)}
-                                                        className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                                        title={language === "en" ? "Delete Payment" : "ادائیگی حذف کریں"}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEditPayment(payment)}
+                                                            className="p-2 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
+                                                            title={language === "en" ? "Edit Payment" : "ادائیگی ایڈٹ کریں"}
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePayment(payment._id)}
+                                                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                                            title={language === "en" ? "Delete Payment" : "ادائیگی حذف کریں"}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -249,10 +290,12 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                 </tbody>
                             </table>
                         </div>
+                        )}
                     </div>
 
                 </div>
             </div>
         </div>
+        </>
     );
 }

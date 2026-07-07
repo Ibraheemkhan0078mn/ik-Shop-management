@@ -8,6 +8,8 @@ import { useProducts } from "../../productsModule/services/product.service";
 import { useBatchesByProduct } from "../services/batch.service";
 import { useSelector } from "react-redux";
 import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
+import ProductCRUDModal from "../../productsModule/components/ProductCRUDModal.jsx";
+import SupplierModal from "../../suppliers/components/SupplierModal.jsx";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate  = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
@@ -152,8 +154,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
     // data
     const { data: existingPurchase, isLoading: isFetching } = usePurchase(purchaseId, { skip: !isUpdate || !purchaseId });
-    const { data: suppliersRaw }  = useAllSuppliers();
-    const { data: productsRaw }   = useProducts();
+    const { data: suppliersRaw, refetch: refetchSuppliers }  = useAllSuppliers();
+    const { data: productsRaw, refetch: refetchProducts }   = useProducts();
     const { data: purchasesRaw }  = useAllPurchases();
     const [createPurchase, { isLoading: isCreating }] = useCreatePurchase();
     const [updatePurchase, { isLoading: isUpdating }] = useUpdatePurchase();
@@ -170,12 +172,24 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [editingIndex, setEditingIndex] = useState(null);
     const [batchStamp,   setBatchStamp]   = useState(() => Date.now().toString());
     const [showImport,   setShowImport]   = useState(false);
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [showSupplierModal, setShowSupplierModal] = useState(false);
 
     const { data: batchesRaw = [] } = useBatchesByProduct(itemForm.item, { skip: !itemForm.item });
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
     const selectedBatch    = availableBatches.find(b => b._id === itemForm.batchSelection);
     const isExistingMode   = itemForm.batchMode === "existing" && Boolean(itemForm.batchSelection);
     const selectedSupplierName = suppliersList.find(s => s._id === bill.supplier)?.name ?? "";
+
+    const handleProductCreated = () => {
+        setShowProductModal(false);
+        refetchProducts();
+    };
+
+    const handleSupplierCreated = () => {
+        setShowSupplierModal(false);
+        refetchSuppliers();
+    };
 
     // prefill update
     useEffect(() => {
@@ -228,12 +242,34 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         }));
     }, [selectedBatch, isExistingMode]);
 
-    // autofill unit
+    // autofill unit and auto-select batch mode
     useEffect(() => {
         if (!itemForm.item) return;
         const prod = productsList.find(p => p._id === itemForm.item);
-        if (prod) setItemForm(p => p.unit === (prod.unit ?? "unit") ? p : { ...p, unit: prod.unit ?? "unit" });
+        if (prod) {
+            setItemForm(p => ({
+                ...p,
+                unit: prod.unit ?? "unit",
+                discountType: prod.discountType ?? "percentage",
+                taxType: prod.taxType ?? "percentage"
+            }));
+        }
     }, [itemForm.item, productsList]);
+
+    // auto-select batch mode based on available batches
+    useEffect(() => {
+        if (!itemForm.item) return;
+        if (availableBatches.length === 0) {
+            // No existing batches - default to new mode
+            setItemForm(p => ({ ...p, batchMode: "new", batchSelection: "" }));
+        } else {
+            // Has existing batches - default to existing mode and select newest
+            const newestBatch = availableBatches.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+            if (newestBatch) {
+                handleBatchSelect(newestBatch._id);
+            }
+        }
+    }, [itemForm.item, availableBatches]);
 
     // calculations
     const calc = useMemo(() => {
@@ -459,13 +495,23 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <Label>{t("Supplier", "سپلائر")} *</Label>
-                                    <div className="relative z-50">
-                                        <SearchableSelect
-                                            options={suppliersList.map(s => ({ label: s.name, value: s._id }))}
-                                            value={bill.supplier}
-                                            onChange={val => setBill(p => ({ ...p, supplier: val }))}
-                                            placeholder={t("Select supplier…", "سپلائر…")}
-                                        />
+                                    <div className="flex gap-2">
+                                        <div className="relative z-50 flex-1">
+                                            <SearchableSelect
+                                                options={suppliersList.map(s => ({ label: s.name, value: s._id }))}
+                                                value={bill.supplier}
+                                                onChange={val => setBill(p => ({ ...p, supplier: val }))}
+                                                placeholder={t("Select supplier…", "سپلائر…")}
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSupplierModal(true)}
+                                            className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                            title="Create new supplier"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
                                     </div>
                                 </Field>
                                 <Field>
@@ -505,15 +551,26 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
                                             <Label>{t("Product", "پروڈکٹ")} *</Label>
-                                            <SSelect
-                                                options={productsList.map(p => ({ label: p.name, value: p._id }))}
-                                                value={itemForm.item}
-                                                onChange={val => {
-                                                    const prod = productsList.find(p => p._id === val);
-                                                    if (prod) { setBatchStamp(Date.now().toString()); setItemForm(p => ({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", discountType: p.discountType ?? "percentage", taxType: p.taxType ?? "percentage" })); }
-                                                }}
-                                                placeholder={t("Search product…", "پروڈکٹ…")}
-                                            />
+                                            <div className="flex gap-2">
+                                                <SSelect
+                                                    className="flex-1"
+                                                    options={productsList.map(p => ({ label: p.name, value: p._id }))}
+                                                    value={itemForm.item}
+                                                    onChange={val => {
+                                                        const prod = productsList.find(p => p._id === val);
+                                                        if (prod) { setBatchStamp(Date.now().toString()); setItemForm(p => ({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", discountType: p.discountType ?? "percentage", taxType: p.taxType ?? "percentage" })); }
+                                                    }}
+                                                    placeholder={t("Search product…", "پروڈکٹ…")}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowProductModal(true)}
+                                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                    title="Create new product"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
                                         </Field>
                                         <Field>
                                             <Label>Batch Mode</Label>
@@ -627,8 +684,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 <Field>
                                     <Label><DollarSign className="inline w-3 h-3 mr-1" />Discount</Label>
                                     <div className="flex gap-2">
-                                        <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} />
-                                        <Sel className="w-20 shrink-0" value={bill.discountType} onChange={e => setBill(p => ({ ...p, discountType: e.target.value }))}>
+                                        <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} className="text-base py-3" />
+                                        <Sel className="w-24 shrink-0 text-base py-3" value={bill.discountType} onChange={e => setBill(p => ({ ...p, discountType: e.target.value }))}>
                                             <option value="percentage">%</option>
                                             <option value="fixed">Fixed</option>
                                         </Sel>
@@ -658,6 +715,21 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                     </div>
                 </div>
             </div>
+            {showProductModal && (
+                <ProductCRUDModal
+                    mode="create"
+                    open={showProductModal}
+                    onClose={() => setShowProductModal(false)}
+                    onSuccess={handleProductCreated}
+                />
+            )}
+            {showSupplierModal && (
+                <SupplierModal
+                    mode="create"
+                    onClose={() => setShowSupplierModal(false)}
+                    onSuccess={handleSupplierCreated}
+                />
+            )}
         </div>
     );
 }

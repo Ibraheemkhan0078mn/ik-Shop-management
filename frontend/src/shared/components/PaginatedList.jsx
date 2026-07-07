@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react"
+import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null, queryA
 //    className       string    optional  scrollable area className
 //    wrapperClassName string   optional
 // ─────────────────────────────────────────────────────────────────
-const PaginatedList = ({
+const PaginatedList = forwardRef(({
     rtkQuery,
     filter = {},
     renderItems,
@@ -76,9 +76,14 @@ const PaginatedList = ({
     className = "",
     wrapperClassName = "",
     queryArgs = {},
-}) => {
-    const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter } =
+}, ref) => {
+    const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter, refetch } =
         usePaginatedFetch({ rtkQuery, limit, dataKey, queryArgs })
+
+    // Expose refetch method to parent via ref
+    useImperativeHandle(ref, () => ({
+        refetch
+    }), [refetch])
 
     const filterStr = JSON.stringify(filter)
 
@@ -122,7 +127,9 @@ const PaginatedList = ({
             />
         </div>
     )
-}
+})
+
+PaginatedList.displayName = "PaginatedList"
 
 
 // ─────────────────────────────────────────────────────────────────

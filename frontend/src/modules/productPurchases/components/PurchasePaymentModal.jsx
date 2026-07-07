@@ -1,17 +1,21 @@
 import { useState, useEffect } from "react";
-import { DollarSign, Calendar, X } from "lucide-react";
+import { DollarSign, Calendar, X, Plus } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
+import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 
-export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
-    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-    const [paymentMethod, setPaymentMethod] = useState("cash");
-    const [creditAccountId, setCreditAccountId] = useState("");
-    const [cashAmount, setCashAmount] = useState("");
+export default function PurchasePaymentModal({ purchase, payment, onClose, onSuccess }) {
+    const isEditing = Boolean(payment);
+    const [paymentDate, setPaymentDate] = useState(payment?.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    const [paymentMethod, setPaymentMethod] = useState(payment?.paymentMethod || "cash");
+    const [creditAccountId, setCreditAccountId] = useState(payment?.creditAccount?._id || "");
+    const [cashAmount, setCashAmount] = useState(payment?.cashAmount?.toString() || "");
+    const [showQarzaModal, setShowQarzaModal] = useState(false);
 
-    const { data: creditAccounts } = useQarzaAccounts();
+    const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
 
     const remainingAmount = purchase?.totalAmount - (purchase?.paidAmount || 0);
+    const editingAmount = payment?.amount || remainingAmount;
 
     // Auto-set cash amount based on payment method
     useEffect(() => {
@@ -21,6 +25,11 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
             setCashAmount("");
         }
     }, [paymentMethod, remainingAmount]);
+
+    const handleQarzaAccountCreated = () => {
+        setShowQarzaModal(false);
+        refetchAccounts();
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -36,21 +45,21 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
 
         if (paymentMethod === 'cash') {
             // Cash mode: full payment automatically
-            paymentData.amount = remainingAmount;
-            paymentData.cashAmount = remainingAmount;
+            paymentData.amount = editingAmount;
+            paymentData.cashAmount = editingAmount;
         } else if (paymentMethod === 'credit') {
             // Credit mode: full payment automatically
             if (!creditAccountId) {
                 showError("Please select a credit account");
                 return;
             }
-            paymentData.amount = remainingAmount;
+            paymentData.amount = editingAmount;
             paymentData.creditAccount = creditAccountId;
-            paymentData.creditAmount = remainingAmount;
+            paymentData.creditAmount = editingAmount;
         } else if (paymentMethod === 'hybrid') {
             // Hybrid mode: user enters cash, rest goes to credit
             const cash = parseFloat(cashAmount) || 0;
-            if (cash <= 0 || cash > remainingAmount) {
+            if (cash <= 0 || cash > editingAmount) {
                 showError("Cash amount must be greater than 0 and less than or equal to remaining amount");
                 return;
             }
@@ -58,40 +67,52 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
                 showError("Please select a credit account");
                 return;
             }
-            const credit = remainingAmount - cash;
-            paymentData.amount = remainingAmount;
+            const credit = editingAmount - cash;
+            paymentData.amount = editingAmount;
             paymentData.cashAmount = cash;
             paymentData.creditAccount = creditAccountId;
             paymentData.creditAmount = credit;
         }
 
         try {
-            const response = await fetch(`http://localhost:5001/api/purchases/${purchase._id}/payments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(paymentData),
-            });
+            let response;
+            if (isEditing) {
+                response = await fetch(`http://localhost:5001/api/purchases/payments/${payment._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(paymentData),
+                });
+            } else {
+                response = await fetch(`http://localhost:5001/api/purchases/${purchase._id}/payments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(paymentData),
+                });
+            }
 
             const data = await response.json();
+            console.log('Payment response:', data); // Debug log
             if (data.success) {
-                showSuccess("Payment recorded successfully");
+                showSuccess(isEditing ? "Payment updated successfully" : "Payment recorded successfully");
                 onSuccess();
             } else {
                 showError(data.message || "Failed to record payment");
             }
         } catch (error) {
+            console.error('Payment error:', error); // Debug log
             showError("Failed to record payment");
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
             <div className="bg-[var(--app-bg)] rounded-xl shadow-2xl w-full max-w-md">
                 <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
                         <DollarSign className="w-5 h-5 text-[var(--accent-2)]" />
-                        <h2 className="text-lg font-semibold text-[var(--ink)]">Record Payment</h2>
+                        <h2 className="text-lg font-semibold text-[var(--ink)]">{isEditing ? "Edit Payment" : "Record Payment"}</h2>
                     </div>
                     <button onClick={onClose} className="text-[var(--muted)] hover:text-[var(--ink)]">
                         <X className="w-5 h-5" />
@@ -173,19 +194,29 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
                     {paymentMethod === 'credit' && (
                         <div>
                             <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
-                            <select
-                                value={creditAccountId}
-                                onChange={(e) => setCreditAccountId(e.target.value)}
-                                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                required
-                            >
-                                <option value="">Select credit account</option>
-                                {creditAccounts?.accounts?.map(account => (
-                                    <option key={account._id} value={account._id}>
-                                        {account.name} (Type: {account.type})
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="flex gap-2">
+                                <select
+                                    value={creditAccountId}
+                                    onChange={(e) => setCreditAccountId(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                    required
+                                >
+                                    <option value="">Select credit account</option>
+                                    {creditAccounts?.accounts?.map(account => (
+                                        <option key={account._id} value={account._id}>
+                                            {account.name} (Type: {account.type})
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowQarzaModal(true)}
+                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                    title="Create new account"
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
                             <p className="text-xs text-[var(--muted)] mt-1">Full payment of Rs {remainingAmount.toLocaleString()} will be charged to this account.</p>
                         </div>
                     )}
@@ -205,19 +236,29 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
                             </div>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
-                                <select
-                                    value={creditAccountId}
-                                    onChange={(e) => setCreditAccountId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                    required
-                                >
-                                    <option value="">Select credit account</option>
-                                    {creditAccounts?.accounts?.map(account => (
-                                        <option key={account._id} value={account._id}>
-                                            {account.name} (Type: {account.type})
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={creditAccountId}
+                                        onChange={(e) => setCreditAccountId(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                        required
+                                    >
+                                        <option value="">Select credit account</option>
+                                        {creditAccounts?.accounts?.map(account => (
+                                            <option key={account._id} value={account._id}>
+                                                {account.name} (Type: {account.type})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowQarzaModal(true)}
+                                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                        title="Create new account"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
                                 <p className="text-xs text-[var(--muted)] mt-1">
                                     Remaining Rs {(remainingAmount - (parseFloat(cashAmount) || 0)).toLocaleString()} will be charged to this account.
                                 </p>
@@ -242,6 +283,13 @@ export default function PurchasePaymentModal({ purchase, onClose, onSuccess }) {
                     </div>
                 </form>
             </div>
+            {showQarzaModal && (
+                <QarzaAccountModal
+                    mode="create"
+                    onClose={() => setShowQarzaModal(false)}
+                    onSuccess={handleQarzaAccountCreated}
+                />
+            )}
         </div>
     );
 }

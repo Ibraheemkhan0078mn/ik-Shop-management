@@ -66,6 +66,7 @@ export const purchaseApi = baseApi.injectEndpoints({
         // Get Payments
         getPurchasePayments: build.query({
             query: (purchaseId) => ({ url: `/purchases/${purchaseId}/payments` }),
+            transformResponse: (raw) => raw.data || raw,
             providesTags: (result, error, purchaseId) => [{ type: "Purchase", id: `payments-${purchaseId}` }],
         }),
     }),

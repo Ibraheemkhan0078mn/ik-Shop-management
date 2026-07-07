@@ -267,9 +267,10 @@ export const deletePurchaseData = asyncHandler(async (req, res) => {
 });
 
 export const updatePurchaseStatus = asyncHandler(async (req, res) => {
-    const { getLocalPurchaseModel, getLocalBatchModel } = await import("../../../configs/connect.db.js");
+    const { getLocalPurchaseModel, getLocalBatchModel, getLocalProductModel } = await import("../../../configs/connect.db.js");
     const PurchaseModel = getLocalPurchaseModel();
     const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
 
     const { id } = req.params;
     const { status } = req.body;
@@ -283,16 +284,40 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
         return res.status(404).json({ success: false, message: "Purchase not found" });
     }
 
+    const oldStatus = purchase.status;
+
+    // If changing from delivered to something else, reverse stock
+    if (oldStatus === 'delivered' && status !== 'delivered') {
+        for (const item of purchase.items) {
+            const batch = await BatchModel.findById(item.batch);
+            if (batch) {
+                batch.quantity -= item.quantity;
+                if (batch.quantity < 0) batch.quantity = 0;
+                await batch.save();
+            }
+            
+            // Reverse master product stock
+            await ProductModel.findByIdAndUpdate(item.product, {
+                $inc: { currentStockLevel: -item.quantity }
+            });
+        }
+    }
+
     purchase.status = status;
 
-    // If status is delivered, increment stock for all items
-    if (status === 'delivered') {
+    // If status is delivered (and wasn't before), increment stock for all items
+    if (status === 'delivered' && oldStatus !== 'delivered') {
         for (const item of purchase.items) {
             const batch = await BatchModel.findById(item.batch);
             if (batch) {
                 batch.quantity += item.quantity;
                 await batch.save();
             }
+            
+            // Increment master product stock
+            await ProductModel.findByIdAndUpdate(item.product, {
+                $inc: { currentStockLevel: item.quantity }
+            });
         }
     }
 
@@ -320,11 +345,11 @@ export const createPurchasePaymentData = asyncHandler(async (req, res) => {
     } catch (error) {
         return res.status(400).json({ success: false, message: error.message });
     }
-});
+}); 
 
 export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
     try {
-        const payments = await getPurchasePayments(req.params.purchaseId);
+        const payments = await getPurchasePayments(req.params.id);
         res.status(200).json({
             success: true,
             message: "Purchase payments retrieved successfully",

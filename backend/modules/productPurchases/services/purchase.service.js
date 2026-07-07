@@ -138,8 +138,16 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         throw new Error("Purchase not found");
     }
 
-    // Calculate stock differences
-    const stockAdjustments = calculateStockDiff(existing.items, data.items);
+    // Only adjust stock if purchase was delivered
+    if (existing.status === 'delivered') {
+        // Calculate stock differences
+        const stockAdjustments = calculateStockDiff(existing.items, data.items);
+
+        // Apply stock adjustments
+        for (const adj of stockAdjustments) {
+            await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
+        }
+    }
 
     const purchaseItems = [];
     for (const item of data.items) {
@@ -180,11 +188,6 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         notes: data.notes,
     });
 
-    // Apply stock adjustments
-    for (const adj of stockAdjustments) {
-        await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
-    }
-
     return purchase;
 };
 
@@ -194,9 +197,12 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
         throw new Error("Purchase not found");
     }
 
-    // Decrement stock for all items before deletion
-    for (const item of existing.items) {
-        await adjustStock(item.product, item.batch, 'decr', item.quantity);
+    // Only decrement stock if purchase was delivered
+    if (existing.status === 'delivered') {
+        // Decrement stock for all items before deletion
+        for (const item of existing.items) {
+            await adjustStock(item.product, item.batch, 'decr', item.quantity);
+        }
     }
 
     return await deleteOnePurchaseService(id);

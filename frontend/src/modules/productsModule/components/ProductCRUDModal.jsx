@@ -251,7 +251,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       {showCategoryDialog && <CategoryCRUDModal mode="create" open={showCategoryDialog} onClose={setShowCategoryDialog} onCategoryCreated={handleCategoryCreated} />}
       {showSubCategoryDialog && <SubCategoryCRUDModal categoryId={form.category} mode="create" open={showSubCategoryDialog} onClose={setShowSubCategoryDialog} onSubCategoryCreated={handleSubCategoryCreated} />}
 
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
         <div className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
           {/* Header */}
