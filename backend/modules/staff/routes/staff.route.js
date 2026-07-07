@@ -12,6 +12,8 @@ import {
     createOrUpdateAttendanceData,
     getAttendanceHistoryData,
     getActiveStaffData,
+    getSalaryBreakdownData,
+    getPaymentSummaryData,
 } from "../controllers/staff.controller.js";
 import {
     createSalaryPaymentData,
@@ -41,6 +43,10 @@ router.get("/attendance/by-date", getAttendanceByDateData);
 router.post("/attendance", createOrUpdateAttendanceData);
 router.get("/attendance/history", getAttendanceHistoryData);
 router.get("/active", getActiveStaffData);
+
+// Staff Salary & Payment Summary Routes (must come before /:id)
+router.get("/:id/salary-breakdown", getSalaryBreakdownData);
+router.get("/:id/payment-summary", getPaymentSummaryData);
 
 // Staff Routes
 router.post("/", createStaffData);

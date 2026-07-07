@@ -99,10 +99,11 @@ export const staffApi = baseApi.injectEndpoints({
 
         // Sale Bills
         getSaleBills: builder.query({
-            query: (staffId) => ({
+            query: ({ staffId, page, limit, startDate, endDate }) => ({
                 url: `/staff/sale-bill/${staffId}`,
+                params: { page, limit, startDate, endDate },
             }),
-            providesTags: (result, error, staffId) => [{ type: "SaleBill", id: staffId }],
+            providesTags: (result, error, { staffId }) => [{ type: "SaleBill", id: staffId }],
         }),
         createSaleBill: builder.mutation({
             query: (data) => ({
@@ -149,6 +150,19 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             providesTags: ["Attendance"],
         }),
+        getSalaryBreakdown: builder.query({
+            query: ({ staffId, startDate, endDate }) => ({
+                url: `/staff/${staffId}/salary-breakdown`,
+                params: { startDate, endDate },
+            }),
+            providesTags: (result, error, { staffId }) => [{ type: "Staff", id: staffId }],
+        }),
+        getPaymentSummary: builder.query({
+            query: (staffId) => ({
+                url: `/staff/${staffId}/payment-summary`,
+            }),
+            providesTags: (result, error, staffId) => [{ type: "Staff", id: staffId }],
+        }),
     }),
 });
 
@@ -172,4 +186,6 @@ export const {
     useGetAttendanceByDateQuery,
     useCreateOrUpdateAttendanceMutation,
     useGetAttendanceHistoryQuery,
+    useGetSalaryBreakdownQuery,
+    useGetPaymentSummaryQuery,
 } = staffApi;

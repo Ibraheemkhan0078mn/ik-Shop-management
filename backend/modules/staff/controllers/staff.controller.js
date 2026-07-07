@@ -12,6 +12,8 @@ import {
     createOrUpdateAttendance,
     getAttendanceHistory,
     getActiveStaff,
+    calculateSalaryBreakdown,
+    calculatePaymentSummary,
 } from "../services/staff.service.js";
 
 // Create Staff
@@ -174,5 +176,36 @@ export const getActiveStaffData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Active staff retrieved successfully",
         data: staff,
+    });
+});
+
+// Calculate Salary Breakdown
+export const getSalaryBreakdownData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+        return next(new ErrorResponse("Start date and end date are required", 400));
+    }
+
+    const breakdown = await calculateSalaryBreakdown(id, startDate, endDate);
+
+    res.status(200).json({
+        success: true,
+        message: "Salary breakdown calculated successfully",
+        data: breakdown,
+    });
+});
+
+// Calculate Payment Summary
+export const getPaymentSummaryData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const summary = await calculatePaymentSummary(id);
+
+    res.status(200).json({
+        success: true,
+        message: "Payment summary calculated successfully",
+        data: summary,
     });
 });

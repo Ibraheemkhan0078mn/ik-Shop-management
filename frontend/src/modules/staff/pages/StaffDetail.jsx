@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X } from "lucide-react";
+import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation } from "../api/staff.api.js";
+import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery } from "../api/staff.api.js";
 import api from "../../../shared/services/api.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
@@ -11,14 +12,22 @@ export default function StaffDetail() {
     const [activeTab, setActiveTab] = useState("profile");
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [showStaffPaymentModal, setShowStaffPaymentModal] = useState(false);
-    const [orders, setOrders] = useState([]);
-    const [ordersLoading, setOrdersLoading] = useState(false);
-    const [ordersPagination, setOrdersPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+    const [dateFilter, setDateFilter] = useState({ startDate: "", endDate: "" });
+    const [salaryBreakdownFilter, setSalaryBreakdownFilter] = useState({ 
+        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0]
+    });
     const [staffPaymentForm, setStaffPaymentForm] = useState({ amount: "", notes: "" });
     const [selectedImages, setSelectedImages] = useState([]);
 
     const { data: staffData, isLoading, refetch } = useGetStaffByIdQuery(id);
     const { data: paymentsData } = useGetSalaryPaymentsQuery(id);
+    const { data: salaryBreakdownData } = useGetSalaryBreakdownQuery({ 
+        staffId: id, 
+        startDate: salaryBreakdownFilter.startDate, 
+        endDate: salaryBreakdownFilter.endDate 
+    }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate });
+    const { data: paymentSummaryData } = useGetPaymentSummaryQuery(id);
 
     const [addDocument] = useAddDocumentMutation();
     const [removeDocument] = useRemoveDocumentMutation();
@@ -32,30 +41,13 @@ export default function StaffDetail() {
     const staff = staffData?.data;
     const payments = paymentsData?.data || [];
 
-    // Fetch POS orders for this staff
-    const fetchStaffOrders = async (page = 1) => {
-        setOrdersLoading(true);
-        try {
-            const response = await api.get(`/staff/sale-bill/${id}?page=${page}&limit=20`);
-            setOrders(response.data.data || []);
-            setOrdersPagination({
-                page: response.data.page || 1,
-                limit: response.data.limit || 20,
-                total: response.data.total || 0,
-                totalPages: response.data.totalPages || 0,
-            });
-        } catch (error) {
-            console.error("Failed to fetch staff orders:", error);
-        } finally {
-            setOrdersLoading(false);
-        }
+    const handleDateFilterChange = (field, value) => {
+        setDateFilter(prev => ({ ...prev, [field]: value }));
     };
 
-    useEffect(() => {
-        if (activeTab === "saleOrders") {
-            fetchStaffOrders(1);
-        }
-    }, [activeTab]);
+    const clearDateFilter = () => {
+        setDateFilter({ startDate: "", endDate: "" });
+    };
 
     const handleAddDocument = async (e) => {
         e.preventDefault();
@@ -188,7 +180,7 @@ export default function StaffDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["profile", "documents", "saleOrders", "staffPayments"].map((tab) => (
+                {["profile", "documents", "saleOrders", "salaryBreakdown", "paymentSummary", "staffPayments"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -198,7 +190,7 @@ export default function StaffDetail() {
                                 : "text-[var(--muted)] hover:text-[var(--ink)]"
                         }`}
                     >
-                        {tab === "saleOrders" ? "Sale Orders" : tab === "staffPayments" ? "Staff Payments" : tab}
+                        {tab === "saleOrders" ? "Sale Orders" : tab === "staffPayments" ? "Staff Payments" : tab === "salaryBreakdown" ? "Salary Breakdown" : tab === "paymentSummary" ? "Payment Summary" : tab}
                     </button>
                 ))}
             </div>
@@ -324,62 +316,291 @@ export default function StaffDetail() {
 
             {/* Sale Orders Tab - POS Orders */}
             {activeTab === "saleOrders" && (
-                <div className="space-y-6">
-                    <div className="card p-6">
-                        <div className="flex items-center justify-between mb-4">
+                <div className="h-[calc(100vh-200px)] flex flex-col">
+                    <div className="card p-6 flex-1 flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between mb-4 shrink-0">
                             <h3 className="text-lg font-semibold text-[var(--ink)]">POS Orders</h3>
                             <ShoppingCart size={20} className="text-[var(--accent-2)]" />
                         </div>
-                        {ordersLoading ? (
-                            <p className="text-[var(--muted)]">Loading orders...</p>
-                        ) : orders.length ? (
-                            <div className="space-y-3">
-                                {orders.map((order) => (
-                                    <div key={order._id} className="p-4 border border-[var(--border)] rounded-md">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div>
-                                                <p className="font-medium text-[var(--ink)]">Order #{order.orderNumber}</p>
-                                                <p className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleString()}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-[var(--accent-2)]">Rs {order.totalAmount?.toLocaleString() || 0}</p>
-                                                {staff.salaryType === "percentage" && (
-                                                    <p className="text-xs text-[var(--muted)]">
-                                                        Earned: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="text-sm text-[var(--muted)]">
-                                            <p>Items: {order.items?.length || 0}</p>
-                                            <p>Payment: {order.paymentMethod}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {ordersPagination.totalPages > 1 && (
-                                    <div className="flex justify-center gap-2 mt-4">
-                                        <button
-                                            onClick={() => fetchStaffOrders(ordersPagination.page - 1)}
-                                            disabled={ordersPagination.page === 1}
-                                            className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50"
-                                        >
-                                            Previous
-                                        </button>
-                                        <span className="px-3 py-1">
-                                            Page {ordersPagination.page} of {ordersPagination.totalPages}
-                                        </span>
-                                        <button
-                                            onClick={() => fetchStaffOrders(ordersPagination.page + 1)}
-                                            disabled={ordersPagination.page === ordersPagination.totalPages}
-                                            className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50"
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
+
+                        {/* Date Filter */}
+                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] shrink-0">
+                            <Filter size={16} className="text-[var(--muted)]" />
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={14} className="text-[var(--muted)]" />
+                                    <input
+                                        type="date"
+                                        value={dateFilter.startDate}
+                                        onChange={(e) => handleDateFilterChange('startDate', e.target.value)}
+                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
+                                    />
+                                </div>
+                                <span className="text-[var(--muted)]">to</span>
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={14} className="text-[var(--muted)]" />
+                                    <input
+                                        type="date"
+                                        value={dateFilter.endDate}
+                                        onChange={(e) => handleDateFilterChange('endDate', e.target.value)}
+                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
+                                    />
+                                </div>
+                                {(dateFilter.startDate || dateFilter.endDate) && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-xs text-red-500 hover:text-red-600"
+                                    >
+                                        Clear
+                                    </button>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden">
+                            <PaginatedList
+                                rtkQuery={(params) => useGetSaleBillsQuery({ staffId: id, ...params, ...dateFilter })}
+                                limit={20}
+                                dataKey="data"
+                                renderItems={(orders) => (
+                                    <div className="space-y-3">
+                                        {orders.map((order) => (
+                                            <div key={order._id} className="p-4 border border-[var(--border)] rounded-md">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div>
+                                                        <p className="font-medium text-[var(--ink)]">Order #{order.orderNumber}</p>
+                                                        <p className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-[var(--accent-2)]">Rs {order.totalAmount?.toLocaleString() || 0}</p>
+                                                        {staff.salaryType === "percentage" && (
+                                                            <div className="flex items-center gap-2 justify-end">
+                                                                <span className="text-xs text-[var(--muted)]">
+                                                                    Earned: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                                                    {staff.percentage}%
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="text-sm text-[var(--muted)]">
+                                                    <p>Items: {order.items?.length || 0}</p>
+                                                    <p>Payment: {order.paymentMethod}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                renderEmpty={() => (
+                                    <div className="flex flex-col items-center justify-center h-full text-center">
+                                        <ShoppingCart size={48} className="text-[var(--muted)] mb-4" />
+                                        <p className="text-[var(--muted)]">No POS orders found for this staff</p>
+                                    </div>
+                                )}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Salary Breakdown Tab - Only for Fixed Salary */}
+            {activeTab === "salaryBreakdown" && staff?.salaryType === "fixed" && (
+                <div className="space-y-6">
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Salary Breakdown</h3>
+                            <TrendingUp size={20} className="text-[var(--accent-2)]" />
+                        </div>
+
+                        {/* Date Filter */}
+                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]">
+                            <Filter size={16} className="text-[var(--muted)]" />
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={14} className="text-[var(--muted)]" />
+                                    <input
+                                        type="date"
+                                        value={salaryBreakdownFilter.startDate}
+                                        onChange={(e) => setSalaryBreakdownFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
+                                    />
+                                </div>
+                                <span className="text-[var(--muted)]">to</span>
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={14} className="text-[var(--muted)]" />
+                                    <input
+                                        type="date"
+                                        value={salaryBreakdownFilter.endDate}
+                                        onChange={(e) => setSalaryBreakdownFilter(prev => ({ ...prev, endDate: e.target.value }))}
+                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {salaryBreakdownData?.data ? (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Staff Name</p>
+                                            <p className="font-medium text-[var(--ink)]">{salaryBreakdownData.data.staffName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Monthly Salary</p>
+                                            <p className="font-medium text-[var(--accent-2)]">Rs {salaryBreakdownData.data.monthlySalary?.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Total Expected</p>
+                                            <p className="font-medium text-[var(--ink)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.salaryForMonth, 0).toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Total Paid</p>
+                                            <p className="font-medium text-[var(--accent-2)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.totalPaid, 0).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {salaryBreakdownData.data.breakdown.map((month, index) => (
+                                        <div key={index} className="p-4 border border-[var(--border)] rounded-md">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div>
+                                                    <p className="font-medium text-[var(--ink)]">{month.month}</p>
+                                                    <p className="text-xs text-[var(--muted)]">{month.workingDays} / {month.totalDays} days</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        month.paymentStatus === 'full' ? 'bg-green-100 text-green-700' :
+                                                        month.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                        {month.paymentStatus}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4 text-sm">
+                                                <div>
+                                                    <p className="text-[var(--muted)]">Expected</p>
+                                                    <p className="font-medium text-[var(--ink)]">Rs {month.salaryForMonth.toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[var(--muted)]">Paid</p>
+                                                    <p className="font-medium text-[var(--accent-2)]">Rs {month.totalPaid.toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[var(--muted)]">Remaining</p>
+                                                    <p className="font-medium text-red-500">Rs {month.remaining.toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            {month.payments.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                                                    <p className="text-xs text-[var(--muted)] mb-2">Payments:</p>
+                                                    <div className="space-y-1">
+                                                        {month.payments.map((payment, pIndex) => (
+                                                            <div key={pIndex} className="flex justify-between text-xs">
+                                                                <span className="text-[var(--muted)]">{new Date(payment.paidAt).toLocaleDateString()}</span>
+                                                                <span className="text-[var(--ink)]">Rs {payment.amount.toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         ) : (
-                            <p className="text-[var(--muted)]">No POS orders found for this staff</p>
+                            <p className="text-[var(--muted)]">Select date range to view salary breakdown</p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Salary Breakdown Tab - Not applicable for percentage salary */}
+            {activeTab === "salaryBreakdown" && staff?.salaryType !== "fixed" && (
+                <div className="card p-6 text-center">
+                    <p className="text-[var(--muted)]">Salary breakdown is only applicable for fixed salary staff</p>
+                </div>
+            )}
+
+            {/* Payment Summary Tab */}
+            {activeTab === "paymentSummary" && (
+                <div className="space-y-6">
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Payment Summary</h3>
+                            <PieChart size={20} className="text-[var(--accent-2)]" />
+                        </div>
+
+                        {paymentSummaryData?.data ? (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Staff Name</p>
+                                            <p className="font-medium text-[var(--ink)]">{paymentSummaryData.data.staffName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Salary Type</p>
+                                            <p className="font-medium text-[var(--ink)] capitalize">{paymentSummaryData.data.salaryType}</p>
+                                        </div>
+                                        {paymentSummaryData.data.salaryType === 'percentage' && (
+                                            <div>
+                                                <p className="text-sm text-[var(--muted)]">Percentage</p>
+                                                <p className="font-medium text-[var(--accent-2)]">{paymentSummaryData.data.percentage}%</p>
+                                            </div>
+                                        )}
+                                        {paymentSummaryData.data.salaryType === 'fixed' && (
+                                            <div>
+                                                <p className="text-sm text-[var(--muted)]">Monthly Salary</p>
+                                                <p className="font-medium text-[var(--accent-2)]">Rs {paymentSummaryData.data.monthlySalary?.toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Join Date</p>
+                                            <p className="font-medium text-[var(--ink)]">{new Date(paymentSummaryData.data.joinDate).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                        <p className="text-sm text-[var(--muted)] mb-1">Total Earnings</p>
+                                        <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {paymentSummaryData.data.totalEarnings.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                        <p className="text-sm text-[var(--muted)] mb-1">Total Paid</p>
+                                        <p className="text-2xl font-bold text-green-600">Rs {paymentSummaryData.data.totalPaid.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                        <p className="text-sm text-[var(--muted)] mb-1">Total Remaining</p>
+                                        <p className="text-2xl font-bold text-red-500">Rs {paymentSummaryData.data.totalRemaining.toLocaleString()}</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 border border-[var(--border)] rounded-md">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-[var(--muted)]">Payment Status</p>
+                                            <p className="font-medium text-[var(--ink)] capitalize">{paymentSummaryData.data.paymentStatus}</p>
+                                        </div>
+                                        <span className={`px-3 py-1 text-sm rounded-full ${
+                                            paymentSummaryData.data.paymentStatus === 'advanced' ? 'bg-green-100 text-green-700' :
+                                            paymentSummaryData.data.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>
+                                            {paymentSummaryData.data.paymentStatus === 'advanced' ? 'Paid in Advance' :
+                                             paymentSummaryData.data.paymentStatus === 'partial' ? 'Partial Payment' :
+                                             'Remaining'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-[var(--muted)]">Loading payment summary...</p>
                         )}
                     </div>
                 </div>
