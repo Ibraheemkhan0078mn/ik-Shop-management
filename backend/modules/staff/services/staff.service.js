@@ -401,10 +401,9 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // Get all payments for this staff within the date range
-    const payments = await StaffSalaryPaymentModel.find({
-        staffId,
-        paidAt: { $gte: start, $lte: end }
+    // Get ALL payments for this staff (not just within date range) for FIFO allocation
+    const allPayments = await StaffSalaryPaymentModel.find({
+        staffId
     }).sort({ paidAt: 1 });
     
     // Generate month-wise breakdown
@@ -414,6 +413,10 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     
     let monthStart = new Date(start);
     monthStart.setDate(1);
+    
+    // Track remaining payment amount for FIFO allocation
+    let paymentIndex = 0;
+    let remainingPaymentAmount = 0;
     
     while (monthStart <= end) {
         const monthEnd = new Date(monthStart);
@@ -440,13 +443,40 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
             salaryForMonth = (monthlySalary / daysInMonth) * workingDays;
         }
         
-        // Calculate payments for this month
-        const monthPayments = payments.filter(payment => {
-            const paymentDate = new Date(payment.paidAt);
-            return paymentDate >= monthStart && paymentDate <= monthEnd;
-        });
+        // Allocate payments using FIFO method
+        let allocatedPayments = [];
+        let totalPaid = 0;
+        let remainingForMonth = salaryForMonth;
         
-        const totalPaid = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        while (remainingForMonth > 0.01 && paymentIndex < allPayments.length) {
+            const payment = allPayments[paymentIndex];
+            
+            if (remainingPaymentAmount === 0) {
+                remainingPaymentAmount = payment.amount || 0;
+            }
+            
+            const allocationAmount = Math.min(remainingPaymentAmount, remainingForMonth);
+            
+            if (allocationAmount > 0) {
+                allocatedPayments.push({
+                    id: payment._id,
+                    amount: allocationAmount,
+                    originalAmount: payment.amount,
+                    paidAt: payment.paidAt,
+                    notes: payment.notes
+                });
+                
+                totalPaid += allocationAmount;
+                remainingForMonth -= allocationAmount;
+                remainingPaymentAmount -= allocationAmount;
+            }
+            
+            if (remainingPaymentAmount <= 0.01) {
+                paymentIndex++;
+                remainingPaymentAmount = 0;
+            }
+        }
+        
         const remaining = Math.max(0, salaryForMonth - totalPaid);
         
         let paymentStatus = 'remaining';
@@ -468,12 +498,7 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
             totalPaid: Math.round(totalPaid * 100) / 100,
             remaining: Math.round(remaining * 100) / 100,
             paymentStatus,
-            payments: monthPayments.map(p => ({
-                id: p._id,
-                amount: p.amount,
-                paidAt: p.paidAt,
-                notes: p.notes
-            }))
+            payments: allocatedPayments
         });
         
         // Move to next month

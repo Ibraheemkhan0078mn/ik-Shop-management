@@ -497,12 +497,19 @@ export default function StaffDetail() {
                                             </div>
                                             {month.payments.length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                                                    <p className="text-xs text-[var(--muted)] mb-2">Payments:</p>
+                                                    <p className="text-xs text-[var(--muted)] mb-2">Allocated Payments (FIFO):</p>
                                                     <div className="space-y-1">
                                                         {month.payments.map((payment, pIndex) => (
-                                                            <div key={pIndex} className="flex justify-between text-xs">
-                                                                <span className="text-[var(--muted)]">{new Date(payment.paidAt).toLocaleDateString()}</span>
-                                                                <span className="text-[var(--ink)]">Rs {payment.amount.toLocaleString()}</span>
+                                                            <div key={pIndex} className="flex justify-between text-xs items-center">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[var(--muted)]">{new Date(payment.paidAt).toLocaleDateString()}</span>
+                                                                    {payment.amount !== payment.originalAmount && (
+                                                                        <span className="text-[var(--muted)] text-xs">
+                                                                            (of Rs {payment.originalAmount?.toLocaleString()})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[var(--ink)] font-medium">Rs {payment.amount.toLocaleString()}</span>
                                                             </div>
                                                         ))}
                                                     </div>
