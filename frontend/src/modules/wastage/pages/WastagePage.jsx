@@ -1,6 +1,6 @@
 // src/modules/wastage/pages/WastagePage.jsx
 import { useState } from "react";
-import { Plus, CheckCircle, Printer, Download } from "lucide-react";
+import { Plus, CheckCircle, Printer, Download, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteWastage, useWastages, useApproveWastage } from "../services/wastage.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -23,6 +23,7 @@ export default function WastagePage() {
 
     const [modal,      setModal]      = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
+    const [viewWastage, setViewWastage] = useState(null);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
@@ -59,6 +60,13 @@ export default function WastagePage() {
                     onClose={() => setApprovalModal(false)}
                     onApprove={handleApprove}
                     onDelete={handleDelete}
+                />
+            )}
+
+            {viewWastage && (
+                <WastageDetailModal
+                    wastage={viewWastage}
+                    onClose={() => setViewWastage(null)}
                 />
             )}
 
@@ -116,6 +124,7 @@ export default function WastagePage() {
                                     <WastageRow
                                         key={w._id}
                                         wastage={w}
+                                        onClick={() => setViewWastage(w)}
                                         onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: w._id }); }}
                                         onDelete={e => handleDelete(w._id, e)}
                                     />
@@ -134,13 +143,16 @@ export default function WastagePage() {
     );
 }
 
-function WastageRow({ wastage, onEdit, onDelete }) {
+function WastageRow({ wastage, onClick, onEdit, onDelete }) {
     const date   = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
     const status = wastage?.status ?? "draft";
     const style  = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
 
     return (
-        <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }}
+        <tr 
+            className="transition cursor-pointer" 
+            style={{ borderBottom: "1px solid var(--border)" }}
+            onClick={onClick}
             onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
@@ -286,6 +298,165 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                         Showing {wastages.length} of {data.total} pending requests
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+function WastageDetailModal({ wastage, onClose }) {
+    const language = useSelector(s => s.auth?.user?.language ?? "en");
+    const status = wastage?.status ?? "draft";
+    const style = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
+
+    if (!wastage) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+            <div className="bg-[var(--surface)] w-full max-w-4xl rounded-3xl shadow-2xl border border-[var(--border)] overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
+                onClick={e => e.stopPropagation()}>
+
+                {/* Header */}
+                <div className="bg-[var(--surface-muted)] px-6 py-5 border-b border-[var(--border)] flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-[var(--accent-2)]/10 rounded-2xl text-[var(--accent-2)]">
+                            <FileText size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-[var(--ink)] flex items-center gap-2">
+                                {wastage?.wastageNumber || "Wastage Details"}
+                            </h2>
+                            <p className="text-sm text-[var(--muted)]">
+                                {language === "en" ? "Wastage Record Details" : "ضیاع ریکارڈ کی تفصیلات"}
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-[var(--surface)] rounded-xl transition-colors text-[var(--muted)] hover:text-[var(--ink)]">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Summary Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar size={18} className="text-[var(--muted)]" />
+                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Date" : "تاریخ"}</span>
+                            </div>
+                            <p className="text-lg font-semibold text-[var(--ink)]">
+                                {new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString()}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+                            <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle size={18} className="text-[var(--muted)]" />
+                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Status" : "حیثیت"}</span>
+                            </div>
+                            <span className="px-3 py-1 rounded-lg text-sm font-semibold capitalize" style={style}>
+                                {status}
+                            </span>
+                        </div>
+                        <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+                            <div className="flex items-center gap-2 mb-2">
+                                <DollarSign size={18} className="text-[var(--muted)]" />
+                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Total Loss" : "کل نقصان"}</span>
+                            </div>
+                            <p className="text-lg font-semibold text-[var(--accent)]">
+                                Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Reason Section */}
+                    <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+                        <h3 className="text-base font-semibold text-[var(--ink)] mb-2 flex items-center gap-2">
+                            <AlertTriangle size={18} className="text-[var(--accent)]" />
+                            {language === "en" ? "Reason" : "وجہ"}
+                        </h3>
+                        <p className="text-sm text-[var(--ink)] capitalize">
+                            {wastage?.reason?.replace(/_/g, " ") || "—"}
+                        </p>
+                        {wastage?.notes && (
+                            <p className="text-sm text-[var(--muted)] mt-2">
+                                {wastage.notes}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Items Section */}
+                    <div className="border border-[var(--border)] rounded-2xl overflow-hidden bg-[var(--surface)]">
+                        <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-muted)]">
+                            <h3 className="text-base font-semibold text-[var(--ink)] flex items-center gap-2">
+                                <Package size={18} className="text-[var(--accent-2)]" />
+                                {language === "en" ? "Wasted Items" : "ضائع شدہ آئٹمز"}
+                                <span className="ml-auto text-xs bg-[var(--surface)] px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--muted)]">
+                                    {wastage?.items?.length || 0} {language === "en" ? "items" : "آئٹمز"}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-[var(--surface)] border-b border-[var(--border)] text-[var(--muted)] uppercase tracking-wider text-xs">
+                                    <tr>
+                                        <th className="px-5 py-3 font-semibold">{language === "en" ? "Product" : "پروڈکٹ"}</th>
+                                        <th className="px-5 py-3 font-semibold text-center">{language === "en" ? "Quantity" : "مقدار"}</th>
+                                        <th className="px-5 py-3 font-semibold text-right">{language === "en" ? "Cost Price" : "قیمت"}</th>
+                                        <th className="px-5 py-3 font-semibold text-right">{language === "en" ? "Total Loss" : "کل نقصان"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--border)]">
+                                    {wastage?.items?.length > 0 ? (
+                                        wastage.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-[var(--surface-muted)]/50 transition-colors">
+                                                <td className="px-5 py-4">
+                                                    <p className="font-medium text-[var(--ink)]">
+                                                        {item.product?.name || item.productName || "—"}
+                                                    </p>
+                                                    {item.batchNumber && (
+                                                        <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-center">
+                                                    {item.quantity || 0}
+                                                </td>
+                                                <td className="px-5 py-4 text-right">
+                                                    Rs {(item.costPrice || 0).toLocaleString()}
+                                                </td>
+                                                <td className="px-5 py-4 text-right font-semibold text-[var(--accent)]">
+                                                    Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="4" className="px-5 py-8 text-center text-[var(--muted)]">
+                                                {language === "en" ? "No items recorded." : "کوئی آئٹم ریکارڈ نہیں کیا گیا۔"}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]">
+                        <div>
+                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Items" : "کل آئٹمز"}</p>
+                            <p className="text-xl font-bold text-[var(--ink)]">{wastage?.totalItems || wastage?.items?.length || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Quantity" : "کل مقدار"}</p>
+                            <p className="text-xl font-bold text-[var(--ink)]">{wastage?.totalQuantity || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Loss Amount" : "کل نقصان کی رقم"}</p>
+                            <p className="text-xl font-bold text-[var(--accent)]">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

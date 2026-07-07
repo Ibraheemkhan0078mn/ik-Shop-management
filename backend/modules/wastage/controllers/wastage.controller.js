@@ -126,7 +126,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
     }
 
     // Only allow edits on draft wastages
-    if (wastage.status !== "draft") {
+    if (wastage.status !== "pending") {
         return next(new ErrorResponse(`Cannot edit a wastage that is already ${wastage.status}`, 400));
     }
 
@@ -149,7 +149,7 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
         validatedData.totalLossAmount = totalLossAmount;
     }
 
-    validatedData.updatedBy = req.user._id;
+    // validatedData.updatedBy = req.user._id;
 
     wastage = await wastageUpdateService(id, validatedData);
 
