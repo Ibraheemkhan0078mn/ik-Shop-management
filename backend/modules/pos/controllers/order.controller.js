@@ -8,6 +8,7 @@ import {
     findOrderByNumber as findOrderByNumberService,
     orderDelete as orderDeleteService,
     countOrders as countOrdersService,
+    getOrderById as getOrderByIdService,
 } from "../services/order.service.js";
 import {
     countHoldOrderService,
@@ -195,7 +196,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
 //  Permanently deletes a completed/cancelled order.
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteOrder = asyncHandler(async (req, res, next) => {
-    const order = await getOrderById(req.params.id);
+    const order = await getOrderByIdService(req.params.id);
 
     if (!order) return next(new ErrorResponse("Order not found", 404));
 

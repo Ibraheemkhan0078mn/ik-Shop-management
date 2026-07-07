@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus, Check } from "lucide-react";
-import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
+import { FormField, Input } from "../../../shared/components/FormFields.jsx";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
+import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 
 const ONLINE_PLATFORMS = [
     { value: "easypaisa", label: "Easypaisa" },
@@ -155,8 +156,19 @@ function OnlineTab({ onlinePlatform, setOnlinePlatform, onlineAmount, setOnlineA
     return (
         <div className="space-y-3">
             <FormField label="Platform">
-                <SearchableSelect options={ONLINE_PLATFORMS} value={onlinePlatform}
-                    onChange={setOnlinePlatform} placeholder="Select platform..." />
+                <select
+                    value={onlinePlatform}
+                    onChange={(e) => setOnlinePlatform(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl outline-none transition"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                >
+                    <option value="">Select platform...</option>
+                    {ONLINE_PLATFORMS.map((platform) => (
+                        <option key={platform.value} value={platform.value}>
+                            {platform.label}
+                        </option>
+                    ))}
+                </select>
             </FormField>
             <FormField label="Amount Received">
                 <div className="flex gap-2">
@@ -169,14 +181,34 @@ function OnlineTab({ onlinePlatform, setOnlinePlatform, onlineAmount, setOnlineA
     );
 }
 
-function CreditTab({ qarzaOptions, qarzaAccountId, setQarzaAccountId, onCreateQarza, total }) {
+function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, total, onOpenQarzaModal }) {
     return (
         <div className="space-y-3">
             <FormField label="Ledger Account">
-                <SearchableSelect options={qarzaOptions} value={qarzaAccountId}
-                    onChange={setQarzaAccountId} placeholder="Search account..." />
+                <div className="flex gap-2">
+                    <select
+                        className="flex-1 px-3 py-2 text-sm rounded-xl outline-none transition"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                        value={qarzaAccountId}
+                        onChange={(e) => setQarzaAccountId(e.target.value)}
+                    >
+                        <option value="">Search account...</option>
+                        {qarzaOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        onClick={onOpenQarzaModal}
+                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                        title="Create new account"
+                    >
+                        <Plus size={16} />
+                    </button>
+                </div>
             </FormField>
-            <CreateQarzaLink onClick={onCreateQarza} />
             {qarzaAccountId && <InfoStrip label="Amount on credit" value={`Rs ${total.toLocaleString()}`} />}
         </div>
     );
@@ -186,7 +218,7 @@ function HybridTab({
     hybridCash, setHybridCash,
     hybridQarza, setHybridQarza,
     hybridQarzaAccountId, setHybridQarzaAccountId,
-    qarzaOptions, onCreateQarza,
+    qarzaOptions, onOpenQarzaModal,
     total, hybridSum, hybridValid, hybridShortage,
     fillHybridCash, fillHybridQarza,
 }) {
@@ -224,11 +256,30 @@ function HybridTab({
                             value={hybridQarza} onChange={(e) => setHybridQarza(e.target.value)} />
                         <FillButton onClick={fillHybridQarza} />
                     </div>
-                    <SearchableSelect options={qarzaOptions} value={hybridQarzaAccountId}
-                        onChange={setHybridQarzaAccountId} placeholder="Select Qarza account..." />
+                    <div className="flex gap-2">
+                        <select
+                            className="flex-1 px-3 py-2 text-sm rounded-xl outline-none transition"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                            value={hybridQarzaAccountId}
+                            onChange={(e) => setHybridQarzaAccountId(e.target.value)}
+                        >
+                            <option value="">Select Qarza account...</option>
+                            {qarzaOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={onOpenQarzaModal}
+                            className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                            title="Create new account"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
                 </div>
-
-                <CreateQarzaLink onClick={onCreateQarza} />
             </div>
 
             <InfoStrip
@@ -255,7 +306,7 @@ export default function PosPaymentModal({
     initialDiscount = 0,
     initialStaffId = "",
 }) {
-    const { data: qarzaAccounts = [] } = useQarzaAccounts();
+    const { data: qarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
     const { data: staffList = [] } = useGetStaffListQuery({ limit: 100 });
 
     const [activeTab, setActiveTab] = useState("cash");
@@ -270,6 +321,7 @@ export default function PosPaymentModal({
     const [hybridCash, setHybridCash] = useState("");
     const [hybridQarza, setHybridQarza] = useState("");
     const [hybridQarzaAccountId, setHybridQarzaAccountId] = useState("");
+    const [showQarzaModal, setShowQarzaModal] = useState(false);
 
     const discountAmt = Math.max(0, Number(orderDiscount) || 0);
     const total = Math.max(0, subtotal - discountAmt);
@@ -281,6 +333,11 @@ export default function PosPaymentModal({
     useEffect(() => {
         if (total > 0) setCashReceived(String(total.toFixed(0)));
     }, [total]);
+
+    const handleQarzaAccountCreated = () => {
+        setShowQarzaModal(false);
+        refetchQarzaAccounts();
+    };
 
     const qarzaOptions = qarzaAccounts?.accounts?.map((a) => ({
         value: a._id,
@@ -479,15 +536,15 @@ export default function PosPaymentModal({
                                     onlineAmount={onlineAmount} setOnlineAmount={setOnlineAmount} total={total} />
                             )}
                             {activeTab === "credit" && (
-                                <CreditTab qarzaOptions={qarzaOptions} qarzaAccountId={qarzaAccountId}
-                                    setQarzaAccountId={setQarzaAccountId} onCreateQarza={onCreateQarza} total={total} />
+                                <CreditTabWithModal qarzaOptions={qarzaOptions} qarzaAccountId={qarzaAccountId}
+                                    setQarzaAccountId={setQarzaAccountId} total={total} onOpenQarzaModal={() => setShowQarzaModal(true)} />
                             )}
                             {activeTab === "hybrid" && (
                                 <HybridTab
                                     hybridCash={hybridCash} setHybridCash={setHybridCash}
                                     hybridQarza={hybridQarza} setHybridQarza={setHybridQarza}
                                     hybridQarzaAccountId={hybridQarzaAccountId} setHybridQarzaAccountId={setHybridQarzaAccountId}
-                                    qarzaOptions={qarzaOptions} onCreateQarza={onCreateQarza}
+                                    qarzaOptions={qarzaOptions} onOpenQarzaModal={() => setShowQarzaModal(true)}
                                     total={total} hybridSum={hybridSum}
                                     hybridValid={hybridValid} hybridShortage={hybridShortage}
                                     fillHybridCash={fillHybridCash} fillHybridQarza={fillHybridQarza}
@@ -524,6 +581,13 @@ export default function PosPaymentModal({
                 </div>
 
             </div>
+            {showQarzaModal && (
+                <QarzaAccountModal
+                    mode="create"
+                    onClose={() => setShowQarzaModal(false)}
+                    onSuccess={handleQarzaAccountCreated}
+                />
+            )}
         </div>
     );
 }
