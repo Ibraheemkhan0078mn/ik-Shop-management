@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import { useLogout } from "../../modules/auth/services/auth.service.js";
 import logo from "../assets/logo.png";
 import { sidebarData } from "../data/sidebar.js";
+import { useGetSettingsQuery } from "../../modules/settings/api/settings.api.js";
 
 const PERMISSION_MAP = {
   Sale:            p => p.pos,
@@ -22,7 +23,13 @@ const PERMISSION_MAP = {
 export default function Sidebar() {
   const location  = useLocation();
   const logoutUser = useLogout();
-  const { permissions = {}, role, language = "en" } = useSelector(s => s.auth) ?? {};
+  const { permissions = {}, role, language = "en", id: userId } = useSelector(s => s.auth) ?? {};
+  const { data: settingsData } = useGetSettingsQuery(userId);
+
+  const settings = settingsData?.data || {};
+  const shopName = settings.shop?.name || "Shop Manager";
+  const shopImageUrl = settings.shop?.imageUrl || "";
+  const moduleVisibility = settings.modules || {};
 
   const navItems = useMemo(() => sidebarData(language).navMain, [language]);
 
@@ -30,6 +37,31 @@ export default function Sidebar() {
     const check = PERMISSION_MAP[item.permissions];
     if (check) return check(permissions);
     if (item.id === "users") return permissions.manageUsers || role === "admin";
+    return true;
+  };
+
+  const isModuleVisible = item => {
+    // Map item IDs to module keys
+    const moduleKeyMap = {
+      dashboard: "dashboard",
+      pos: "pos",
+      products: "products",
+      purchases: "purchases",
+      sales: "sales",
+      customers: "customers",
+      suppliers: "suppliers",
+      expenses: "expenses",
+      reports: "reports",
+      accounts: "accounts",
+      qarza: "qarza",
+      staff: "staff",
+      wastage: "wastage",
+    };
+    
+    const moduleKey = moduleKeyMap[item.id];
+    if (moduleKey && moduleVisibility.hasOwnProperty(moduleKey)) {
+      return moduleVisibility[moduleKey];
+    }
     return true;
   };
 
@@ -82,11 +114,15 @@ export default function Sidebar() {
           className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
           style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
         >
-          <img src={logo} alt="logo" className="w-full h-full object-contain" />
+          {shopImageUrl ? (
+            <img src={shopImageUrl} alt="Shop" className="w-full h-full object-cover" />
+          ) : (
+            <img src={logo} alt="logo" className="w-full h-full object-contain" />
+          )}
         </div>
         <div className="leading-tight min-w-0">
           <p className="font-display text-sm font-bold truncate" style={{ color: "var(--accent)" }}>
-            Shop Manager
+            {shopName}
           </p>
           <p className="text-[11px] truncate" style={{ color: "var(--muted)" }}>
             Orders to accounts
@@ -105,7 +141,7 @@ export default function Sidebar() {
         </p>
 
         <ul className="space-y-0.5">
-          {navItems.filter(canAccess).map(item => {
+          {navItems.filter(canAccess).filter(isModuleVisible).map(item => {
             const Icon       = item.icon;
             const hasChildren = !!item.items?.length;
             const isActive   = activeId === item.id;
@@ -178,30 +214,50 @@ export default function Sidebar() {
 
       {/* ── Footer ── */}
       <div
-        className="px-2.5 py-3 pb-7 flex items-center gap-1.5"
+        className="px-3 py-3 pb-6 flex items-center justify-between gap-2"
         style={{ borderTop: "1px solid var(--border)", background: "var(--surface-muted)" }}
       >
-        <button
-          onClick={logoutUser}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-          onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface)"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>{language === "ur" ? "لاگ آؤٹ" : "Logout"}</span>
-        </button>
+        {/* Shop Info - Left Side */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            {shopImageUrl ? (
+              <img src={shopImageUrl} alt="Shop" className="w-full h-full object-cover" />
+            ) : (
+              <img src={logo} alt="logo" className="w-full h-full object-contain" />
+            )}
+          </div>
+          <div className="leading-tight min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--accent)" }}>
+              {shopName}
+            </p>
+          </div>
+        </div>
 
-        <Link
-          to="/settings/generals"
-          className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-          onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "var(--surface)"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>{language === "ur" ? "سیٹنگز" : "Settings"}</span>
-        </Link>
+        {/* Action Icons - Right Side */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Link
+            to="/settings"
+            className="p-2 rounded-lg transition-all duration-200"
+            style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
+
+          <button
+            onClick={logoutUser}
+            className="p-2 rounded-lg transition-all duration-200"
+            style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

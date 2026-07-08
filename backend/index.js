@@ -33,6 +33,7 @@ import ProductReturnRouter from './modules/productReturn/routes/productReturn.ro
 import CustomerRouter from './modules/customer/routes/customer.route.js'
 import DashboardRouter from './modules/dashboard/dashboard.route.js'
 import StaffRouter from './modules/staff/routes/staff.route.js'
+import SettingsRouter from './modules/settings/routes/settings.route.js'
 
 dontenv.config();
 const app = express();
@@ -91,6 +92,7 @@ app.use("/api/product-returns", ProductReturnRouter)
 app.use("/api/customers", CustomerRouter)
 app.use("/api/dashboard", DashboardRouter)
 app.use("/api/staff", StaffRouter)
+app.use("/api/settings", SettingsRouter)
 
 app.use(errorHandler);
 

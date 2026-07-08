@@ -37,6 +37,7 @@ import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
 import StaffAttendance from "../modules/staff/pages/StaffAttendance.jsx";
 import StaffReport from "../modules/reports/pages/StaffReport.jsx";
+import SettingsPage from "../modules/settings/pages/SettingsPage.jsx";
 import GiantInventoryReport from "../modules/reports/pages/GiantInventoryReport.jsx";
 import CreditsDebitsReport from "../modules/reports/pages/CreditsDebitsReport.jsx";
 import ExpenseKPIReport from "../modules/reports/pages/ExpenseKPIReport.jsx";
@@ -77,6 +78,7 @@ function AppRoutes() {
             <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
             <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
             <Route path="/settings/generals" element={<ProtectedRoute><Generals /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
             {/* Reports Routes */}
             <Route path="/reports" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />

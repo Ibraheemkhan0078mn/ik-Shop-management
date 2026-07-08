@@ -60,6 +60,7 @@ import { persistReducer, persistStore } from "redux-persist";
 
 // ── NEW: RTK Query base API ───────────────────────────────────
 import { baseApi } from "./rtkBaseApi.js";
+import "../modules/settings/api/settings.api.js";
 
 const presistConfig = {
     key: "ims-auth",
