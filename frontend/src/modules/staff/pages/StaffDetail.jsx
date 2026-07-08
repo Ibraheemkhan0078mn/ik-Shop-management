@@ -2,13 +2,21 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery } from "../api/staff.api.js";
+import { getStaffLabels } from "../labels/staffLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
+    
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getStaffLabels(language);
+    
     const [activeTab, setActiveTab] = useState("profile");
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [showStaffPaymentModal, setShowStaffPaymentModal] = useState(false);
@@ -58,21 +66,21 @@ export default function StaffDetail() {
         };
         try {
             await addDocument({ id, data: documentData }).unwrap();
-            toast.success("Document added successfully");
+            toast.success(labels.documentAdded);
             refetch();
             e.target.reset();
         } catch (error) {
-            toast.error("Failed to add document");
+            toast.error(labels.failedToAddDocument);
         }
     };
 
     const handleRemoveDocument = async (docId) => {
         try {
             await removeDocument({ id, docId }).unwrap();
-            toast.success("Document removed successfully");
+            toast.success(labels.documentRemoved);
             refetch();
         } catch (error) {
-            toast.error("Failed to remove document");
+            toast.error(labels.failedToRemoveDocument);
         }
     };
 
@@ -80,12 +88,12 @@ export default function StaffDetail() {
         e.preventDefault();
         try {
             await createSalaryPayment({ ...paymentForm, staffId: id }).unwrap();
-            toast.success("Payment recorded successfully");
+            toast.success(labels.paymentRecorded);
             setShowPaymentForm(false);
             setPaymentForm({ amount: "", month: "", notes: "" });
             refetch();
         } catch (error) {
-            toast.error("Failed to record payment");
+            toast.error(labels.failedToRecordPayment);
         }
     };
 
@@ -97,23 +105,23 @@ export default function StaffDetail() {
                 staffId: id,
                 month: new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
             }).unwrap();
-            toast.success("Staff payment recorded successfully");
+            toast.success(labels.paymentRecorded);
             setShowStaffPaymentModal(false);
             setStaffPaymentForm({ amount: "", notes: "" });
             refetch();
         } catch (error) {
-            toast.error("Failed to record staff payment");
+            toast.error(labels.failedToRecordPayment);
         }
     };
 
     const handleDeletePayment = async (paymentId) => {
-        if (window.confirm("Are you sure you want to delete this payment?")) {
+        if (window.confirm(labels.deletePaymentConfirm)) {
             try {
                 await deleteSalaryPayment(paymentId).unwrap();
-                toast.success("Payment deleted successfully");
+                toast.success(labels.paymentRecorded);
                 refetch();
             } catch (error) {
-                toast.error("Failed to delete payment");
+                toast.error(labels.failedToRecordPayment);
             }
         }
     };
@@ -129,32 +137,32 @@ export default function StaffDetail() {
 
         try {
             await addImages({ id, formData }).unwrap();
-            toast.success("Images uploaded successfully");
+            toast.success(labels.imagesUploaded);
             setSelectedImages([]);
             refetch();
         } catch (error) {
-            toast.error("Failed to upload images");
+            toast.error(labels.failedToUploadImages);
         }
     };
 
     const handleRemoveImage = async (imageId) => {
-        if (window.confirm("Are you sure you want to delete this image?")) {
+        if (window.confirm(labels.deletePaymentConfirm)) {
             try {
                 await removeImage({ id, imageId }).unwrap();
-                toast.success("Image removed successfully");
+                toast.success(labels.imageRemoved);
                 refetch();
             } catch (error) {
-                toast.error("Failed to remove image");
+                toast.error(labels.failedToRemoveImage);
             }
         }
     };
 
     if (isLoading) {
-        return <div className="p-6 text-center">Loading...</div>;
+        return <div className="p-6 text-center">{labels.loading}</div>;
     }
 
     if (!staff) {
-        return <div className="p-6 text-center">Staff not found</div>;
+        return <div className="p-6 text-center">{labels.staffNotFound}</div>;
     }
 
     return (
@@ -168,13 +176,13 @@ export default function StaffDetail() {
                 </button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{staff.fullName}</h1>
-                    <p className="text-sm text-[var(--muted)]">{staff.role} - {staff.salaryType} salary</p>
+                    <p className="text-sm text-[var(--muted)]">{staff.role} - {staff.salaryType} {labels.salary}</p>
                 </div>
                 <button
                     onClick={() => navigate(`/staff/edit/${id}`)}
                     className="btn-add"
                 >
-                    <Edit size={16} /> Edit
+                    <Edit size={16} /> {labels.edit}
                 </button>
             </div>
 
@@ -190,7 +198,7 @@ export default function StaffDetail() {
                                 : "text-[var(--muted)] hover:text-[var(--ink)]"
                         }`}
                     >
-                        {tab === "saleOrders" ? "Sale Orders" : tab === "staffPayments" ? "Staff Payments" : tab === "salaryBreakdown" ? "Salary Breakdown" : tab === "paymentSummary" ? "Payment Summary" : tab}
+                        {tab === "saleOrders" ? labels.saleOrders : tab === "staffPayments" ? labels.staffPayments : tab === "salaryBreakdown" ? labels.salaryBreakdown : tab === "paymentSummary" ? labels.paymentSummary : labels[tab] || tab}
                     </button>
                 ))}
             </div>
@@ -200,64 +208,64 @@ export default function StaffDetail() {
                 <div className="card p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Full Name</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.fullName}</label>
                             <p className="font-medium text-[var(--ink)]">{staff.fullName}</p>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">CNIC</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.cnic}</label>
                             <p className="font-medium text-[var(--ink)]">{staff.cnic}</p>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Phone</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.phone}</label>
                             <p className="font-medium text-[var(--ink)]">{staff.phone}</p>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Role</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.role}</label>
                             <p className="font-medium text-[var(--ink)] capitalize">{staff.role}</p>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Salary Type</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.salaryType}</label>
                             <p className="font-medium text-[var(--ink)] capitalize">{staff.salaryType}</p>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Status</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.status}</label>
                             <span className={`px-2 py-1 text-xs rounded-full ${
                                 staff.status === 'active' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                             }`}>
-                                {staff.status}
+                                {staff.status === 'active' ? labels.active : labels.inactive}
                             </span>
                         </div>
                         <div>
-                            <label className="text-sm text-[var(--muted)]">Join Date</label>
+                            <label className="text-sm text-[var(--muted)]">{labels.joinDate}</label>
                             <p className="font-medium text-[var(--ink)]">{new Date(staff.joinDate).toLocaleDateString()}</p>
                         </div>
                         {staff.salaryType === "fixed" && (
                             <div>
-                                <label className="text-sm text-[var(--muted)]">Monthly Salary</label>
+                                <label className="text-sm text-[var(--muted)]">{labels.monthlySalary}</label>
                                 <p className="font-medium text-[var(--ink)]">Rs {staff.monthlySalary || 0}</p>
                             </div>
                         )}
                         {staff.salaryType === "percentage" && (
                             <div>
-                                <label className="text-sm text-[var(--muted)]">Percentage</label>
+                                <label className="text-sm text-[var(--muted)]">{labels.commissionRate}</label>
                                 <p className="font-medium text-[var(--ink)]">{staff.percentage || 0}%</p>
                             </div>
                         )}
                         {staff.address && (
                             <div className="md:col-span-2">
-                                <label className="text-sm text-[var(--muted)]">Address</label>
+                                <label className="text-sm text-[var(--muted)]">{labels.address}</label>
                                 <p className="font-medium text-[var(--ink)]">{staff.address}</p>
                             </div>
                         )}
                         {staff.emergencyContact && (
                             <div>
-                                <label className="text-sm text-[var(--muted)]">Emergency Contact</label>
+                                <label className="text-sm text-[var(--muted)]">{labels.emergencyContact}</label>
                                 <p className="font-medium text-[var(--ink)]">{staff.emergencyContact}</p>
                             </div>
                         )}
                         {staff.notes && (
                             <div className="md:col-span-2">
-                                <label className="text-sm text-[var(--muted)]">Notes</label>
+                                <label className="text-sm text-[var(--muted)]">{labels.notes}</label>
                                 <p className="font-medium text-[var(--ink)]">{staff.notes}</p>
                             </div>
                         )}
@@ -269,7 +277,7 @@ export default function StaffDetail() {
             {activeTab === "documents" && (
                 <div className="space-y-6">
                     <div className="card p-6">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Upload Images</h3>
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.uploadImages}</h3>
                         <div className="space-y-4">
                             <input
                                 type="file"
@@ -278,12 +286,12 @@ export default function StaffDetail() {
                                 onChange={handleImageUpload}
                                 className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
                             />
-                            <p className="text-sm text-[var(--muted)]">You can select multiple images to upload</p>
+                            <p className="text-sm text-[var(--muted)]">{labels.selectMultipleImages}</p>
                         </div>
                     </div>
 
                     <div className="card p-6">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Images</h3>
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.images}</h3>
                         {staff.documents?.length ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 {staff.documents.map((doc) => (
@@ -308,7 +316,7 @@ export default function StaffDetail() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">No images uploaded</p>
+                            <p className="text-[var(--muted)]">{labels.noImagesUploaded}</p>
                         )}
                     </div>
                 </div>
@@ -319,7 +327,7 @@ export default function StaffDetail() {
                 <div className="h-[calc(100vh-200px)] flex flex-col">
                     <div className="card p-6 flex-1 flex flex-col overflow-hidden">
                         <div className="flex items-center justify-between mb-4 shrink-0">
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">POS Orders</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.posOrders}</h3>
                             <ShoppingCart size={20} className="text-[var(--accent-2)]" />
                         </div>
 
@@ -336,7 +344,7 @@ export default function StaffDetail() {
                                         className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
                                     />
                                 </div>
-                                <span className="text-[var(--muted)]">to</span>
+                                <span className="text-[var(--muted)]">{labels.to}</span>
                                 <div className="flex items-center gap-1">
                                     <Calendar size={14} className="text-[var(--muted)]" />
                                     <input
@@ -351,7 +359,7 @@ export default function StaffDetail() {
                                         onClick={clearDateFilter}
                                         className="text-xs text-red-500 hover:text-red-600"
                                     >
-                                        Clear
+                                        {labels.clear}
                                     </button>
                                 )}
                             </div>
@@ -368,7 +376,7 @@ export default function StaffDetail() {
                                             <div key={order._id} className="p-4 border border-[var(--border)] rounded-md">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div>
-                                                        <p className="font-medium text-[var(--ink)]">Order #{order.orderNumber}</p>
+                                                        <p className="font-medium text-[var(--ink)]">{labels.orderNumber} {order.orderNumber}</p>
                                                         <p className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleString()}</p>
                                                     </div>
                                                     <div className="text-right">
@@ -376,7 +384,7 @@ export default function StaffDetail() {
                                                         {staff.salaryType === "percentage" && (
                                                             <div className="flex items-center gap-2 justify-end">
                                                                 <span className="text-xs text-[var(--muted)]">
-                                                                    Earned: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
+                                                                    {labels.earned}: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
                                                                 </span>
                                                                 <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
                                                                     {staff.percentage}%
@@ -386,8 +394,8 @@ export default function StaffDetail() {
                                                     </div>
                                                 </div>
                                                 <div className="text-sm text-[var(--muted)]">
-                                                    <p>Items: {order.items?.length || 0}</p>
-                                                    <p>Payment: {order.paymentMethod}</p>
+                                                    <p>{labels.items}: {order.items?.length || 0}</p>
+                                                    <p>{labels.paymentMethod}: {order.paymentMethod}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -396,7 +404,7 @@ export default function StaffDetail() {
                                 renderEmpty={() => (
                                     <div className="flex flex-col items-center justify-center h-full text-center">
                                         <ShoppingCart size={48} className="text-[var(--muted)] mb-4" />
-                                        <p className="text-[var(--muted)]">No POS orders found for this staff</p>
+                                        <p className="text-[var(--muted)]">{labels.noPosOrdersFound}</p>
                                     </div>
                                 )}
                             />
@@ -410,7 +418,7 @@ export default function StaffDetail() {
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">Salary Breakdown</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.salaryBreakdown}</h3>
                             <TrendingUp size={20} className="text-[var(--accent-2)]" />
                         </div>
 
@@ -427,7 +435,7 @@ export default function StaffDetail() {
                                         className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
                                     />
                                 </div>
-                                <span className="text-[var(--muted)]">to</span>
+                                <span className="text-[var(--muted)]">{labels.to}</span>
                                 <div className="flex items-center gap-1">
                                     <Calendar size={14} className="text-[var(--muted)]" />
                                     <input
@@ -445,19 +453,19 @@ export default function StaffDetail() {
                                 <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Staff Name</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.staffName}</p>
                                             <p className="font-medium text-[var(--ink)]">{salaryBreakdownData.data.staffName}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Monthly Salary</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.monthlySalary}</p>
                                             <p className="font-medium text-[var(--accent-2)]">Rs {salaryBreakdownData.data.monthlySalary?.toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Total Expected</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.totalExpected}</p>
                                             <p className="font-medium text-[var(--ink)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.salaryForMonth, 0).toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Total Paid</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.totalPaid}</p>
                                             <p className="font-medium text-[var(--accent-2)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.totalPaid, 0).toLocaleString()}</p>
                                         </div>
                                     </div>
@@ -469,7 +477,7 @@ export default function StaffDetail() {
                                             <div className="flex items-center justify-between mb-3">
                                                 <div>
                                                     <p className="font-medium text-[var(--ink)]">{month.month}</p>
-                                                    <p className="text-xs text-[var(--muted)]">{month.workingDays} / {month.totalDays} days</p>
+                                                    <p className="text-xs text-[var(--muted)]">{month.workingDays} / {month.totalDays} {labels.days || "days"}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className={`px-2 py-1 text-xs rounded-full ${
@@ -477,27 +485,27 @@ export default function StaffDetail() {
                                                         month.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' :
                                                         'bg-red-100 text-red-700'
                                                     }`}>
-                                                        {month.paymentStatus}
+                                                        {month.paymentStatus === 'full' ? labels.full : month.paymentStatus === 'partial' ? labels.partial : labels.unpaid}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-4 text-sm">
                                                 <div>
-                                                    <p className="text-[var(--muted)]">Expected</p>
+                                                    <p className="text-[var(--muted)]">{labels.expected}</p>
                                                     <p className="font-medium text-[var(--ink)]">Rs {month.salaryForMonth.toLocaleString()}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[var(--muted)]">Paid</p>
+                                                    <p className="text-[var(--muted)]">{labels.paid}</p>
                                                     <p className="font-medium text-[var(--accent-2)]">Rs {month.totalPaid.toLocaleString()}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[var(--muted)]">Remaining</p>
+                                                    <p className="text-[var(--muted)]">{labels.remaining}</p>
                                                     <p className="font-medium text-red-500">Rs {month.remaining.toLocaleString()}</p>
                                                 </div>
                                             </div>
                                             {month.payments.length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                                                    <p className="text-xs text-[var(--muted)] mb-2">Allocated Payments (FIFO):</p>
+                                                    <p className="text-xs text-[var(--muted)] mb-2">{labels.allocatedPayments}:</p>
                                                     <div className="space-y-1">
                                                         {month.payments.map((payment, pIndex) => (
                                                             <div key={pIndex} className="flex justify-between text-xs items-center">
@@ -520,7 +528,7 @@ export default function StaffDetail() {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">Select date range to view salary breakdown</p>
+                            <p className="text-[var(--muted)]">{labels.selectDateRange}</p>
                         )}
                     </div>
                 </div>
@@ -529,7 +537,7 @@ export default function StaffDetail() {
             {/* Salary Breakdown Tab - Not applicable for percentage salary */}
             {activeTab === "salaryBreakdown" && staff?.salaryType !== "fixed" && (
                 <div className="card p-6 text-center">
-                    <p className="text-[var(--muted)]">Salary breakdown is only applicable for fixed salary staff</p>
+                    <p className="text-[var(--muted)]">{labels.salaryBreakdownFixedOnly}</p>
                 </div>
             )}
 
@@ -538,7 +546,7 @@ export default function StaffDetail() {
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">Payment Summary</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.paymentSummary}</h3>
                             <PieChart size={20} className="text-[var(--accent-2)]" />
                         </div>
 
@@ -547,27 +555,27 @@ export default function StaffDetail() {
                                 <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Staff Name</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.staffName}</p>
                                             <p className="font-medium text-[var(--ink)]">{paymentSummaryData.data.staffName}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Salary Type</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.salaryType}</p>
                                             <p className="font-medium text-[var(--ink)] capitalize">{paymentSummaryData.data.salaryType}</p>
                                         </div>
                                         {paymentSummaryData.data.salaryType === 'percentage' && (
                                             <div>
-                                                <p className="text-sm text-[var(--muted)]">Percentage</p>
+                                                <p className="text-sm text-[var(--muted)]">{labels.percentage}</p>
                                                 <p className="font-medium text-[var(--accent-2)]">{paymentSummaryData.data.percentage}%</p>
                                             </div>
                                         )}
                                         {paymentSummaryData.data.salaryType === 'fixed' && (
                                             <div>
-                                                <p className="text-sm text-[var(--muted)]">Monthly Salary</p>
+                                                <p className="text-sm text-[var(--muted)]">{labels.monthlySalary}</p>
                                                 <p className="font-medium text-[var(--accent-2)]">Rs {paymentSummaryData.data.monthlySalary?.toLocaleString()}</p>
                                             </div>
                                         )}
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Join Date</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.joinDate}</p>
                                             <p className="font-medium text-[var(--ink)]">{new Date(paymentSummaryData.data.joinDate).toLocaleDateString()}</p>
                                         </div>
                                     </div>
@@ -575,15 +583,15 @@ export default function StaffDetail() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">Total Earnings</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalEarnings}</p>
                                         <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {paymentSummaryData.data.totalEarnings.toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">Total Paid</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalPaid}</p>
                                         <p className="text-2xl font-bold text-green-600">Rs {paymentSummaryData.data.totalPaid.toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">Total Remaining</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalRemaining}</p>
                                         <p className="text-2xl font-bold text-red-500">Rs {paymentSummaryData.data.totalRemaining.toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -591,7 +599,7 @@ export default function StaffDetail() {
                                 <div className="p-4 border border-[var(--border)] rounded-md">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">Payment Status</p>
+                                            <p className="text-sm text-[var(--muted)]">{labels.paymentStatus}</p>
                                             <p className="font-medium text-[var(--ink)] capitalize">{paymentSummaryData.data.paymentStatus}</p>
                                         </div>
                                         <span className={`px-3 py-1 text-sm rounded-full ${
@@ -607,7 +615,7 @@ export default function StaffDetail() {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">Loading payment summary...</p>
+                            <p className="text-[var(--muted)]">{labels.loading}</p>
                         )}
                     </div>
                 </div>
@@ -618,12 +626,12 @@ export default function StaffDetail() {
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">Staff Payments</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.staffPayments}</h3>
                             <button
                                 onClick={() => setShowStaffPaymentModal(true)}
                                 className="btn-add"
                             >
-                                <Plus size={16} /> Create Payment
+                                <Plus size={16} /> {labels.recordPayment}
                             </button>
                         </div>
                         {payments.length ? (
@@ -639,7 +647,7 @@ export default function StaffDetail() {
                                             <span className={`px-2 py-1 text-xs rounded-full ${
                                                 payment.status === 'paid' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
                                             }`}>
-                                                {payment.status}
+                                                {payment.status === 'paid' ? labels.paid : labels.partial}
                                             </span>
                                             <button
                                                 onClick={() => handleDeletePayment(payment._id)}
@@ -652,7 +660,7 @@ export default function StaffDetail() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">No payments recorded</p>
+                            <p className="text-[var(--muted)]">{labels.noStaffFound}</p>
                         )}
                     </div>
                 </div>

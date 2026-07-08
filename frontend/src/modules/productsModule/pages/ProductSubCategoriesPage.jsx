@@ -6,9 +6,15 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryCRUDModal from "../components/SubCategoryCRUDModal";
+import { getProductLabels } from "../labels/productLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductSubCategoriesPage() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getProductLabels(language);
+    
     const [mode, setMode] = useState("list");
     const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -21,10 +27,10 @@ export default function ProductSubCategoriesPage() {
         setDeleteLoading(true);
         try {
             await deleteSubCategory(deleteTarget.id).unwrap();
-            showSuccess("Subcategory deleted successfully");
+            showSuccess(labels.subCategoryDeleted);
             setDeleteTarget(null);
         } catch (error) {
-            showError(error?.data?.message || "Unable to delete subcategory");
+            showError(error?.data?.message || labels.failedToDelete);
             setDeleteTarget(null);
         }
         setDeleteLoading(false);
@@ -54,11 +60,11 @@ export default function ProductSubCategoriesPage() {
             <div className="flex flex-col">
                 {/* Desktop Header */}
                 <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface-muted) rounded-t-xl border-b border-(--border) text-xs font-semibold text-(--muted)">
-                    <div className="col-span-1">Icon</div>
-                    <div className="col-span-3">Name</div>
-                    <div className="col-span-3">Category</div>
-                    <div className="col-span-3">Description</div>
-                    <div className="col-span-2">Actions</div>
+                    <div className="col-span-1">{labels.image}</div>
+                    <div className="col-span-3">{labels.name}</div>
+                    <div className="col-span-3">{labels.category}</div>
+                    <div className="col-span-3">{labels.description}</div>
+                    <div className="col-span-2">{labels.actions}</div>
                 </div>
 
                 {/* Desktop Rows */}
@@ -92,16 +98,16 @@ export default function ProductSubCategoriesPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-(--ink) truncate">{item.name}</h3>
-                                <p className="text-xs text-(--muted) truncate">Category: {item.category?.name || "—"}</p>
+                                <p className="text-xs text-(--muted) truncate">{labels.category}: {item.category?.name || "—"}</p>
                                 <p className="text-sm text-(--muted) truncate">{item.description || "—"}</p>
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-(--border)">
                             <button onClick={() => handleEdit(item._id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
-                                <Edit size={16} /> Edit
+                                <Edit size={16} /> {labels.edit}
                             </button>
                             <button onClick={() => setDeleteTarget({ id: item._id, name: item.name })} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
-                                <Trash2 size={16} /> Delete
+                                <Trash2 size={16} /> {labels.delete}
                             </button>
                         </div>
                     </div>
@@ -128,15 +134,15 @@ export default function ProductSubCategoriesPage() {
                             <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
                                 <AlertTriangle className="w-7 h-7 text-red-500" />
                             </div>
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">Delete Subcategory?</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.deleteConfirm}</h3>
                             <p className="text-sm text-[var(--muted)] text-center">
-                                Are you sure you want to delete <strong className="text-[var(--ink)]">{deleteTarget.name}</strong>? This action cannot be undone.
+                                {labels.deleteConfirm} <strong className="text-[var(--ink)]">{deleteTarget.name}</strong>
                             </p>
                         </div>
                         <div className="flex gap-3 px-6 py-5">
-                            <button onClick={() => setDeleteTarget(null)} disabled={deleteLoading} className="flex-1 py-2.5 rounded-xl bg-[var(--app-bg)] text-[var(--muted)] font-medium text-sm hover:opacity-80 transition-all">Cancel</button>
+                            <button onClick={() => setDeleteTarget(null)} disabled={deleteLoading} className="flex-1 py-2.5 rounded-xl bg-[var(--app-bg)] text-[var(--muted)] font-medium text-sm hover:opacity-80 transition-all">{labels.cancel}</button>
                             <button onClick={handleDelete} disabled={deleteLoading} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-all disabled:opacity-60">
-                                {deleteLoading ? "Deleting…" : "Delete"}
+                                {deleteLoading ? labels.loading : labels.delete}
                             </button>
                         </div>
                     </div>
@@ -146,11 +152,11 @@ export default function ProductSubCategoriesPage() {
             {/* List mode */}
             <div className="flex-none">
                 <PageHeading
-                    heading="Product Subcategories"
-                    subheading="Manage subcategories for better product organization"
+                    heading={labels.productSubCategories}
+                    subheading={labels.manageProducts}
                     leftActions={
                         <div onClick={handleCreate}>
-                            <ScreenTabButton lucideIcon={Plus} text="Add Subcategory" />
+                            <ScreenTabButton lucideIcon={Plus} text={labels.add} />
                         </div>
                     }
                     rightActions={

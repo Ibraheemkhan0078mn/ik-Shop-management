@@ -2,10 +2,18 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Calendar, Clock, Check, X, Coffee, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 import { useGetActiveStaffQuery, useGetAttendanceByDateQuery, useCreateOrUpdateAttendanceMutation } from "../api/staff.api.js";
+import { getStaffLabels } from "../labels/staffLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 export default function StaffAttendance() {
   const navigate = useNavigate();
+  
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getStaffLabels(language);
+  
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceData, setAttendanceData] = useState({});
 
@@ -76,10 +84,10 @@ export default function StaffAttendance() {
         status,
         lateHours
       }).unwrap();
-      toast.success("Attendance saved");
+      toast.success(labels.attendanceMarked);
     } catch (error) {
       console.error('Error saving attendance:', error);
-      toast.error("Failed to save attendance");
+      toast.error(labels.failedToSave || "Failed to save attendance");
       // Revert on error
       setAttendanceData(prev => {
         const newState = { ...prev };
@@ -93,13 +101,13 @@ export default function StaffAttendance() {
   const getStatusInfo = (status) => {
     switch (status) {
       case 'present':
-        return { icon: Check, color: 'bg-green-500', label: 'Present' };
+        return { icon: Check, color: 'bg-green-500', label: labels.present };
       case 'absent':
-        return { icon: X, color: 'bg-red-500', label: 'Absent' };
+        return { icon: X, color: 'bg-red-500', label: labels.absent };
       case 'leave':
-        return { icon: Coffee, color: 'bg-yellow-500', label: 'Leave' };
+        return { icon: Coffee, color: 'bg-yellow-500', label: labels.leave };
       case 'late':
-        return { icon: AlertCircle, color: 'bg-orange-500', label: 'Late' };
+        return { icon: AlertCircle, color: 'bg-orange-500', label: labels.late };
       default:
         return { icon: Clock, color: 'bg-gray-400', label: 'Not Marked' };
     }
@@ -117,8 +125,8 @@ export default function StaffAttendance() {
             <ArrowLeft size={20} className="text-[var(--ink)]" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Staff Attendance</h1>
-            <p className="text-sm text-[var(--muted)]">Mark attendance for your staff</p>
+            <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.markAttendance}</h1>
+            <p className="text-sm text-[var(--muted)]">{labels.manageStaff}</p>
           </div>
         </div>
       </div>
@@ -128,7 +136,7 @@ export default function StaffAttendance() {
         <div className="flex items-center gap-4">
           <Calendar size={20} className="text-[var(--muted)]" />
           <div className="flex-1">
-            <label className="block text-sm font-medium text-[var(--ink)] mb-2">Select Date</label>
+            <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.attendanceDate}</label>
             <input
               type="date"
               value={selectedDate}
@@ -141,9 +149,9 @@ export default function StaffAttendance() {
 
       {/* Staff Cards */}
       {staffLoading || attendanceLoading ? (
-        <div className="card p-8 text-center text-[var(--muted)]">Loading...</div>
+        <div className="card p-8 text-center text-[var(--muted)]">{labels.loading}</div>
       ) : staff.length === 0 ? (
-        <div className="card p-8 text-center text-[var(--muted)]">No active staff found</div>
+        <div className="card p-8 text-center text-[var(--muted)]">{labels.noStaffFound}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {staff.map((staffMember) => {
@@ -176,7 +184,7 @@ export default function StaffAttendance() {
                         : 'bg-[var(--app-bg)] border border-[var(--border)] hover:bg-green-50'
                     }`}
                   >
-                    Present
+                    {labels.present}
                   </button>
                   <button
                     onClick={() => handleStatusChange(staffMember._id, 'absent')}
@@ -186,7 +194,7 @@ export default function StaffAttendance() {
                         : 'bg-[var(--app-bg)] border border-[var(--border)] hover:bg-red-50'
                     }`}
                   >
-                    Absent
+                    {labels.absent}
                   </button>
                   <button
                     onClick={() => handleStatusChange(staffMember._id, 'leave')}
@@ -196,7 +204,7 @@ export default function StaffAttendance() {
                         : 'bg-[var(--app-bg)] border border-[var(--border)] hover:bg-yellow-50'
                     }`}
                   >
-                    Leave
+                    {labels.leave}
                   </button>
                   <button
                     onClick={() => handleStatusChange(staffMember._id, 'late')}
@@ -206,7 +214,7 @@ export default function StaffAttendance() {
                         : 'bg-[var(--app-bg)] border border-[var(--border)] hover:bg-orange-50'
                     }`}
                   >
-                    Late
+                    {labels.late}
                   </button>
                 </div>
 

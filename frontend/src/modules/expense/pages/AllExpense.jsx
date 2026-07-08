@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Plus, Tag, Printer, Download, BarChart3, Calendar, Edit2, Trash2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteExpense, useExpensesPaginated } from "../services/expense.service.js";
+import { getExpenseLabels } from "../labels/expenseLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import ExpenseModal from "../components/ExpenseModal.jsx";
 import CategoryModal from "../components/CategoryModal.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -12,7 +14,10 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import ExpenseKPIReport from "../../reports/pages/ExpenseKPIReport.jsx";
 
 export default function AllExpense() {
-    const language        = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getExpenseLabels(language);
+    
     const [deleteExpense] = useDeleteExpense();
     const [activeTab,    setActiveTab] = useState("list"); // "list" or "report"
 
@@ -21,12 +26,12 @@ export default function AllExpense() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this expense?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteExpense(id).unwrap();
-            showSuccess("Expense deleted successfully");
+            showSuccess(labels.expenseDeleted);
         } catch (error) {
-            showError(error?.data?.message || "Failed to delete expense");
+            showError(error?.data?.message || labels.failedToDelete);
         }
     };
 
@@ -43,15 +48,15 @@ export default function AllExpense() {
 
             <div className="flex-none">
                 <PageHeading
-                    heading={language === "en" ? "Expenses" : "اخراجات"}
-                    subheading={language === "en" ? "Manage your expenses" : "اپنی اخراجات کا انتظام کریں"}
+                    heading={labels.expenseManagement}
+                    subheading={labels.manageExpenses}
                     leftActions={
                         <>
                             <div onClick={() => setModal("create")}>
-                                <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Expense" : "اخراجات شامل کریں"} />
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addExpense} />
                             </div>
                             <div onClick={() => setCatModal(true)}>
-                                <ScreenTabButton lucideIcon={Tag} text={language === "en" ? "Categories" : "زمرے"} />
+                                <ScreenTabButton lucideIcon={Tag} text={labels.category} />
                             </div>
                         </>
                     }
@@ -77,7 +82,7 @@ export default function AllExpense() {
                                 : "text-ink-muted hover:text-ink"
                         }`}
                     >
-                        {language === "en" ? "Expense List" : "اخراجات کی فہرست"}
+                        {labels.expenseManagement}
                     </button>
                     <button
                         onClick={() => setActiveTab("report")}
@@ -88,7 +93,7 @@ export default function AllExpense() {
                         }`}
                     >
                         <BarChart3 size={16} />
-                        {language === "en" ? "Expense Report" : "اخراجات کی رپورٹ"}
+                        {labels.totalExpenses}
                     </button>
                 </div>
             </div>
@@ -104,11 +109,11 @@ export default function AllExpense() {
                         <table className="w-full text-sm text-left">
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                    <th className="px-4 py-3 font-semibold">Amount</th>
-                                    <th className="px-4 py-3 font-semibold">Date</th>
-                                    <th className="px-4 py-3 font-semibold">Category</th>
-                                    <th className="px-4 py-3 font-semibold">Notes</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.amount}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.category}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.description}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -126,7 +131,7 @@ export default function AllExpense() {
                 )}
                 renderEmpty={() => (
                     <p className="text-center py-12 text-sm text-ink-muted">
-                        No expenses found.
+                        {labels.noExpensesFound}
                     </p>
                 )}
             />

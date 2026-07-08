@@ -3,6 +3,8 @@ import { useState, useCallback } from "react";
 import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Printer, Download } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
+import { getProductLabels } from "../labels/productLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ProductCRUDModal from "../components/ProductCRUDModal.jsx";
 import ProductFilterPanel from "../components/ProductFilterPanel.jsx";
@@ -25,9 +27,9 @@ const StockBadge = ({ qty }) => (
     </span>
 );
 
-const StatusBadge = ({ active }) => (
+const StatusBadge = ({ active, labels }) => (
     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${active ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500"}`}>
-        {active ? "Active" : "Inactive"}
+        {active ? labels.active : labels.inactive}
     </span>
 );
 
@@ -40,6 +42,10 @@ const IconBtn = ({ onClick, icon: Icon, hoverClass }) => (
 
 export default function Products() {
     const { data: userQuery } = useUser();
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getProductLabels(language);
+    
     const [deleteProduct] = useDeleteProduct();
     const [deleteProductWithBatches] = useDeleteProductWithBatches();
 
@@ -53,9 +59,6 @@ export default function Products() {
     const [currentPage, setCurrentPage] = useState(1);
     const [uniqueBrands] = useState([]);
 
-    const language = userQuery?.data?.language ?? userQuery?.language ?? "en";
-    const isEn = language === "en";
-
     const handleFiltersChange = useCallback((f) => { setActiveFilters(f); setCurrentPage(1); }, []);
     const openEdit = (id) => { setSelectedProductId(id); setModalMode("update"); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setModalMode("create"); setSelectedProductId(null); };
@@ -66,13 +69,13 @@ export default function Products() {
         setDeleteLoading(true);
         try {
             await deleteProduct(deleteTarget.id).unwrap();
-            showSuccess("Product deleted successfully");
+            showSuccess(labels.productDeleted);
             setDeleteTarget(null);
         } catch (err) {
             if (err?.data?.code === "PRODUCT_HAS_BATCHES") {
                 setDeleteTarget((p) => ({ ...p, step: "withBatches", batchCount: err.data.batchCount || 0 }));
             } else {
-                showError(err?.data?.message || "Failed to delete product");
+                showError(err?.data?.message || labels.failedToDelete);
                 setDeleteTarget(null);
             }
         }
@@ -84,10 +87,10 @@ export default function Products() {
         setDeleteLoading(true);
         try {
             await deleteProductWithBatches(deleteTarget.id).unwrap();
-            showSuccess("Product and all batches deleted");
+            showSuccess(labels.productDeleted);
             setDeleteTarget(null);
         } catch (err) {
-            showError(err?.data?.message || "Failed to delete");
+            showError(err?.data?.message || labels.failedToDelete);
             setDeleteTarget(null);
         }
         setDeleteLoading(false);
@@ -100,15 +103,15 @@ export default function Products() {
                 {/* Desktop header */}
                 <div className="hidden md:grid md:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                    <div className="col-span-1">Image</div>
-                    <div className="col-span-2">Name</div>
-                    <div className="col-span-2">Code</div>
-                    <div className="col-span-2">Barcode</div>
-                    <div className="col-span-1">Price</div>
-                    <div className="col-span-1">Stock</div>
-                    <div className="col-span-1">Category</div>
-                    <div className="col-span-1">Status</div>
-                    <div className="col-span-1">Actions</div>
+                    <div className="col-span-1">{labels.image}</div>
+                    <div className="col-span-2">{labels.name}</div>
+                    <div className="col-span-2">{labels.sku}</div>
+                    <div className="col-span-2">{labels.barcode}</div>
+                    <div className="col-span-1">{labels.price}</div>
+                    <div className="col-span-1">{labels.stock}</div>
+                    <div className="col-span-1">{labels.category}</div>
+                    <div className="col-span-1">{labels.status}</div>
+                    <div className="col-span-1">{labels.actions}</div>
                 </div>
 
                 {/* Desktop rows */}
@@ -129,7 +132,7 @@ export default function Products() {
                         <div className="col-span-1 text-xs text-(--muted) truncate">
                             {item.category?.name}{item.subCategory?.name && <span className="text-(--muted)/50"> › {item.subCategory.name}</span>}
                         </div>
-                        <div className="col-span-1"><StatusBadge active={item.isActive} /></div>
+                        <div className="col-span-1"><StatusBadge active={item.isActive} labels={labels} /></div>
                         <div className="col-span-1 flex items-center gap-1.5">
                             <button id={`products-edit-${item._id}`} onClick={() => openEdit(item._id)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
                                 <Edit size={15} />
@@ -153,13 +156,13 @@ export default function Products() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                         <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.name}</h3>
-                                        <StatusBadge active={item.isActive} />
+                                        <StatusBadge active={item.isActive} labels={labels} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
-                                        {item.productCode && <span>Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
-                                        {item.barcode && <span>Barcode: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
-                                        <span>Price: <span className="font-semibold text-(--ink)">{item.defaultRetailPrice ?? 0}</span></span>
-                                        <span>Stock: <StockBadge qty={item.currentStockLevel} /></span>
+                                        {item.productCode && <span>{labels.sku}: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
+                                        {item.barcode && <span>{labels.barcode}: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
+                                        <span>{labels.price}: <span className="font-semibold text-(--ink)">{item.defaultRetailPrice ?? 0}</span></span>
+                                        <span>{labels.stock}: <StockBadge qty={item.currentStockLevel} /></span>
                                     </div>
                                     {(item.category?.name) && (
                                         <div className="text-xs mt-1.5 px-2 py-0.5 rounded-md inline-block"
@@ -173,12 +176,12 @@ export default function Products() {
                                 <button id={`products-mobile-edit-${item._id}`} onClick={() => openEdit(item._id)}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
                                     style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                    <Edit size={14} /> Edit
+                                    <Edit size={14} /> {labels.edit}
                                 </button>
                                 <button id={`products-mobile-delete-${item._id}`} onClick={() => openDeleteConfirm(item)}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
                                     style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                    <Trash2 size={14} /> Delete
+                                    <Trash2 size={14} /> {labels.delete}
                                 </button>
                             </div>
                         </div>
@@ -202,18 +205,18 @@ export default function Products() {
                                     <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
                                         <AlertTriangle className="w-7 h-7 text-red-500" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-(--ink)">Delete Product?</h3>
+                                    <h3 className="text-lg font-bold text-(--ink)">{labels.deleteConfirm}</h3>
                                     <p className="text-sm text-(--muted)">
-                                        This will permanently remove <strong className="text-(--ink)">{deleteTarget.name}</strong> and cannot be undone.
+                                        {labels.deleteConfirm} <strong className="text-(--ink)">{deleteTarget.name}</strong>
                                     </p>
                                 </div>
                                 <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
                                     <button id="products-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>Cancel</button>
+                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>{labels.cancel}</button>
                                     <button id="products-delete-confirm" onClick={handleConfirmDelete} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
-                                        {deleteLoading ? "Deleting…" : "Delete"}
+                                        {deleteLoading ? labels.loading : labels.delete}
                                     </button>
                                 </div>
                             </>
@@ -223,23 +226,23 @@ export default function Products() {
                                     <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
                                         <PackageX className="w-7 h-7 text-amber-500" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-(--ink)">Batches Connected</h3>
+                                    <h3 className="text-lg font-bold text-(--ink)">{labels.deleteConfirm}</h3>
                                     <p className="text-sm text-(--muted)">
                                         <strong className="text-(--ink)">{deleteTarget.name}</strong> has{" "}
                                         <strong className="text-amber-500">{deleteTarget.batchCount} batch(es)</strong> linked to it.
                                     </p>
                                     <div className="w-full rounded-xl px-4 py-2.5 text-xs text-amber-700 text-center"
                                         style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
-                                        Deleting will permanently remove this product along with all its batches and history.
+                                        {labels.deleteConfirm}
                                     </div>
                                 </div>
                                 <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
                                     <button id="products-hard-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>Cancel</button>
+                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>{labels.cancel}</button>
                                     <button id="products-hard-delete-confirm" onClick={handleConfirmHardDelete} disabled={deleteLoading}
                                         className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
-                                        {deleteLoading ? "Deleting…" : "Delete with Batches"}
+                                        {deleteLoading ? labels.loading : labels.delete}
                                     </button>
                                 </div>
                             </>
@@ -251,15 +254,15 @@ export default function Products() {
             <div className="flex-none">
                 <PageHeading
                     id="products-page-heading"
-                    heading={isEn ? "Products" : "مصنوعات"}
-                    subheading={isEn ? "Manage your products" : "اپنی مصنوعات کا انتظام کریں"}
+                    heading={labels.productManagement}
+                    subheading={labels.manageProducts}
                     leftActions={
                         <>
                             <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
-                                <ScreenTabButton lucideIcon={Filter} text={isEn ? "Filters" : "فلٹرز"} />
+                                <ScreenTabButton lucideIcon={Filter} text={labels.filterByCategory} />
                             </div>
                             <div id="products-add-button" onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
-                                <ScreenTabButton lucideIcon={Package} text={isEn ? "Add Product" : "مصنوعات شامل کریں"} />
+                                <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
                             </div>
                         </>
                     }

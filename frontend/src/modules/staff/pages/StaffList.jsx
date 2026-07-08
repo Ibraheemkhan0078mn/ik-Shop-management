@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Edit, Trash2, Eye, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 import { useGetStaffListQuery, useDeleteStaffMutation } from "../api/staff.api.js";
+import { getStaffLabels } from "../labels/staffLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 export default function StaffList() {
     const navigate = useNavigate();
@@ -10,6 +13,10 @@ export default function StaffList() {
     const [roleFilter, setRoleFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [salaryTypeFilter, setSalaryTypeFilter] = useState("");
+
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getStaffLabels(language);
 
     const { data: staffData, isLoading, refetch } = useGetStaffListQuery({
         search,
@@ -21,13 +28,13 @@ export default function StaffList() {
     const [deleteStaff] = useDeleteStaffMutation();
 
     const handleDelete = async (id, name) => {
-        if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+        if (window.confirm(labels.deleteConfirm.replace("{name}", name))) {
             try {
                 await deleteStaff(id).unwrap();
-                toast.success("Staff deleted successfully");
+                toast.success(labels.staffDeleted);
                 refetch();
             } catch (error) {
-                toast.error("Failed to delete staff");
+                toast.error(labels.failedToDelete);
             }
         }
     };
@@ -38,14 +45,14 @@ export default function StaffList() {
         <div className="p-6 bg-[var(--app-bg)] min-h-screen">
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Staff Management</h1>
-                    <p className="text-sm text-[var(--muted)]">Manage your staff members</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.staffManagement}</h1>
+                    <p className="text-sm text-[var(--muted)]">{labels.manageStaff}</p>
                 </div>
                 <button
                     onClick={() => navigate("/staff/create")}
                     className="btn-add"
                 >
-                    <Plus size={16} /> Add Staff
+                    <Plus size={16} /> {labels.addStaff}
                 </button>
             </div>
 
@@ -54,7 +61,7 @@ export default function StaffList() {
                     onClick={() => navigate("/staff/attendance")}
                     className="btn-add"
                 >
-                    <Calendar size={16} /> Mark Attendance
+                    <Calendar size={16} /> {labels.markAttendance}
                 </button>
             </div>
 
@@ -65,7 +72,7 @@ export default function StaffList() {
                                 <Search size={16} className="text-[var(--muted)]" />
                                 <input
                                     type="text"
-                                    placeholder="Search by name, CNIC, phone..."
+                                    placeholder={labels.searchPlaceholder}
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
@@ -76,29 +83,29 @@ export default function StaffList() {
                                 onChange={(e) => setRoleFilter(e.target.value)}
                                 className="px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                             >
-                                <option value="">All Roles</option>
-                                <option value="cashier">Cashier</option>
-                                <option value="tailor">Tailor</option>
-                                <option value="stockKeeper">Stock Keeper</option>
-                                <option value="other">Other</option>
+                                <option value="">{labels.allRoles}</option>
+                                <option value="cashier">{labels.cashier}</option>
+                                <option value="tailor">{labels.tailor}</option>
+                                <option value="stockKeeper">{labels.stockKeeper}</option>
+                                <option value="other">{labels.other}</option>
                             </select>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                             >
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="">{labels.allStatus}</option>
+                                <option value="active">{labels.active}</option>
+                                <option value="inactive">{labels.inactive}</option>
                             </select>
                             <select
                                 value={salaryTypeFilter}
                                 onChange={(e) => setSalaryTypeFilter(e.target.value)}
                                 className="px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                             >
-                                <option value="">All Salary Types</option>
-                                <option value="fixed">Fixed</option>
-                                <option value="percentage">Percentage</option>
+                                <option value="">{labels.allSalaryTypes}</option>
+                                <option value="fixed">{labels.fixed}</option>
+                                <option value="percentage">{labels.percentage}</option>
                             </select>
                         </div>
                     </div>
@@ -106,21 +113,21 @@ export default function StaffList() {
                     {/* Staff Table */}
                     <div className="card overflow-hidden">
                         {isLoading ? (
-                            <div className="p-8 text-center text-[var(--muted)]">Loading...</div>
+                            <div className="p-8 text-center text-[var(--muted)]">{labels.loading}</div>
                         ) : staff.length === 0 ? (
-                            <div className="p-8 text-center text-[var(--muted)]">No staff found</div>
+                            <div className="p-8 text-center text-[var(--muted)]">{labels.noStaffFound}</div>
                         ) : (
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-[var(--border)]">
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Name</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">CNIC</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Phone</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Role</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Salary Type</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Status</th>
-                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">Join Date</th>
-                                        <th className="text-center p-4 text-sm font-semibold text-[var(--ink)]">Actions</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.name}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.cnic}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.phone}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.role}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.salaryType}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.status}</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-[var(--ink)]">{labels.joinDate}</th>
+                                        <th className="text-center p-4 text-sm font-semibold text-[var(--ink)]">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody>

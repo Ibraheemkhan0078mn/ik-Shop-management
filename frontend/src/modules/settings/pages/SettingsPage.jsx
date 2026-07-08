@@ -3,16 +3,17 @@ import { X, Printer, Camera, Globe, Store, Lock, Check, Eye, EyeOff, User, Mail,
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
-import { useGetSettingsQuery, useUpdateSettingsMutation, useUpdateShopSettingsMutation, useUpdatePrinterSettingsMutation, useUpdateCameraSettingsMutation, useUpdateLanguageSettingsMutation, useUpdateModuleSettingsMutation } from "../api/settings.api.js";
+import { useUpdateSettingsMutation, useUpdateShopSettingsMutation, useUpdatePrinterSettingsMutation, useUpdateCameraSettingsMutation, useUpdateLanguageSettingsMutation, useUpdateModuleSettingsMutation } from "../api/settings.api.js";
 import { getSettingsLabels } from "../../../labels/settingsLabels.js";
+import { useSettings } from "../hooks/useSettings.js";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
     const { id: userId, name, email, phoneNo, role } = useSelector(s => s.auth) || {};
-    const { data: settingsData, isLoading } = useGetSettingsQuery(userId, { skip: !userId });
+    const { settings: settingsData, isLoading } = useSettings();
     
     // Get language from settings data, fallback to "en"
-    const settingsLanguage = settingsData?.data?.language || "en";
+    const settingsLanguage = settingsData?.language || "en";
     const labels = getSettingsLabels(settingsLanguage);
     
     const [updateSettings] = useUpdateSettingsMutation();
@@ -41,16 +42,15 @@ export default function SettingsPage() {
     const [profilePhone, setProfilePhone] = useState("");
 
     useEffect(() => {
-        if (settingsData?.data) {
-            const s = settingsData.data;
-            setShopName(s.shop?.name || "");
-            setShopImagePreview(s.shop?.imageUrl || "");
-            setPrinterHeight(s.printer?.height || 300);
-            setPrinterWidth(s.printer?.width || 80);
-            setPrintMode(s.printer?.printMode || "preview");
-            setLanguageState(s.language || "en");
-            setSelectedCamera(s.camera?.selectedDeviceId || "");
-            setModules(s.modules || {});
+        if (settingsData) {
+            setShopName(settingsData.shop?.name || "");
+            setShopImagePreview(settingsData.shop?.imageUrl || "");
+            setPrinterHeight(settingsData.printer?.height || 300);
+            setPrinterWidth(settingsData.printer?.width || 80);
+            setPrintMode(settingsData.printer?.printMode || "preview");
+            setLanguageState(settingsData.language || "en");
+            setSelectedCamera(settingsData.camera?.selectedDeviceId || "");
+            setModules(settingsData.modules || {});
         }
         // Initialize profile from auth state
         setProfileName(name || "");

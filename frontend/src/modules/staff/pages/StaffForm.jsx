@@ -2,11 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 import { useGetStaffByIdQuery, useCreateStaffMutation, useUpdateStaffMutation } from "../api/staff.api.js";
+import { getStaffLabels } from "../labels/staffLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 export default function StaffForm({ isEdit = false }) {
     const navigate = useNavigate();
     const { id } = useParams();
+    
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getStaffLabels(language);
+    
     const [formData, setFormData] = useState({
         fullName: "",
         cnic: "",
@@ -61,19 +69,19 @@ export default function StaffForm({ isEdit = false }) {
         try {
             if (isEdit) {
                 await updateStaff({ id, data: formData }).unwrap();
-                toast.success("Staff updated successfully");
+                toast.success(labels.staffUpdated);
             } else {
                 await createStaff(formData).unwrap();
-                toast.success("Staff created successfully");
+                toast.success(labels.staffCreated);
             }
             navigate("/staff");
         } catch (error) {
-            toast.error(isEdit ? "Failed to update staff" : "Failed to create staff");
+            toast.error(isEdit ? labels.failedToUpdate : labels.failedToCreate);
         }
     };
 
     if (isEdit && isLoading) {
-        return <div className="p-6 text-center">Loading...</div>;
+        return <div className="p-6 text-center">{labels.loading}</div>;
     }
 
     return (
@@ -87,10 +95,10 @@ export default function StaffForm({ isEdit = false }) {
                 </button>
                 <div>
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
-                        {isEdit ? "Edit Staff" : "Add New Staff"}
+                        {isEdit ? labels.editStaff : labels.createStaff}
                     </h1>
                     <p className="text-sm text-[var(--muted)]">
-                        {isEdit ? "Update staff information" : "Fill in the staff details"}
+                        {isEdit ? labels.manageStaff : labels.fullName}
                     </p>
                 </div>
             </div>
@@ -99,11 +107,11 @@ export default function StaffForm({ isEdit = false }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Personal Information */}
                     <div className="md:col-span-2">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Personal Information</h3>
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.personalInfo || "Personal Information"}</h3>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Full Name *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.fullName} *</label>
                         <input
                             type="text"
                             name="fullName"
@@ -115,7 +123,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">CNIC *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.cnic} *</label>
                         <input
                             type="text"
                             name="cnic"
@@ -127,7 +135,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Phone *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.phone} *</label>
                         <input
                             type="text"
                             name="phone"
@@ -139,7 +147,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Role *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.role} *</label>
                         <select
                             name="role"
                             value={formData.role}
@@ -147,15 +155,15 @@ export default function StaffForm({ isEdit = false }) {
                             required
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                         >
-                            <option value="cashier">Cashier</option>
-                            <option value="tailor">Tailor</option>
-                            <option value="stockKeeper">Stock Keeper</option>
-                            <option value="other">Other</option>
+                            <option value="cashier">{labels.cashier}</option>
+                            <option value="tailor">{labels.tailor}</option>
+                            <option value="stockKeeper">{labels.stockKeeper}</option>
+                            <option value="other">{labels.other}</option>
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Join Date *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.joinDate} *</label>
                         <input
                             type="date"
                             name="joinDate"
@@ -167,25 +175,25 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Status</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.status}</label>
                         <select
                             name="status"
                             value={formData.status}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                         >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="active">{labels.active}</option>
+                            <option value="inactive">{labels.inactive}</option>
                         </select>
                     </div>
 
                     {/* Salary Information */}
                     <div className="md:col-span-2 mt-4">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Salary Information</h3>
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.salaryInfo || "Salary Information"}</h3>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Salary Type *</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.salaryType} *</label>
                         <select
                             name="salaryType"
                             value={formData.salaryType}
@@ -193,14 +201,14 @@ export default function StaffForm({ isEdit = false }) {
                             required
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                         >
-                            <option value="fixed">Fixed Salary</option>
-                            <option value="percentage">Percentage Based</option>
+                            <option value="fixed">{labels.fixed} {labels.salary}</option>
+                            <option value="percentage">{labels.percentage} {labels.salaryInfo || "Based"}</option>
                         </select>
                     </div>
 
                     {formData.salaryType === "fixed" ? (
                         <div>
-                            <label className="block text-sm font-medium text-[var(--ink)] mb-2">Monthly Salary</label>
+                            <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.monthlySalary || "Monthly Salary"}</label>
                             <input
                                 type="number"
                                 name="monthlySalary"
@@ -212,7 +220,7 @@ export default function StaffForm({ isEdit = false }) {
                         </div>
                     ) : (
                         <div>
-                            <label className="block text-sm font-medium text-[var(--ink)] mb-2">Percentage (%)</label>
+                            <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.commissionRate} (%)</label>
                             <input
                                 type="number"
                                 name="percentage"
@@ -227,11 +235,11 @@ export default function StaffForm({ isEdit = false }) {
 
                     {/* Additional Information */}
                     <div className="md:col-span-2 mt-4">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Additional Information</h3>
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.additionalInfo || "Additional Information"}</h3>
                     </div>
 
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Address</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.address}</label>
                         <input
                             type="text"
                             name="address"
@@ -242,7 +250,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Emergency Contact</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.emergencyContact || "Emergency Contact"}</label>
                         <input
                             type="text"
                             name="emergencyContact"
@@ -253,7 +261,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Photo URL</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.photo || "Photo URL"}</label>
                         <input
                             type="text"
                             name="photo"
@@ -264,7 +272,7 @@ export default function StaffForm({ isEdit = false }) {
                     </div>
 
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">Notes</label>
+                        <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.notes || "Notes"}</label>
                         <textarea
                             name="notes"
                             value={formData.notes}
@@ -281,13 +289,13 @@ export default function StaffForm({ isEdit = false }) {
                         onClick={() => navigate("/staff")}
                         className="px-4 py-2 border border-[var(--border)] rounded-md hover:bg-[var(--hover)]"
                     >
-                        Cancel
+                        {labels.cancel}
                     </button>
                     <button
                         type="submit"
                         className="btn-add"
                     >
-                        <Save size={16} /> {isEdit ? "Update" : "Create"} Staff
+                        <Save size={16} /> {isEdit ? labels.edit : labels.create} {labels.staffManagement?.split(" ")[0] || "Staff"}
                     </button>
                 </div>
             </form>
