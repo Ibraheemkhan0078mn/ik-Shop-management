@@ -74,7 +74,6 @@ const NAV_ITEMS = [
       { id: "creditDebits", icon: Wallet, url: "/reports/credits-debits" },
     ],
   },
-  { id: "profile", icon: UserCircle, url: "/profile", allowedUrls: ["/profile"] },
   { id: "users", icon: Users, url: "/users", allowedUrls: ["/users"] },
 ];
 

@@ -45,7 +45,12 @@ export const updateShopSettingsData = asyncHandler(async (req, res, next) => {
     if (!userId) {
         return next(new ErrorResponse("User ID is required", 400));
     }
-    const shopData = req.body;
+
+    const shopData = {
+        name: req.body.name,
+        imageUrl: req.file?.path || req.body.imageUrl, // Use uploaded file path or existing URL
+    };
+
     const settings = await updateShopSettings(userId, shopData);
 
     res.status(200).json({

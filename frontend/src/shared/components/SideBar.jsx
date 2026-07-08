@@ -1,7 +1,7 @@
 // src/components/Sidebar.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { ChevronDown, ChevronRight, LogOut, Settings } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Settings, Menu, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useLogout } from "../../modules/auth/services/auth.service.js";
 import logo from "../assets/logo.png";
@@ -25,6 +25,7 @@ export default function Sidebar() {
   const logoutUser = useLogout();
   const { permissions = {}, role, language = "en", id: userId } = useSelector(s => s.auth) ?? {};
   const { data: settingsData } = useGetSettingsQuery(userId);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const settings = settingsData?.data || {};
   const shopName = settings.shop?.name || "Shop Manager";
@@ -97,7 +98,9 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="flex flex-col w-64 h-screen sticky top-0 z-50"
+      className={`flex flex-col h-screen sticky top-0 z-50 transition-all duration-300 ${
+        isCollapsed ? "w-16" : "w-64"
+      }`}
       style={{
         background: "var(--surface)",
         borderRight: "1px solid var(--border)",
@@ -107,11 +110,23 @@ export default function Sidebar() {
     >
       {/* ── Header ── */}
       <div
-        className="flex items-center gap-3 px-4 py-4 "
+        className="flex items-center gap-3 px-4 py-4 relative"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`absolute ${isRtl ? "left-2" : "right-2"} p-1.5 rounded-lg transition-colors`}
+          style={{ color: "var(--muted)", background: "var(--surface-muted)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--muted)"}
+        >
+          {isCollapsed ? <Menu size={16} /> : <X size={16} />}
+        </button>
+        
         <div
-          className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+          className={`w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 ${
+            isCollapsed ? "mx-auto" : ""
+          }`}
           style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
         >
           {shopImageUrl ? (
@@ -120,25 +135,30 @@ export default function Sidebar() {
             <img src={logo} alt="logo" className="w-full h-full object-contain" />
           )}
         </div>
-        <div className="leading-tight min-w-0">
-          <p className="font-display text-sm font-bold truncate" style={{ color: "var(--accent)" }}>
-            {shopName}
-          </p>
-          <p className="text-[11px] truncate" style={{ color: "var(--muted)" }}>
-            Orders to accounts
-          </p>
-        </div>
+        {!isCollapsed && (
+          <div className="leading-tight min-w-0">
+            <p className="font-display text-sm font-bold truncate" style={{ color: "var(--accent)" }}>
+              {shopName}
+            </p>
+            <p className="text-[11px] truncate" style={{ color: "var(--muted)" }}>
+              Orders to accounts
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3 custom-scrollbar">
-        {/* section label */}
-        <p
-          className="px-2 mb-2 text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: "var(--muted)" }}
-        >
-          {language === "ur" ? "مینو" : "Menu"}
-        </p>
+      <nav className={`flex-1 overflow-y-auto custom-scrollbar ${
+        isCollapsed ? "px-2 py-3" : "px-2.5 py-3"
+      }`}>
+        {!isCollapsed && (
+          <p
+            className="px-2 mb-2 text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: "var(--muted)" }}
+          >
+            {language === "ur" ? "مینو" : "Menu"}
+          </p>
+        )}
 
         <ul className="space-y-0.5">
           {navItems.filter(canAccess).filter(isModuleVisible).map(item => {
@@ -164,13 +184,16 @@ export default function Sidebar() {
                         setActiveId(item.id);
                         if (hasChildren) setOpenGroups(p => ({ ...p, [item.id]: true }));
                       }}
-                      className={`sidebar-item flex-1 min-w-0 ${isActive ? "sidebar-item-active" : ""}`}
+                      className={`sidebar-item flex-1 min-w-0 ${isActive ? "sidebar-item-active" : ""} ${
+                        isCollapsed ? "justify-center" : ""
+                      }`}
+                      title={isCollapsed ? item.title : ""}
                     >
-                      {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                      <span className="truncate">{item.title}</span>
+                      {Icon && <Icon className={`shrink-0 ${isCollapsed ? "w-5 h-5" : "w-4 h-4"}`} />}
+                      {!isCollapsed && <span className="truncate">{item.title}</span>}
                     </NavLink>
 
-                    {hasChildren && (
+                    {!isCollapsed && hasChildren && (
                       <button
                         type="button"
                         onClick={() => toggleGroup(item)}
@@ -185,7 +208,7 @@ export default function Sidebar() {
                   </div>
 
                   {/* Children */}
-                  {hasChildren && isOpen && (
+                  {!isCollapsed && hasChildren && isOpen && (
                     <ul className="pb-1. py-3 space-y-0.5" style={{ paddingInlineStart: "2rem", paddingInlineEnd: "0.5rem" }}>
                       {item.items.map(sub => {
                         const SubIcon   = sub.icon;
@@ -214,11 +237,13 @@ export default function Sidebar() {
 
       {/* ── Footer ── */}
       <div
-        className="px-3 py-3 pb-6 flex items-center justify-between gap-2"
+        className={`px-3 py-3 pb-6 flex items-center gap-2 ${
+          isCollapsed ? "justify-center" : "justify-between"
+        }`}
         style={{ borderTop: "1px solid var(--border)", background: "var(--surface-muted)" }}
       >
         {/* Shop Info - Left Side */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className={`flex items-center gap-2.5 min-w-0 ${isCollapsed ? "" : "flex-1"}`}>
           <div
             className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -229,21 +254,24 @@ export default function Sidebar() {
               <img src={logo} alt="logo" className="w-full h-full object-contain" />
             )}
           </div>
-          <div className="leading-tight min-w-0">
-            <p className="text-xs font-semibold truncate" style={{ color: "var(--accent)" }}>
-              {shopName}
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div className="leading-tight min-w-0 flex-1">
+              <p className="text-xs font-semibold truncate" style={{ color: "var(--accent)" }} title={shopName}>
+                {shopName}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Action Icons - Right Side */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className={`flex items-center gap-1.5 shrink-0 ${isCollapsed ? "flex-col gap-2" : ""}`}>
           <Link
             to="/settings"
             className="p-2 rounded-lg transition-all duration-200"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "var(--surface)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+            title={isCollapsed ? "Settings" : ""}
           >
             <Settings className="w-4 h-4" />
           </Link>
@@ -254,6 +282,7 @@ export default function Sidebar() {
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+            title={isCollapsed ? "Logout" : ""}
           >
             <LogOut className="w-4 h-4" />
           </button>
