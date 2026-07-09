@@ -4,6 +4,8 @@ import { Plus, Printer, Download, Check, X, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
+import { getPurchaseLabels } from "../labels/purchaseLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PurchaseModal from "../components/PurchaseModal.jsx";
 import ViewPurchaseDetail from "../components/ViewPurchaseDetail.jsx";
@@ -13,7 +15,10 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductPurchasePage() {
-    const language         = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseLabels(language);
+    
     const navigate         = useNavigate();
     const [deletePurchase] = useDeletePurchase();
     const [updateStatus] = useUpdatePurchaseStatus();
@@ -26,23 +31,23 @@ export default function ProductPurchasePage() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this purchase?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deletePurchase(id).unwrap();
-            showSuccess("Purchase deleted successfully");
+            showSuccess(labels.purchaseDeleted);
         } catch (error) {
-            showError(error?.data?.message || "Failed to delete purchase");
+            showError(error?.data?.message || labels.failedToDelete);
         }
     };
 
     const handleStatusUpdate = async (id, status, e) => {
         e.stopPropagation();
-        if (!window.confirm(`Mark purchase as ${status}?`)) return;
+        if (!window.confirm(`${labels.deleteConfirm} ${status}?`)) return;
         try {
             await updateStatus({ id, status }).unwrap();
             showSuccess(`Purchase marked as ${status}`);
         } catch (error) {
-            showError(error?.data?.message || 'Failed to update status');
+            showError(error?.data?.message || labels.failedToUpdate);
         }
     };
 
@@ -76,11 +81,11 @@ export default function ProductPurchasePage() {
 
             <div className="flex-none">
                 <PageHeading
-                    heading={language === "en" ? "Purchases" : "خریداری"}
-                    subheading={language === "en" ? "Manage your purchases" : "اپنی خریداری کا انتظام کریں"}
+                    heading={labels.purchaseManagement}
+                    subheading={labels.managePurchases}
                     leftActions={
                         <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Purchase" : "خرید شامل کریں"} />
+                            <ScreenTabButton lucideIcon={Plus} text={labels.addPurchase} />
                         </div>
                     }
                     rightActions={

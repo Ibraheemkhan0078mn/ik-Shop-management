@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Plus, Printer, Download } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
+import { getSupplierLabels } from "../labels/supplierLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import SupplierModal from "../components/SupplierModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -10,19 +12,22 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 export default function SupplierPage() {
-    const language           = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getSupplierLabels(language);
+    
     const [deleteSupplier]   = useDeleteSupplier();
 
     const [modal,      setModal]      = useState(null);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this supplier?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteSupplier(id).unwrap();
-            showSuccess("Supplier deleted successfully");
+            showSuccess(labels.supplierDeleted);
         } catch (error) {
-            showError(error?.data?.message || "Failed to delete supplier");
+            showError(error?.data?.message || labels.failedToDelete);
         }
     };
 
@@ -38,11 +43,11 @@ export default function SupplierPage() {
 
             <div className="flex-none">
                 <PageHeading
-                    heading={language === "en" ? "Suppliers" : "سپلائرز"}
-                    subheading={language === "en" ? "Manage your suppliers" : "اپنے سپلائرز کا انتظام کریں"}
+                    heading={labels.supplierManagement}
+                    subheading={labels.manageSuppliers}
                     leftActions={
                         <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Supplier" : "سپلائر شامل کریں"} />
+                            <ScreenTabButton lucideIcon={Plus} text={labels.addSupplier} />
                         </div>
                     }
                     rightActions={
@@ -70,12 +75,12 @@ export default function SupplierPage() {
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider"
                                     style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                    <th className="px-4 py-3 font-semibold">Name</th>
-                                    <th className="px-4 py-3 font-semibold">Type</th>
-                                    <th className="px-4 py-3 font-semibold">Phone</th>
-                                    <th className="px-4 py-3 font-semibold">Email</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.name}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.type}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.phone}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.email}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -102,6 +107,10 @@ export default function SupplierPage() {
 }
 
 function SupplierRow({ supplier, onEdit, onDelete }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getSupplierLabels(language);
+    
     const isActive = supplier?.isActive ?? true;
 
     return (
@@ -127,7 +136,7 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
                         background: isActive ? "rgba(15,118,110,0.1)" : "rgba(107,114,128,0.1)",
                         color:      isActive ? "var(--accent-2)"       : "#6b7280",
                     }}>
-                    {isActive ? "Active" : "Inactive"}
+                    {isActive ? labels.active : labels.inactive}
                 </span>
             </td>
             <td className="px-4 py-3">
@@ -137,14 +146,14 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
                         style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
                         onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                        Edit
+                        {labels.edit}
                     </button>
                     <button onClick={onDelete}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition"
                         style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
                         onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                        Delete
+                        {labels.delete}
                     </button>
                 </div>
             </td>

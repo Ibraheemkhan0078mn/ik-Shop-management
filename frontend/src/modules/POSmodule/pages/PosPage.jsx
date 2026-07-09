@@ -13,6 +13,8 @@ import {
   useUpdateHoldOrder
 } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
+import { getPosLabels } from "../labels/posLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PosCartSidebar from "../components/PosCartSidebar.jsx";
@@ -92,13 +94,15 @@ const ProductTableRow = ({ product, onAddToCart }) => {
 
 export default function PosPage() {
   const navigate = useNavigate();
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getPosLabels(language);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   const authUser = useSelector((state) => state.auth);
   const currentUser = authUser?.role
     ? authUser
     : { role: "admin", permissions: { deleteOrders: true } };
-  const language = currentUser?.language || "en";
   const isUrdu = language !== "en";
 
   // ── Cart State ────────────────────────────────────────────────────────────

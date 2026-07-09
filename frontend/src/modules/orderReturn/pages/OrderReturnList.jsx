@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX, Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -18,22 +20,26 @@ const STATUS_STYLES = {
 const DEFAULT_STATUS_STYLE = "bg-[var(--surface-muted)] text-ink-subtle";
 const getStatusStyle = (status) => STATUS_STYLES[status] ?? DEFAULT_STATUS_STYLE;
 
-const TABLE_COLUMNS = [
-    { key: "returnNumber", label: "Return #" },
-    { key: "referenceOrderNumber", label: "Order #", hideBelow: "sm" },
-    { key: "customerName", label: "Customer", hideBelow: "md" },
-    { key: "items", label: "Items", align: "center", hideBelow: "sm" },
-    { key: "refund", label: "Refund", align: "right" },
-    { key: "status", label: "Status", align: "center" },
-    { key: "date", label: "Date", hideBelow: "md" },
-    { key: "actions", label: "Actions", align: "center" },
-];
-
 const HIDE_CLASS = { sm: "hidden sm:table-cell", md: "hidden md:table-cell" };
 const colClass = (col) => [HIDE_CLASS[col.hideBelow], col.align && `text-${col.align}`].filter(Boolean).join(" ");
 
 const OrderReturnList = () => {
     const navigate = useNavigate();
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getOrderReturnLabels(language);
+    
+    const TABLE_COLUMNS = [
+        { key: "returnNumber", label: labels.returnNumber },
+        { key: "referenceOrderNumber", label: labels.orderNumber, hideBelow: "sm" },
+        { key: "customerName", label: labels.customer, hideBelow: "md" },
+        { key: "items", label: labels.items, align: "center", hideBelow: "sm" },
+        { key: "refund", label: labels.refund, align: "right" },
+        { key: "status", label: labels.status, align: "center" },
+        { key: "date", label: labels.date, hideBelow: "md" },
+        { key: "actions", label: labels.actions, align: "center" },
+    ];
+    
     const [showModal, setShowModal] = useState(false);
     const [selectedReturn, setSelectedReturn] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -41,7 +47,6 @@ const OrderReturnList = () => {
     const [returns, setReturns] = useState([]);
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-    const language = "en";
 
     const fetchReturns = async (page = 1) => {
         setLoading(true);
@@ -66,13 +71,13 @@ const OrderReturnList = () => {
     }, []);
 
     const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to delete this return?")) {
+        if (window.confirm(labels.deleteConfirm)) {
             try {
                 await deleteOrderReturnApi(id);
-                showSuccess("Return deleted successfully");
+                showSuccess(labels.returnDeleted);
                 fetchReturns(pagination.page);
             } catch (error) {
-                showError(error?.response?.data?.message || "Failed to delete return");
+                showError(error?.response?.data?.message || labels.failedToDelete);
             }
         }
     };
@@ -118,8 +123,8 @@ const OrderReturnList = () => {
             {/* ── Heading section ── */}
             <div className="flex-none px-6 pt-4">
                 <PageHeading
-                    heading="Order Returns"
-                    subheading="Manage all order returns"
+                    heading={labels.orderReturns}
+                    subheading={labels.manageReturns}
                     leftActions={
                         <div className="flex items-center gap-3">
                             <button
@@ -130,7 +135,7 @@ const OrderReturnList = () => {
                                 <ArrowLeft className="w-4 h-4" />
                             </button>
                             <div onClick={() => setShowModal(true)}>
-                                <ScreenTabButton lucideIcon={Plus} text="New Return" />
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
                             </div>
                         </div>
                     }

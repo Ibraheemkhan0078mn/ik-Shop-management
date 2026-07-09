@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus, CheckCircle, Printer, Download } from "lucide-react";
 import { useSelector } from "react-redux";
+import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -17,7 +19,10 @@ const STATUS_CLASS = {
 };
 
 export default function PurchaseReturnPage() {
-    const language = useSelector((s) => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseReturnLabels(language);
+    
     const [modal, setModal] = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -50,23 +55,23 @@ export default function PurchaseReturnPage() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this purchase return?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deletePurchaseReturnApi(id);
-            showSuccess("Purchase return deleted successfully");
+            showSuccess(labels.returnDeleted);
             setRefreshKey((v) => v + 1);
         } catch (error) {
-            showError(error?.response?.data?.message || error?.message || "Failed to delete purchase return");
+            showError(error?.response?.data?.message || error?.message || labels.failedToDelete);
         }
     };
 
     const handleApprove = async (id) => {
         try {
             await approvePurchaseReturnApi(id);
-            showSuccess("Purchase return approved successfully");
+            showSuccess(labels.returnApproved);
             setRefreshKey((v) => v + 1);
         } catch (error) {
-            showError(error?.response?.data?.message || error?.message || "Failed to approve purchase return");
+            showError(error?.response?.data?.message || error?.message || labels.failedToApprove);
         }
     };
 
@@ -90,15 +95,15 @@ export default function PurchaseReturnPage() {
             )}
 
             <PageHeading
-                heading={language === "en" ? "Purchase Returns" : "خریداری واپسی"}
-                subheading={language === "en" ? "Manage purchase return records" : "خریداری واپسی ریکارڈز کا انتظام کریں"}
+                heading={labels.purchaseReturns}
+                subheading={labels.manageReturns}
                 leftActions={
                     <>
                         <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Purchase Return" : "خریداری واپسی شامل کریں"} />
+                            <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
                         </div>
                         <div onClick={() => setApprovalModal(true)}>
-                            <ScreenTabButton lucideIcon={CheckCircle} text={language === "en" ? "Approve Purchase Return" : "خریداری واپسی منظور کریں"} />
+                            <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveReturn} />
                         </div>
                     </>
                 }

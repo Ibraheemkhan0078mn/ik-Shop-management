@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Zap } from 'lucide-react';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 import AlertBar from '../components/AlertBar.jsx';
 import SalesRevenueKPIs from '../components/SalesRevenueKPIs.jsx';
 import InventoryAlertKPIs from '../components/InventoryAlertKPIs.jsx';
@@ -12,6 +14,9 @@ import { dashboardApi } from '../services/dashboard.service.js';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
 
   const handleRefresh = () => {
     dashboardApi.util.invalidateTags(['Dashboard']);
@@ -22,21 +27,21 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Dashboard</h1>
-          <p className="text-sm text-[var(--muted)]">Overview of your business performance</p>
+          <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.dashboard}</h1>
+          <p className="text-sm text-[var(--muted)]">{labels.businessOverview}</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => navigate("/quick-list")}
             className="btn-add"
           >
-            <Zap size={16} /> Quick List
+            <Zap size={16} /> {labels.quickList}
           </button>
           <button
             onClick={handleRefresh}
             className="btn-add"
           >
-            <RefreshCw size={16} /> Refresh
+            <RefreshCw size={16} /> {labels.refresh}
           </button>
         </div>
       </div>
@@ -56,25 +61,25 @@ export default function Dashboard() {
 
       {/* Section 4: Sales Charts */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">Sales Performance</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.salesPerformance}</h2>
         <SalesCharts />
       </div>
 
       {/* Section 5: Product & Category Charts */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">Products & Categories</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.productsAndCategories}</h2>
         <ProductCategoryCharts />
       </div>
 
       {/* Section 6: Retail vs Wholesale Comparison */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">Retail vs Wholesale</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.retailVsWholesale}</h2>
         <RetailWholesaleComparison />
       </div>
 
       {/* Section 7: Inventory Overview Charts */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">Inventory Overview</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.inventoryOverview}</h2>
         <InventoryOverviewCharts />
       </div>
     </div>

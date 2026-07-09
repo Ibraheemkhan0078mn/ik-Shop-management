@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Plus, CheckCircle, Printer, Download, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteWastage, useWastages, useApproveWastage } from "../services/wastage.service.js";
+import { getWastageLabels } from "../labels/wastageLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import WastageModal from "../components/WastageModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -17,7 +19,10 @@ const STATUS_STYLE = {
 };
 
 export default function WastagePage() {
-    const language        = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getWastageLabels(language);
+    
     const [deleteWastage] = useDeleteWastage();
     const [approveWastage] = useApproveWastage();
 
@@ -27,21 +32,21 @@ export default function WastagePage() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this wastage record?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteWastage(id).unwrap();
-            showSuccess("Wastage record deleted successfully");
+            showSuccess(labels.wastageDeleted);
         } catch (error) {
-            showError(error?.data?.message || "Failed to delete wastage record");
+            showError(error?.data?.message || labels.failedToDelete);
         }
     };
 
     const handleApprove = async (id) => {
         try {
             await approveWastage(id).unwrap();
-            showSuccess("Wastage approved successfully");
+            showSuccess(labels.wastageApproved);
         } catch (error) {
-            showError(error?.data?.message || "Failed to approve wastage");
+            showError(error?.data?.message || labels.failedToApprove);
         }
     };
 
@@ -72,15 +77,15 @@ export default function WastagePage() {
 
             <div className="flex-none">
                 <PageHeading
-                    heading={language === "en" ? "Wastage" : "ضیاع"}
-                    subheading={language === "en" ? "Manage wastage records" : "ضیاع ریکارڈز کا انتظام کریں"}
+                    heading={labels.wastageManagement}
+                    subheading={labels.manageWastage}
                     leftActions={
                         <>
                             <div onClick={() => setModal({ mode: "create" })}>
-                                <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Wastage" : "ضیاع شامل کریں"} />
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addWastage} />
                             </div>
                             <div onClick={() => setApprovalModal(true)}>
-                                <ScreenTabButton lucideIcon={CheckCircle} text={language === "en" ? "Approve Wastage" : "ضیاع منظور کریں"} />
+                                <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveWastage} />
                             </div>
                         </>
                     }
