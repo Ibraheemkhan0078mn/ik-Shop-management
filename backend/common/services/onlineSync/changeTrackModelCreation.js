@@ -1,7 +1,8 @@
 
 
 import mongoose from "mongoose";
-import { getActivityLogModel, getLocalChangeTrackModel } from "../../db/localDbConnection.js";
+import { getLocalChangeTrackModel } from "../../../configs/connect.db.js";
+import { getLocalActivityLogModel } from "../../../configs/connect.db.js";
 
 
 

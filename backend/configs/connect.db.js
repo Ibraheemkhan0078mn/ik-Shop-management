@@ -27,6 +27,27 @@ import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js"
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
+import { changeTrackDocsCreationFunc } from "../common/services/onlineSync/changeTrackModelCreation.js";
+
+// Function to add change tracking middleware to a schema
+const addChangeTrackingMiddleware = (schema, modelName) => {
+    schema.post('save', async function(doc) {
+        try {
+            const operation = this.isNew ? 'create' : 'update';
+            await changeTrackDocsCreationFunc(operation, modelName, doc._id.toString(), null);
+        } catch (error) {
+            console.error(`[changeTrack] Error tracking ${modelName} save:`, error);
+        }
+    });
+
+    schema.post('deleteOne', async function(doc) {
+        try {
+            await changeTrackDocsCreationFunc('delete', modelName, doc._id.toString(), null);
+        } catch (error) {
+            console.error(`[changeTrack] Error tracking ${modelName} delete:`, error);
+        }
+    });
+};
 
 let UserModel = null;
 let ProductModel = null;
@@ -67,6 +88,34 @@ export const connectDb = async () => {
         console.log(`Server is connected to db host: ${LocalConnection.host}`);
     }
 
+    // Add change tracking middleware to schemas before creating models
+    addChangeTrackingMiddleware(userSchema, "Users");
+    addChangeTrackingMiddleware(productSchema, "Products");
+    addChangeTrackingMiddleware(categorySchema, "Categories");
+    addChangeTrackingMiddleware(subCategorySchema, "SubCategories");
+    addChangeTrackingMiddleware(batchSchema, "Batches");
+    addChangeTrackingMiddleware(supplierSchema, "Suppliers");
+    addChangeTrackingMiddleware(purchaseSchema, "Purchases");
+    addChangeTrackingMiddleware(purchasePaymentSchema, "PurchasePayments");
+    addChangeTrackingMiddleware(orderSchema, "Orders");
+    addChangeTrackingMiddleware(holdOrderSchema, "HoldOrders");
+    addChangeTrackingMiddleware(expenseSchema, "Expenses");
+    addChangeTrackingMiddleware(expenseCatagSchema, "ExpensesCategory");
+    addChangeTrackingMiddleware(activityLogSchema, "ActivityLogs");
+    addChangeTrackingMiddleware(changeTrackSchema, "ChangeTracks");
+    addChangeTrackingMiddleware(imageChangeTrackSchema, "ImageChangeTracks");
+    addChangeTrackingMiddleware(QarzaAccountSchema, "QarzaAccount");
+    addChangeTrackingMiddleware(QarzaPaymentSchema, "QarzaPayment");
+    addChangeTrackingMiddleware(wastageSchema, "Wastages");
+    addChangeTrackingMiddleware(purchaseReturnSchema, "PurchaseReturn");
+    addChangeTrackingMiddleware(productReturnSchema, "ProductReturn");
+    addChangeTrackingMiddleware(customerSchema, "Customers");
+    addChangeTrackingMiddleware(staffSchema, "Staff");
+    addChangeTrackingMiddleware(staffSalaryPaymentSchema, "StaffSalaryPayment");
+    addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
+    addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
+    addChangeTrackingMiddleware(settingsSchema, "Settings");
+
     UserModel = LocalConnection.model("Users", userSchema);
     ProductModel = LocalConnection.model("Products", productSchema);
     CategoryModel = LocalConnection.model("Categories", categorySchema);
@@ -97,8 +146,7 @@ export const connectDb = async () => {
     StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
     SettingsModel = LocalConnection.model("Settings", settingsSchema)
 
-
-    startChangeStreamTracking(LocalConnection)
+    console.log("📝 Automatic change tracking enabled for local database models");
 };
 
 

@@ -1,5 +1,7 @@
 // ================= Change Stream Tracker =================
 
+import { changeTrackDocsCreationFunc } from "./changeTrackModelCreation.js";
+
 /**
  * Builds a map of collectionName -> modelName
  * so we can report the actual Mongoose model name (not the raw collection name).
@@ -28,8 +30,9 @@ const logChange = (modelName, operation, id, extra = {}) => {
 /**
  * Starts a single DB-level change stream that tracks
  * create / update / delete across ALL registered models.
+ * Stores changes in local MongoDB using changeTrackService.
  */
-const startChangeStreamTracking = (connection, resumeToken = null) => {
+export const startChangeStreamTracking = (connection, resumeToken = null) => {
     const collectionModelMap = buildCollectionModelMap(connection);
 
     const changeStream = connection.watch([], {
@@ -37,16 +40,19 @@ const startChangeStreamTracking = (connection, resumeToken = null) => {
         ...(resumeToken ? { resumeAfter: resumeToken } : {}),
     });
 
-    changeStream.on("change", (change) => {
+    changeStream.on("change", async (change) => {
         const modelName = collectionModelMap.get(change.ns.coll) || change.ns.coll;
         const id = change.documentKey?._id;
+        let operation = null;
 
         switch (change.operationType) {
             case "insert":
+                operation = "create";
                 logChange(modelName, "CREATE", id, { document: change.fullDocument });
                 break;
 
             case "update":
+                operation = "update";
                 logChange(modelName, "UPDATE", id, {
                     updatedFields: change.updateDescription?.updatedFields,
                     removedFields: change.updateDescription?.removedFields,
@@ -54,15 +60,27 @@ const startChangeStreamTracking = (connection, resumeToken = null) => {
                 break;
 
             case "replace":
+                operation = "update";
                 logChange(modelName, "UPDATE", id, { document: change.fullDocument });
                 break;
 
             case "delete":
+                operation = "delete";
                 logChange(modelName, "DELETE", id);
                 break;
 
             default:
+                operation = change.operationType;
                 logChange(modelName, change.operationType.toUpperCase(), id);
+        }
+
+        // Store the change in local MongoDB using changeTrackService
+        if (operation && id && modelName) {
+            try {
+                await changeTrackDocsCreationFunc(operation, modelName, id.toString(), null);
+            } catch (error) {
+                console.error("[changeStreamTracker] Error storing change track:", error);
+            }
         }
 
         // store token for reconnect-after-crash resilience

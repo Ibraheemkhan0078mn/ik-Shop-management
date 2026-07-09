@@ -26,6 +26,7 @@ import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
+import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
 let OnlineProductModel = null;
@@ -59,7 +60,7 @@ export const connectOnlineDb = async () => {
     dns.setServers(['8.8.8.8', '8.8.4.4']);
     
     // Dummy URL - replace with actual online MongoDB connection string
-    const ONLINE_MONGODB_URI = "mongodb+srv://dummy:dummy@cluster0.dummy.mongodb.net/?appName=Cluster0";
+    const ONLINE_MONGODB_URI = "mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0";
     
     const OnlineConnection = await mongoose
         .createConnection(ONLINE_MONGODB_URI, { dbName: "IMS-ONLINE" })
@@ -98,6 +99,9 @@ export const connectOnlineDb = async () => {
     OnlineStaffSaleBillModel = OnlineConnection.model("StaffSaleBill", staffSaleBillSchema)
     OnlineStaffAttendanceModel = OnlineConnection.model("StaffAttendance", staffAttendanceSchema)
     OnlineSettingsModel = OnlineConnection.model("Settings", settingsSchema)
+
+    // Change stream tracking disabled - using local database tracking instead
+    // startChangeStreamTracking(OnlineConnection)
 };
 
 

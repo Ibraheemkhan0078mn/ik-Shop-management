@@ -100,7 +100,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5001;
 
 connectDb();
-connectOnlineDb();
+connectOnlineDb(); // Online database with change stream tracking enabled
 app.listen(PORT, () => {
     console.log(`Server is listing on ${PORT} `);
 });
