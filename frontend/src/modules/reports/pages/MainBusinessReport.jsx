@@ -4,7 +4,7 @@ import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
-import { usePDF } from "react-to-pdf";
+import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
 
 const PERIOD_OPTIONS = [
     { value: "today", label: "Today" },
@@ -199,10 +199,8 @@ function TransactionList({ transactions, type, onToggle, isExpanded }) {
 }
 
 export default function MainBusinessReport() {
-    const { toPDF, targetRef } = usePDF({ 
-        filename: "main-business-report.pdf",
-        scale: 0.8
-    });
+    const targetRef = useRef(null);
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -265,28 +263,8 @@ export default function MainBusinessReport() {
     const breakdowns = data?.breakdowns || {};
     const transactions = data?.transactions || {};
 
-    const handleExportPDF = async () => {
-        // Hide sidebar during PDF export
-        document.body.classList.add('pdf-exporting');
-        
-        await handleExpandAll();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        await toPDF();
-        await handleCollapseAll();
-        
-        // Remove class after export
-        document.body.classList.remove('pdf-exporting');
-    };
-
     return (
         <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
-            <style>{`
-                .pdf-exporting [class*="sidebar"],
-                .pdf-exporting [class*="Sidebar"],
-                .pdf-exporting aside {
-                    display: none !important;
-                }
-            `}</style>
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Main Business Report</h1>
@@ -302,7 +280,7 @@ export default function MainBusinessReport() {
                         Refresh
                     </button>
                     <button
-                        onClick={handleExportPDF}
+                        onClick={() => setIsPdfModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
                         style={{ background: 'var(--accent-2)' }}
                     >
@@ -829,6 +807,463 @@ export default function MainBusinessReport() {
                     </div>
                 </div>
             )}
+            
+            <PdfPreviewModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName="main-business-report.pdf"
+                onBeforeExport={handleExpandAll}
+                onAfterExport={handleCollapseAll}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <SummaryCard
+                        label="Total Sales"
+                        value={summary.totalSales}
+                        icon={ShoppingCart}
+                        color="#10b981"
+                        description="Revenue from completed orders"
+                        onToggle={() => toggleSection('sales')}
+                        isExpanded={expandedSections.sales}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: POS Orders (completed status)</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Total Orders:</strong> {details.salesCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Total Purchases"
+                        value={summary.totalPurchases}
+                        icon={Package}
+                        color="#3b82f6"
+                        description="Cost of inventory purchases"
+                        onToggle={() => toggleSection('purchases')}
+                        isExpanded={expandedSections.purchases}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Purchase Orders</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Total Purchases:</strong> {details.purchaseCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Total Expenses"
+                        value={summary.totalExpenses}
+                        icon={Receipt}
+                        color="#ef4444"
+                        description="Operating expenses"
+                        onToggle={() => toggleSection('expenses')}
+                        isExpanded={expandedSections.expenses}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Expense Records</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Total Expenses:</strong> {details.expenseCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Total Salaries"
+                        value={summary.totalSalaries}
+                        icon={Users}
+                        color="#8b5cf6"
+                        description="Staff salary payments"
+                        onToggle={() => toggleSection('salaries')}
+                        isExpanded={expandedSections.salaries}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Staff Salary Payments</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Payment Count:</strong> {details.salaryPaymentCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Purchase Returns"
+                        value={summary.totalPurchaseReturns}
+                        icon={TrendingUp}
+                        color="#06b6d4"
+                        description="Returns to suppliers"
+                        onToggle={() => toggleSection('returns')}
+                        isExpanded={expandedSections.returns}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Purchase Return Records</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Return Count:</strong> {details.purchaseReturnCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Sale Returns"
+                        value={summary.totalProductReturns}
+                        icon={TrendingDown}
+                        color="#f59e0b"
+                        description="Customer product returns"
+                        onToggle={() => toggleSection('returns')}
+                        isExpanded={expandedSections.returns}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Product Return Records</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Return Count:</strong> {details.productReturnCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Wastage Loss"
+                        value={summary.totalWastage}
+                        icon={AlertCircle}
+                        color="#dc2626"
+                        description="Inventory wastage cost"
+                        onToggle={() => toggleSection('wastage')}
+                        isExpanded={expandedSections.wastage}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Source: Wastage Records (quantity × cost price)</span>
+                            </div>
+                            <div className="p-2 rounded" style={{ background: 'var(--surface-muted)' }}>
+                                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    <strong>Wastage Count:</strong> {details.wastageCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </SummaryCard>
+
+                    <SummaryCard
+                        label="Net Profit/Loss"
+                        value={summary.netProfit}
+                        icon={summary.netProfit >= 0 ? DollarSign : AlertCircle}
+                        color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"}
+                        description={summary.netProfit >= 0 ? "Net profit for period" : "Net loss for period"}
+                        onToggle={() => toggleSection('profit')}
+                        isExpanded={expandedSections.profit}
+                    >
+                        <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
+                                <Info size={14} />
+                                <span className="text-xs">Calculation: Sales - Purchases - Expenses - Wastage - Salaries - Sale Returns + Purchase Returns</span>
+                            </div>
+                        </div>
+                    </SummaryCard>
+                </div>
+
+                <div className="rounded-xl border shadow-sm p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>Transaction Summary</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Sales Count</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.salesCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Purchase Count</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.purchaseCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Expense Count</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.expenseCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Wastage Count</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.wastageCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Purchase Returns</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.purchaseReturnCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Sale Returns</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.productReturnCount || 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Salary Payments</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.salaryPaymentCount || 0}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Transaction Details Sections */}
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Transaction Details</h2>
+                    
+                    {transactions.sales && transactions.sales.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Sales Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.sales}
+                                type="sales"
+                                onToggle={() => toggleTransactions('sales')}
+                                isExpanded={expandedTransactions.sales}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.purchases && transactions.purchases.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Purchase Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.purchases}
+                                type="purchases"
+                                onToggle={() => toggleTransactions('purchases')}
+                                isExpanded={expandedTransactions.purchases}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.expenses && transactions.expenses.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Expense Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.expenses}
+                                type="expenses"
+                                onToggle={() => toggleTransactions('expenses')}
+                                isExpanded={expandedTransactions.expenses}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.salaryPayments && transactions.salaryPayments.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Salary Payment Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.salaryPayments}
+                                type="salaryPayments"
+                                onToggle={() => toggleTransactions('salaries')}
+                                isExpanded={expandedTransactions.salaries}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.purchaseReturns && transactions.purchaseReturns.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Purchase Return Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.purchaseReturns}
+                                type="purchaseReturns"
+                                onToggle={() => toggleTransactions('purchaseReturns')}
+                                isExpanded={expandedTransactions.purchaseReturns}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.productReturns && transactions.productReturns.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Product Return Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.productReturns}
+                                type="productReturns"
+                                onToggle={() => toggleTransactions('productReturns')}
+                                isExpanded={expandedTransactions.productReturns}
+                            />
+                        </div>
+                    )}
+
+                    {transactions.wastages && transactions.wastages.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Wastage Transactions</h3>
+                            <TransactionList
+                                transactions={transactions.wastages}
+                                type="wastages"
+                                onToggle={() => toggleTransactions('wastages')}
+                                isExpanded={expandedTransactions.wastages}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Breakdown Sections */}
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Detailed Breakdowns</h2>
+                    
+                    {breakdowns.salesByPaymentMethod && breakdowns.salesByPaymentMethod.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Sales by Payment Method</h3>
+                            <div className="space-y-2">
+                                {breakdowns.salesByPaymentMethod.map((item, idx) => (
+                                    <BreakdownItem
+                                        key={idx}
+                                        label={item.method}
+                                        value={item.total}
+                                        count={item.count}
+                                        percentage={item.percentage}
+                                        color="#10b981"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {breakdowns.expensesByCategory && breakdowns.expensesByCategory.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Expenses by Category</h3>
+                            <div className="space-y-2">
+                                {breakdowns.expensesByCategory.map((item, idx) => (
+                                    <BreakdownItem
+                                        key={idx}
+                                        label={item.category}
+                                        value={item.total}
+                                        count={item.count}
+                                        percentage={item.percentage}
+                                        color="#ef4444"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {breakdowns.productReturnsByReason && breakdowns.productReturnsByReason.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Product Returns by Reason</h3>
+                            <div className="space-y-2">
+                                {breakdowns.productReturnsByReason.map((item, idx) => (
+                                    <BreakdownItem
+                                        key={idx}
+                                        label={item.reason}
+                                        value={item.total}
+                                        count={item.count}
+                                        percentage={item.percentage}
+                                        color="#f59e0b"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {breakdowns.purchaseReturnsBySupplier && breakdowns.purchaseReturnsBySupplier.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Purchase Returns by Supplier</h3>
+                            <div className="space-y-2">
+                                {breakdowns.purchaseReturnsBySupplier.map((item, idx) => (
+                                    <BreakdownItem
+                                        key={idx}
+                                        label={item.supplierName}
+                                        value={item.total}
+                                        count={item.count}
+                                        percentage={item.percentage}
+                                        color="#06b6d4"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {breakdowns.wastagesByProduct && breakdowns.wastagesByProduct.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Wastage by Product</h3>
+                            <div className="space-y-2">
+                                {breakdowns.wastagesByProduct.map((item, idx) => (
+                                    <div className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{item.productName}</p>
+                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.count} records • {item.totalQuantity} units</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold" style={{ color: '#dc2626' }}>Rs {item.total?.toLocaleString() || 0}</p>
+                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.percentage}%</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {breakdowns.salariesByStaff && breakdowns.salariesByStaff.length > 0 && (
+                        <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Salary Payments by Staff</h3>
+                            <div className="space-y-2">
+                                {breakdowns.salariesByStaff.map((item, idx) => (
+                                    <BreakdownItem
+                                        key={idx}
+                                        label={item.staffName}
+                                        value={item.total}
+                                        count={item.count}
+                                        percentage={item.percentage}
+                                        color="#8b5cf6"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="rounded-xl border shadow-sm p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                        <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Profit/Loss Calculation</h3>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>+ Sales:</span>
+                                <span>Rs {summary.totalSales?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>- Purchases:</span>
+                                <span>Rs {summary.totalPurchases?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>- Expenses:</span>
+                                <span>Rs {summary.totalExpenses?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>- Wastage:</span>
+                                <span>Rs {summary.totalWastage?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>- Salaries:</span>
+                                <span>Rs {summary.totalSalaries?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>- Sale Returns:</span>
+                                <span>Rs {summary.totalProductReturns?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
+                                <span>+ Purchase Returns:</span>
+                                <span>Rs {summary.totalPurchaseReturns?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-bold pt-2 border-t" style={{ borderColor: 'var(--border)', color: summary.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                                <span>= Net:</span>
+                                <span>Rs {summary.netProfit?.toLocaleString() || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </PdfPreviewModal>
         </div>
     );
 }
