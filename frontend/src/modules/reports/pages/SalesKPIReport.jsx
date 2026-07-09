@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useGetSalesKPIReportQuery } from "../services/reports.service";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportLabels } from "../labels/reportLabels.js";
 import { 
@@ -68,6 +69,7 @@ export default function SalesKPIReport() {
     const language = settings?.language || "en";
     const labels = getReportLabels(language);
     
+    const contentRef = useRef(null);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -147,14 +149,10 @@ export default function SalesKPIReport() {
                     </div>
                 }
                 rightActions={
-                    <>
-                        <button onClick={handlePrint} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
-                            <Printer size={18} />
-                        </button>
-                        <button onClick={handleExport} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
-                            <Download size={18} />
-                        </button>
-                    </>
+                    <PdfExportButton 
+                        contentRef={contentRef} 
+                        fileName="sales-kpi-report.pdf" 
+                    />
                 }
             />
 
@@ -163,7 +161,7 @@ export default function SalesKPIReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary)' }} />
                 </div>
             ) : (
-                <>
+                <div ref={contentRef}>
                     {/* Section 1: Summary Cards (6 cards in 2 rows of 3) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         <KPICard
@@ -690,7 +688,7 @@ export default function SalesKPIReport() {
                             ))}
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

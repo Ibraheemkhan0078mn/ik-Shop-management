@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     DollarSign,
     ShoppingCart,
@@ -26,6 +26,7 @@ import { useGetPurchaseKPIReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -57,6 +58,7 @@ const KPICard = ({ label, value, icon: Icon, color, description, trend, suffix =
 );
 
 export default function PurchaseKPIReport() {
+    const contentRef = useRef(null);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -117,14 +119,10 @@ export default function PurchaseKPIReport() {
                     </div>
                 }
                 rightActions={
-                    <>
-                        <button onClick={handlePrint} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
-                            <Printer size={18} />
-                        </button>
-                        <button onClick={handleExport} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)] no-print" style={{ color: "var(--muted)" }}>
-                            <Download size={18} />
-                        </button>
-                    </>
+                    <PdfExportButton 
+                        contentRef={contentRef} 
+                        fileName="purchase-kpi-report.pdf" 
+                    />
                 }
             />
 
@@ -133,7 +131,7 @@ export default function PurchaseKPIReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary)' }} />
                 </div>
             ) : (
-                <>
+                <div ref={contentRef}>
                     {/* Section 1: Summary Cards (6 cards) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         <KPICard
@@ -626,7 +624,7 @@ export default function PurchaseKPIReport() {
                             </button>
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

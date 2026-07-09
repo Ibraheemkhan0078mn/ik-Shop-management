@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import { createQarzaPayment, deleteQarzaPayment, getAllQarzaAccount, getqarzaAccount, getQarzaAccountRelatedPayments, qarzaAccountCreate, qarzaAccountDelete, qarzaAccountUpdate, updateQarzaPayment, getPaginatedQarzaAccounts, getPaginatedQarzaPayments, getQarzaAccountPaymentsSummary, getCreditsDebitsReport, getAccountLedger } from "../controllers/qarza.controller.js";
+import { createQarzaPayment, deleteQarzaPayment, getAllQarzaAccount, getqarzaAccount, getQarzaAccountRelatedPayments, qarzaAccountCreate, qarzaAccountDelete, qarzaAccountUpdate, updateQarzaPayment, getPaginatedQarzaAccounts, getPaginatedQarzaPayments, getQarzaAccountPaymentsSummary, getCreditsDebitsReport, getAccountLedger, getPaginatedQarzaPaymentsWithoutAccount } from "../controllers/qarza.controller.js";
 import { upload } from '../../../common/middlewares/multer.middleware.js'
 
 
@@ -11,6 +11,7 @@ router.get("/getqarzaAccount", getqarzaAccount);
 router.get("/getAllQarzaAccount", getAllQarzaAccount);
 router.get("/pagination", getPaginatedQarzaAccounts);
 router.get("/payments/pagination", getPaginatedQarzaPayments);
+router.get("/payments/pagination/without-account", getPaginatedQarzaPaymentsWithoutAccount);
 router.get("/payments/summary", getQarzaAccountPaymentsSummary);
 router.get("/credits-debits/report", getCreditsDebitsReport);
 router.get("/credits-debits/ledger/:accountId", getAccountLedger);

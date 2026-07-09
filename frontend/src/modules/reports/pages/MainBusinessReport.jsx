@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Calendar, Download, Printer, RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Info } from "lucide-react";
 import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
 
 const PERIOD_OPTIONS = [
     { value: "today", label: "Today" },
@@ -196,6 +199,7 @@ function TransactionList({ transactions, type, onToggle, isExpanded }) {
 }
 
 export default function MainBusinessReport() {
+    const contentRef = useRef(null);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -287,14 +291,10 @@ export default function MainBusinessReport() {
                         <RefreshCw size={16} />
                         Refresh
                     </button>
-                    <button
-                        onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border transition"
-                        style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--ink)' }}
-                    >
-                        <Download size={16} />
-                        Export
-                    </button>
+                    <PdfExportButton 
+                        contentRef={contentRef} 
+                        fileName="main-business-report.pdf" 
+                    />
                     <button
                         onClick={handlePrint}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
@@ -372,6 +372,7 @@ export default function MainBusinessReport() {
                     <RefreshCw className="animate-spin" size={40} style={{ color: 'var(--accent-2)' }} />
                 </div>
             ) : (
+                <div ref={contentRef}>
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <SummaryCard
@@ -822,6 +823,7 @@ export default function MainBusinessReport() {
                         </div>
                     </div>
                 </>
+                </div>
             )}
         </div>
     );

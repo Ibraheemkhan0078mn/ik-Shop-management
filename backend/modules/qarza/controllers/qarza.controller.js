@@ -362,16 +362,38 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
         
         const payments = await QarzaPaymentModel.find({ qarzaAccountId });
         
-        const totalIn = payments.filter(p => p.type === "cashin").reduce((sum, p) => sum + p.amount, 0);
-        const totalOut = payments.filter(p => p.type === "cashout").reduce((sum, p) => sum + p.amount, 0);
-        const net = totalIn - totalOut;
+        // Calculate manual cashin and cashout
+        const manualCashIn = payments
+            .filter(p => p.source === 'manual' && p.type === 'cashin')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        
+        const manualCashOut = payments
+            .filter(p => p.source === 'manual' && p.type === 'cashout')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        
+        // Calculate POS (treated as cashout)
+        const posAmount = payments
+            .filter(p => p.source === 'pos')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        
+        // Calculate Purchase (treated as cashin)
+        const purchaseAmount = payments
+            .filter(p => p.source === 'purchaseProducts')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        
+        // Overall calculation: (Manual Cash In + Purchase) - (Manual Cash Out + POS)
+        const totalIn = manualCashIn + purchaseAmount;
+        const totalOut = manualCashOut + posAmount;
+        const overall = totalIn - totalOut;
 
         return res.json({ 
             success: true, 
             data: {
-                totalIn,
-                totalOut,
-                net,
+                manualCashIn,
+                manualCashOut,
+                posAmount,
+                purchaseAmount,
+                overall,
                 totalPayments: payments.length
             }
         });
@@ -612,5 +634,44 @@ export const getAccountLedger = async (req, res) => {
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error getting account ledger" });
+    }
+};
+
+export const getPaginatedQarzaPaymentsWithoutAccount = async (req, res) => {
+    try {
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let skip = (page - 1) * limit;
+        let search = req.query.search || "";
+
+        const QarzaPaymentModel = getLocalQarzaPaymentModel();
+        
+        let query = { qarzaAccountId: { $exists: false } };
+        
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { notes: { $regex: search, $options: "i" } }
+            ];
+        }
+        
+        let payments = await QarzaPaymentModel.find(query)
+            .sort({ date: -1 })
+            .limit(limit)
+            .skip(skip);
+
+        let total = await QarzaPaymentModel.countDocuments(query);
+
+        return res.json({ 
+            success: true, 
+            data: payments,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting payments without account" });
     }
 };

@@ -70,6 +70,7 @@ export const qarzaApi = baseApi.injectEndpoints({
                 url: "/qarzaRoutes/payments/summary",
                 params: { qarzaAccountId },
             }),
+            transformResponse: (raw) => raw.data ?? raw,
             providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
         }),
 
