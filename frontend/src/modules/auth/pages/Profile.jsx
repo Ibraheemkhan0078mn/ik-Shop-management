@@ -38,7 +38,7 @@ export default function Profile() {
     return (
         <div style={{ color: "var(--ink)" }}>
             <PageHeading heading="Profile" subheading="View and manage your profile information" />
-            
+
             <div className="max-w-2xl space-y-6">
                 <div className="p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                     <h2 className="text-lg font-bold mb-4">Personal Information</h2>

@@ -31,21 +31,19 @@ import { changeTrackDocsCreationFunc } from "../common/services/onlineSync/chang
 
 // Function to add change tracking middleware to a schema
 const addChangeTrackingMiddleware = (schema, modelName) => {
-    schema.post('save', async function(doc) {
-        try {
-            const operation = this.isNew ? 'create' : 'update';
-            await changeTrackDocsCreationFunc(operation, modelName, doc._id.toString(), null);
-        } catch (error) {
-            console.error(`[changeTrack] Error tracking ${modelName} save:`, error);
-        }
+    // Skip tracking for ChangeTrack model itself to avoid infinite loops
+    if (modelName === "ChangeTracks") return;
+
+    schema.post('save', function(doc) {
+        // Non-blocking - don't await, let it run in background
+        changeTrackDocsCreationFunc(this.isNew ? 'create' : 'update', modelName, doc._id.toString(), null)
+            .catch(error => console.error(`[changeTrack] Error tracking ${modelName} save:`, error));
     });
 
-    schema.post('deleteOne', async function(doc) {
-        try {
-            await changeTrackDocsCreationFunc('delete', modelName, doc._id.toString(), null);
-        } catch (error) {
-            console.error(`[changeTrack] Error tracking ${modelName} delete:`, error);
-        }
+    schema.post('deleteOne', function(doc) {
+        // Non-blocking - don't await, let it run in background
+        changeTrackDocsCreationFunc('delete', modelName, doc._id.toString(), null)
+            .catch(error => console.error(`[changeTrack] Error tracking ${modelName} delete:`, error));
     });
 };
 
