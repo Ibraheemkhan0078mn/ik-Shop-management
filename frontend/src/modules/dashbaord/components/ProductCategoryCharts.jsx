@@ -1,11 +1,17 @@
 import React from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
 import { useGetTopSellingProductsQuery, useGetSalesByCategoryQuery } from '../services/dashboard.service.js';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 export default function ProductCategoryCharts() {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const [topProductsFilter, setTopProductsFilter] = React.useState('30D');
   const [topProductsMetric, setTopProductsMetric] = React.useState('revenue');
   const [categoryFilter, setCategoryFilter] = React.useState('30D');
@@ -15,7 +21,7 @@ export default function ProductCategoryCharts() {
 
   const topProductsChartData = topProductsData?.map(d => ({
     name: d.name,
-    [topProductsMetric === 'revenue' ? 'Revenue' : 'Units']: topProductsMetric === 'revenue' ? d.revenue : d.unitsSold,
+    [topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold]: topProductsMetric === 'revenue' ? d.revenue : d.unitsSold,
   })) || [];
 
   const categoryChartData = categoryData?.map(d => ({
@@ -33,13 +39,13 @@ export default function ProductCategoryCharts() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Top Selling Products */}
       <ChartCard
-        title="Top Selling Products"
+        title={labels.topSellingProducts}
         loading={topProductsLoading}
         height={300}
         showFilter
         defaultFilter="30D"
         onFilterChange={setTopProductsFilter}
-        emptyMessage="No sales data for this period"
+        emptyMessage={labels.noDataAvailable}
         isEmpty={topProductsChartData.length === 0}
         filterSlot={
           <select
@@ -47,8 +53,8 @@ export default function ProductCategoryCharts() {
             onChange={(e) => setTopProductsMetric(e.target.value)}
             className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--app-bg)]"
           >
-            <option value="revenue">By Revenue</option>
-            <option value="units">By Units Sold</option>
+            <option value="revenue">{labels.byRevenue}</option>
+            <option value="units">{labels.byUnitsSold}</option>
           </select>
         }
       >
@@ -60,9 +66,9 @@ export default function ProductCategoryCharts() {
             <Tooltip />
             <Legend />
             <Bar 
-              dataKey={topProductsMetric === 'revenue' ? 'Revenue' : 'Units'} 
+              dataKey={topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold} 
               fill="#10b981" 
-              name={topProductsMetric === 'revenue' ? 'Revenue' : 'Units Sold'}
+              name={topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold}
             />
           </BarChart>
         </ResponsiveContainer>
@@ -70,13 +76,13 @@ export default function ProductCategoryCharts() {
 
       {/* Sales by Category */}
       <ChartCard
-        title="Sales by Category"
+        title={labels.salesByCategory}
         loading={categoryLoading}
         height={300}
         showFilter
         defaultFilter="30D"
         onFilterChange={setCategoryFilter}
-        emptyMessage="No category data for this period"
+        emptyMessage={labels.noDataAvailable}
         isEmpty={categoryChartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">

@@ -1,10 +1,16 @@
 import React from 'react';
 import { DollarSign, TrendingUp, ShoppingCart, Package } from 'lucide-react';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 import KPICard from './KPICard.jsx';
 import TimeRangeFilter from './TimeRangeFilter.jsx';
 import { useGetSalesRevenueKPIsQuery } from '../services/dashboard.service.js';
 
 export default function SalesRevenueKPIs() {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const [filter, setFilter] = React.useState('30D');
   const { data: kpis, isLoading } = useGetSalesRevenueKPIsQuery(filter);
 
@@ -18,12 +24,12 @@ export default function SalesRevenueKPIs() {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard
-          label="Total Revenue"
+          label={labels.totalRevenue}
           value={kpis?.totalRevenue}
-          subLabel="Retail + Wholesale combined"
+          subLabel={`${labels.retail} + ${labels.wholesale} combined`}
           secondary={{
-            'Retail': kpis?.retailRevenue,
-            'Wholesale': kpis?.wholesaleRevenue,
+            [labels.retail]: kpis?.retailRevenue,
+            [labels.wholesale]: kpis?.wholesaleRevenue,
           }}
           icon={DollarSign}
           color="bg-green-500"
@@ -31,38 +37,38 @@ export default function SalesRevenueKPIs() {
         />
 
         <KPICard
-          label="Retail Revenue"
+          label={labels.retailRevenue}
           value={kpis?.retailRevenue}
-          subLabel={`(${kpis?.retailOrders} orders)`}
+          subLabel={`(${kpis?.retailOrders} ${labels.orders})`}
           icon={ShoppingCart}
           color="bg-blue-500"
           loading={isLoading}
         />
 
         <KPICard
-          label="Wholesale Revenue"
+          label={labels.wholesaleRevenue}
           value={kpis?.wholesaleRevenue}
-          subLabel={`(${kpis?.wholesaleOrders} orders)`}
+          subLabel={`(${kpis?.wholesaleOrders} ${labels.orders})`}
           icon={Package}
           color="bg-purple-500"
           loading={isLoading}
         />
 
         <KPICard
-          label="Total Orders"
+          label={labels.totalOrders}
           value={kpis?.totalOrders}
-          subLabel={`Retail: ${kpis?.retailOrders} | Wholesale: ${kpis?.wholesaleOrders}`}
+          subLabel={`${labels.retail}: ${kpis?.retailOrders} | ${labels.wholesale}: ${kpis?.wholesaleOrders}`}
           icon={ShoppingCart}
           color="bg-cyan-500"
           loading={isLoading}
         />
 
         <KPICard
-          label="Average Order Value"
+          label={labels.averageOrderValue}
           value={kpis?.avgOrderValue}
           secondary={{
-            'Retail AOV': kpis?.retailAvgOrderValue,
-            'Wholesale AOV': kpis?.wholesaleAvgOrderValue,
+            [labels.retailAOV]: kpis?.retailAvgOrderValue,
+            [labels.wholesaleAOV]: kpis?.wholesaleAvgOrderValue,
           }}
           icon={TrendingUp}
           color="bg-orange-500"
@@ -70,9 +76,9 @@ export default function SalesRevenueKPIs() {
         />
 
         <KPICard
-          label="Gross Profit"
+          label={labels.grossProfit}
           value={kpis?.grossProfit}
-          subLabel={`${kpis?.grossMargin}% margin`}
+          subLabel={`${kpis?.grossMargin}% ${labels.margin}`}
           icon={TrendingUp}
           color="bg-emerald-500"
           loading={isLoading}

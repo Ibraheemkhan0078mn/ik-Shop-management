@@ -1,11 +1,17 @@
 import React from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
 import { useGetStockLevelByCategoryQuery, useGetInventoryValueByCategoryQuery } from '../services/dashboard.service.js';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 export default function InventoryOverviewCharts() {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const { data: stockLevelData, isLoading: stockLevelLoading } = useGetStockLevelByCategoryQuery();
   const { data: inventoryValueData, isLoading: inventoryValueLoading } = useGetInventoryValueByCategoryQuery();
 
@@ -24,11 +30,11 @@ export default function InventoryOverviewCharts() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Stock Level by Category */}
       <ChartCard
-        title="Stock Level by Category"
+        title={labels.stockLevelByCategory}
         loading={stockLevelLoading}
         height={300}
         showFilter={false}
-        emptyMessage="No stock data available"
+        emptyMessage={labels.noDataAvailable}
         isEmpty={stockLevelChartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -38,18 +44,18 @@ export default function InventoryOverviewCharts() {
             <YAxis dataKey="name" type="category" width={100} stroke="var(--muted)" />
             <Tooltip />
             <Legend />
-            <Bar dataKey="stockLevel" fill="#10b981" name="Stock Level" />
+            <Bar dataKey="stockLevel" fill="#10b981" name={labels.stockLevel} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
       {/* Inventory Value by Category */}
       <ChartCard
-        title="Inventory Value by Category"
+        title={labels.inventoryValueByCategory}
         loading={inventoryValueLoading}
         height={300}
         showFilter={false}
-        emptyMessage="No inventory value data available"
+        emptyMessage={labels.noDataAvailable}
         isEmpty={inventoryValueChartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">

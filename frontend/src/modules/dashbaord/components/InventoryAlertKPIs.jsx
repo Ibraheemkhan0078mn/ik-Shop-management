@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { AlertTriangle, PackageMinus, PackageX } from 'lucide-react';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 import KPICard from './KPICard.jsx';
 import PaginatedTableModal from './PaginatedTableModal.jsx';
 import { useGetInventoryAlertKPIsQuery } from '../services/dashboard.service.js';
 import { useGetExpiryProductsQuery, useGetLowStockProductsQuery, useGetOutOfStockProductsQuery } from '../services/dashboard.service.js';
 
 export default function InventoryAlertKPIs() {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const { data: alerts, isLoading } = useGetInventoryAlertKPIsQuery();
   
   // Modal states
@@ -71,11 +77,11 @@ export default function InventoryAlertKPIs() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-[var(--ink)]">Inventory Alerts</h2>
+      <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.inventoryOverview}</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KPICard
-          label="Expiring Soon"
+          label={labels.lowStock}
           value={alerts?.expiringSoon}
           subLabel="Batches expiring within 30 days"
           icon={AlertTriangle}
@@ -86,7 +92,7 @@ export default function InventoryAlertKPIs() {
         />
 
         <KPICard
-          label="Low Stock"
+          label={labels.lowStock}
           value={alerts?.lowStock}
           subLabel="Batches below minimum stock"
           icon={PackageMinus}
@@ -97,7 +103,7 @@ export default function InventoryAlertKPIs() {
         />
 
         <KPICard
-          label="Out of Stock"
+          label={labels.outOfStock}
           value={alerts?.outOfStock}
           subLabel="Batches with zero stock"
           icon={PackageX}

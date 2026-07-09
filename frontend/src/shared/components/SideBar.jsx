@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, LogOut, Settings, Menu, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useLogout } from "../../modules/auth/services/auth.service.js";
+import { useSettings } from "../../modules/settings/hooks/useSettings.js";
 import logo from "../assets/logo.png";
 import { sidebarData } from "../data/sidebar.js";
 import { useGetSettingsQuery } from "../../modules/settings/api/settings.api.js";
@@ -23,11 +24,13 @@ const PERMISSION_MAP = {
 export default function Sidebar() {
   const location  = useLocation();
   const logoutUser = useLogout();
-  const { permissions = {}, role, language = "en", id: userId } = useSelector(s => s.auth) ?? {};
-  const { data: settingsData } = useGetSettingsQuery(userId);
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const { permissions = {}, role, id: userId } = useSelector(s => s.auth) ?? {};
+  // const { data: settingsData } = useGetSettingsQuery(userId);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const settings = settingsData?.data || {};
+  // const settings = settingsData?.data || {};
   const shopName = settings.shop?.name || "Shop Manager";
   const shopImageUrl = settings.shop?.imageUrl || "";
   const moduleVisibility = settings.modules || {};
@@ -141,7 +144,7 @@ export default function Sidebar() {
               {shopName}
             </p>
             <p className="text-[11px] truncate" style={{ color: "var(--muted)" }}>
-              Orders to accounts
+              {language === "ur" ? "آرڈرز سے اکاؤنٹس" : "Orders to accounts"}
             </p>
           </div>
         )}
@@ -271,7 +274,7 @@ export default function Sidebar() {
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "var(--surface)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
-            title={isCollapsed ? "Settings" : ""}
+            title={isCollapsed ? (language === "ur" ? "سیٹنگز" : "Settings") : ""}
           >
             <Settings className="w-4 h-4" />
           </Link>
@@ -282,7 +285,7 @@ export default function Sidebar() {
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
-            title={isCollapsed ? "Logout" : ""}
+            title={isCollapsed ? (language === "ur" ? "لاگ آؤٹ" : "Logout") : ""}
           >
             <LogOut className="w-4 h-4" />
           </button>
