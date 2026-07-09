@@ -4,7 +4,7 @@ import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
-import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
+import { usePDF } from "react-to-pdf";
 
 const PERIOD_OPTIONS = [
     { value: "today", label: "Today" },
@@ -199,7 +199,10 @@ function TransactionList({ transactions, type, onToggle, isExpanded }) {
 }
 
 export default function MainBusinessReport() {
-    const contentRef = useRef(null);
+    const { toPDF, targetRef } = usePDF({ 
+        filename: "main-business-report.pdf",
+        scale: 0.8
+    });
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -220,8 +223,6 @@ export default function MainBusinessReport() {
     }
 
     const handleRefresh = () => refetch();
-    const handlePrint = () => window.print();
-    const handleExport = () => console.log("Export functionality to be implemented");
 
     const toggleSection = (key) => {
         setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -264,19 +265,28 @@ export default function MainBusinessReport() {
     const breakdowns = data?.breakdowns || {};
     const transactions = data?.transactions || {};
 
-    // For print, expand all sections
-    const isPrinting = window.matchMedia?.('print')?.matches;
+    const handleExportPDF = async () => {
+        // Hide sidebar during PDF export
+        document.body.classList.add('pdf-exporting');
+        
+        await handleExpandAll();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await toPDF();
+        await handleCollapseAll();
+        
+        // Remove class after export
+        document.body.classList.remove('pdf-exporting');
+    };
 
     return (
         <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
             <style>{`
-                @media print {
-                    .no-print { display: none !important; }
-                    .print-expanded { display: block !important; }
-                    body { background: white !important; }
+                .pdf-exporting [class*="sidebar"],
+                .pdf-exporting [class*="Sidebar"],
+                .pdf-exporting aside {
+                    display: none !important;
                 }
             `}</style>
-
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Main Business Report</h1>
@@ -291,17 +301,13 @@ export default function MainBusinessReport() {
                         <RefreshCw size={16} />
                         Refresh
                     </button>
-                    <PdfExportButton 
-                        contentRef={contentRef} 
-                        fileName="main-business-report.pdf" 
-                    />
                     <button
-                        onClick={handlePrint}
+                        onClick={handleExportPDF}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        <Printer size={16} />
-                        Print
+                        <Download size={16} />
+                        Export PDF
                     </button>
                 </div>
             </div>
@@ -372,8 +378,7 @@ export default function MainBusinessReport() {
                     <RefreshCw className="animate-spin" size={40} style={{ color: 'var(--accent-2)' }} />
                 </div>
             ) : (
-                <div ref={contentRef}>
-                <>
+                <div ref={targetRef}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <SummaryCard
                             label="Total Sales"
@@ -382,7 +387,7 @@ export default function MainBusinessReport() {
                             color="#10b981"
                             description="Revenue from completed orders"
                             onToggle={() => toggleSection('sales')}
-                            isExpanded={expandedSections.sales || isPrinting}
+                            isExpanded={expandedSections.sales}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -404,7 +409,7 @@ export default function MainBusinessReport() {
                             color="#3b82f6"
                             description="Cost of inventory purchases"
                             onToggle={() => toggleSection('purchases')}
-                            isExpanded={expandedSections.purchases || isPrinting}
+                            isExpanded={expandedSections.purchases}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -426,7 +431,7 @@ export default function MainBusinessReport() {
                             color="#ef4444"
                             description="Operating expenses"
                             onToggle={() => toggleSection('expenses')}
-                            isExpanded={expandedSections.expenses || isPrinting}
+                            isExpanded={expandedSections.expenses}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -448,7 +453,7 @@ export default function MainBusinessReport() {
                             color="#8b5cf6"
                             description="Staff salary payments"
                             onToggle={() => toggleSection('salaries')}
-                            isExpanded={expandedSections.salaries || isPrinting}
+                            isExpanded={expandedSections.salaries}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -470,7 +475,7 @@ export default function MainBusinessReport() {
                             color="#06b6d4"
                             description="Returns to suppliers"
                             onToggle={() => toggleSection('returns')}
-                            isExpanded={expandedSections.returns || isPrinting}
+                            isExpanded={expandedSections.returns}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -492,7 +497,7 @@ export default function MainBusinessReport() {
                             color="#f59e0b"
                             description="Customer product returns"
                             onToggle={() => toggleSection('returns')}
-                            isExpanded={expandedSections.returns || isPrinting}
+                            isExpanded={expandedSections.returns}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -514,7 +519,7 @@ export default function MainBusinessReport() {
                             color="#dc2626"
                             description="Inventory wastage cost"
                             onToggle={() => toggleSection('wastage')}
-                            isExpanded={expandedSections.wastage || isPrinting}
+                            isExpanded={expandedSections.wastage}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -536,7 +541,7 @@ export default function MainBusinessReport() {
                             color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"}
                             description={summary.netProfit >= 0 ? "Net profit for period" : "Net loss for period"}
                             onToggle={() => toggleSection('profit')}
-                            isExpanded={expandedSections.profit || isPrinting}
+                            isExpanded={expandedSections.profit}
                         >
                             <div className="mt-3">
                                 <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--muted)' }}>
@@ -592,7 +597,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.sales}
                                     type="sales"
                                     onToggle={() => toggleTransactions('sales')}
-                                    isExpanded={expandedTransactions.sales || isPrinting}
+                                    isExpanded={expandedTransactions.sales}
                                 />
                             </div>
                         )}
@@ -604,7 +609,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.purchases}
                                     type="purchases"
                                     onToggle={() => toggleTransactions('purchases')}
-                                    isExpanded={expandedTransactions.purchases || isPrinting}
+                                    isExpanded={expandedTransactions.purchases}
                                 />
                             </div>
                         )}
@@ -616,7 +621,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.expenses}
                                     type="expenses"
                                     onToggle={() => toggleTransactions('expenses')}
-                                    isExpanded={expandedTransactions.expenses || isPrinting}
+                                    isExpanded={expandedTransactions.expenses}
                                 />
                             </div>
                         )}
@@ -628,7 +633,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.salaryPayments}
                                     type="salaryPayments"
                                     onToggle={() => toggleTransactions('salaries')}
-                                    isExpanded={expandedTransactions.salaries || isPrinting}
+                                    isExpanded={expandedTransactions.salaries}
                                 />
                             </div>
                         )}
@@ -640,7 +645,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.purchaseReturns}
                                     type="purchaseReturns"
                                     onToggle={() => toggleTransactions('purchaseReturns')}
-                                    isExpanded={expandedTransactions.purchaseReturns || isPrinting}
+                                    isExpanded={expandedTransactions.purchaseReturns}
                                 />
                             </div>
                         )}
@@ -652,7 +657,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.productReturns}
                                     type="productReturns"
                                     onToggle={() => toggleTransactions('productReturns')}
-                                    isExpanded={expandedTransactions.productReturns || isPrinting}
+                                    isExpanded={expandedTransactions.productReturns}
                                 />
                             </div>
                         )}
@@ -664,7 +669,7 @@ export default function MainBusinessReport() {
                                     transactions={transactions.wastages}
                                     type="wastages"
                                     onToggle={() => toggleTransactions('wastages')}
-                                    isExpanded={expandedTransactions.wastages || isPrinting}
+                                    isExpanded={expandedTransactions.wastages}
                                 />
                             </div>
                         )}
@@ -822,7 +827,6 @@ export default function MainBusinessReport() {
                             </div>
                         </div>
                     </div>
-                </>
                 </div>
             )}
         </div>

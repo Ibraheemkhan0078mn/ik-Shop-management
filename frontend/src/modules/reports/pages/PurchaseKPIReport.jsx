@@ -26,7 +26,6 @@ import { useGetPurchaseKPIReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
-import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -118,12 +117,7 @@ export default function PurchaseKPIReport() {
                         <ScreenTabButton lucideIcon={RefreshCw} text="Refresh" />
                     </div>
                 }
-                rightActions={
-                    <PdfExportButton 
-                        contentRef={contentRef} 
-                        fileName="purchase-kpi-report.pdf" 
-                    />
-                }
+              
             />
 
             {isLoading ? (

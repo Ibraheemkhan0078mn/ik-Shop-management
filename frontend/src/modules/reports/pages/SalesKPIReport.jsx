@@ -3,7 +3,6 @@ import { useGetSalesKPIReportQuery } from "../services/reports.service";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
-import PdfExportButton from "../../../shared/components/PdfExportButton.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportLabels } from "../labels/reportLabels.js";
 import { 
@@ -148,12 +147,7 @@ export default function SalesKPIReport() {
                         <ScreenTabButton lucideIcon={RefreshCw} text={labels.refresh} />
                     </div>
                 }
-                rightActions={
-                    <PdfExportButton 
-                        contentRef={contentRef} 
-                        fileName="sales-kpi-report.pdf" 
-                    />
-                }
+             
             />
 
             {isLoading ? (
