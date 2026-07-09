@@ -1,5 +1,61 @@
-import { getActivityLogModel, getLocalAttendenceModel, getLocalChangeMemberModel, getLocalClassModel, getLocalClassPartnershipModel, getLocalCourseModel, getLocalDeviceIdentityModel, getLocalExamModel, getLocalExpenseCatagModel, getLocalExpenseModel, getLocalInventoryCategoryModel, getLocalInventoryModel, getLocalMemberSalaryChangeModel, getLocalOpeningBalanceModel, getLocalPartnerInvestmentModel, getLocalPaymentTrackingRecordModel, getLocalPaymentWithoutAccountModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalReminderModel, getLocalStudentCounterModel, getLocalStudentFeeTrasactionModel, getLocalStudentMarksModel, getLocalstudentModel, getLocalSubjectModel, getLocalMemberAttendenceModel, getLocalMemberSalaryPaymentModel, getLocalUserModel, getLocalVacationLeaveModel } from "../../db/localDbConnection.js"
-import { getOnlineActivityLogModel, getOnlineAttendenceModel, getOnlineClassModel, getOnlineClassPartnershipModel, getOnlineCourseModel, getOnlineDeviceIdentityModel, getOnlineExamModel, getOnlineExpenseCatagModel, getOnlineExpenseModel, getOnlineInventoryCategoryModel, getOnlineInventoryModel, getOnlineMemberSalaryChangeModel, getOnlineOpeningBalanceModel, getOnlinePartnerInvestmentModel, getOnlinePaymentTrackingRecordModel, getOnlinePaymentWithoutAccountModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineReminderModel, getOnlineStudentCounterModel, getOnlineStudentFeeTrasactionModel, getOnlineStudentMarksModel, getOnlineStudentModel, getOnlineSubjectModel, getOnlineMemberAttendenceModel, getOnlineMemberModel, getOnlineMemberSalaryPaymentModel, getOnlineUserModel, getOnlineVacationLeaveModel } from '../../db/onlineDbConnection.js'
+import { 
+    getLocalPurchaseReturnModel, 
+    getLocalProductReturnModel, 
+    getLocalWastageModel, 
+    getLocalCustomerModel, 
+    getLocalQarzaAccountModel, 
+    getLocalQarzaPaymentModel, 
+    getLocalImageChangeTrackModel, 
+    getLocalExpensesModel, 
+    getLocalExpenseCategoryModel, 
+    getLocalActivityLogModel, 
+    getLocalChangeTrackModel, 
+    getLocalUserModel, 
+    getLocalProductModel, 
+    getLocalCategoryModel, 
+    getLocalSubCategoryModel, 
+    getLocalBatchModel, 
+    getLocalSupplierModel, 
+    getLocalPurchaseModel, 
+    getLocalPurchasePaymentModel, 
+    getLocalOrderModel, 
+    getLocalHoldOrderModel, 
+    getLocalStaffModel, 
+    getLocalStaffSalaryPaymentModel, 
+    getLocalStaffSaleBillModel, 
+    getLocalStaffAttendanceModel, 
+    getLocalSettingsModel 
+} from "../../../configs/connect.db.js";
+
+import { 
+    getOnlinePurchaseReturnModel, 
+    getOnlineProductReturnModel, 
+    getOnlineWastageModel, 
+    getOnlineCustomerModel, 
+    getOnlineQarzaAccountModel, 
+    getOnlineQarzaPaymentModel, 
+    getOnlineImageChangeTrackModel, 
+    getOnlineExpensesModel, 
+    getOnlineExpenseCategoryModel, 
+    getOnlineActivityLogModel, 
+    getOnlineChangeTrackModel, 
+    getOnlineUserModel, 
+    getOnlineProductModel, 
+    getOnlineCategoryModel, 
+    getOnlineSubCategoryModel, 
+    getOnlineBatchModel, 
+    getOnlineSupplierModel, 
+    getOnlinePurchaseModel, 
+    getOnlinePurchasePaymentModel, 
+    getOnlineOrderModel, 
+    getOnlineHoldOrderModel, 
+    getOnlineStaffModel, 
+    getOnlineStaffSalaryPaymentModel, 
+    getOnlineStaffSaleBillModel, 
+    getOnlineStaffAttendanceModel, 
+    getOnlineSettingsModel 
+} from '../../../configs/onlineConnect.db.js';
+
 import { deleteOnlineSync } from "./deleteOnlineSync.js";
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
 import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
@@ -8,49 +64,38 @@ import { imgDelete } from "./imgDelete.js";
 import { ImageUpload } from "./imgUpload.js";
 import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "./uploadSync.js";
 import { duplicateChangeTracksServiceCleaning } from "./cleaningSync.js";
-import { syncOnlineDeveloperOptionsToLocalService } from "../../services/OrganizedServices/developerOption/developerOption.general.service.js";
-
-
-
 
 export async function docsSyncOrganizer(syncType = "required", loggedInUserData) {
     try {
 
         let modelArray = [
-            { local: getLocalPartnerInvestmentModel(), online: getOnlinePartnerInvestmentModel(), permissionString: ["member-investment-view"] },
-            { local: getLocalClassPartnershipModel(), online: getOnlineClassPartnershipModel(), permissionString: ["member-class-partnership-view"] },
-            { local: getLocalReminderModel(), online: getOnlineReminderModel(), permissionString: ["student-reminder"] },
-            { local: getLocalPaymentWithoutAccountModel(), online: getOnlinePaymentWithoutAccountModel(), permissionString: ["qarzas-without-account-view"] },
-            { local: getLocalQarzaAccountModel(), online: getOnlineQarzaAccountModel(), permissionString: ["qarzas-with-account-view"] },
-            { local: getLocalQarzaPaymentModel(), online: getOnlineQarzaPaymentModel(), permissionString: ["qarza-with-account-payment-view"] },
-            { local: getLocalExpenseModel(), online: getOnlineExpenseModel(), permissionString: ["expenses-view"] },
-            { local: getLocalAttendenceModel(), online: getOnlineAttendenceModel(), permissionString: ["student-attendance-view"] },
-            { local: getLocalClassModel(), online: getOnlineClassModel(), permissionString: ["classes-view"] },
-            { local: getLocalstudentModel(), online: getOnlineStudentModel(), permissionString: ["students-view"] },
-            { local: getLocalCourseModel(), online: getOnlineCourseModel(), permissionString: ["class-course-view"] },
-            { local: getLocalStudentMarksModel(), online: getOnlineStudentMarksModel(), permissionString: ["student-marks-view"] },
-            // { local: getLocalUserModel(), online: getOnlineUserModel(), permissionString: ["users-view"] },
-            { local: getLocalChangeMemberModel(), online: getOnlineMemberModel(), permissionString: ["members-view"] },
-            { local: getLocalMemberAttendenceModel(), online: getOnlineMemberAttendenceModel(), permissionString: ["members-attendance-view"] },
-            { local: getLocalStudentFeeTrasactionModel(), online: getOnlineStudentFeeTrasactionModel(), permissionString: ["student-deposits-view"] },
-            { local: getLocalSubjectModel(), online: getOnlineSubjectModel(), permissionString: ["class-subject-view"] },
-            { local: getLocalExamModel(), online: getOnlineExamModel(), permissionString: ["class-exam-view"] },
-            { local: getLocalExpenseCatagModel(), online: getOnlineExpenseCatagModel(), permissionString: ["expense-category-view"] },
-            { local: getLocalMemberSalaryPaymentModel(), online: getOnlineMemberSalaryPaymentModel(), permissionString: ["member-payment-view"] },
-            { local: getLocalInventoryCategoryModel(), online: getOnlineInventoryCategoryModel(), permissionString: ["inventory-view"] },
-            { local: getLocalInventoryModel(), online: getOnlineInventoryModel(), permissionString: ["inventory-view"] },
-            { local: getActivityLogModel(), online: getOnlineActivityLogModel(), permissionString: ["activityLogs-view"] },
-            { local: getLocalOpeningBalanceModel(), online: getOnlineOpeningBalanceModel(), permissionString: ["opening-balance-view", 'opening-balance-update'] },
-            { local: getLocalMemberSalaryChangeModel(), online: getOnlineMemberSalaryChangeModel(), permissionString: ["member-salary-change-view", 'member-salary-change-update'] },
-            { local: getLocalVacationLeaveModel(), online: getOnlineVacationLeaveModel(), permissionString: ["vacation-leave-view", "vacation-leave-update"] },
-            { local: getLocalPaymentTrackingRecordModel(), online: getOnlinePaymentTrackingRecordModel(), permissionString: ["payment-tracking-view"] }
-
+            { local: getLocalPurchaseReturnModel(), online: getOnlinePurchaseReturnModel(), permissionString: ["purchase-return-view"] },
+            { local: getLocalProductReturnModel(), online: getOnlineProductReturnModel(), permissionString: ["product-return-view"] },
+            { local: getLocalWastageModel(), online: getOnlineWastageModel(), permissionString: ["wastage-view"] },
+            { local: getLocalCustomerModel(), online: getOnlineCustomerModel(), permissionString: ["customer-view"] },
+            { local: getLocalQarzaAccountModel(), online: getOnlineQarzaAccountModel(), permissionString: ["qarza-account-view"] },
+            { local: getLocalQarzaPaymentModel(), online: getOnlineQarzaPaymentModel(), permissionString: ["qarza-payment-view"] },
+            { local: getLocalExpensesModel(), online: getOnlineExpensesModel(), permissionString: ["expense-view"] },
+            { local: getLocalExpenseCategoryModel(), online: getOnlineExpenseCategoryModel(), permissionString: ["expense-category-view"] },
+            { local: getLocalActivityLogModel(), online: getOnlineActivityLogModel(), permissionString: ["activity-log-view"] },
+            { local: getLocalChangeTrackModel(), online: getOnlineChangeTrackModel(), permissionString: [] },
+            { local: getLocalImageChangeTrackModel(), online: getOnlineImageChangeTrackModel(), permissionString: [] },
+            { local: getLocalUserModel(), online: getOnlineUserModel(), permissionString: ["user-view"] },
+            { local: getLocalProductModel(), online: getOnlineProductModel(), permissionString: ["product-view"] },
+            { local: getLocalCategoryModel(), online: getOnlineCategoryModel(), permissionString: ["category-view"] },
+            { local: getLocalSubCategoryModel(), online: getOnlineSubCategoryModel(), permissionString: ["subcategory-view"] },
+            { local: getLocalBatchModel(), online: getOnlineBatchModel(), permissionString: ["batch-view"] },
+            { local: getLocalSupplierModel(), online: getOnlineSupplierModel(), permissionString: ["supplier-view"] },
+            { local: getLocalPurchaseModel(), online: getOnlinePurchaseModel(), permissionString: ["purchase-view"] },
+            { local: getLocalPurchasePaymentModel(), online: getOnlinePurchasePaymentModel(), permissionString: ["purchase-payment-view"] },
+            { local: getLocalOrderModel(), online: getOnlineOrderModel(), permissionString: ["order-view"] },
+            { local: getLocalHoldOrderModel(), online: getOnlineHoldOrderModel(), permissionString: ["hold-order-view"] },
+            { local: getLocalStaffModel(), online: getOnlineStaffModel(), permissionString: ["staff-view"] },
+            { local: getLocalStaffSalaryPaymentModel(), online: getOnlineStaffSalaryPaymentModel(), permissionString: ["staff-salary-payment-view"] },
+            { local: getLocalStaffSaleBillModel(), online: getOnlineStaffSaleBillModel(), permissionString: ["staff-sale-bill-view"] },
+            { local: getLocalStaffAttendanceModel(), online: getOnlineStaffAttendanceModel(), permissionString: ["staff-attendance-view"] },
+            { local: getLocalSettingsModel(), online: getOnlineSettingsModel(), permissionString: ["settings-view"] },
         ];
-
-
-
-
-        await syncOnlineDeveloperOptionsToLocalService() 
 
         console.time("dublicateCleaning")
         await duplicateChangeTracksServiceCleaning()

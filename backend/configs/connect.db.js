@@ -97,6 +97,8 @@ export const connectDb = async () => {
     StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
     SettingsModel = LocalConnection.model("Settings", settingsSchema)
 
+
+    startChangeStreamTracking(LocalConnection)
 };
 
 

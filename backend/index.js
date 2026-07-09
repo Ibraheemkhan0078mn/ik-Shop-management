@@ -8,6 +8,7 @@ dotenv.config({
      quiet: true
 })
 import { connectDb } from "./configs/connect.db.js";
+import { connectOnlineDb } from "./configs/onlineConnect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
 import { uploadDir } from "./common/services/uploadDirectory.js";
 
@@ -99,6 +100,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5001;
 
 connectDb();
+connectOnlineDb();
 app.listen(PORT, () => {
     console.log(`Server is listing on ${PORT} `);
 });
