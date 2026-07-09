@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { X, Wallet } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getQarzaLabels } from "../labels/qarzaLabels.js";
 import { useCreateQarzaAccount, useUpdateQarzaAccount } from "../services/qarza.service.js";
-import { useSelector } from "react-redux";
 import emptyImage from "../../../shared/assets/images/boy-user.jpg";
 import { backendBaseUrl } from "../../../shared/constants/constants.js";
 
@@ -43,8 +44,11 @@ const Btn = ({ children, variant = "primary", className = "", ...p }) => {
 const emptyForm = () => ({ name: "", type: "personal", phoneNo: "", address: "", notes: "", isActive: true });
 
 export default function QarzaAccountModal({ mode = "create", account, onClose, onSuccess }) {
-    const language   = useSelector(s => s.auth?.user?.language ?? "en");
-    const isUpdate   = mode === "update";
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getQarzaLabels(language);
+    
+    const isUpdate = mode === "update";
 
     const [createAccount, { isLoading: isCreating }] = useCreateQarzaAccount();
     const [updateAccount, { isLoading: isUpdating }] = useUpdateQarzaAccount();
@@ -79,7 +83,7 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
     };
 
     const handleSubmit = async () => {
-        if (!form.name.trim()) return showError("Name is required");
+        if (!form.name.trim()) return showError(labels.nameRequired);
 
         const fd = new FormData();
         Object.entries(form).forEach(([k, v]) => fd.append(k, v));
@@ -89,10 +93,10 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
         try {
             if (isUpdate) {
                 await updateAccount(fd).unwrap();
-                showSuccess("Account updated!");
+                showSuccess(labels.accountUpdated);
             } else {
                 await createAccount(fd).unwrap();
-                showSuccess("Account created!");
+                showSuccess(labels.accountCreated);
                 setForm(emptyForm());
                 setImgFile(null);
                 setPreview(null);
@@ -100,7 +104,7 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? "Operation failed");
+            showError(e?.data?.message ?? labels.operationFailed);
         }
     };
 
@@ -120,9 +124,9 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                         </div>
                         <div>
                             <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>
-                                {isUpdate ? "Edit Account" : "New Account"}
+                                {isUpdate ? labels.editAccount : labels.newAccount}
                             </h2>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>Credit / Debit ledger</p>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>{labels.creditDebitLedger}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition"
@@ -139,10 +143,10 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                             <img src={preview ?? emptyImage} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div>
-                            <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--muted)" }}>PROFILE PHOTO</p>
+                            <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--muted)" }}>{labels.profilePhoto}</p>
                             <label className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-xl cursor-pointer font-semibold transition"
                                 style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }}>
-                                Choose Photo
+                                {labels.choosePhoto}
                                 <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
                             </label>
                         </div>
@@ -150,27 +154,27 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field>
-                            <Label>Name *</Label>
-                            <Inp value={form.name} placeholder="Full name" onChange={e => update("name", e.target.value)} />
+                            <Label>{labels.name} *</Label>
+                            <Inp value={form.name} placeholder={labels.fullName} onChange={e => update("name", e.target.value)} />
                         </Field>
                         <Field>
-                            <Label>Type</Label>
+                            <Label>{labels.type}</Label>
                             <Sel value={form.type} onChange={e => update("type", e.target.value)}>
-                                <option value="personal">Personal</option>
-                                <option value="others">Others</option>
+                                <option value="personal">{labels.personal}</option>
+                                <option value="others">{labels.others}</option>
                             </Sel>
                         </Field>
                         <Field>
-                            <Label>Phone</Label>
-                            <Inp value={form.phoneNo} placeholder="03xx-xxxxxxx" onChange={e => update("phoneNo", e.target.value)} />
+                            <Label>{labels.phone}</Label>
+                            <Inp value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={e => update("phoneNo", e.target.value)} />
                         </Field>
                         <Field>
-                            <Label>Address</Label>
-                            <Inp value={form.address} placeholder="City / Area" onChange={e => update("address", e.target.value)} />
+                            <Label>{labels.address}</Label>
+                            <Inp value={form.address} placeholder={labels.cityArea} onChange={e => update("address", e.target.value)} />
                         </Field>
                         {isUpdate && (
                             <Field className="sm:col-span-2">
-                                <Label>Status</Label>
+                                <Label>{labels.active}</Label>
                                 <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                                     style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
                                     <div className="relative inline-flex items-center cursor-pointer"
@@ -182,21 +186,21 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                                         </div>
                                     </div>
                                     <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                                        {form.isActive ? "Active" : "Inactive"}
+                                        {form.isActive ? labels.active : labels.inactive}
                                     </span>
                                 </div>
                             </Field>
                         )}
                         <Field className="sm:col-span-2">
-                            <Label>Notes</Label>
-                            <Txt rows={2} value={form.notes} placeholder="Internal notes…" onChange={e => update("notes", e.target.value)} />
+                            <Label>{labels.notes}</Label>
+                            <Txt rows={2} value={form.notes} placeholder={labels.internalNotes} onChange={e => update("notes", e.target.value)} />
                         </Field>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                        <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+                        <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
                         <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
-                            {isSubmitting ? (isUpdate ? "Updating…" : "Creating…") : (isUpdate ? "Update Account" : "Create Account")}
+                            {isSubmitting ? (isUpdate ? labels.updating : labels.creating) : (isUpdate ? labels.updateAccount : labels.createAccount)}
                         </Btn>
                     </div>
                 </div>

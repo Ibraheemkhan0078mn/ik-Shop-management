@@ -8,10 +8,18 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Truck } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useCreateSupplier, useUpdateSupplier, useSupplier, useAllSuppliers } from "../services/suppliers.service.js";
-import { useSelector } from "react-redux";
 
 const TYPES = ["Distributor", "Wholesaler", "Manufacturer", "Other"];
+
+const getLocalizedTypes = (labels) => [
+    labels.distributor,
+    labels.wholesaler,
+    labels.manufacturer,
+    labels.other,
+];
 
 const emptyForm = () => ({
     name: "", type: "Other",
@@ -69,9 +77,11 @@ const Btn = ({ children, variant = "primary", size = "md", className = "", ...p 
 
 // ─── main component ────────────────────────────────────────────────────────
 export default function SupplierModal({ mode = "create", supplierId, onClose, onSuccess }) {
-    const language  = useSelector(s => s.auth?.user?.language ?? "en");
-    const t         = (en, ur) => language === "en" ? en : ur;
-    const isUpdate  = mode === "update";
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getSupplierLabels(language);
+    
+    const isUpdate = mode === "update";
 
     const { data: existingSupplier, isLoading: isFetching } =
         useSupplier(supplierId, { skip: !isUpdate || !supplierId });
@@ -84,6 +94,8 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
 
     const [form,      setForm]      = useState(emptyForm());
     const [nameError, setNameError] = useState(false);
+
+    const localizedTypes = getLocalizedTypes(labels);
 
     const update = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
@@ -111,8 +123,8 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
     };
 
     const handleSubmit = async () => {
-        if (!form.name.trim()) return showError(t("Supplier name is required.", "نام ضروری ہے۔"));
-        if (nameError)          return showError(t("Name already taken.", "نام پہلے سے موجود ہے۔"));
+        if (!form.name.trim()) return showError(labels.nameRequired);
+        if (nameError)          return showError(labels.nameAlreadyTaken);
 
         const payload = {
             ...form,
@@ -127,23 +139,23 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
         try {
             if (isUpdate) {
                 await updateSupplier({ id: supplierId, ...payload }).unwrap();
-                showSuccess(t("Supplier updated!", "سپلائر اپڈیٹ ہو گیا۔"));
+                showSuccess(labels.supplierUpdated);
             } else {
                 await createSupplier(payload).unwrap();
-                showSuccess(t("Supplier created!", "سپلائر شامل ہو گیا۔"));
+                showSuccess(labels.supplierCreated);
                 setForm(emptyForm());
             }
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.data?.message || labels.operationFailed);
         }
     };
 
     if (isUpdate && isFetching && !existingSupplier) return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="rounded-2xl p-8 text-sm" style={{ background: "var(--surface)", color: "var(--muted)" }}>
-                Loading…
+                {labels.loading}
             </div>
         </div>
     );
@@ -165,10 +177,10 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                         </div>
                         <div>
                             <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>
-                                {isUpdate ? t("Update Supplier", "سپلائر اپڈیٹ") : t("New Supplier", "نیا سپلائر")}
+                                {isUpdate ? labels.updateSupplier : labels.newSupplier}
                             </h2>
                             <p className="text-xs" style={{ color: "var(--muted)" }}>
-                                {t("Supplier management", "سپلائر")}
+                                {labels.supplierManagementShort}
                             </p>
                         </div>
                     </div>
@@ -184,45 +196,45 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                         <Field>
-                            <Label required>Name</Label>
-                            <Inp value={form.name} placeholder="ABC Traders"
+                            <Label required>{labels.name}</Label>
+                            <Inp value={form.name} placeholder={labels.namePlaceholder}
                                 error={nameError}
                                 onChange={e => handleNameChange(e.target.value)} />
                             {nameError && (
                                 <span className="text-xs mt-1" style={{ color: "#dc2626" }}>
-                                    {t("Name already in use", "نام پہلے سے موجود ہے")}
+                                    {labels.nameAlreadyInUse}
                                 </span>
                             )}
                         </Field>
 
                         <Field>
-                            <Label>Type</Label>
+                            <Label>{labels.type}</Label>
                             <Sel value={form.type} onChange={e => update("type", e.target.value)}>
-                                {TYPES.map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                                {TYPES.map((tp, idx) => <option key={tp} value={tp}>{localizedTypes[idx]}</option>)}
                             </Sel>
                         </Field>
 
                         <Field>
-                            <Label>Phone</Label>
-                            <Inp value={form.phone} placeholder="0300-1234567"
+                            <Label>{labels.phone}</Label>
+                            <Inp value={form.phone} placeholder={labels.phonePlaceholder}
                                 onChange={e => update("phone", e.target.value)} />
                         </Field>
 
                         <Field>
-                            <Label>Email</Label>
-                            <Inp type="email" value={form.email} placeholder="supplier@example.com"
+                            <Label>{labels.email}</Label>
+                            <Inp type="email" value={form.email} placeholder={labels.emailPlaceholder}
                                 onChange={e => update("email", e.target.value)} />
                         </Field>
 
                         <Field>
-                            <Label>Tax ID / NTN</Label>
-                            <Inp value={form.taxId} placeholder="1234567-8"
+                            <Label>{labels.taxId}</Label>
+                            <Inp value={form.taxId} placeholder={labels.taxIdPlaceholder}
                                 onChange={e => update("taxId", e.target.value)} />
                         </Field>
 
                         {/* status toggle */}
                         <Field className="sm:col-span-2">
-                            <Label>Status</Label>
+                            <Label>{labels.status}</Label>
                             <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                                 style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -235,31 +247,31 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                                     </div>
                                 </label>
                                 <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                                    {form.isActive ? t("Active", "فعال") : t("Inactive", "غیر فعال")}
+                                    {form.isActive ? labels.active : labels.inactive}
                                 </span>
                             </div>
                         </Field>
 
                         <Field className="sm:col-span-2">
-                            <Label>Address</Label>
-                            <Txt rows={2} value={form.address} placeholder="Industrial Area, Karachi…"
+                            <Label>{labels.address}</Label>
+                            <Txt rows={2} value={form.address} placeholder={labels.addressPlaceholder}
                                 onChange={e => update("address", e.target.value)} />
                         </Field>
 
                         <Field className="sm:col-span-2">
-                            <Label>Notes</Label>
-                            <Txt rows={2} value={form.notes} placeholder="Payment terms, reliability…"
+                            <Label>{labels.notes}</Label>
+                            <Txt rows={2} value={form.notes} placeholder={labels.notesPlaceholder}
                                 onChange={e => update("notes", e.target.value)} />
                         </Field>
                     </div>
 
                     {/* footer */}
                     <div className="flex justify-end gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                        <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+                        <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
                         <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
                             {isSubmitting
-                                ? (isUpdate ? "Updating…" : "Creating…")
-                                : isUpdate ? t("Update Supplier", "اپڈیٹ") : t("Create Supplier", "شامل کریں")
+                                ? (isUpdate ? labels.updating : labels.creating)
+                                : isUpdate ? labels.updateSupplier : labels.createSupplier
                             }
                         </Btn>
                     </div>

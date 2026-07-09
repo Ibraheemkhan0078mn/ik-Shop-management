@@ -39,30 +39,30 @@ export default function InventoryAlertKPIs() {
   };
 
   const expiryColumns = [
-    { header: 'Product Name', key: 'productName' },
-    { header: 'SKU', key: 'sku' },
-    { header: 'Batch Number', key: 'batchNumber' },
-    { header: 'Expiry Date', key: 'expiryDate', render: (row) => new Date(row.expiryDate).toLocaleDateString() },
-    { header: 'Days Remaining', key: 'daysRemaining' },
-    { header: 'Stock Qty', key: 'stockQty' },
+    { header: labels.productName, key: 'productName' },
+    { header: labels.sku, key: 'sku' },
+    { header: labels.batchNumber, key: 'batchNumber' },
+    { header: labels.expiryDate, key: 'expiryDate', render: (row) => new Date(row.expiryDate).toLocaleDateString() },
+    { header: labels.daysRemaining, key: 'daysRemaining' },
+    { header: labels.stockQty, key: 'stockQty' },
   ];
 
   const lowStockColumns = [
-    { header: 'Product Name', key: 'productName' },
-    { header: 'SKU', key: 'sku' },
-    { header: 'Batch Number', key: 'batchNumber' },
-    { header: 'Current Stock', key: 'currentStock' },
-    { header: 'Min Stock', key: 'minStock' },
-    { header: 'Max Stock', key: 'maxStock' },
-    { header: 'Shortage', key: 'shortage' },
+    { header: labels.productName, key: 'productName' },
+    { header: labels.sku, key: 'sku' },
+    { header: labels.batchNumber, key: 'batchNumber' },
+    { header: labels.currentStock, key: 'currentStock' },
+    { header: labels.minStock, key: 'minStock' },
+    { header: labels.maxStock, key: 'maxStock' },
+    { header: labels.shortage, key: 'shortage' },
   ];
 
   const outOfStockColumns = [
-    { header: 'Product Name', key: 'productName' },
-    { header: 'SKU', key: 'sku' },
-    { header: 'Batch Number', key: 'batchNumber' },
-    { header: 'Last Stock Date', key: 'lastStockDate', render: (row) => new Date(row.lastStockDate).toLocaleDateString() },
-    { header: 'Min Stock', key: 'minStock' },
+    { header: labels.productName, key: 'productName' },
+    { header: labels.sku, key: 'sku' },
+    { header: labels.batchNumber, key: 'batchNumber' },
+    { header: labels.lastStockDate, key: 'lastStockDate', render: (row) => new Date(row.lastStockDate).toLocaleDateString() },
+    { header: labels.minStock, key: 'minStock' },
   ];
 
   const expiryRowColors = (row) => {
@@ -83,7 +83,7 @@ export default function InventoryAlertKPIs() {
         <KPICard
           label={labels.lowStock}
           value={alerts?.expiringSoon}
-          subLabel="Batches expiring within 30 days"
+          subLabel={labels.batchesExpiring}
           icon={AlertTriangle}
           color="bg-amber-500"
           borderColor={getExpiryBorderColor()}
@@ -94,7 +94,7 @@ export default function InventoryAlertKPIs() {
         <KPICard
           label={labels.lowStock}
           value={alerts?.lowStock}
-          subLabel="Batches below minimum stock"
+          subLabel={labels.batchesBelowMin}
           icon={PackageMinus}
           color="bg-amber-500"
           borderColor="border-amber-500"
@@ -105,7 +105,7 @@ export default function InventoryAlertKPIs() {
         <KPICard
           label={labels.outOfStock}
           value={alerts?.outOfStock}
-          subLabel="Batches with zero stock"
+          subLabel={labels.batchesZeroStock}
           icon={PackageX}
           color="bg-red-500"
           borderColor="border-red-500"
@@ -118,7 +118,7 @@ export default function InventoryAlertKPIs() {
       <PaginatedTableModal
         isOpen={expiryModalOpen}
         onClose={() => setExpiryModalOpen(false)}
-        title="Expiring Products — Batch Detail"
+        title={labels.expiringProducts}
         columns={expiryColumns}
         data={expiryData?.data}
         loading={expiryLoading}
@@ -135,8 +135,8 @@ export default function InventoryAlertKPIs() {
               }}
               className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--app-bg)]"
             >
-              <option value="7D">Expiring in 7 days</option>
-              <option value="30D">Expiring in 30 days</option>
+              <option value="7D">{labels.expiringIn7Days}</option>
+              <option value="30D">{labels.expiringIn30Days}</option>
             </select>
           </div>
         }
@@ -146,7 +146,7 @@ export default function InventoryAlertKPIs() {
       <PaginatedTableModal
         isOpen={lowStockModalOpen}
         onClose={() => setLowStockModalOpen(false)}
-        title="Low Stock — Batch Detail"
+        title={labels.lowStockDetail}
         columns={lowStockColumns}
         data={lowStockData?.data}
         loading={lowStockLoading}
@@ -159,7 +159,7 @@ export default function InventoryAlertKPIs() {
       <PaginatedTableModal
         isOpen={outOfStockModalOpen}
         onClose={() => setOutOfStockModalOpen(false)}
-        title="Out of Stock — Batch Detail"
+        title={labels.outOfStockDetail}
         columns={outOfStockColumns}
         data={outOfStockData?.data}
         loading={outOfStockLoading}

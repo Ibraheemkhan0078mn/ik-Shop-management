@@ -1,26 +1,31 @@
 import { useState } from "react";
-import { useSelector } from "react-redux";
-import { Plus, Printer, Download, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getUserLabels } from "../labels/userLabels.js";
 import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from "../services/user.service.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
-const PERMISSIONS = [
-    { key: "dashboard", label: "Dashboard" },
-    { key: "pos", label: "POS" },
-    { key: "products", label: "Products" },
-    { key: "purchases", label: "Purchases" },
-    { key: "expenses", label: "Expenses" },
-    { key: "reports", label: "Reports" },
-    { key: "accounts", label: "Accounts" },
-    { key: "staff", label: "Staff" },
-    { key: "manageUsers", label: "Manage Users" },
-    { key: "settings", label: "Settings" },
+const getPermissions = (labels) => [
+    { key: "dashboard", label: labels.dashboard },
+    { key: "pos", label: labels.pos },
+    { key: "products", label: labels.products },
+    { key: "purchases", label: labels.purchases },
+    { key: "expenses", label: labels.expenses },
+    { key: "reports", label: labels.reports },
+    { key: "accounts", label: labels.accounts },
+    { key: "staff", label: labels.staff },
+    { key: "manageUsers", label: labels.manageUsers },
+    { key: "settings", label: labels.settings },
 ];
 
 export default function UserManagement() {
-    const language = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getUserLabels(language);
+    const PERMISSIONS = getPermissions(labels);
+    
     const { data: response, refetch } = useGetAllUsersQuery();
     const users = response?.data || [];
     const [createUser] = useCreateUserMutation();
@@ -78,65 +83,55 @@ export default function UserManagement() {
         try {
             if (modal.mode === "create") {
                 if (formData.password !== formData.confirmPassword) {
-                    showError("Passwords do not match");
+                    showError(labels.passwordsDoNotMatch);
                     return;
                 }
                 const { confirmPassword: _, ...data } = formData;
                 await createUser(data).unwrap();
-                showSuccess("User created successfully");
+                showSuccess(labels.userCreated);
             } else {
                 await updateUser(formData).unwrap();
-                showSuccess("User updated successfully");
+                showSuccess(labels.userUpdated);
             }
             setModal(null);
             refetch();
         } catch (err) {
-            showError(err?.data?.message || "Operation failed");
+            showError(err?.data?.message || labels.operationFailed);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this user?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteUser(id).unwrap();
-            showSuccess("User deleted successfully");
+            showSuccess(labels.userDeleted);
             refetch();
         } catch (err) {
-            showError(err?.data?.message || "Delete failed");
+            showError(err?.data?.message || labels.deleteFailed);
         }
     };
 
     return (
         <div style={{ color: "var(--ink)" }}>
             <PageHeading
-                heading="User Management"
-                subheading="Manage staff and user accounts"
+                heading={labels.userManagement}
+                subheading={labels.manageStaffUserAccounts}
                 leftActions={
                     <div onClick={openCreateModal}>
-                        <ScreenTabButton lucideIcon={Plus} text="Add User" />
+                        <ScreenTabButton lucideIcon={Plus} text={labels.addUser} />
                     </div>
-                }
-                rightActions={
-                    <>
-                        <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                            <Printer size={18} />
-                        </button>
-                        <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                            <Download size={18} />
-                        </button>
-                    </>
                 }
             />
             {modal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.5)" }}>
                     <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                         <h2 className="text-xl font-bold mb-4">
-                            {modal.mode === "create" ? "Create Staff" : "Edit User"}
+                            {modal.mode === "create" ? labels.addStaff : labels.edit}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Name</label>
+                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.name}</label>
                                     <input
                                         type="text"
                                         required
@@ -147,7 +142,7 @@ export default function UserManagement() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Email</label>
+                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.email}</label>
                                     <input
                                         type="email"
                                         required
@@ -158,7 +153,7 @@ export default function UserManagement() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Phone</label>
+                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.phone}</label>
                                     <input
                                         type="tel"
                                         value={formData.phoneNo}
@@ -168,21 +163,21 @@ export default function UserManagement() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Role</label>
+                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.role}</label>
                                     <select
                                         value={formData.role}
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                         className="w-full px-4 py-2 rounded-lg border"
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                     >
-                                        <option value="staff">Staff</option>
-                                        <option value="manager">Manager</option>
+                                        <option value="staff">{labels.staff}</option>
+                                        <option value="manager">{labels.manager}</option>
                                     </select>
                                 </div>
                                 {modal.mode === "create" && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Password</label>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
                                             <input
                                                 type="password"
                                                 required
@@ -193,7 +188,7 @@ export default function UserManagement() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>Confirm Password</label>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.confirmPassword}</label>
                                             <input
                                                 type="password"
                                                 required
@@ -207,7 +202,7 @@ export default function UserManagement() {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>Permissions</label>
+                                <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {PERMISSIONS.map(({ key, label }) => (
                                         <label key={key} className="flex items-center gap-2">
@@ -229,14 +224,14 @@ export default function UserManagement() {
                                     className="px-4 py-2 rounded-lg"
                                     style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
                                 >
-                                    Cancel
+                                    {labels.cancel}
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 rounded-lg"
                                     style={{ background: "var(--accent-2)", color: "white" }}
                                 >
-                                    {modal.mode === "create" ? "Create" : "Update"}
+                                    {modal.mode === "create" ? labels.create : labels.update}
                                 </button>
                             </div>
                         </form>
@@ -245,14 +240,14 @@ export default function UserManagement() {
             )}
 
             <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold">User Management</h1>
+                <h1 className="text-2xl font-bold">{labels.userManagement}</h1>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg"
                     style={{ background: "var(--accent-2)", color: "white" }}
                 >
                     <Plus className="w-4 h-4" />
-                    Add Staff
+                    {labels.addStaff}
                 </button>
             </div>
 
@@ -267,7 +262,7 @@ export default function UserManagement() {
                             <p className="font-bold">{user.name}</p>
                             <p className="text-sm" style={{ color: "var(--muted)" }}>{user.email}</p>
                             <p className="text-xs" style={{ color: "var(--muted)" }}>
-                                {user.role} • {user.phoneNo || "No phone"}
+                                {user.role} • {user.phoneNo || labels.noPhone}
                             </p>
                         </div>
                         <div className="flex gap-2">

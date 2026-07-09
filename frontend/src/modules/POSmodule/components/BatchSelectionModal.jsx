@@ -40,6 +40,24 @@ const TEXT = {
     outOfStockAlert: "یہ بیچ ختم ہو چکا ہے۔",
     expiredAlert: "یہ بیچ کی مدت ختم ہو چکی ہے۔",
   },
+  ur_en: {
+    title: "بیچ منتخب کریں / Select Batch",
+    loading: "بیچز لوڈ ہو رہے ہیں... / Loading batches...",
+    emptyTitle: "کوئی بیچ نہیں ملا / No Batches Found",
+    empty: "اس پروڈکٹ کے لیے کوئی فعال بیچ دستیاب نہیں ہے۔ پہلے خریداری کریں۔ / No active batches available for this product. Please create a purchase first.",
+    colBatch: "بیچ / Batch",
+    colPrice: "قیمت / Price",
+    colStock: "اسٹاک / Stock",
+    colExpires: "میعاد / Expires",
+    colStatus: "حیثیت / Status",
+    outOfStock: "ختم شدہ / Out of Stock",
+    expired: "میعاد ختم / Expired",
+    save: "بطور ڈیفالٹ بیچ محفوظ کریں / Save as default batch",
+    cancel: "منسوخ کریں / Cancel",
+    confirm: "تصدیق کریں / Confirm",
+    outOfStockAlert: "یہ بیچ ختم ہو چکا ہے۔ / This batch is out of stock.",
+    expiredAlert: "یہ بیچ کی مدت ختم ہو چکی ہے۔ / This batch has expired.",
+  },
 };
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;

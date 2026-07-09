@@ -6,10 +6,11 @@ import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
 import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } from "../services/purchases.service";
 import { useProducts } from "../../productsModule/services/product.service";
 import { useBatchesByProduct } from "../services/batch.service";
-import { useSelector } from "react-redux";
 import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
 import ProductCRUDModal from "../../productsModule/components/ProductCRUDModal.jsx";
 import SupplierModal from "../../suppliers/components/SupplierModal.jsx";
+import { getPurchaseLabels } from "../labels/purchaseLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate  = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
@@ -148,8 +149,9 @@ class ErrorBoundary extends Component {
 
 // ─── main modal ───────────────────────────────────────────────────────────────
 function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess }) {
-    const language   = useSelector(s => s.auth?.user?.language ?? "en");
-    const t          = (en, ur) => language === "en" ? en : ur;
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseLabels(language);
     const isUpdate   = mode === "update";
 
     // data
@@ -314,15 +316,15 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     };
 
     const handleAddItem = () => {
-        if (!bill.supplier)                                               return showError(t("Select supplier first.", "سپلائر منتخب کریں۔"));
-        if (!itemForm.item)                                               return showError(t("Select item.", "آئٹم منتخب کریں۔"));
-        if (!itemForm.quantity || Number(itemForm.quantity) <= 0)         return showError(t("Enter valid quantity.", "صحیح مقدار درج کریں۔"));
-        if (itemForm.perItemPrice === "" || Number(itemForm.perItemPrice) < 0) return showError(t("Enter valid price.", "صحیح قیمت درج کریں۔"));
-        if (itemForm.batchMode === "existing" && !itemForm.batchSelection) return showError(t("Select batch.", "بیچ منتخب کریں۔"));
+        if (!bill.supplier)                                               return showError(labels.selectSupplierFirst);
+        if (!itemForm.item)                                               return showError(labels.selectItem);
+        if (!itemForm.quantity || Number(itemForm.quantity) <= 0)         return showError(labels.enterValidQuantity);
+        if (itemForm.perItemPrice === "" || Number(itemForm.perItemPrice) < 0) return showError(labels.enterValidPrice);
+        if (itemForm.batchMode === "existing" && !itemForm.batchSelection) return showError(labels.selectBatch);
 
         const prod    = productsList.find(p => p._id === itemForm.item);
         const batchNo = itemForm.batchMode === "new" ? makeBatch(batchStamp) : itemForm.batchNumber?.trim();
-        if (!batchNo) return showError("Batch number required.");
+        if (!batchNo) return showError(labels.batchNumberRequired);
 
         const row = {
             item: itemForm.item, name: prod?.name ?? "Unknown",
@@ -361,8 +363,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     };
 
     const handleSubmit = async () => {
-        if (!bill.supplier)     return showError(t("Select supplier.", "سپلائر منتخب کریں۔"));
-        if (!addedItems.length) return showError(t("Add at least one item.", "ایک آئٹم شامل کریں۔"));
+        if (!bill.supplier)     return showError(labels.selectSupplier);
+        if (!addedItems.length) return showError(labels.addAtLeastOneItem);
         const payload = {
             supplier: bill.supplier, date: bill.purchaseDate,
             invoiceNumber: bill.invoiceNumber, notes: bill.notes ?? "",
@@ -380,16 +382,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         try {
             if (isUpdate) {
                 await updatePurchase({ id: purchaseId, ...payload }).unwrap();
-                showSuccess(t("Purchase updated!", "خرید اپڈیٹ ہو گئی۔"));
+                showSuccess(labels.purchaseUpdated);
             } else {
                 await createPurchase(payload).unwrap();
-                showSuccess(t("Purchase created!", "خرید محفوظ ہو گئی۔"));
+                showSuccess(labels.purchaseCreated);
                 setBill(emptyBill()); setAddedItems([]); setItemForm(emptyItem());
             }
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(e?.data?.message ?? labels.operationFailed);
         }
     };
 
@@ -461,14 +463,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                         </div>
                         <div>
                             <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>
-                                {isUpdate ? t("Update Purchase", "خرید اپڈیٹ") : t("New Purchase Bill", "نئی خرید")}
+                                {isUpdate ? labels.editPurchase : labels.newPurchaseBill}
                             </h2>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>{isUpdate ? bill.invoiceNumber : t("Purchase Management", "خریداری")}</p>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>{isUpdate ? bill.invoiceNumber : labels.purchaseManagement}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {!isUpdate && <Btn variant="secondary" size="sm" onClick={() => setShowImport(p => !p)}><Upload className="w-3.5 h-3.5" /><span className="hidden sm:inline">Import</span></Btn>}
-                        {addedItems.length > 0 && <Btn variant="secondary" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span></Btn>}
+                        {!isUpdate && <Btn variant="secondary" size="sm" onClick={() => setShowImport(p => !p)}><Upload className="w-3.5 h-3.5" /><span className="hidden sm:inline">{labels.import}</span></Btn>}
+                        {addedItems.length > 0 && <Btn variant="secondary" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">{labels.export}</span></Btn>}
                         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition" style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
                             <X className="w-4 h-4" />
                         </button>
@@ -478,9 +480,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                 {/* import bar */}
                 {showImport && (
                     <div className="mx-4 sm:mx-6 mt-4 p-4 rounded-2xl" style={{ background: "rgba(180,83,9,0.06)", border: "1px solid rgba(180,83,9,0.2)" }}>
-                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent)" }}>Import CSV / JSON</p>
+                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent)" }}>{labels.importCsvJson}</p>
                         <input type="file" accept=".csv,.json" onChange={handleBulkImport} className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-medium file:cursor-pointer" style={{ color: "var(--muted)" }} />
-                        <p className="text-xs mt-2 font-mono" style={{ color: "var(--muted)" }}>Format: name,quantity,unit,price,batchNumber,expiryDate</p>
+                        <p className="text-xs mt-2 font-mono" style={{ color: "var(--muted)" }}>{labels.formatHint}</p>
                     </div>
                 )}
 
@@ -494,14 +496,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                         <Card noOverflow>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
-                                    <Label>{t("Supplier", "سپلائر")} *</Label>
+                                    <Label>{labels.supplier} *</Label>
                                     <div className="flex gap-2">
                                         <div className="relative z-50 flex-1">
                                             <SearchableSelect
                                                 options={suppliersList.map(s => ({ label: s.name, value: s._id }))}
                                                 value={bill.supplier}
                                                 onChange={val => setBill(p => ({ ...p, supplier: val }))}
-                                                placeholder={t("Select supplier…", "سپلائر…")}
+                                                placeholder={labels.selectSupplier + "…"}
                                             />
                                         </div>
                                         <button
@@ -515,7 +517,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     </div>
                                 </Field>
                                 <Field>
-                                    <Label>{t("Invoice No", "انوائس")}</Label>
+                                    <Label>{labels.invoiceNo}</Label>
                                     <Inp value={bill.invoiceNumber} readOnly style={{ background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" }} />
                                 </Field>
                             </div>
@@ -526,7 +528,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                             <div className="p-4 rounded-2xl" style={{ background: "rgba(180,83,9,0.05)", border: "1px solid rgba(180,83,9,0.15)" }}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <TrendingUp className="w-4 h-4" style={{ color: "var(--accent)" }} />
-                                    <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>Frequently purchased</span>
+                                    <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{labels.frequentlyPurchased}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {frequentItems.map((f, i) => {
@@ -545,12 +547,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                         {/* add/edit item form */}
                         {bill.supplier && (
-                            <Card title={editingIndex !== null ? t("Edit Item", "آئٹم ایڈٹ") : t("Add Item", "آئٹم شامل کریں")} icon={Plus}>
+                            <Card title={editingIndex !== null ? labels.editItem : labels.addItem} icon={Plus}>
                                 <div className="space-y-4">
                                     {/* product + batch mode */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
-                                            <Label>{t("Product", "پروڈکٹ")} *</Label>
+                                            <Label>{labels.product} *</Label>
                                             <div className="flex gap-2">
                                                 <SSelect
                                                     className="flex-1"
@@ -560,7 +562,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                         const prod = productsList.find(p => p._id === val);
                                                         if (prod) { setBatchStamp(Date.now().toString()); setItemForm(p => ({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", discountType: p.discountType ?? "percentage", taxType: p.taxType ?? "percentage" })); }
                                                     }}
-                                                    placeholder={t("Search product…", "پروڈکٹ…")}
+                                                    placeholder={labels.product + "…"}
                                                 />
                                                 <button
                                                     type="button"
@@ -573,21 +575,21 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             </div>
                                         </Field>
                                         <Field>
-                                            <Label>Batch Mode</Label>
+                                            <Label>{labels.batchMode}</Label>
                                             <div className="flex gap-2">
                                                 <Btn variant={itemForm.batchMode === "new" ? "active" : "inactive"} size="sm" className="flex-1"
                                                     onClick={() => { setBatchStamp(Date.now().toString()); setItemForm(p => ({ ...p, batchMode: "new", batchSelection: "" })); }}>
-                                                    New
+                                                    {labels.new}
                                                 </Btn>
                                                 <Btn variant={itemForm.batchMode === "existing" ? "active" : "inactive"} size="sm" className="flex-1"
                                                     disabled={!itemForm.item || availableBatches.length === 0}
                                                     onClick={() => setItemForm(p => ({ ...p, batchMode: "existing" }))}>
-                                                    Existing
+                                                    {labels.existing}
                                                 </Btn>
                                             </div>
                                             {itemForm.batchMode === "existing" && (
                                                 <Sel className="mt-2" value={itemForm.batchSelection} onChange={e => handleBatchSelect(e.target.value)}>
-                                                    <option value="">Select batch…</option>
+                                                    <option value="">{labels.selectBatchPlaceholder}</option>
                                                     {availableBatches.map(b => <option key={b._id} value={b._id}>{b.batchNumber} (Qty: {b.quantity})</option>)}
                                                 </Sel>
                                             )}
@@ -597,11 +599,11 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     {/* batch no + quantity */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
-                                            <Label>Batch No</Label>
+                                            <Label>{labels.batchNo}</Label>
                                             <Inp value={itemForm.batchNumber} readOnly className="text-xs" style={{ background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" }} />
                                         </Field>
                                         <Field>
-                                            <Label>{t("Quantity", "مقدار")} *</Label>
+                                            <Label>{labels.quantity} *</Label>
                                             <div className="flex gap-2 items-center">
                                                 <Inp name="quantity" type="number" placeholder="0" value={itemForm.quantity} onChange={handleItemChange} />
                                                 <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>
@@ -613,27 +615,27 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                                     {/* price + discount + tax */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        <Field><Label>Price *</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
-                                        <Field><Label>Discount</Label><Inp name="discount" type="number" placeholder="0" value={itemForm.discount} onChange={handleItemChange} /></Field>
+                                        <Field><Label>{labels.price} *</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
+                                        <Field><Label>{labels.discount}</Label><Inp name="discount" type="number" placeholder="0" value={itemForm.discount} onChange={handleItemChange} /></Field>
                                         <Field>
-                                            <Label>Disc. Type</Label>
+                                            <Label>{labels.discountType}</Label>
                                             <Sel value={itemForm.discountType} onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))}>
-                                                <option value="percentage">%</option>
-                                                <option value="fixed">Fixed</option>
+                                                <option value="percentage">{labels.percentage}</option>
+                                                <option value="fixed">{labels.fixed}</option>
                                             </Sel>
                                         </Field>
-                                        <Field><Label>Tax (%)</Label><Inp name="tax" type="number" placeholder="0" value={itemForm.tax} onChange={handleItemChange} /></Field>
+                                        <Field><Label>{labels.taxPercent}</Label><Inp name="tax" type="number" placeholder="0" value={itemForm.tax} onChange={handleItemChange} /></Field>
                                     </div>
 
                                     {/* dates */}
                                     <div className="grid grid-cols-2 gap-3">
-                                        <Field><Label>Mfg Date</Label><Inp name="mfgDate" type="date" value={itemForm.mfgDate} onChange={handleItemChange} /></Field>
-                                        <Field><Label>Expiry Date</Label><Inp name="expiryDate" type="date" value={itemForm.expiryDate} onChange={handleItemChange} /></Field>
+                                        <Field><Label>{labels.mfgDate}</Label><Inp name="mfgDate" type="date" value={itemForm.mfgDate} onChange={handleItemChange} /></Field>
+                                        <Field><Label>{labels.expiryDate}</Label><Inp name="expiryDate" type="date" value={itemForm.expiryDate} onChange={handleItemChange} /></Field>
                                     </div>
 
                                     <Btn variant="primary" className="w-full" onClick={handleAddItem}>
                                         <Plus className="w-4 h-4" />
-                                        {editingIndex !== null ? t("Update Item", "اپڈیٹ") : t("Add to Bill", "شامل کریں")}
+                                        {editingIndex !== null ? labels.updateItem : labels.addToBill}
                                     </Btn>
                                 </div>
                             </Card>
@@ -641,13 +643,13 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                         {/* items table */}
                         {addedItems.length > 0 && (
-                            <Card title={`${t("Items", "آئٹمز")} (${addedItems.length})`} icon={FileText}>
+                            <Card title={`${labels.items} (${addedItems.length})`} icon={FileText}>
                                 <div className="overflow-x-auto -mx-5 -mb-5">
                                     <table className="w-full text-sm min-w-[500px]">
                                         <thead>
                                             <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                                {["Item","Batch","Qty","Price","Total","Actions"].map(h => (
-                                                    <th key={h} className={`px-4 py-3 font-semibold ${h === "Actions" ? "text-center" : h === "Qty" || h === "Price" || h === "Total" ? "text-right" : "text-left"}`}>{h}</th>
+                                                {[labels.item, labels.batch, labels.qty, labels.price, labels.total, labels.actions].map(h => (
+                                                    <th key={h} className={`px-4 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === labels.price || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -663,8 +665,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                     <td className="px-4 py-3 text-right tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{Number(it.totalPurchasePrice).toFixed(2)}</td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex justify-center gap-1">
-                                                            <Btn variant="ghost" size="sm" onClick={() => handleEditItem(it, idx)}>Edit</Btn>
-                                                            <Btn variant="danger" size="sm" onClick={() => setAddedItems(p => p.filter((_, i) => i !== idx))}>Remove</Btn>
+                                                            <Btn variant="ghost" size="sm" onClick={() => handleEditItem(it, idx)}>{labels.edit}</Btn>
+                                                            <Btn variant="danger" size="sm" onClick={() => setAddedItems(p => p.filter((_, i) => i !== idx))}>{labels.remove}</Btn>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -678,38 +680,38 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                     {/* right column */}
                     <div className="w-full lg:w-72 space-y-4 shrink-0">
-                        <Card title={t("Bill Details", "بل تفصیل")} icon={FileText}>
+                        <Card title={labels.billDetails} icon={FileText}>
                             <div className="space-y-3">
-                                <Field><Label><Calendar className="inline w-3 h-3 mr-1" />Date</Label><Inp type="date" name="purchaseDate" value={bill.purchaseDate} onChange={handleBillChange} /></Field>
+                                <Field><Label><Calendar className="inline w-3 h-3 mr-1" />{labels.date}</Label><Inp type="date" name="purchaseDate" value={bill.purchaseDate} onChange={handleBillChange} /></Field>
                                 <Field>
-                                    <Label><DollarSign className="inline w-3 h-3 mr-1" />Discount</Label>
+                                    <Label><DollarSign className="inline w-3 h-3 mr-1" />{labels.discount}</Label>
                                     <div className="flex gap-2">
                                         <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} className="text-base py-3" />
                                         <Sel className="w-24 shrink-0 text-base py-3" value={bill.discountType} onChange={e => setBill(p => ({ ...p, discountType: e.target.value }))}>
-                                            <option value="percentage">%</option>
-                                            <option value="fixed">Fixed</option>
+                                            <option value="percentage">{labels.percentage}</option>
+                                            <option value="fixed">{labels.fixed}</option>
                                         </Sel>
                                     </div>
                                 </Field>
-                                <Field><Label>Tax / GST (%)</Label><Inp type="number" name="gst" placeholder="0" value={bill.gst} onChange={handleBillChange} /></Field>
-                                <Field><Label><Truck className="inline w-3 h-3 mr-1" />Shipping</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} /></Field>
-                                <Field><Label><File className="inline w-3 h-3 mr-1" />Notes</Label><Txt name="notes" rows={3} placeholder="Optional note…" value={bill.notes} onChange={handleBillChange} /></Field>
+                                <Field><Label>{labels.taxGst}</Label><Inp type="number" name="gst" placeholder="0" value={bill.gst} onChange={handleBillChange} /></Field>
+                                <Field><Label><Truck className="inline w-3 h-3 mr-1" />{labels.shipping}</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} /></Field>
+                                <Field><Label><File className="inline w-3 h-3 mr-1" />{labels.notes}</Label><Txt name="notes" rows={3} placeholder={labels.optionalNote} value={bill.notes} onChange={handleBillChange} /></Field>
                             </div>
                         </Card>
 
-                        <Card title={t("Summary", "خلاصہ")} icon={DollarSign}>
+                        <Card title={labels.summary} icon={DollarSign}>
                             <div className="space-y-2">
-                                <SumRow label="Subtotal" value={`Rs ${calc.subtotal.toFixed(2)}`} />
-                                <SumRow label="Discount" value={`− Rs ${calc.discount.toFixed(2)}`} danger />
-                                <SumRow label="Tax"      value={`+ Rs ${calc.gst.toFixed(2)}`} accent />
-                                <SumRow label="Shipping" value={`+ Rs ${calc.shipping.toFixed(2)}`} />
+                                <SumRow label={labels.subtotal} value={`Rs ${calc.subtotal.toFixed(2)}`} />
+                                <SumRow label={labels.discount} value={`− Rs ${calc.discount.toFixed(2)}`} danger />
+                                <SumRow label={labels.gst}      value={`+ Rs ${calc.gst.toFixed(2)}`} accent />
+                                <SumRow label={labels.shipping} value={`+ Rs ${calc.shipping.toFixed(2)}`} />
                                 <div className="pt-3 mt-1 flex justify-between items-center" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <span className="font-bold" style={{ color: "var(--ink)" }}>Total</span>
+                                    <span className="font-bold" style={{ color: "var(--ink)" }}>{labels.total}</span>
                                     <span className="text-lg font-black tabular-nums" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
                                 </div>
                             </div>
                             <Btn variant="primary" className="w-full mt-4" onClick={handleSubmit} disabled={isSubmitting}>
-                                {isSubmitting ? (isUpdate ? "Updating…" : "Submitting…") : (isUpdate ? t("Update Bill →", "اپڈیٹ →") : t("Submit Bill →", "جمع کریں →"))}
+                                {isSubmitting ? (isUpdate ? labels.updating : labels.submitting) : (isUpdate ? labels.updateBill : labels.submitBill)}
                             </Btn>
                         </Card>
                     </div>

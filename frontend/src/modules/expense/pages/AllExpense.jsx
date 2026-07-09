@@ -1,6 +1,6 @@
 // src/modules/expense/pages/AllExpense.jsx
 import { useState } from "react";
-import { Plus, Tag, Printer, Download, BarChart3, Calendar, Edit2, Trash2 } from "lucide-react";
+import { Plus, Tag, Edit2, Trash2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteExpense, useExpensesPaginated } from "../services/expense.service.js";
 import { getExpenseLabels } from "../labels/expenseLabels.js";
@@ -11,7 +11,6 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import ExpenseKPIReport from "../../reports/pages/ExpenseKPIReport.jsx";
 
 export default function AllExpense() {
     const { settings } = useSettings();
@@ -19,7 +18,6 @@ export default function AllExpense() {
     const labels = getExpenseLabels(language);
     
     const [deleteExpense] = useDeleteExpense();
-    const [activeTab,    setActiveTab] = useState("list"); // "list" or "report"
 
     const [modal,      setModal]      = useState(null);
     const [catModal,   setCatModal]   = useState(false);
@@ -60,46 +58,10 @@ export default function AllExpense() {
                             </div>
                         </>
                     }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
-                    }
                 />
-                
-                {/* Tab Navigation */}
-                <div className="flex gap-2 mt-4 border-b border-edge">
-                    <button
-                        onClick={() => setActiveTab("list")}
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${
-                            activeTab === "list"
-                                ? "border-b-2 border-primary text-ink"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        {labels.expenseManagement}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("report")}
-                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                            activeTab === "report"
-                                ? "border-b-2 border-primary text-ink"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        <BarChart3 size={16} />
-                        {labels.totalExpenses}
-                    </button>
-                </div>
             </div>
 
-            {activeTab === "list" ? (
-                <PaginatedList
+            <PaginatedList
                 rtkQuery={useExpensesPaginated}
                 limit={20}
                 dataKey="data"
@@ -135,9 +97,6 @@ export default function AllExpense() {
                     </p>
                 )}
             />
-            ) : (
-                <ExpenseKPIReport />
-            )}
         </div>
     );
 }
@@ -153,7 +112,6 @@ function ExpenseRow({ expense: exp, onEdit, onDelete }) {
 
             <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-                    <Calendar className="w-3.5 h-3.5 shrink-0" />
                     {new Date(exp.date).toLocaleDateString()}
                 </div>
             </td>

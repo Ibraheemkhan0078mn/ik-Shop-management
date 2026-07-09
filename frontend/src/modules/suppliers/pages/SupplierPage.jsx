@@ -1,6 +1,6 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
 import { useState } from "react";
-import { Plus, Printer, Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
@@ -50,16 +50,6 @@ export default function SupplierPage() {
                             <ScreenTabButton lucideIcon={Plus} text={labels.addSupplier} />
                         </div>
                     }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
-                    }
                 />
             </div>
 
@@ -98,7 +88,7 @@ export default function SupplierPage() {
                 )}
                 renderEmpty={() => (
                     <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>
-                        No suppliers found.
+                        {labels.noSuppliersFound}
                     </p>
                 )}
             />

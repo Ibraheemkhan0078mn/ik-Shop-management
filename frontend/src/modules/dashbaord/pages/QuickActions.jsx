@@ -24,75 +24,82 @@ import {
     Boxes,
     GripVertical,
 } from "lucide-react";
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 
 const STORAGE_KEY = "quickActions_visibility_v1";
 const ORDER_KEY = "quickActions_order_v1";
 
-const ALL_LINKS = [
-    { id: "dashboard", title: "Dashboard", url: "/dashboard", icon: BarChart3, important: true },
-    { id: "analytics", title: "Analytics", url: "/dashboard/analytics", icon: TrendingUp, important: false },
-    { id: "products", title: "Add Products", url: "/products", icon: Package, important: true },
-    { id: "categories", title: "Categories", url: "/products/categories", icon: Boxes, important: false },
-    { id: "sub-categories", title: "Sub-Categories", url: "/products/sub-categories", icon: Boxes, important: false },
-    { id: "purchases", title: "Add Purchases", url: "/purchases", icon: CreditCard, important: true },
-    { id: "suppliers", title: "Suppliers", url: "/suppliers", icon: Truck, important: false },
-    { id: "purchase-returns", title: "Purchase Returns", url: "/purchase-returns", icon: RotateCcw, important: false },
-    { id: "product-return", title: "Product Returns", url: "/product-return", icon: RotateCcw, important: false },
-    { id: "customers", title: "Customers", url: "/customers", icon: Users, important: true },
-    { id: "wastage", title: "Wastage", url: "/wastage", icon: Package, important: false },
-    { id: "qarza", title: "Qarza Accounts", url: "/qarzaAccount", icon: Wallet, important: false },
-    { id: "expenses", title: "Expenses", url: "/expenses", icon: DollarSign, important: true },
-    { id: "pos", title: "POS", url: "/pos", icon: ShoppingCart, important: true },
-    { id: "order-history", title: "Order History", url: "/order-history", icon: ClipboardList, important: false },
-    { id: "settings", title: "Settings", url: "/settings/generals", icon: Settings, important: false },
-    { id: "reports", title: "Reports", url: "/reports", icon: BarChart3, important: true },
-    { id: "report-inventory", title: "Inventory Report", url: "/reports/giant-inventory", icon: Package, important: false },
-    { id: "report-staff", title: "Staff Report", url: "/reports/staff", icon: Users, important: false },
-    { id: "report-credits", title: "Credits & Debits", url: "/reports/credits-debits", icon: Wallet, important: false },
-    { id: "report-expenses", title: "Expense KPI", url: "/reports/expenses", icon: DollarSign, important: false },
-    { id: "report-sales", title: "Sales KPI", url: "/reports/sales", icon: TrendingUp, important: false },
-    { id: "report-purchases", title: "Purchase KPI", url: "/reports/purchases", icon: CreditCard, important: false },
-    { id: "report-suppliers", title: "Supplier KPI", url: "/reports/suppliers", icon: Truck, important: false },
-    { id: "report-customers", title: "Customer KPI", url: "/reports/customers", icon: Users, important: false },
-    { id: "staff", title: "Staff", url: "/staff", icon: UserCog, important: true },
-    { id: "staff-create", title: "Add Staff", url: "/staff/create", icon: UserPlus, important: false },
-    { id: "staff-attendance", title: "Attendance", url: "/staff/attendance", icon: CalendarCheck, important: false },
-    { id: "profile", title: "Profile", url: "/profile", icon: Users, important: false },
-    { id: "users", title: "App Users", url: "/users", icon: Settings, important: true },
-];
-
-const LINKS_BY_ID = ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l }), {});
-
-const loadVisibility = () => {
-    try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (saved && typeof saved === "object") return saved;
-    } catch {
-        // ignore corrupt storage
-    }
-    return ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l.important }), {});
-};
-
-const loadOrder = () => {
-    try {
-        const saved = JSON.parse(localStorage.getItem(ORDER_KEY));
-        if (Array.isArray(saved)) {
-            const valid = saved.filter((id) => LINKS_BY_ID[id]);
-            const missing = ALL_LINKS.map((l) => l.id).filter((id) => !valid.includes(id));
-            return [...valid, ...missing];
-        }
-    } catch {
-        // ignore corrupt storage
-    }
-    return ALL_LINKS.map((l) => l.id);
-};
-
 const QuickActions = () => {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getDashboardLabels(language);
+    
     const [searchQuery, setSearchQuery] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
+    const dragIdRef = useRef(null);
+
+    const ALL_LINKS = [
+        { id: "dashboard", title: labels.dashboard, url: "/dashboard", icon: BarChart3, important: true },
+        { id: "analytics", title: labels.analytics, url: "/dashboard/analytics", icon: TrendingUp, important: false },
+        { id: "products", title: labels.addProducts, url: "/products", icon: Package, important: true },
+        { id: "categories", title: labels.categories, url: "/products/categories", icon: Boxes, important: false },
+        { id: "sub-categories", title: labels.subCategories, url: "/products/sub-categories", icon: Boxes, important: false },
+        { id: "purchases", title: labels.addPurchases, url: "/purchases", icon: CreditCard, important: true },
+        { id: "suppliers", title: labels.suppliers, url: "/suppliers", icon: Truck, important: false },
+        { id: "purchase-returns", title: labels.purchaseReturns, url: "/purchase-returns", icon: RotateCcw, important: false },
+        { id: "product-return", title: labels.productReturns, url: "/product-return", icon: RotateCcw, important: false },
+        { id: "customers", title: labels.customers, url: "/customers", icon: Users, important: true },
+        { id: "wastage", title: labels.wastage, url: "/wastage", icon: Package, important: false },
+        { id: "qarza", title: labels.qarzaAccounts, url: "/qarzaAccount", icon: Wallet, important: false },
+        { id: "expenses", title: labels.expenses, url: "/expenses", icon: DollarSign, important: true },
+        { id: "pos", title: labels.pos, url: "/pos", icon: ShoppingCart, important: true },
+        { id: "order-history", title: labels.orderHistory, url: "/order-history", icon: ClipboardList, important: false },
+        { id: "settings", title: labels.settings, url: "/settings/generals", icon: Settings, important: false },
+        { id: "reports", title: labels.reports, url: "/reports", icon: BarChart3, important: true },
+        { id: "report-inventory", title: labels.inventoryReport, url: "/reports/giant-inventory", icon: Package, important: false },
+        { id: "report-staff", title: labels.staffReport, url: "/reports/staff", icon: Users, important: false },
+        { id: "report-credits", title: labels.creditsDebits, url: "/reports/credits-debits", icon: Wallet, important: false },
+        { id: "report-expenses", title: labels.expenseKpi, url: "/reports/expenses", icon: DollarSign, important: false },
+        { id: "report-sales", title: labels.salesKpi, url: "/reports/sales", icon: TrendingUp, important: false },
+        { id: "report-purchases", title: labels.purchaseKpi, url: "/reports/purchases", icon: CreditCard, important: false },
+        { id: "report-suppliers", title: labels.supplierKpi, url: "/reports/suppliers", icon: Truck, important: false },
+        { id: "report-customers", title: labels.customerKpi, url: "/reports/customers", icon: Users, important: false },
+        { id: "staff", title: labels.staff, url: "/staff", icon: UserCog, important: true },
+        { id: "staff-create", title: labels.addStaff, url: "/staff/create", icon: UserPlus, important: false },
+        { id: "staff-attendance", title: labels.attendance, url: "/staff/attendance", icon: CalendarCheck, important: false },
+        { id: "profile", title: labels.profile, url: "/profile", icon: Users, important: false },
+        { id: "users", title: labels.appUsers, url: "/users", icon: Settings, important: true },
+    ];
+
+    const LINKS_BY_ID = ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l }), {});
+
+    const loadVisibility = () => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (saved && typeof saved === "object") return saved;
+        } catch {
+            // ignore corrupt storage
+        }
+        return ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l.important }), {});
+    };
+
+    const loadOrder = () => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(ORDER_KEY));
+            if (Array.isArray(saved)) {
+                const valid = saved.filter((id) => LINKS_BY_ID[id]);
+                const missing = ALL_LINKS.map((l) => l.id).filter((id) => !valid.includes(id));
+                return [...valid, ...missing];
+            }
+        } catch {
+            // ignore corrupt storage
+        }
+        return ALL_LINKS.map((l) => l.id);
+    };
+
     const [visibility, setVisibility] = useState(loadVisibility);
     const [order, setOrder] = useState(loadOrder);
-    const dragIdRef = useRef(null);
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(visibility));
@@ -150,7 +157,7 @@ const QuickActions = () => {
                     />
                     <input
                         type="text"
-                        placeholder="Search modules..."
+                        placeholder={labels.searchModules}
                         className="w-full max-w-sm pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-(--surface-muted) border border-(--border) focus:ring-2 focus:ring-(--accent-2) shadow-[0_8px_20px_rgba(64,45,28,0.08)] transition-all outline-none"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -247,13 +254,13 @@ const QuickActions = () => {
             {isEditMode && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1f1a17]/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.35)] flex items-center gap-6 z-50 border border-white/10">
                     <p className="text-xs font-medium text-[#e7d7c4] whitespace-nowrap">
-                        Drag to reorder · tap to show/hide
+                        {labels.dragToReorder}
                     </p>
                     <button
                         onClick={() => setIsEditMode(false)}
                         className="bg-(--accent-2) text-white hover:bg-[#0b5f59] text-[10px] font-black px-5 py-2 rounded-xl transition-all active:scale-95 uppercase tracking-wider"
                     >
-                        Done
+                        {labels.done}
                     </button>
                 </div>
             )}

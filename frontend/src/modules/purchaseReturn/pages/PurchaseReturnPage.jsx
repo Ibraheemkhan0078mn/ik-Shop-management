@@ -1,6 +1,6 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
 import { useCallback, useEffect, useState } from "react";
-import { Plus, CheckCircle, Printer, Download } from "lucide-react";
+import { Plus, CheckCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -107,16 +107,6 @@ export default function PurchaseReturnPage() {
                         </div>
                     </>
                 }
-                rightActions={
-                    <>
-                        <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                            <Printer size={18} />
-                        </button>
-                        <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                            <Download size={18} />
-                        </button>
-                    </>
-                }
             />
 
                 <PaginatedList
@@ -129,14 +119,14 @@ export default function PurchaseReturnPage() {
                             <table className="w-full text-sm text-left">
                                 <thead>
                                     <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                        <th className="px-4 py-3 font-semibold">Return #</th>
-                                        <th className="px-4 py-3 font-semibold">Purchase Invoice</th>
-                                        <th className="px-4 py-3 font-semibold">Supplier</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                        <th className="px-4 py-3 font-semibold text-right">Refund</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                        <th className="px-4 py-3 font-semibold">Date</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.returnHash}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.purchaseInvoice}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.supplier}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
+                                        <th className="px-4 py-3 font-semibold text-right">{labels.refund}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -157,7 +147,7 @@ export default function PurchaseReturnPage() {
                     )}
                     renderEmpty={() => (
                         <p className="text-center py-12 text-sm text-ink-muted">
-                            No purchase returns found.
+                            {labels.noReturnsFound}
                         </p>
                     )}
                 />
@@ -166,9 +156,23 @@ export default function PurchaseReturnPage() {
 }
 
 function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseReturnLabels(language);
+    
     const date = new Date(purchaseReturn?.returnDate ?? purchaseReturn?.createdAt).toLocaleDateString();
     const status = purchaseReturn?.status ?? "draft";
     const statusClass = STATUS_CLASS[status] ?? STATUS_CLASS.draft;
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'draft': return labels.draft;
+            case 'pending': return labels.pending;
+            case 'approved': return labels.approved;
+            case 'rejected': return labels.rejected;
+            default: return status;
+        }
+    };
 
     return (
         <tr className="transition border-b border-edge hover:bg-surface-muted">
@@ -189,7 +193,7 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3 text-center">
                 <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${statusClass}`}>
-                    {status}
+                    {getStatusLabel(status)}
                 </span>
             </td>
             <td className="px-4 py-3 text-xs text-ink-muted">
@@ -201,13 +205,13 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
                         onClick={onEdit}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
                     >
-                        Edit
+                        {labels.edit}
                     </button>
                     <button
                         onClick={onDelete}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
                     >
-                        Delete
+                        {labels.delete}
                     </button>
                 </div>
             </td>
@@ -216,7 +220,10 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
 }
 
 function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
-    const language = useSelector((s) => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseReturnLabels(language);
+    
     const usePendingPurchaseReturnsQuery = (params = {}) => {
         const [data, setData] = useState(null);
         const [isLoading, setIsLoading] = useState(true);
@@ -242,35 +249,45 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
     const { data, isLoading } = usePendingPurchaseReturnsQuery({ page: 1, limit: 20 });
     const purchaseReturns = data?.data ?? [];
 
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'draft': return labels.draft;
+            case 'pending': return labels.pending;
+            case 'approved': return labels.approved;
+            case 'rejected': return labels.rejected;
+            default: return status;
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[85vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b">
                     <h2 className="text-lg font-semibold">
-                        {language === "en" ? "Approve Purchase Return Requests" : "خریداری واپسی کی درخواستیں منظور کریں"}
+                        {labels.approvePurchaseReturnRequests}
                     </h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
                 </div>
                 <div className="overflow-y-auto max-h-[65vh]">
                     {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">Loading...</div>
+                        <div className="p-8 text-center text-gray-500">{labels.loading}</div>
                     ) : purchaseReturns.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
-                            {language === "en" ? "No pending purchase return requests" : "زیر التواء خریداری واپسی کی درخواستیں نہیں"}
+                            {labels.noPendingRequests}
                         </div>
                     ) : (
                         <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                             <table className="w-full text-sm text-left">
                                 <thead>
                                     <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                        <th className="px-4 py-3 font-semibold">Return #</th>
-                                        <th className="px-4 py-3 font-semibold">Purchase Invoice</th>
-                                        <th className="px-4 py-3 font-semibold">Supplier</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                        <th className="px-4 py-3 font-semibold text-right">Refund</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                        <th className="px-4 py-3 font-semibold">Date</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.returnHash}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.purchaseInvoice}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.supplier}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
+                                        <th className="px-4 py-3 font-semibold text-right">{labels.refund}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -293,7 +310,7 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${STATUS_CLASS[pr?.status ?? "pending"]}`}>
-                                                    {pr?.status ?? "pending"}
+                                                    {getStatusLabel(pr?.status ?? "pending")}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-xs text-ink-muted">
@@ -305,13 +322,13 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
                                                         onClick={() => onApprove(pr._id)}
                                                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
                                                     >
-                                                        Approve
+                                                        {labels.approve}
                                                     </button>
                                                     <button
                                                         onClick={(e) => onDelete(pr._id, e)}
                                                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
                                                     >
-                                                        Delete
+                                                        {labels.delete}
                                                     </button>
                                                 </div>
                                             </td>
@@ -324,7 +341,7 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
                 </div>
                 {data?.totalPages > 1 && (
                     <div className="p-4 border-t text-center text-xs text-ink-muted">
-                        Showing {purchaseReturns.length} of {data.total} pending requests
+                        {labels.showingPendingRequests.replace("{count}", purchaseReturns.length).replace("{total}", data.total)}
                     </div>
                 )}
             </div>

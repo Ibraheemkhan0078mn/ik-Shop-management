@@ -1,8 +1,9 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Printer, Download, MapPin, Edit2, Trash2 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { Plus, MapPin, Edit2, Trash2, Phone } from "lucide-react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getQarzaLabels } from "../labels/qarzaLabels.js";
 import { useQarzaAccountsPaginated, useDeleteQarzaAccount } from "../services/qarza.service.js";
 import QarzaAccountModal from "../components/QarzaAccountModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -14,19 +15,21 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 
 export default function QarzaAccounts() {
     const navigate   = useNavigate();
-    const language   = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getQarzaLabels(language);
 
     const [deleteAccount] = useDeleteQarzaAccount();
     const [modal,  setModal]  = useState(null);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Delete this account?")) return;
+        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteAccount(id).unwrap();
-            showSuccess("Account deleted");
+            showSuccess(labels.accountDeleted);
         } catch (e) {
-            showError(e?.data?.message ?? "Delete failed");
+            showError(e?.data?.message ?? labels.deleteFailed);
         }
     };
 
@@ -47,22 +50,12 @@ export default function QarzaAccounts() {
 
             <div className="flex-none">
                 <PageHeading
-                    heading={language === "en" ? "Credit & Debits" : "کریڈٹ اور ڈیبٹس"}
-                    subheading={language === "en" ? "Manage credit and debit accounts" : "کریڈٹ اور ڈیبٹ اکاؤنٹس کا انتظام کریں"}
+                    heading={labels.creditDebits}
+                    subheading={labels.manageCreditDebitAccounts}
                     leftActions={
                         <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Account" : "اکاؤنٹ شامل کریں"} />
+                            <ScreenTabButton lucideIcon={Plus} text={labels.addAccount} />
                         </div>
-                    }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
                     }
                 />
             </div>
@@ -102,14 +95,14 @@ export default function QarzaAccounts() {
                                                     background: net >= 0 ? "rgba(15,118,110,0.1)" : "rgba(220,38,38,0.1)",
                                                     color: net >= 0 ? "var(--accent-2)" : "#dc2626"
                                                 }}>
-                                                {net >= 0 ? "Receivable" : "Payable"}
+                                                {net >= 0 ? labels.receivable : labels.payable}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* balance */}
                                     <div className="mb-4">
-                                        <div className="text-xs mb-1" style={{ color: "var(--muted)" }}>Net Balance</div>
+                                        <div className="text-xs mb-1" style={{ color: "var(--muted)" }}>{labels.balance}</div>
                                         <div className="text-2xl font-bold tabular-nums"
                                             style={{ color: net >= 0 ? "var(--accent-2)" : "#dc2626" }}>
                                             Rs {Math.abs(net).toLocaleString()}
@@ -146,7 +139,7 @@ export default function QarzaAccounts() {
                                             }}
                                         >
                                             <Edit2 className="w-3.5 h-3.5" />
-                                            Edit
+                                            {labels.edit}
                                         </button>
                                         <button
                                             onClick={(e) => handleDelete(acc._id, e)}
@@ -158,7 +151,7 @@ export default function QarzaAccounts() {
                                             }}
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
-                                            Delete
+                                            {labels.delete}
                                         </button>
                                     </div>
                                 </div>
@@ -168,7 +161,7 @@ export default function QarzaAccounts() {
                 )}
                 renderEmpty={() => (
                     <div className="flex items-center justify-center h-48 text-sm" style={{ color: "var(--muted)" }}>
-                        No accounts found.
+                        {labels.noAccountsFound}
                     </div>
                 )}
             />

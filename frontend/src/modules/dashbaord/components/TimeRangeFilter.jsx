@@ -1,17 +1,7 @@
 import React from 'react';
 import { ChevronDown, Calendar } from 'lucide-react';
-
-const TIME_RANGE_OPTIONS = [
-  { value: 'Today', label: 'Today' },
-  { value: '3D', label: '3 Days' },
-  { value: '7D', label: '7 Days' },
-  { value: '30D', label: '30 Days' },
-  { value: '3M', label: '3 Months' },
-  { value: '90D', label: '90 Days' },
-  { value: '1Y', label: '1 Year' },
-  { value: 'All', label: 'All Time' },
-  { value: 'Custom', label: 'Custom Range' },
-];
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 
 export default function TimeRangeFilter({
   value = '30D',
@@ -19,6 +9,22 @@ export default function TimeRangeFilter({
   size = 'default',
   disabled = false,
 }) {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
+  const TIME_RANGE_OPTIONS = [
+    { value: 'Today', label: labels.today },
+    { value: '3D', label: labels.days3 },
+    { value: '7D', label: labels.days7 },
+    { value: '30D', label: labels.days30 },
+    { value: '3M', label: labels.months3 },
+    { value: '90D', label: labels.days90 },
+    { value: '1Y', label: labels.year1 },
+    { value: 'All', label: labels.allTime },
+    { value: 'Custom', label: labels.customRange },
+  ];
+
   const [isOpen, setIsOpen] = React.useState(false);
   const [showCustomPicker, setShowCustomPicker] = React.useState(false);
   const [customStartDate, setCustomStartDate] = React.useState('');
@@ -98,11 +104,11 @@ export default function TimeRangeFilter({
           <div className="absolute right-0 mt-2 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-40 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Calendar size={16} className="text-[var(--muted)]" />
-              <h3 className="text-sm font-semibold text-[var(--ink)]">Custom Date Range</h3>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">{labels.customDateRange}</h3>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-[var(--muted)] mb-1">Start Date</label>
+                <label className="block text-xs text-[var(--muted)] mb-1">{labels.startDate}</label>
                 <input
                   type="date"
                   value={customStartDate}
@@ -111,7 +117,7 @@ export default function TimeRangeFilter({
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--muted)] mb-1">End Date</label>
+                <label className="block text-xs text-[var(--muted)] mb-1">{labels.endDate}</label>
                 <input
                   type="date"
                   value={customEndDate}
@@ -124,14 +130,14 @@ export default function TimeRangeFilter({
                   onClick={() => setShowCustomPicker(false)}
                   className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg hover:bg-[var(--app-bg)] transition-colors"
                 >
-                  Cancel
+                  {labels.cancel}
                 </button>
                 <button
                   onClick={handleCustomApply}
                   disabled={!customStartDate || !customEndDate}
                   className="flex-1 px-3 py-1.5 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Apply
+                  {labels.apply}
                 </button>
               </div>
             </div>

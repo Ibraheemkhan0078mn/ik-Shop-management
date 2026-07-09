@@ -3,8 +3,14 @@ import { X } from "lucide-react";
 import { useCreateSubCategoryMutation, useUpdateSubCategoryMutation, useGetSubCategoryByIdQuery } from "../services/subCategories.service";
 import { useGetCategoriesQuery } from "../services/category.service";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import { getProductLabels } from "../labels/productLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = null, categoryId = null, open, onClose, onSubCategoryCreated }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getProductLabels(language);
+    
     const isCreate = mode === "create";
     const [createSubCategory, { isLoading: isCreating }] = useCreateSubCategoryMutation();
     const [updateSubCategory, { isLoading: isUpdating }] = useUpdateSubCategoryMutation();
@@ -56,10 +62,10 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
     const validateForm = () => {
         const newErrors = {};
         if (!formData.category?.trim()) {
-            newErrors.category = "Category is required";
+            newErrors.category = labels.categoryRequired;
         }
         if (!formData.name?.trim()) {
-            newErrors.name = "Subcategory name is required";
+            newErrors.name = labels.subCategoryNameRequired;
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -72,10 +78,10 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
             let result;
             if (isCreate) {
                 result = await createSubCategory(formData).unwrap();
-                showSuccess("Subcategory created successfully");
+                showSuccess(labels.subCategoryCreated);
             } else {
                 result = await updateSubCategory({ id: subCategoryId, ...formData }).unwrap();
-                showSuccess("Subcategory updated successfully");
+                showSuccess(labels.subCategoryUpdated);
             }
             onClose();
             // Callback to notify parent that subcategory was created
@@ -83,7 +89,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                 onSubCategoryCreated(result);
             }
         } catch (error) {
-            const errorMessage = error?.data?.message || error?.message || "Something went wrong while saving the subcategory.";
+            const errorMessage = error?.data?.message || error?.message || labels.somethingWentWrong;
             showError(errorMessage);
         }
     };
@@ -94,7 +100,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
         return (
             <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-md">
                 <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm">
-                    SubCategory load ho raha hai...
+                    {labels.subCategoryLoading}
                 </div>
             </div>
         );
@@ -112,7 +118,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                 {/* Header */}
                 <div className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)] shrink-0 bg-[var(--surface-muted)]">
                     <h2 className="text-xl font-bold text-[var(--ink)] tracking-tight">
-                        {isCreate ? "Add New SubCategory" : "Edit SubCategory"}
+                        {isCreate ? labels.addNewSubCategory : labels.editSubCategory}
                     </h2>
                     <button
                         type="button"
@@ -129,7 +135,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                         {/* Category */}
                         <div>
                             <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                * Category
+                                * {labels.category}
                             </label>
                             <select
                                 value={formData.category}
@@ -140,7 +146,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                                     : 'border-[var(--border)] bg-[var(--app-bg)]'
                                     } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                <option value="">Category chunein...</option>
+                                <option value="">{labels.selectCategory}</option>
                                 {categories.map((c) => (
                                     <option key={c._id} value={c._id}>
                                         {c.name}
@@ -153,11 +159,11 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                         {/* SubCategory Name */}
                         <div>
                             <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                * SubCategory Name
+                                * {labels.subCategoryName}
                             </label>
                             <input
                                 type="text"
-                                placeholder="SubCategory ka naam likhein"
+                                placeholder={labels.subCategoryPlaceholder}
                                 value={formData.name}
                                 onChange={(e) => updateField('name', e.target.value)}
                                 className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
@@ -171,10 +177,10 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                         {/* Description */}
                         <div className="col-span-full">
                             <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                Description
+                                {labels.subCategoryDescription}
                             </label>
                             <textarea
-                                placeholder="SubCategory description likhein"
+                                placeholder={labels.subCategoryDescriptionPlaceholder}
                                 rows={4}
                                 value={formData.description}
                                 onChange={(e) => updateField('description', e.target.value)}
@@ -192,7 +198,7 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
                                        rounded-lg bg-[var(--accent-2)] text-[var(--surface)] hover:bg-[var(--accent-2)]/80
                                        active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isCreating || isUpdating ? "Saving..." : (isCreate ? "Save SubCategory" : "Update SubCategory")} →
+                            {isCreating || isUpdating ? labels.saving : (isCreate ? labels.saveSubCategory : labels.updateSubCategory)} →
                         </button>
                     </div>
                 </div>

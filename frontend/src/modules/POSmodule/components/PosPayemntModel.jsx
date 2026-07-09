@@ -4,21 +4,23 @@ import { FormField, Input } from "../../../shared/components/FormFields.jsx";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getPosLabels } from "../labels/posLabels.js";
 
-const ONLINE_PLATFORMS = [
-    { value: "easypaisa", label: "Easypaisa" },
-    { value: "jazzcash", label: "JazzCash" },
-    { value: "bank_transfer", label: "Bank Transfer" },
-    { value: "raast", label: "Raast" },
-    { value: "sadapay", label: "SadaPay" },
-    { value: "nayapay", label: "NayaPay" },
+const ONLINE_PLATFORMS = (labels) => [
+    { value: "easypaisa", label: labels.easypaisa },
+    { value: "jazzcash", label: labels.jazzcash },
+    { value: "bank_transfer", label: labels.bankTransfer },
+    { value: "raast", label: labels.raast },
+    { value: "sadapay", label: labels.sadapay },
+    { value: "nayapay", label: labels.nayapay },
 ];
 
-const PAYMENT_TABS = [
-    { key: "cash", label: "Cash", icon: Wallet },
-    { key: "online", label: "Online", icon: Smartphone },
-    { key: "credit", label: "Qarza", icon: CreditCard },
-    { key: "hybrid", label: "Hybrid", icon: Layers },
+const PAYMENT_TABS = (labels) => [
+    { key: "cash", label: labels.cash, icon: Wallet },
+    { key: "online", label: labels.online, icon: Smartphone },
+    { key: "credit", label: labels.qarza, icon: CreditCard },
+    { key: "hybrid", label: labels.hybrid, icon: Layers },
 ];
 
 // ─── Design Atoms ─────────────────────────────────────────────────────────────
@@ -40,7 +42,7 @@ const InfoStrip = ({ label, value, valid = true }) => (
     </div>
 );
 
-const FillButton = ({ onClick }) => (
+const FillButton = ({ onClick, labels }) => (
     <button
         onClick={onClick}
         className="h-9 px-3 text-xs rounded-lg font-semibold transition-all whitespace-nowrap shrink-0 hover:shadow-sm"
@@ -50,21 +52,21 @@ const FillButton = ({ onClick }) => (
             border: "1px solid rgba(15,118,110,0.25)",
         }}
     >
-        Fill rest
+        {labels.fillRest}
     </button>
 );
 
-const CreateQarzaLink = ({ onClick }) => (
+const CreateQarzaLink = ({ onClick, labels }) => (
     <button
         onClick={onClick}
         className="flex items-center gap-1.5 text-xs font-semibold hover:underline"
         style={{ color: "var(--accent-2)" }}
     >
-        <Plus size={12} /> New Qarza account
+        <Plus size={12} /> {labels.newQarzaAccount}
     </button>
 );
 
-const OrderTypeToggle = ({ value, onChange }) => (
+const OrderTypeToggle = ({ value, onChange, labels }) => (
     <div
         className="flex rounded-xl p-1 gap-1 w-full"
         style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
@@ -82,7 +84,7 @@ const OrderTypeToggle = ({ value, onChange }) => (
                     boxShadow: value === type ? "0 2px 8px rgba(15,118,110,0.2)" : "none",
                 }}
             >
-                {type}
+                {type === "retail" ? labels.retail : labels.wholesale}
             </button>
         ))}
     </div>
@@ -90,7 +92,7 @@ const OrderTypeToggle = ({ value, onChange }) => (
 
 // ─── Tab Panels ───────────────────────────────────────────────────────────────
 
-function CashTab({ cashReceived, setCashReceived, total, cashChange }) {
+function CashTab({ cashReceived, setCashReceived, total, cashChange, labels }) {
     const received = Number(cashReceived) || 0;
     const isShort = received > 0 && received < total;
     const isSufficient = received >= total && cashReceived;
@@ -104,7 +106,7 @@ function CashTab({ cashReceived, setCashReceived, total, cashChange }) {
 
     return (
         <div className="space-y-3">
-            <FormField label="Cash Received">
+            <FormField label={labels.cashReceived}>
                 <Input
                     type="number" min={0} autoFocus
                     placeholder={`Min. Rs ${total.toLocaleString()}`}
@@ -137,14 +139,14 @@ function CashTab({ cashReceived, setCashReceived, total, cashChange }) {
                 ))}
             </div>
 
-            {isSufficient && <InfoStrip label="Change to return" value={`Rs ${cashChange.toLocaleString()}`} />}
+            {isSufficient && <InfoStrip label={labels.changeToReturn} value={`Rs ${cashChange.toLocaleString()}`} />}
             {isShort && (
                 <div
                     className="rounded-xl px-4 py-2.5"
                     style={{ background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)" }}
                 >
                     <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
-                        Short by Rs {(total - received).toLocaleString()}
+                        {labels.shortBy} Rs {(total - received).toLocaleString()}
                     </p>
                 </div>
             )}
@@ -152,39 +154,39 @@ function CashTab({ cashReceived, setCashReceived, total, cashChange }) {
     );
 }
 
-function OnlineTab({ onlinePlatform, setOnlinePlatform, onlineAmount, setOnlineAmount, total }) {
+function OnlineTab({ onlinePlatform, setOnlinePlatform, onlineAmount, setOnlineAmount, total, labels, onlinePlatforms }) {
     return (
         <div className="space-y-3">
-            <FormField label="Platform">
+            <FormField label={labels.platform}>
                 <select
                     value={onlinePlatform}
                     onChange={(e) => setOnlinePlatform(e.target.value)}
                     className="w-full px-3 py-2 text-sm rounded-xl outline-none transition"
                     style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
                 >
-                    <option value="">Select platform...</option>
-                    {ONLINE_PLATFORMS.map((platform) => (
+                    <option value="">{labels.selectPlatform}</option>
+                    {onlinePlatforms.map((platform) => (
                         <option key={platform.value} value={platform.value}>
                             {platform.label}
                         </option>
                     ))}
                 </select>
             </FormField>
-            <FormField label="Amount Received">
+            <FormField label={labels.amountReceived}>
                 <div className="flex gap-2">
                     <Input type="number" min={0} placeholder={`Rs ${total.toLocaleString()}`}
                         value={onlineAmount} onChange={(e) => setOnlineAmount(e.target.value)} />
-                    <FillButton onClick={() => setOnlineAmount(String(total))} />
+                    <FillButton onClick={() => setOnlineAmount(String(total))} labels={labels} />
                 </div>
             </FormField>
         </div>
     );
 }
 
-function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, total, onOpenQarzaModal }) {
+function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, total, onOpenQarzaModal, labels }) {
     return (
         <div className="space-y-3">
-            <FormField label="Ledger Account">
+            <FormField label={labels.ledgerAccount}>
                 <div className="flex gap-2">
                     <select
                         className="flex-1 px-3 py-2 text-sm rounded-xl outline-none transition"
@@ -192,7 +194,7 @@ function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, t
                         value={qarzaAccountId}
                         onChange={(e) => setQarzaAccountId(e.target.value)}
                     >
-                        <option value="">Search account...</option>
+                        <option value="">{labels.searchAccount}</option>
                         {qarzaOptions.map((option) => (
                             <option key={option.value} value={option.value}>
                                 {option.label}
@@ -209,7 +211,7 @@ function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, t
                     </button>
                 </div>
             </FormField>
-            {qarzaAccountId && <InfoStrip label="Amount on credit" value={`Rs ${total.toLocaleString()}`} />}
+            {qarzaAccountId && <InfoStrip label={labels.amountOnCredit} value={`Rs ${total.toLocaleString()}`} />}
         </div>
     );
 }
@@ -221,11 +223,12 @@ function HybridTab({
     qarzaOptions, onOpenQarzaModal,
     total, hybridSum, hybridValid, hybridShortage,
     fillHybridCash, fillHybridQarza,
+    labels,
 }) {
     return (
         <div className="space-y-3">
             <p className="text-xs" style={{ color: "var(--muted)" }}>
-                Cash + Qarza must total <strong style={{ color: "var(--ink)" }}>Rs {total.toLocaleString()}</strong>.
+                {labels.cashQarzaTotal} <strong style={{ color: "var(--ink)" }}>Rs {total.toLocaleString()}</strong>.
             </p>
 
             <div
@@ -235,12 +238,12 @@ function HybridTab({
                 {/* Cash row */}
                 <div>
                     <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
-                        <Wallet size={11} /> Cash portion
+                        <Wallet size={11} /> {labels.cashPortion}
                     </p>
                     <div className="flex gap-2">
                         <Input type="number" min={0} placeholder="0"
                             value={hybridCash} onChange={(e) => setHybridCash(e.target.value)} />
-                        <FillButton onClick={fillHybridCash} />
+                        <FillButton onClick={fillHybridCash} labels={labels} />
                     </div>
                 </div>
 
@@ -249,12 +252,12 @@ function HybridTab({
                 {/* Qarza row */}
                 <div>
                     <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
-                        <CreditCard size={11} /> Qarza portion
+                        <CreditCard size={11} /> {labels.qarzaPortion}
                     </p>
                     <div className="flex gap-2 mb-2">
                         <Input type="number" min={0} placeholder="0"
                             value={hybridQarza} onChange={(e) => setHybridQarza(e.target.value)} />
-                        <FillButton onClick={fillHybridQarza} />
+                        <FillButton onClick={fillHybridQarza} labels={labels} />
                     </div>
                     <div className="flex gap-2">
                         <select
@@ -263,7 +266,7 @@ function HybridTab({
                             value={hybridQarzaAccountId}
                             onChange={(e) => setHybridQarzaAccountId(e.target.value)}
                         >
-                            <option value="">Select Qarza account...</option>
+                            <option value="">{labels.selectQarzaAccount}</option>
                             {qarzaOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}
@@ -285,7 +288,7 @@ function HybridTab({
             <InfoStrip
                 valid={hybridValid}
                 label={hybridValid
-                    ? "✓ Amounts balanced"
+                    ? `✓ ${labels.amountsBalanced}`
                     : `Remaining: Rs ${hybridShortage > 0 ? hybridShortage.toLocaleString() : "—"}`}
                 value={`${hybridSum.toLocaleString()} / ${total.toLocaleString()}`}
             />
@@ -306,8 +309,15 @@ export default function PosPaymentModal({
     initialDiscount = 0,
     initialStaffId = "",
 }) {
+    const { settings } = useSettings();
+    const currentLanguage = settings?.language || "en";
+    const labels = getPosLabels(currentLanguage);
+
     const { data: qarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
     const { data: staffList = [] } = useGetStaffListQuery({ limit: 100 });
+
+    const onlinePlatforms = ONLINE_PLATFORMS(labels);
+    const paymentTabs = PAYMENT_TABS(labels);
 
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
@@ -411,8 +421,8 @@ export default function PosPaymentModal({
                             <CreditCard size={17} style={{ color: "var(--accent-2)" }} />
                         </div>
                         <div>
-                            <h2 className="text-sm font-bold" style={{ color: "var(--ink)" }}>Complete Payment</h2>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>Confirm order details below</p>
+                            <h2 className="text-sm font-bold" style={{ color: "var(--ink)" }}>{labels.completePayment}</h2>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>{labels.confirmOrderDetails}</p>
                         </div>
                     </div>
                     <button
@@ -434,18 +444,18 @@ export default function PosPaymentModal({
                     >
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-xs font-medium mb-0.5" style={{ color: "var(--accent-2)" }}>Grand Total</p>
+                                <p className="text-xs font-medium mb-0.5" style={{ color: "var(--accent-2)" }}>{labels.grandTotal}</p>
                                 <p className="text-3xl font-extrabold" style={{ color: "var(--accent-2)" }}>
                                     Rs {total.toLocaleString()}
                                 </p>
                                 {discountAmt > 0 && (
                                     <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                                        Rs {subtotal.toLocaleString()} − Rs {discountAmt.toLocaleString()} discount
+                                        Rs {subtotal.toLocaleString()} − Rs {discountAmt.toLocaleString()} {labels.discount}
                                     </p>
                                 )}
                             </div>
                             <div className="text-right">
-                                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>Discount</p>
+                                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.discount}</p>
                                 <div className="w-28">
                                     <Input
                                         type="number" min={0} placeholder="Rs 0"
@@ -461,12 +471,12 @@ export default function PosPaymentModal({
 
                         {/* Customer + Staff */}
                         <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Customer Name">
-                                <Input placeholder="Optional"
+                            <FormField label={labels.customerName}>
+                                <Input placeholder={labels.optional}
                                     value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                             </FormField>
 
-                            <FormField label="Staff Member">
+                            <FormField label={labels.staffMember}>
                                 <select
                                     value={selectedStaffId}
                                     onChange={(e) => setSelectedStaffId(e.target.value)}
@@ -477,7 +487,7 @@ export default function PosPaymentModal({
                                         border: "1px solid var(--border)",
                                     }}
                                 >
-                                    <option value="">Select staff...</option>
+                                    <option value="">{labels.selectStaff}</option>
                                     {staffList_.map((s) => (
                                         <option key={s._id} value={s._id}>{s.fullName}</option>
                                     ))}
@@ -487,8 +497,8 @@ export default function PosPaymentModal({
 
                         {/* Order type toggle */}
                         <div>
-                            <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>Order Type</p>
-                            <OrderTypeToggle value={orderType} onChange={setOrderType} />
+                            <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.orderType}</p>
+                            <OrderTypeToggle value={orderType} onChange={setOrderType} labels={labels} />
                         </div>
 
                         {/* Divider */}
@@ -496,12 +506,12 @@ export default function PosPaymentModal({
 
                         {/* Payment method tabs */}
                         <div>
-                            <p className="text-xs font-medium mb-2" style={{ color: "var(--muted)" }}>Payment Method</p>
+                            <p className="text-xs font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.paymentMethod}</p>
                             <div
                                 className="grid grid-cols-4 rounded-xl p-1 gap-1"
                                 style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
                             >
-                                {PAYMENT_TABS.map(({ key, label, icon: Icon }) => {
+                                {paymentTabs.map(({ key, label, icon: Icon }) => {
                                     const isActive = activeTab === key;
                                     return (
                                         <button
@@ -529,15 +539,15 @@ export default function PosPaymentModal({
                         >
                             {activeTab === "cash" && (
                                 <CashTab cashReceived={cashReceived} setCashReceived={setCashReceived}
-                                    total={total} cashChange={cashChange} />
+                                    total={total} cashChange={cashChange} labels={labels} />
                             )}
                             {activeTab === "online" && (
                                 <OnlineTab onlinePlatform={onlinePlatform} setOnlinePlatform={setOnlinePlatform}
-                                    onlineAmount={onlineAmount} setOnlineAmount={setOnlineAmount} total={total} />
+                                    onlineAmount={onlineAmount} setOnlineAmount={setOnlineAmount} total={total} labels={labels} onlinePlatforms={onlinePlatforms} />
                             )}
                             {activeTab === "credit" && (
                                 <CreditTabWithModal qarzaOptions={qarzaOptions} qarzaAccountId={qarzaAccountId}
-                                    setQarzaAccountId={setQarzaAccountId} total={total} onOpenQarzaModal={() => setShowQarzaModal(true)} />
+                                    setQarzaAccountId={setQarzaAccountId} total={total} onOpenQarzaModal={() => setShowQarzaModal(true)} labels={labels} />
                             )}
                             {activeTab === "hybrid" && (
                                 <HybridTab
@@ -548,6 +558,7 @@ export default function PosPaymentModal({
                                     total={total} hybridSum={hybridSum}
                                     hybridValid={hybridValid} hybridShortage={hybridShortage}
                                     fillHybridCash={fillHybridCash} fillHybridQarza={fillHybridQarza}
+                                    labels={labels}
                                 />
                             )}
                         </div>
@@ -575,7 +586,7 @@ export default function PosPaymentModal({
                         }}
                     >
                         {canCheckout ? <Check size={16} /> : <ChevronRight size={16} />}
-                        {canCheckout ? "Complete Payment" : "Fill required fields"}
+                        {canCheckout ? labels.completePayment : labels.fillRequiredFields}
                         <span className="ml-auto text-xs opacity-60 font-normal">↵ Enter</span>
                     </button>
                 </div>

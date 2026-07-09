@@ -1,14 +1,8 @@
 import React from 'react';
 import { Skeleton } from './Skeleton.jsx';
 import { ChevronDown } from 'lucide-react';
-
-const TIME_RANGE_OPTIONS = [
-  { value: '7D', label: '7 Days' },
-  { value: '30D', label: '30 Days' },
-  { value: '90D', label: '90 Days' },
-  { value: '1Y', label: '1 Year' },
-  { value: 'All', label: 'All Time' },
-];
+import { useSettings } from '../../settings/hooks/useSettings.js';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
 
 export default function ChartCard({
   title,
@@ -22,8 +16,20 @@ export default function ChartCard({
   isEmpty = false,
   filterSlot = null,
 }) {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [selectedFilter, setSelectedFilter] = React.useState(defaultFilter);
+
+  const TIME_RANGE_OPTIONS = [
+    { value: '7D', label: labels.days7 },
+    { value: '30D', label: labels.days30 },
+    { value: '90D', label: labels.days90 },
+    { value: '1Y', label: labels.year1 },
+    { value: 'All', label: labels.allTime },
+  ];
 
   const handleFilterSelect = (value) => {
     setSelectedFilter(value);
@@ -47,7 +53,7 @@ export default function ChartCard({
               onClick={() => setFilterOpen(!filterOpen)}
               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[var(--app-bg)] border border-[var(--border)] rounded-lg hover:border-[var(--accent-2)] transition-colors"
             >
-              {TIME_RANGE_OPTIONS.find(opt => opt.value === selectedFilter)?.label || '30 Days'}
+              {TIME_RANGE_OPTIONS.find(opt => opt.value === selectedFilter)?.label || labels.days30}
               <ChevronDown size={14} className={`transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
             </button>
             {filterOpen && (
@@ -74,7 +80,7 @@ export default function ChartCard({
       <div style={{ height: `${height}px` }} className="relative">
         {isEmpty ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-sm text-[var(--muted)]">{emptyMessage || 'No data for this period'}</p>
+            <p className="text-sm text-[var(--muted)]">{emptyMessage || labels.noDataAvailable}</p>
           </div>
         ) : (
           children

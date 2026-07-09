@@ -5,13 +5,17 @@ export const customerLabels = {
     manageCustomers: "Manage your customers",
     addCustomer: "Add Customer",
     editCustomer: "Edit Customer",
+    newCustomer: "New Customer",
+    customerManagementShort: "Customer management",
     
     // Form labels
     name: "Name",
     phone: "Phone",
+    phoneNo: "Phone Number",
     cnic: "CNIC",
     address: "Address",
     image: "Image",
+    customerImage: "Customer Image",
     status: "Status",
     notes: "Notes",
     
@@ -27,6 +31,11 @@ export const customerLabels = {
     cancel: "Cancel",
     delete: "Delete",
     edit: "Edit",
+    createCustomer: "Create Customer",
+    updateCustomer: "Update Customer",
+    chooseImage: "Choose Image",
+    updating: "Updating…",
+    creating: "Creating…",
     
     // Messages
     loading: "Loading...",
@@ -38,6 +47,20 @@ export const customerLabels = {
     failedToUpdate: "Failed to update customer",
     failedToDelete: "Failed to delete customer",
     deleteConfirm: "Are you sure you want to delete this customer?",
+    operationFailed: "Operation failed",
+    
+    // Validation
+    nameRequired: "Customer name is required.",
+    nameAlreadyTaken: "Name already taken.",
+    nameAlreadyInUse: "Name already in use",
+    
+    // Placeholders
+    namePlaceholder: "Ali Khan",
+    phonePlaceholder: "0300-1234567",
+    cnicPlaceholder: "35201-1234567-8",
+    addressPlaceholder: "House 1, Street 2, City",
+    imageFormats: "PNG, JPG, JPEG, WEBP",
+    noImageSelected: "No image selected",
     
     // Summary
     totalCustomers: "Total Customers",
@@ -50,13 +73,17 @@ export const customerLabels = {
     manageCustomers: "اپنے گاہکوں کا انتظام کریں",
     addCustomer: "گاہک شامل کریں",
     editCustomer: "گاہک میں ترمیم کریں",
+    newCustomer: "نیا گاہک",
+    customerManagementShort: "گاہک کا انتظام",
     
     // Form labels
     name: "نام",
     phone: "فون",
+    phoneNo: "فون نمبر",
     cnic: "شناختی کارڈ",
     address: "پتہ",
     image: "تصویر",
+    customerImage: "گاہک کی تصویر",
     status: "حیثیت",
     notes: "نوٹس",
     
@@ -72,6 +99,11 @@ export const customerLabels = {
     cancel: "منسوخ کریں",
     delete: "حذف کریں",
     edit: "ترمیم کریں",
+    createCustomer: "گاہک بنائیں",
+    updateCustomer: "گاہک اپڈیٹ کریں",
+    chooseImage: "تصویر منتخب کریں",
+    updating: "اپڈیٹ ہو رہا ہے…",
+    creating: "بنایا جا رہا ہے…",
     
     // Messages
     loading: "لوڈ ہو رہا ہے...",
@@ -83,6 +115,20 @@ export const customerLabels = {
     failedToUpdate: "گاہک اپ ڈیٹ کرنے میں ناکامی",
     failedToDelete: "گاہک حذف کرنے میں ناکامی",
     deleteConfirm: "کیا آپ واقعی اس گاہک کو حذف کرنا چاہتے ہیں؟",
+    operationFailed: "ناکام",
+    
+    // Validation
+    nameRequired: "گاہک کا نام ضروری ہے۔",
+    nameAlreadyTaken: "نام پہلے سے موجود ہے۔",
+    nameAlreadyInUse: "نام پہلے سے موجود ہے",
+    
+    // Placeholders
+    namePlaceholder: "علی خان",
+    phonePlaceholder: "0300-1234567",
+    cnicPlaceholder: "35201-1234567-8",
+    addressPlaceholder: "گھر 1، گلی 2، شہر",
+    imageFormats: "PNG, JPG, JPEG, WEBP",
+    noImageSelected: "کوئی تصویر منتخب نہیں",
     
     // Summary
     totalCustomers: "کل گاہک",
@@ -95,13 +141,17 @@ export const customerLabels = {
     manageCustomers: "اپنے گاہکوں کا انتظام کریں / Manage your customers",
     addCustomer: "گاہک شامل کریں / Add Customer",
     editCustomer: "گاہک میں ترمیم کریں / Edit Customer",
+    newCustomer: "نیا گاہک / New Customer",
+    customerManagementShort: "گاہک کا انتظام / Customer management",
     
     // Form labels
     name: "نام / Name",
     phone: "فون / Phone",
+    phoneNo: "فون نمبر / Phone Number",
     cnic: "شناختی کارڈ / CNIC",
     address: "پتہ / Address",
     image: "تصویر / Image",
+    customerImage: "گاہک کی تصویر / Customer Image",
     status: "حیثیت / Status",
     notes: "نوٹس / Notes",
     
@@ -117,6 +167,11 @@ export const customerLabels = {
     cancel: "منسوخ کریں / Cancel",
     delete: "حذف کریں / Delete",
     edit: "ترمیم کریں / Edit",
+    createCustomer: "گاہک بنائیں / Create Customer",
+    updateCustomer: "گاہک اپڈیٹ کریں / Update Customer",
+    chooseImage: "تصویر منتخب کریں / Choose Image",
+    updating: "اپڈیٹ ہو رہا ہے… / Updating…",
+    creating: "بنایا جا رہا ہے… / Creating…",
     
     // Messages
     loading: "لوڈ ہو رہا ہے / Loading...",
@@ -128,6 +183,20 @@ export const customerLabels = {
     failedToUpdate: "گاہک اپ ڈیٹ کرنے میں ناکامی / Failed to update customer",
     failedToDelete: "گاہک حذف کرنے میں ناکامی / Failed to delete customer",
     deleteConfirm: "کیا آپ واقعی اس گاہک کو حذف کرنا چاہتے ہیں؟ / Are you sure you want to delete this customer?",
+    operationFailed: "ناکام / Operation failed",
+    
+    // Validation
+    nameRequired: "گاہک کا نام ضروری ہے۔ / Customer name is required.",
+    nameAlreadyTaken: "نام پہلے سے موجود ہے۔ / Name already taken.",
+    nameAlreadyInUse: "نام پہلے سے موجود ہے / Name already in use",
+    
+    // Placeholders
+    namePlaceholder: "علی خان / Ali Khan",
+    phonePlaceholder: "0300-1234567",
+    cnicPlaceholder: "35201-1234567-8",
+    addressPlaceholder: "گھر 1، گلی 2، شہر / House 1, Street 2, City",
+    imageFormats: "PNG, JPG, JPEG, WEBP",
+    noImageSelected: "کوئی تصویر منتخب نہیں / No image selected",
     
     // Summary
     totalCustomers: "کل گاہک / Total Customers",

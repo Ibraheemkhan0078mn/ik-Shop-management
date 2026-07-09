@@ -2,30 +2,36 @@ import { useState, useEffect } from "react";
 import { useGetCategoriesQuery } from "../../productsModule/services/category.service.js";
 import { useProductFilters } from "../../../shared/hooks/useProductFilters.js";
 import { Filter, X, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getPosLabels } from "../labels/posLabels.js";
 
-const STOCK_STATUS_OPTIONS = [
-  { value: "", label: "All Stock" },
-  { value: "in_stock", label: "In Stock" },
-  { value: "out_of_stock", label: "Out of Stock" },
-  { value: "low_stock", label: "Low Stock (< 5)" },
+const STOCK_STATUS_OPTIONS = (labels) => [
+  { value: "", label: labels.allStock },
+  { value: "in_stock", label: labels.inStock },
+  { value: "out_of_stock", label: labels.outOfStock },
+  { value: "low_stock", label: labels.lowStock },
 ];
 
-const ACTIVE_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "true", label: "Active" },
-  { value: "false", label: "Inactive" },
+const ACTIVE_STATUS_OPTIONS = (labels) => [
+  { value: "", label: labels.allStatus },
+  { value: "true", label: labels.active },
+  { value: "false", label: labels.inactive },
 ];
 
-const DEFAULT_PRICE_RANGES = [
-  { label: "All Prices", min: 0, max: 100000 },
-  { label: "Under Rs 100", min: 0, max: 100 },
-  { label: "Rs 100 - 500", min: 100, max: 500 },
-  { label: "Rs 500 - 1000", min: 500, max: 1000 },
-  { label: "Rs 1000 - 5000", min: 1000, max: 5000 },
-  { label: "Above Rs 5000", min: 5000, max: 100000 },
+const DEFAULT_PRICE_RANGES = (labels) => [
+  { label: labels.allPrices, min: 0, max: 100000 },
+  { label: labels.under100, min: 0, max: 100 },
+  { label: labels.price100to500, min: 100, max: 500 },
+  { label: labels.price500to1000, min: 500, max: 1000 },
+  { label: labels.price1000to5000, min: 1000, max: 5000 },
+  { label: labels.above5000, min: 5000, max: 100000 },
 ];
 
 export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, brands = [] }) {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getPosLabels(language);
+
   const { data: categoriesResponse } = useGetCategoriesQuery();
   const categories = categoriesResponse?.data || [];
 
@@ -37,6 +43,10 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
     getActiveFilterParams,
     hasActiveFilters,
   } = useProductFilters();
+
+  const stockStatusOptions = STOCK_STATUS_OPTIONS(labels);
+  const activeStatusOptions = ACTIVE_STATUS_OPTIONS(labels);
+  const defaultPriceRanges = DEFAULT_PRICE_RANGES(labels);
 
   const [expandedSections, setExpandedSections] = useState({
     category: true,
@@ -94,7 +104,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
       <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-[var(--accent-2)]" />
-          <h2 className="font-semibold text-[var(--ink)]">Filters</h2>
+          <h2 className="font-semibold text-[var(--ink)]">{labels.filters}</h2>
         </div>
         <button
           onClick={onClose}
@@ -109,11 +119,11 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
         {/* Search */}
         <div>
           <label className="text-xs font-semibold text-[var(--muted)] mb-2 block">
-            Search
+            {labels.search}
           </label>
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder={labels.searchProductsPlaceholder}
             value={filters.searchText}
             onChange={(e) => updateFilter("searchText", e.target.value)}
             className="w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
@@ -126,7 +136,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             onClick={() => toggleSection("category")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
           >
-            Category
+            {labels.category}
             {expandedSections.category ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.category && (
@@ -155,7 +165,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             onClick={() => toggleSection("brand")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
           >
-            Brand
+            {labels.brand}
             {expandedSections.brand ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.brand && (
@@ -176,7 +186,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
                   </label>
                 ))
               ) : (
-                <p className="text-xs text-[var(--muted)] p-2">No brands available</p>
+                <p className="text-xs text-[var(--muted)] p-2">{labels.noBrandsAvailable}</p>
               )}
             </div>
           )}
@@ -188,12 +198,12 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             onClick={() => toggleSection("price")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
           >
-            Price Range
+            {labels.priceRange}
             {expandedSections.price ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.price && (
             <div className="space-y-1">
-              {DEFAULT_PRICE_RANGES.map((range) => (
+              {defaultPriceRanges.map((range) => (
                 <label
                   key={range.label}
                   className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
@@ -214,7 +224,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
               <div className="flex items-center gap-2 p-2">
                 <input
                   type="number"
-                  placeholder="Min"
+                  placeholder={labels.min}
                   value={filters.minPrice === 0 ? "" : filters.minPrice}
                   onChange={(e) => updateFilter("minPrice", Number(e.target.value) || 0)}
                   className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
@@ -222,7 +232,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
                 <span className="text-[var(--muted)]">-</span>
                 <input
                   type="number"
-                  placeholder="Max"
+                  placeholder={labels.max}
                   value={filters.maxPrice === 100000 ? "" : filters.maxPrice}
                   onChange={(e) => updateFilter("maxPrice", Number(e.target.value) || 100000)}
                   className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
@@ -238,12 +248,12 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             onClick={() => toggleSection("stock")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
           >
-            Stock Status
+            {labels.stockStatus}
             {expandedSections.stock ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.stock && (
             <div className="space-y-1">
-              {STOCK_STATUS_OPTIONS.map((option) => (
+              {stockStatusOptions.map((option) => (
                 <label
                   key={option.value}
                   className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
@@ -268,12 +278,12 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             onClick={() => toggleSection("status")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
           >
-            Status
+            {labels.status}
             {expandedSections.status ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.status && (
             <div className="space-y-1">
-              {ACTIVE_STATUS_OPTIONS.map((option) => (
+              {activeStatusOptions.map((option) => (
                 <label
                   key={option.value}
                   className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
@@ -300,14 +310,14 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
           className="w-full py-2 px-4 bg-[var(--accent-2)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
         >
           <Check size={16} />
-          Apply Filters
+          {labels.applyFilters}
         </button>
         <button
           onClick={handleReset}
           disabled={!hasActiveFilters()}
           className="w-full py-2 px-4 border border-[var(--border)] text-[var(--ink)] rounded-lg font-medium hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Reset Filters
+          {labels.resetFilters}
         </button>
       </div>
     </div>

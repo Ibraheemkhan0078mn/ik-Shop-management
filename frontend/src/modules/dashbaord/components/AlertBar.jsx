@@ -1,8 +1,14 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { useGetInventoryAlertKPIsQuery } from '../services/dashboard.service.js';
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 
 export default function AlertBar() {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getDashboardLabels(language);
+  
   const { data: alerts, isLoading } = useGetInventoryAlertKPIsQuery();
 
   if (isLoading || !alerts || (alerts.expiringIn7Days === 0 && alerts.lowStock === 0 && alerts.outOfStock === 0)) {
@@ -14,7 +20,7 @@ export default function AlertBar() {
   if (alerts.expiringIn7Days > 0) {
     alertChips.push({
       type: 'critical',
-      label: `${alerts.expiringIn7Days} batches expiring within 7 days`,
+      label: `${alerts.expiringIn7Days} ${labels.batchesExpiringIn7Days}`,
       color: 'bg-red-500',
       textColor: 'text-white',
     });
@@ -23,7 +29,7 @@ export default function AlertBar() {
   if (alerts.lowStock > 0) {
     alertChips.push({
       type: 'warning',
-      label: `${alerts.lowStock} batches with low stock`,
+      label: `${alerts.lowStock} ${labels.batchesWithLowStock}`,
       color: 'bg-amber-500',
       textColor: 'text-white',
     });
@@ -32,7 +38,7 @@ export default function AlertBar() {
   if (alerts.outOfStock > 0) {
     alertChips.push({
       type: 'critical',
-      label: `${alerts.outOfStock} batches out of stock`,
+      label: `${alerts.outOfStock} ${labels.batchesOutOfStock}`,
       color: 'bg-red-500',
       textColor: 'text-white',
     });
@@ -45,7 +51,7 @@ export default function AlertBar() {
       <div className="flex items-center gap-3 overflow-x-auto">
         <div className="flex items-center gap-2 shrink-0">
           <AlertTriangle size={18} className="text-amber-500" />
-          <span className="text-sm font-semibold text-[var(--ink)]">Active Alerts:</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">{labels.activeAlerts}:</span>
         </div>
         {alertChips.map((chip, index) => (
           <button

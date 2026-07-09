@@ -3,13 +3,15 @@ import React, { useState, useEffect } from "react";
 import { useLogin, useSignup } from "../services/auth.service.js";
 import { Eye, EyeOff, BarChart3, Shield, Zap, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { getAuthLabels } from "../labels/authLabels.js";
 
 const SAVED_CREDS_KEY = "savedCredentials";
+const LANGUAGE_KEY = "appLanguage";
 
-const FEATURE_LIST = [
-  { icon: BarChart3, label: "Advanced Analytics & Reports" },
-  { icon: Shield,   label: "Secure & Role-Based Access" },
-  { icon: Zap,      label: "Lightning Fast Performance" },
+const getFeatureList = (labels) => [
+  { icon: BarChart3, label: labels.advancedAnalytics },
+  { icon: Shield,   label: labels.secureAccess },
+  { icon: Zap,      label: labels.fastPerformance },
 ];
 
 const EMPTY_FORM = {
@@ -20,6 +22,18 @@ const EMPTY_FORM = {
 export default function AuthPage() {
   const loginUser  = useLogin();
   const signupUser = useSignup();
+
+  // Load language from localStorage
+  const [language, setLanguage] = useState(() => {
+    try {
+      return localStorage.getItem(LANGUAGE_KEY) || "en";
+    } catch {
+      return "en";
+    }
+  });
+  
+  const labels = getAuthLabels(language);
+  const featureList = getFeatureList(labels);
 
   const [isLoginMode,      setIsLoginMode]      = useState(true);
   const [showPassword,     setShowPassword]      = useState(false);
@@ -87,13 +101,13 @@ export default function AuthPage() {
      console.log(response, "The data")
       } else {
         if (formData.password !== formData.confirmPassword) {
-          toast.error("Passwords do not match");
+          toast.error(labels.passwordsDoNotMatch);
           return;
         }
         await signupUser(formData);
       }
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? err?.message ?? "Something went wrong");
+      toast.error(err?.response?.data?.message ?? err?.message ?? labels.somethingWentWrong);
     } finally {
       setIsSubmitting(false);
     }
@@ -152,7 +166,7 @@ export default function AuthPage() {
           </p>
 
           <ul className="space-y-4">
-            {FEATURE_LIST.map(({ icon: Icon, label }) => (
+            {featureList.map(({ icon: Icon, label }) => (
               <li key={label} className="flex items-center gap-3">
                 <span
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -204,7 +218,7 @@ export default function AuthPage() {
           {/* Heading */}
           <div className="mb-8">
             <h2 id="auth-heading" className="font-display text-3xl font-bold mb-2" style={{ color: "var(--ink)" }}>
-              {isLoginMode ? "Sign in" : "Create account"}
+              {isLoginMode ? labels.signIn : labels.signUp}
             </h2>
             <p id="auth-subheading" className="text-sm" style={{ color: "var(--muted)" }}>
               {isLoginMode ? "Enter your credentials to continue" : "Fill in your details to get started"}
@@ -215,7 +229,7 @@ export default function AuthPage() {
           <form onSubmit={submitAuth} className="space-y-4">
 
             {!isLoginMode && (
-              <FormField label="Full Name">
+              <FormField label={labels.name}>
                 <input
                   ref={nameInputRef}
                   id="auth-name-input"
@@ -226,7 +240,7 @@ export default function AuthPage() {
               </FormField>
             )}
 
-            <FormField label="Email Address">
+            <FormField label={labels.email}>
               <input
                 ref={emailInputRef}
                 id="auth-email-input"
@@ -237,7 +251,7 @@ export default function AuthPage() {
             </FormField>
 
             {!isLoginMode && (
-              <FormField label="Phone Number">
+              <FormField label={labels.phone}>
                 <input
                   id="auth-phone-input"
                   className="input-search"
@@ -247,7 +261,7 @@ export default function AuthPage() {
               </FormField>
             )}
 
-            <FormField label="Password">
+            <FormField label={labels.password}>
               <div className="relative">
                 <input
                   id="auth-password-input"
@@ -269,7 +283,7 @@ export default function AuthPage() {
             </FormField>
 
             {!isLoginMode && (
-              <FormField label="Confirm Password">
+              <FormField label={labels.confirmPassword}>
                 <input
                   id="auth-confirm-password-input"
                   className="input-search"
@@ -279,7 +293,7 @@ export default function AuthPage() {
               </FormField>
             )}
 
-            <FormField label="Role">
+            <FormField label={labels.role}>
               <select id="auth-role-select" className="input-search" value={formData.role} onChange={updateField("role")} disabled={!isLoginMode}>
                 <option value="admin">Admin</option>
                 <option value="staff">Staff</option>
@@ -301,10 +315,10 @@ export default function AuthPage() {
                     className="w-4 h-4 rounded"
                     style={{ accentColor: "var(--accent-2)" }}
                   />
-                  <span className="text-sm" style={{ color: "var(--muted)" }}>Remember me</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>{labels.rememberMe}</span>
                 </label>
                 <button type="button" className="text-sm font-medium hover:underline text-primary">
-                  Forgot password?
+                  {labels.forgotPassword}
                 </button>
               </div>
             )}
@@ -316,21 +330,21 @@ export default function AuthPage() {
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm text-white transition-all duration-200 mt-2 disabled:opacity-60"
               style={{ background: "linear-gradient(90deg, var(--accent-2), #0b5f59)" }}
             >
-              {isSubmitting ? "Please wait…" : isLoginMode ? "Sign in" : "Create account"}
+              {isSubmitting ? "Please wait…" : isLoginMode ? labels.signIn : labels.signUp}
               {!isSubmitting && <ArrowRight size={15} />}
             </button>
           </form>
 
           {/* Toggle mode */}
           <p className="mt-6 text-center text-sm" style={{ color: "var(--muted)" }}>
-            {isLoginMode ? "Don't have an account? " : "Already have an account? "}
+            {isLoginMode ? labels.switchToSignup.split("?")[0] + "? " : labels.switchToLogin.split("?")[0] + "? "}
             <button
               id="auth-toggle-button"
               type="button"
               onClick={toggleAuthMode}
               className="font-semibold hover:underline text-primary"
             >
-              {isLoginMode ? "Sign up" : "Sign in"}
+              {isLoginMode ? labels.signUp : labels.signIn}
             </button>
           </p>
 

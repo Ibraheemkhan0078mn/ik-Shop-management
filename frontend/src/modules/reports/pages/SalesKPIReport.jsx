@@ -3,6 +3,8 @@ import { useGetSalesKPIReportQuery } from "../services/reports.service";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportLabels } from "../labels/reportLabels.js";
 import { 
     Calendar, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, 
     RefreshCw, Printer, Download, ChevronDown, ChevronUp, Users, Package,
@@ -62,6 +64,10 @@ const BreakdownItem = ({ label, value, count, percentage, color, subLabel }) => 
 );
 
 export default function SalesKPIReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportLabels(language);
+    
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -79,7 +85,7 @@ export default function SalesKPIReport() {
     });
 
     if (error) {
-        showError(error?.data?.message || "Failed to load sales report");
+        showError(error?.data?.message || labels.failedToLoadReport.replace("{report}", labels.salesReport));
     }
 
     const handleRefresh = () => refetch();
@@ -133,11 +139,11 @@ export default function SalesKPIReport() {
             `}</style>
 
             <PageHeading
-                heading="Sales Report"
-                subheading="Comprehensive sales analytics and performance metrics"
+                heading={labels.salesKPI}
+                subheading={labels.generateViewReports}
                 leftActions={
                     <div onClick={handleRefresh}>
-                        <ScreenTabButton lucideIcon={RefreshCw} text="Refresh" />
+                        <ScreenTabButton lucideIcon={RefreshCw} text={labels.refresh} />
                     </div>
                 }
                 rightActions={
@@ -161,50 +167,50 @@ export default function SalesKPIReport() {
                     {/* Section 1: Summary Cards (6 cards in 2 rows of 3) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         <KPICard
-                            label="Total Revenue"
+                            label={labels.totalRevenue}
                             value={summary.totalRevenue}
                             icon={DollarSign}
                             color="#3b82f6"
-                            description="Gross sales before discounts"
+                            description={labels.grossSales}
                             trend={summary.revenueTrend}
                             suffix="Rs "
                         />
                         <KPICard
-                            label="Total Orders"
+                            label={labels.totalOrders}
                             value={summary.totalOrders}
                             icon={ShoppingCart}
                             color="#10b981"
-                            description="Number of transactions"
+                            description={labels.numberOfTransactions}
                         />
                         <KPICard
-                            label="Units Sold"
+                            label={labels.unitsSold}
                             value={summary.totalUnitsSold}
                             icon={Package}
                             color="#f59e0b"
-                            description="Total items sold"
+                            description={labels.totalItemsSold}
                         />
                         <KPICard
-                            label="Net Sales"
+                            label={labels.netSales}
                             value={summary.netSales}
                             icon={TrendingUp}
                             color="#8b5cf6"
-                            description="Revenue after discounts"
+                            description={labels.revenueAfterDiscounts}
                             suffix="Rs "
                         />
                         <KPICard
-                            label="Gross Profit"
+                            label={labels.grossProfit}
                             value={summary.grossProfit}
                             icon={PieChart}
                             color="#06b6d4"
-                            description="Revenue minus cost of goods"
+                            description={labels.revenueMinusCost}
                             suffix="Rs "
                         />
                         <KPICard
-                            label="Profit Margin"
+                            label={labels.profitMargin}
                             value={summary.grossProfitMargin}
                             icon={Percent}
                             color="#ec4899"
-                            description="Gross profit as percentage"
+                            description={labels.grossProfitPercentage}
                             suffix="%"
                         />
                     </div>
@@ -229,7 +235,7 @@ export default function SalesKPIReport() {
                                             border: period === p ? 'none' : '1px solid var(--border)'
                                         }}
                                     >
-                                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                                        {labels[p] || p.charAt(0).toUpperCase() + p.slice(1)}
                                     </button>
                                 ))}
                             </div>
@@ -243,7 +249,7 @@ export default function SalesKPIReport() {
                                             className="px-3 py-2 rounded-lg text-sm border"
                                             style={{ background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--border)' }}
                                         />
-                                        <span style={{ color: 'var(--muted)' }}>to</span>
+                                        <span style={{ color: 'var(--muted)' }}>{labels.to || "to"}</span>
                                         <input
                                             type="date"
                                             value={toDate}
@@ -258,12 +264,12 @@ export default function SalesKPIReport() {
                                     className="px-4 py-2 rounded-full text-sm font-medium border"
                                     style={{ background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--border)' }}
                                 >
-                                    Custom Range
+                                    {labels.custom}
                                 </button>
                                 <div className="flex items-center gap-2">
                                     {compareWithPrevious ? <ToggleRight size={20} color="var(--success)" /> : <ToggleLeft size={20} color="var(--muted)" />}
                                     <label className="text-sm cursor-pointer" style={{ color: 'var(--muted)' }}>
-                                        Compare with previous period
+                                        {labels.compareWithPrevious}
                                     </label>
                                     <input
                                         type="checkbox"
@@ -279,7 +285,7 @@ export default function SalesKPIReport() {
                     {/* Section 3: Revenue Trend Chart */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Revenue Trend — {period.charAt(0).toUpperCase() + period.slice(1)}
+                            {labels.salesTrend} — {labels[period] || period.charAt(0).toUpperCase() + period.slice(1)}
                         </h3>
                         <div style={{ height: '300px' }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -298,7 +304,7 @@ export default function SalesKPIReport() {
                                             dataKey="previous" 
                                             stroke="var(--muted)" 
                                             strokeDasharray="5 5"
-                                            name="Last Period"
+                                            name={labels.lastPeriod || "Last Period"}
                                         />
                                     )}
                                     <Line 
@@ -306,7 +312,7 @@ export default function SalesKPIReport() {
                                         dataKey="current" 
                                         stroke="var(--primary)" 
                                         strokeWidth={2}
-                                        name="This Period"
+                                        name={labels.thisPeriod || "This Period"}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -316,7 +322,7 @@ export default function SalesKPIReport() {
                     {/* Section 4: Top-Selling Products */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Top-Selling Products
+                            {labels.topSellingProducts}
                         </h3>
                         <div style={{ height: '250px', marginBottom: '20px' }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -337,12 +343,12 @@ export default function SalesKPIReport() {
                                 <thead>
                                     <tr style={{ background: 'var(--surface-muted)' }}>
                                         <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>#</th>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Product Name</th>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Category</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Units Sold</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Revenue</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>% of Total</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Profit Margin</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.productName}</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.category}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.unitsSold}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.revenue}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.percentageOfTotal}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.profitMargin}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -365,7 +371,7 @@ export default function SalesKPIReport() {
                     {/* Section 5: Sales by Category */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Sales by Category
+                            {labels.salesByCategory}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div style={{ height: '300px' }}>
@@ -392,10 +398,10 @@ export default function SalesKPIReport() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr style={{ background: 'var(--surface-muted)' }}>
-                                            <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Category</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Revenue</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Units</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>% Share</th>
+                                            <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.category}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.revenue}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.units}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.share}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -411,7 +417,7 @@ export default function SalesKPIReport() {
                                                             style={{ 
                                                                 width: `${item.percentage}%`, 
                                                                 background: COLORS[idx % COLORS.length] 
-                                                            }} 
+                                                            }}
                                                         />
                                                         <span>{item.percentage}%</span>
                                                     </div>
@@ -428,7 +434,7 @@ export default function SalesKPIReport() {
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <div className="flex items-center gap-4 mb-4">
                             <h3 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>
-                                Sales by Customer
+                                {labels.salesByCustomer}
                             </h3>
                             <div className="flex gap-2">
                                 <button
@@ -441,7 +447,7 @@ export default function SalesKPIReport() {
                                         color: customerTab === "all" ? 'white' : 'var(--ink)'
                                     }}
                                 >
-                                    All Customers
+                                    {labels.allCustomers}
                                 </button>
                                 <button
                                     onClick={() => setCustomerTab("retail")}
@@ -453,7 +459,7 @@ export default function SalesKPIReport() {
                                         color: customerTab === "retail" ? 'white' : 'var(--ink)'
                                     }}
                                 >
-                                    Retail
+                                    {labels.retail}
                                 </button>
                                 <button
                                     onClick={() => setCustomerTab("wholesale")}
@@ -465,7 +471,7 @@ export default function SalesKPIReport() {
                                         color: customerTab === "wholesale" ? 'white' : 'var(--ink)'
                                     }}
                                 >
-                                    Wholesale
+                                    {labels.wholesale}
                                 </button>
                             </div>
                         </div>
@@ -473,13 +479,13 @@ export default function SalesKPIReport() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr style={{ background: 'var(--surface-muted)' }}>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Rank</th>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Customer Name</th>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Type</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Total Purchased</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Orders</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Avg Order Value</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Last Purchase</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.rank}</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.customerName}</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.type}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.totalPurchased}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.orders}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.avgOrderValue}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.lastPurchase}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -512,7 +518,7 @@ export default function SalesKPIReport() {
                     {/* Section 7: Sales by Payment Method */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Sales by Payment Method
+                            {labels.salesByPayment}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div style={{ height: '300px' }}>
@@ -537,10 +543,10 @@ export default function SalesKPIReport() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr style={{ background: 'var(--surface-muted)' }}>
-                                            <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Payment Method</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Transactions</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Total Amount</th>
-                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>% of Total</th>
+                                            <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.paymentMethod}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.transactions}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.totalAmount}</th>
+                                            <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.percentageOfTotal}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -560,7 +566,7 @@ export default function SalesKPIReport() {
                         </div>
                         <div className="mt-4 p-3 rounded-lg" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
                             <p className="text-sm font-semibold" style={{ color: 'var(--warning-text)' }}>
-                                💰 Cash Reconciliation: Total cash collected today: Rs {summary.cashCollected?.toLocaleString() || 0}
+                                💰 {labels.cashReconciliation}: {labels.cashCollected}: Rs {summary.cashCollected?.toLocaleString() || 0}
                             </p>
                         </div>
                     </div>
@@ -568,7 +574,7 @@ export default function SalesKPIReport() {
                     {/* Section 8: Sales by Staff */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Sales by Staff / Salesperson
+                            {labels.salesByStaff} / {labels.salesperson}
                         </h3>
                         <div style={{ height: '250px', marginBottom: '20px' }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -588,11 +594,11 @@ export default function SalesKPIReport() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr style={{ background: 'var(--surface-muted)' }}>
-                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>Staff Name</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Transactions</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Total Revenue</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>Avg Order Value</th>
-                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>% of Total</th>
+                                        <th className="py-2 px-3 text-left font-semibold" style={{ color: 'var(--ink)' }}>{labels.staffName}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.transactions}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.totalRevenue}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.avgOrderValue}</th>
+                                        <th className="py-2 px-3 text-right font-semibold" style={{ color: 'var(--ink)' }}>{labels.percentageOfTotal}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -613,15 +619,15 @@ export default function SalesKPIReport() {
                     {/* Section 9: Discount & Returns */}
                     <div className="rounded-xl border shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-                            Discount & Returns
+                            {labels.discountAndReturns}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div className="p-4 rounded-lg" style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)' }}>
-                                <p className="text-sm font-medium" style={{ color: 'var(--error-text)' }}>Total Discount Given</p>
+                                <p className="text-sm font-medium" style={{ color: 'var(--error-text)' }}>{labels.totalDiscountGiven}</p>
                                 <p className="text-2xl font-bold mt-2" style={{ color: 'var(--error-text)' }}>Rs {summary.totalDiscount?.toLocaleString() || 0}</p>
                             </div>
                             <div className="p-4 rounded-lg" style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)' }}>
-                                <p className="text-sm font-medium" style={{ color: 'var(--error-text)' }}>Total Returns Value</p>
+                                <p className="text-sm font-medium" style={{ color: 'var(--error-text)' }}>{labels.totalReturns}</p>
                                 <p className="text-2xl font-bold mt-2" style={{ color: 'var(--error-text)' }}>Rs {summary.totalReturns?.toLocaleString() || 0}</p>
                                 <p className="text-xs mt-1" style={{ color: 'var(--error-text)' }}>Return Rate: {summary.returnRate}%</p>
                             </div>

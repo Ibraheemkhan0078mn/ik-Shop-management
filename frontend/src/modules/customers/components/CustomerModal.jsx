@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { X, Users, ImagePlus } from "lucide-react";
-import { useSelector } from "react-redux";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useCreateCustomer, useUpdateCustomer, useCustomer, useAllCustomers } from "../services/customers.service.js";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
@@ -38,8 +39,10 @@ const Btn = ({ children, variant = "primary", size = "md", className = "", ...p 
 };
 
 export default function CustomerModal({ mode = "create", customerId, onClose, onSuccess }) {
-    const language = useSelector((s) => s.auth?.user?.language ?? "en");
-    const t = (en, ur) => (language === "en" ? en : ur);
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getCustomerLabels(language);
+    
     const isUpdate = mode === "update";
 
     const { data: existingCustomer, isLoading: isFetching } = useCustomer(customerId, { skip: !isUpdate || !customerId });
@@ -85,8 +88,8 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
     };
 
     const handleSubmit = async () => {
-        if (!form.name.trim()) return showError(t("Customer name is required.", "گاہک کا نام ضروری ہے۔"));
-        if (nameError) return showError(t("Name already taken.", "نام پہلے سے موجود ہے۔"));
+        if (!form.name.trim()) return showError(labels.nameRequired);
+        if (nameError) return showError(labels.nameAlreadyTaken);
 
         const formData = new FormData();
         formData.append("name", form.name.trim());
@@ -102,10 +105,10 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
         try {
             if (isUpdate) {
                 await updateCustomer({ id: customerId, formData }).unwrap();
-                showSuccess(t("Customer updated!", "گاہک اپڈیٹ ہو گیا۔"));
+                showSuccess(labels.customerUpdated);
             } else {
                 await createCustomer(formData).unwrap();
-                showSuccess(t("Customer created!", "گاہک شامل ہو گیا۔"));
+                showSuccess(labels.customerCreated);
                 setForm(emptyForm());
                 setSelectedImageFile(null);
                 setImagePreview("");
@@ -113,12 +116,12 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
             onSuccess?.();
             onClose();
         } catch (error) {
-            showError(error?.data?.message ?? t("Operation failed.", "ناکام۔"));
+            showError(error?.data?.message || labels.operationFailed);
         }
     };
 
     if (isUpdate && isFetching && !existingCustomer) {
-        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"><div className="rounded-2xl p-8 text-sm" style={{ background: "var(--surface)", color: "var(--muted)" }}>Loading…</div></div>;
+        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"><div className="rounded-2xl p-8 text-sm" style={{ background: "var(--surface)", color: "var(--muted)" }}>{labels.loading}</div></div>;
     }
 
     return (
@@ -130,8 +133,8 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
                             <Users className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>{isUpdate ? t("Update Customer", "گاہک اپڈیٹ") : t("New Customer", "نیا گاہک")}</h2>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>{t("Customer management", "گاہک")}</p>
+                            <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>{isUpdate ? labels.updateCustomer : labels.newCustomer}</h2>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>{labels.customerManagementShort}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition" style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
@@ -142,49 +145,49 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
                 <div className="p-6 space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field>
-                            <Label required>Name</Label>
-                            <Inp value={form.name} placeholder="Ali Khan" error={nameError} onChange={(e) => handleNameChange(e.target.value)} />
-                            {nameError && <span className="text-xs mt-1" style={{ color: "#dc2626" }}>{t("Name already in use", "نام پہلے سے موجود ہے")}</span>}
+                            <Label required>{labels.name}</Label>
+                            <Inp value={form.name} placeholder={labels.namePlaceholder} error={nameError} onChange={(e) => handleNameChange(e.target.value)} />
+                            {nameError && <span className="text-xs mt-1" style={{ color: "#dc2626" }}>{labels.nameAlreadyInUse}</span>}
                         </Field>
 
                         <Field className="sm:col-span-2">
-                            <Label>Customer Image</Label>
+                            <Label>{labels.customerImage}</Label>
                             <div className="flex flex-col gap-3 rounded-2xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
                                 <div className="flex items-center gap-3">
                                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--accent-2)", color: "#fff" }}>
                                         <ImagePlus className="w-4 h-4" />
-                                        Choose Image
+                                        {labels.chooseImage}
                                         <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                                     </label>
-                                    <span className="text-xs" style={{ color: "var(--muted)" }}>{selectedImageFile ? selectedImageFile.name : t("PNG, JPG, JPEG, WEBP", "PNG, JPG, JPEG, WEBP")}</span>
+                                    <span className="text-xs" style={{ color: "var(--muted)" }}>{selectedImageFile ? selectedImageFile.name : labels.imageFormats}</span>
                                 </div>
                                 <div className="flex h-28 items-center justify-center overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)", background: "rgba(15,118,110,0.05)" }}>
                                     {imagePreview ? (
                                         <img src={imagePreview} alt="Customer preview" className="h-full w-full object-cover" />
                                     ) : (
-                                        <span className="text-xs" style={{ color: "var(--muted)" }}>No image selected</span>
+                                        <span className="text-xs" style={{ color: "var(--muted)" }}>{labels.noImageSelected}</span>
                                     )}
                                 </div>
                             </div>
                         </Field>
 
                         <Field>
-                            <Label>Phone Number</Label>
-                            <Inp value={form.phoneNo} placeholder="0300-1234567" onChange={(e) => update("phoneNo", e.target.value)} />
+                            <Label>{labels.phoneNo}</Label>
+                            <Inp value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={(e) => update("phoneNo", e.target.value)} />
                         </Field>
 
                         <Field>
-                            <Label>CNIC</Label>
-                            <Inp value={form.cnic} placeholder="35201-1234567-8" onChange={(e) => update("cnic", e.target.value)} />
+                            <Label>{labels.cnic}</Label>
+                            <Inp value={form.cnic} placeholder={labels.cnicPlaceholder} onChange={(e) => update("cnic", e.target.value)} />
                         </Field>
 
                         <Field className="sm:col-span-2">
-                            <Label>Address</Label>
-                            <Txt rows={2} value={form.address} placeholder="House 1, Street 2, City" onChange={(e) => update("address", e.target.value)} />
+                            <Label>{labels.address}</Label>
+                            <Txt rows={2} value={form.address} placeholder={labels.addressPlaceholder} onChange={(e) => update("address", e.target.value)} />
                         </Field>
 
                         <Field className="sm:col-span-2">
-                            <Label>Status</Label>
+                            <Label>{labels.status}</Label>
                             <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" className="sr-only peer" checked={form.isActive} onChange={(e) => update("isActive", e.target.checked)} />
@@ -192,14 +195,14 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
                                         <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" style={{ transform: form.isActive ? "translateX(20px)" : "translateX(0)" }} />
                                     </div>
                                 </label>
-                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{form.isActive ? t("Active", "فعال") : t("Inactive", "غیر فعال")}</span>
+                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{form.isActive ? labels.active : labels.inactive}</span>
                             </div>
                         </Field>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                        <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-                        <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? (isUpdate ? "Updating…" : "Creating…") : isUpdate ? t("Update Customer", "اپڈیٹ") : t("Create Customer", "شامل کریں")}</Btn>
+                        <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
+                        <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? (isUpdate ? labels.updating : labels.creating) : isUpdate ? labels.updateCustomer : labels.createCustomer}</Btn>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Printer, Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
@@ -44,16 +44,6 @@ export default function CustomerPage() {
                             <ScreenTabButton lucideIcon={Plus} text={labels.addCustomer} />
                         </div>
                     }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
-                    }
                 />
             </div>
 
@@ -89,7 +79,7 @@ export default function CustomerPage() {
                         </table>
                     </div>
                 )}
-                renderEmpty={() => <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>No customers found.</p>}
+                renderEmpty={() => <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>{labels.noCustomersFound}</p>}
             />
         </div>
     );

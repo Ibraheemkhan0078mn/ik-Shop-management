@@ -5,6 +5,8 @@ export const supplierLabels = {
     manageSuppliers: "Manage your suppliers",
     addSupplier: "Add Supplier",
     editSupplier: "Edit Supplier",
+    newSupplier: "New Supplier",
+    supplierManagementShort: "Supplier management",
     
     // Form labels
     name: "Name",
@@ -14,10 +16,17 @@ export const supplierLabels = {
     address: "Address",
     status: "Status",
     notes: "Notes",
+    taxId: "Tax ID / NTN",
     
     // Status values
     active: "Active",
     inactive: "Inactive",
+    
+    // Supplier types
+    distributor: "Distributor",
+    wholesaler: "Wholesaler",
+    manufacturer: "Manufacturer",
+    other: "Other",
     
     // Table headers
     actions: "Actions",
@@ -27,6 +36,10 @@ export const supplierLabels = {
     cancel: "Cancel",
     delete: "Delete",
     edit: "Edit",
+    createSupplier: "Create Supplier",
+    updateSupplier: "Update Supplier",
+    updating: "Updating…",
+    creating: "Creating…",
     
     // Messages
     loading: "Loading...",
@@ -38,6 +51,20 @@ export const supplierLabels = {
     failedToUpdate: "Failed to update supplier",
     failedToDelete: "Failed to delete supplier",
     deleteConfirm: "Are you sure you want to delete this supplier?",
+    operationFailed: "Operation failed",
+    
+    // Validation
+    nameRequired: "Supplier name is required.",
+    nameAlreadyTaken: "Name already taken.",
+    nameAlreadyInUse: "Name already in use",
+    
+    // Placeholders
+    namePlaceholder: "ABC Traders",
+    phonePlaceholder: "0300-1234567",
+    emailPlaceholder: "supplier@example.com",
+    taxIdPlaceholder: "1234567-8",
+    addressPlaceholder: "Industrial Area, Karachi…",
+    notesPlaceholder: "Payment terms, reliability…",
     
     // Summary
     totalSuppliers: "Total Suppliers",
@@ -50,6 +77,8 @@ export const supplierLabels = {
     manageSuppliers: "اپنے سپلائرز کا انتظام کریں",
     addSupplier: "سپلائر شامل کریں",
     editSupplier: "سپلائر میں ترمیم کریں",
+    newSupplier: "نیا سپلائر",
+    supplierManagementShort: "سپلائر کا انتظام",
     
     // Form labels
     name: "نام",
@@ -59,10 +88,17 @@ export const supplierLabels = {
     address: "پتہ",
     status: "حیثیت",
     notes: "نوٹس",
+    taxId: "ٹیکس آئی این ٹی این",
     
     // Status values
     active: "فعال",
     inactive: "غیر فعال",
+    
+    // Supplier types
+    distributor: "ڈسٹریبیوٹر",
+    wholesaler: "ہول سیلر",
+    manufacturer: "مینوفیکچرر",
+    other: "دیگر",
     
     // Table headers
     actions: "اقدامات",
@@ -72,6 +108,10 @@ export const supplierLabels = {
     cancel: "منسوخ کریں",
     delete: "حذف کریں",
     edit: "ترمیم کریں",
+    createSupplier: "سپلائر بنائیں",
+    updateSupplier: "سپلائر اپڈیٹ کریں",
+    updating: "اپڈیٹ ہو رہا ہے…",
+    creating: "بنایا جا رہا ہے…",
     
     // Messages
     loading: "لوڈ ہو رہا ہے...",
@@ -83,6 +123,20 @@ export const supplierLabels = {
     failedToUpdate: "سپلائر اپ ڈیٹ کرنے میں ناکامی",
     failedToDelete: "سپلائر حذف کرنے میں ناکامی",
     deleteConfirm: "کیا آپ واقعی اس سپلائر کو حذف کرنا چاہتے ہیں؟",
+    operationFailed: "ناکام",
+    
+    // Validation
+    nameRequired: "سپلائر کا نام ضروری ہے۔",
+    nameAlreadyTaken: "نام پہلے سے موجود ہے۔",
+    nameAlreadyInUse: "نام پہلے سے موجود ہے",
+    
+    // Placeholders
+    namePlaceholder: "اے بی سی ٹریڈرز",
+    phonePlaceholder: "0300-1234567",
+    emailPlaceholder: "supplier@example.com",
+    taxIdPlaceholder: "1234567-8",
+    addressPlaceholder: "صنعتی علاقہ، کراچی…",
+    notesPlaceholder: "ادائیگی کی شرائط،可信性…",
     
     // Summary
     totalSuppliers: "کل سپلائرز",
@@ -95,6 +149,8 @@ export const supplierLabels = {
     manageSuppliers: "اپنے سپلائرز کا انتظام کریں / Manage your suppliers",
     addSupplier: "سپلائر شامل کریں / Add Supplier",
     editSupplier: "سپلائر میں ترمیم کریں / Edit Supplier",
+    newSupplier: "نیا سپلائر / New Supplier",
+    supplierManagementShort: "سپلائر کا انتظام / Supplier management",
     
     // Form labels
     name: "نام / Name",
@@ -104,10 +160,17 @@ export const supplierLabels = {
     address: "پتہ / Address",
     status: "حیثیت / Status",
     notes: "نوٹس / Notes",
+    taxId: "ٹیکس آئی این ٹی این / Tax ID / NTN",
     
     // Status values
     active: "فعال / Active",
     inactive: "غیر فعال / Inactive",
+    
+    // Supplier types
+    distributor: "ڈسٹریبیوٹر / Distributor",
+    wholesaler: "ہول سیلر / Wholesaler",
+    manufacturer: "مینوفیکچرر / Manufacturer",
+    other: "دیگر / Other",
     
     // Table headers
     actions: "اقدامات / Actions",
@@ -117,6 +180,10 @@ export const supplierLabels = {
     cancel: "منسوخ کریں / Cancel",
     delete: "حذف کریں / Delete",
     edit: "ترمیم کریں / Edit",
+    createSupplier: "سپلائر بنائیں / Create Supplier",
+    updateSupplier: "سپلائر اپڈیٹ کریں / Update Supplier",
+    updating: "اپڈیٹ ہو رہا ہے… / Updating…",
+    creating: "بنایا جا رہا ہے… / Creating…",
     
     // Messages
     loading: "لوڈ ہو رہا ہے / Loading...",
@@ -128,6 +195,20 @@ export const supplierLabels = {
     failedToUpdate: "سپلائر اپ ڈیٹ کرنے میں ناکامی / Failed to update supplier",
     failedToDelete: "سپلائر حذف کرنے میں ناکامی / Failed to delete supplier",
     deleteConfirm: "کیا آپ واقعی اس سپلائر کو حذف کرنا چاہتے ہیں؟ / Are you sure you want to delete this supplier?",
+    operationFailed: "ناکام / Operation failed",
+    
+    // Validation
+    nameRequired: "سپلائر کا نام ضروری ہے۔ / Supplier name is required.",
+    nameAlreadyTaken: "نام پہلے سے موجود ہے۔ / Name already taken.",
+    nameAlreadyInUse: "نام پہلے سے موجود ہے / Name already in use",
+    
+    // Placeholders
+    namePlaceholder: "اے بی سی ٹریڈرز / ABC Traders",
+    phonePlaceholder: "0300-1234567",
+    emailPlaceholder: "supplier@example.com",
+    taxIdPlaceholder: "1234567-8",
+    addressPlaceholder: "صنعتی علاقہ، کراچی… / Industrial Area, Karachi…",
+    notesPlaceholder: "ادائیگی کی شرائط،可信性… / Payment terms, reliability…",
     
     // Summary
     totalSuppliers: "کل سپلائرز / Total Suppliers",

@@ -708,11 +708,11 @@ export default function Dashboard() {
                 <div className="lg:col-span-2 bg-(--surface) p-6 rounded-3xl border border-(--border) shadow-[0_16px_40px_rgba(64,45,28,0.12)]">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-semibold text-(--ink) font-display">
-                            Income vs Expense
+                            {labels.incomeVsExpense}
                         </h3>
                         <select className="text-sm border border-(--border) rounded-xl bg-(--surface-muted) px-3 py-2 text-(--ink)">
-                            <option>Last 30 Days</option>
-                            <option>Last 6 Months</option>
+                            <option>{labels.last30Days}</option>
+                            <option>{labels.last6Months}</option>
                         </select>
                     </div>
                     <div className="h-max">

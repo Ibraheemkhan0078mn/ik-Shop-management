@@ -122,6 +122,8 @@ export default function SettingsPage() {
     const handleSaveLanguageSettings = async () => {
         try {
             await updateLanguageSettings({ userId, language: languageState }).unwrap();
+            // Also save to localStorage for auth pages
+            localStorage.setItem('appLanguage', languageState);
             toast.success(labels.languageSettingsSaved);
         } catch (error) {
             toast.error(labels.failedToSave);

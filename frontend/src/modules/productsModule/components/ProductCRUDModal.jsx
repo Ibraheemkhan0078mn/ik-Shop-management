@@ -9,19 +9,12 @@ import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal.jsx";
+import { getProductLabels } from "../labels/productLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-
-const UNITS = [
-  { value: "pcs", label: "Count (pcs)" },
-  { value: "mg", label: "Weight (mg)" },
-  { value: "g", label: "Weight (g)" },
-  { value: "kg", label: "Weight (kg)" },
-  { value: "ml", label: "Volume (ml)" },
-  { value: "L", label: "Volume (L)" },
-];
 
 const EMPTY_FORM = {
   name: "",
@@ -55,10 +48,23 @@ const safeArray = (data) => {
 };
 
 export default function ProductCRUDModal({ mode = "create", productId = null, open, onClose }) {
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getProductLabels(language);
+  
   const isCreate = mode === "create";
   const [createProduct, { isLoading: isCreating }] = useCreateProduct();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProduct();
   const isSaving = isCreating || isUpdating;
+
+  const UNITS = [
+    { value: "pcs", label: labels.countPcs },
+    { value: "mg", label: labels.weightMg },
+    { value: "g", label: labels.weightG },
+    { value: "kg", label: labels.weightKg },
+    { value: "ml", label: labels.volumeMl },
+    { value: "L", label: labels.volumeL },
+  ];
 
   const { data: productData, isLoading: isFetching, error: productError } = useProduct(productId, {
     skip: !productId || isCreate,
@@ -148,17 +154,17 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     (file) => {
       if (!file) return;
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        setErrors((prev) => ({ ...prev, image: "Only PNG, JPG, JPEG or WebP allowed" }));
+        setErrors((prev) => ({ ...prev, image: labels.onlyPngJpg }));
         return;
       }
       if (file.size > MAX_IMAGE_SIZE) {
-        setErrors((prev) => ({ ...prev, image: "Max file size is 5MB" }));
+        setErrors((prev) => ({ ...prev, image: labels.maxFileSize }));
         return;
       }
       updateField("image", file);
       setImagePreview(URL.createObjectURL(file));
     },
-    [updateField]
+    [updateField, labels]
   );
 
   const categoryOptions = useMemo(() => categories.map((c) => ({ label: c.name, value: c._id })), [categories]);
@@ -169,28 +175,28 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     const newErrors = {};
 
     // Always required
-    if (!form.name?.trim()) newErrors.name = "Product Name is required";
-    if (!form.image) newErrors.image = "Product Image is required";
-    if (!form.category) newErrors.category = "Category is required";
-    if (!form.subCategory) newErrors.subCategory = "Sub Category is required";
+    if (!form.name?.trim()) newErrors.name = labels.productNameRequired;
+    if (!form.image) newErrors.image = labels.productImageRequired;
+    if (!form.category) newErrors.category = labels.categoryRequired;
+    if (!form.subCategory) newErrors.subCategory = labels.subCategoryRequired;
 
     // Required inside "more options"
     if (showMore || !isCreate) {
-      if (!form.brandName?.trim()) newErrors.brandName = "Brand Name is required";
-      if (!form.barcode?.trim()) newErrors.barcode = "Barcode is required";
-      if (!form.description?.trim()) newErrors.description = "Description is required";
-      if (!form.unit) newErrors.unit = "Unit is required";
+      if (!form.brandName?.trim()) newErrors.brandName = labels.brandNameRequired;
+      if (!form.barcode?.trim()) newErrors.barcode = labels.barcodeRequired;
+      if (!form.description?.trim()) newErrors.description = labels.descriptionRequired;
+      if (!form.unit) newErrors.unit = labels.unitRequired;
       const priceFields = ["defaultCostPrice", "defaultRetailPrice", "defaultWholesalePrice"];
       priceFields.forEach((f) => {
         if (form[f] === "" || form[f] === null || form[f] === undefined || isNaN(form[f]))
           newErrors[f] = `${f.replace("default", "").replace(/([A-Z])/g, " $1").trim()} is required`;
       });
-      if (isNaN(form.minStockLevel)) newErrors.minStockLevel = "Min Stock Level is required";
-      if (isNaN(form.maxStockLevel)) newErrors.maxStockLevel = "Max Stock Level is required";
+      if (isNaN(form.minStockLevel)) newErrors.minStockLevel = labels.minStockLevelRequired;
+      if (isNaN(form.maxStockLevel)) newErrors.maxStockLevel = labels.maxStockLevelRequired;
       if (form.maxStockLevel <= form.minStockLevel)
-        newErrors.maxStockLevel = "Max must be greater than Min";
+        newErrors.maxStockLevel = labels.maxGreaterThanMin;
       if (form.isDiscountAllowed && form.maxDiscountPercent <= 0)
-        newErrors.maxDiscountPercent = "Must be greater than 0";
+        newErrors.maxDiscountPercent = labels.mustBeGreaterThanZero;
     }
 
     setErrors(newErrors);
@@ -200,12 +206,12 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       const optionalKeys = ["brandName", "barcode", "description", "unit", "defaultCostPrice",
         "defaultRetailPrice", "defaultWholesalePrice", "minStockLevel", "maxStockLevel", "maxDiscountPercent"];
       if (optionalKeys.some((k) => newErrors[k])) setShowMore(true);
-      setBanner(`Fix ${count} error(s) before submitting`);
+      setBanner(labels.fixErrors.replace('{count}', count));
       return false;
     }
     setBanner(null);
     return true;
-  }, [form, showMore, isCreate]);
+  }, [form, showMore, isCreate, labels]);
 
   const onSubmit = useCallback(async () => {
     if (!validateForm()) return;
@@ -239,7 +245,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
         <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm animate-pulse">
-          Loading product...
+          {labels.loadingProduct}
         </div>
       </div>
     );
@@ -257,7 +263,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
             <h2 className="text-base font-semibold text-[var(--ink)]">
-              {isCreate ? "Add Product" : "Edit Product"}
+              {isCreate ? labels.addProduct : labels.editProduct}
             </h2>
             <button
               onClick={onClose}
@@ -285,7 +291,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               {/* Image Upload */}
               <div className="sm:col-span-2">
                 <label className="text-xs font-medium text-[var(--muted)] mb-1.5 block">
-                  Product Image <span className="text-red-500">*</span>
+                  {labels.productImage} <span className="text-red-500">*</span>
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -306,9 +312,9 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   )}
                   <div>
                     <p className="text-sm font-medium text-[var(--ink)]">
-                      {imagePreview ? "Change image" : "Click or drag to upload"}
+                      {imagePreview ? labels.changeImage : labels.clickOrDrag}
                     </p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">PNG, JPG, WebP — max 5MB</p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">{labels.pngJpgWebp}</p>
                   </div>
                   <input
                     ref={fileInputRef}
@@ -323,7 +329,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
               {/* Name */}
               <Field
-                label="Product Name"
+                label={labels.productName}
                 name="name"
                 value={form.name}
                 onChange={updateField}
@@ -334,7 +340,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
               {/* Product Code — optional but visible */}
               <Field
-                label="Product Code"
+                label={labels.productCode}
                 name="productCode"
                 value={form.productCode}
                 onChange={updateField}
@@ -344,35 +350,35 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
               {/* Category */}
               <SelectField
-                label="Category"
+                label={labels.category}
                 name="category"
                 value={form.category}
                 onChange={updateField}
                 options={categoryOptions}
                 error={errors.category}
                 required
-                placeholder="Select category"
-                action={{ label: "New", icon: Plus, onClick: () => setShowCategoryDialog(true) }}
+                placeholder={labels.selectCategory}
+                action={{ label: labels.new, icon: Plus, onClick: () => setShowCategoryDialog(true) }}
               />
 
               {/* Sub Category */}
               <SelectField
-                label="Sub Category"
+                label={labels.subCategory}
                 name="subCategory"
                 value={form.subCategory}
                 onChange={updateField}
                 options={subCategoryOptions}
                 error={errors.subCategory}
                 required
-                placeholder="Select sub category"
+                placeholder={labels.selectSubCategory}
                 disabled={!form.category}
-                action={{ label: "New", icon: Plus, onClick: () => setShowSubCategoryDialog(true) }}
+                action={{ label: labels.new, icon: Plus, onClick: () => setShowSubCategoryDialog(true) }}
               />
 
               {/* Active Status */}
               <div className="sm:col-span-2">
                 <ToggleField
-                  label="Active"
+                  label={labels.active}
                   name="isActive"
                   value={form.isActive}
                   onChange={updateField}
@@ -386,7 +392,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               onClick={() => setShowMore((p) => !p)}
               className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] text-sm text-[var(--muted)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all"
             >
-              <span>{showMore ? "Hide additional fields" : "Show more options"}</span>
+              <span>{showMore ? labels.hideAdditionalFields : labels.showMoreOptions}</span>
               {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
 
@@ -395,7 +401,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
                 <Field
-                  label="Brand Name"
+                  label={labels.brandName}
                   name="brandName"
                   value={form.brandName}
                   onChange={updateField}
@@ -405,40 +411,40 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
                 {/* Barcode */}
                 <Field
-                  label="Barcode"
+                  label={labels.barcode}
                   name="barcode"
                   value={form.barcode}
                   onChange={updateField}
                   error={errors.barcode}
-                  placeholder="Scan or type"
-                  action={{ label: "Scan", icon: Scan, onClick: () => setIsBarcodeOpen(true) }}
+                  placeholder={labels.scanOrType}
+                  action={{ label: labels.scan, icon: Scan, onClick: () => setIsBarcodeOpen(true) }}
                 />
 
                 <div className="sm:col-span-2">
                   <Field
-                    label="Description"
+                    label={labels.description}
                     name="description"
                     value={form.description}
                     onChange={updateField}
                     error={errors.description}
-                    placeholder="Product description"
+                    placeholder={labels.productDescription}
                     type="textarea"
                     rows={3}
                   />
                 </div>
 
                 <SelectField
-                  label="Unit"
+                  label={labels.unit}
                   name="unit"
                   value={form.unit}
                   onChange={updateField}
                   options={unitOptions}
                   error={errors.unit}
-                  placeholder="Select unit"
+                  placeholder={labels.selectUnit}
                 />
 
                 <Field
-                  label="Default Cost Price"
+                  label={labels.defaultCostPrice}
                   name="defaultCostPrice"
                   value={form.defaultCostPrice}
                   onChange={updateField}
@@ -448,7 +454,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <Field
-                  label="Default Retail Price"
+                  label={labels.defaultRetailPrice}
                   name="defaultRetailPrice"
                   value={form.defaultRetailPrice}
                   onChange={updateField}
@@ -458,7 +464,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <Field
-                  label="Default Wholesale Price"
+                  label={labels.defaultWholesalePrice}
                   name="defaultWholesalePrice"
                   value={form.defaultWholesalePrice}
                   onChange={updateField}
@@ -468,7 +474,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <Field
-                  label="Tax Percent"
+                  label={labels.taxPercent}
                   name="taxPercent"
                   value={form.taxPercent}
                   onChange={updateField}
@@ -477,19 +483,19 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <SelectField
-                  label="Tax Type"
+                  label={labels.taxType}
                   name="taxType"
                   value={form.taxType}
                   onChange={updateField}
                   options={[
-                    { label: "Percentage", value: "percentage" },
-                    { label: "Fixed", value: "fixed" },
+                    { label: labels.percentage, value: "percentage" },
+                    { label: labels.fixed, value: "fixed" },
                   ]}
-                  placeholder="Select tax type"
+                  placeholder={labels.selectTaxType}
                 />
 
                 <Field
-                  label="Min Stock Level"
+                  label={labels.minStockLevel}
                   name="minStockLevel"
                   value={form.minStockLevel}
                   onChange={updateField}
@@ -499,7 +505,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <Field
-                  label="Max Stock Level"
+                  label={labels.maxStockLevel}
                   name="maxStockLevel"
                   value={form.maxStockLevel}
                   onChange={updateField}
@@ -509,14 +515,14 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <ToggleField
-                  label="Allow Negative Stock"
+                  label={labels.allowNegativeStock}
                   name="allowNegativeStock"
                   value={form.allowNegativeStock}
                   onChange={updateField}
                 />
 
                 <ToggleField
-                  label="Allow Discount"
+                  label={labels.allowDiscount}
                   name="isDiscountAllowed"
                   value={form.isDiscountAllowed}
                   onChange={updateField}
@@ -524,7 +530,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
                 {form.isDiscountAllowed && (
                   <Field
-                    label="Max Discount %"
+                    label={labels.maxDiscountPercent}
                     name="maxDiscountPercent"
                     value={form.maxDiscountPercent}
                     onChange={updateField}
@@ -535,7 +541,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 )}
 
                 <Field
-                  label="Rack Location"
+                  label={labels.rackLocation}
                   name="rackLocation"
                   value={form.rackLocation}
                   onChange={updateField}
@@ -552,7 +558,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm text-[var(--muted)] hover:bg-[var(--surface)] transition-colors"
             >
-              Cancel
+              {labels.cancel}
             </button>
             <button
               type="button"
@@ -561,7 +567,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm bg-[var(--accent-2)] text-white hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
             >
               <Check className="h-4 w-4" />
-              {isSaving ? "Saving..." : isCreate ? "Save Product" : "Update Product"}
+              {isSaving ? labels.saving : isCreate ? labels.saveProduct : labels.updateProduct}
             </button>
           </div>
         </div>

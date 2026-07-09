@@ -9,6 +9,8 @@ import {
     FileSpreadsheet,
     File
 } from "lucide-react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportLabels } from "../labels/reportLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGetSalesReportQuery,
@@ -23,22 +25,22 @@ import {
 import { FormField, Input, SearchableSelect } from "../../../shared/components/FormFields.jsx";
 import ExpenseKPIReport from "./ExpenseKPIReport.jsx";
 
-const REPORT_TYPES = [
-    { value: "sales", label: "Sales Report", icon: FileText },
-    { value: "purchases", label: "Purchase Report", icon: FileText },
-    { value: "financial", label: "Financial Report", icon: FileText },
-    { value: "credit-debit", label: "Credit/Debit Report", icon: FileText },
-    { value: "expenses", label: "Expense Report", icon: FileText },
-    { value: "suppliers", label: "Supplier Report", icon: FileText },
-    { value: "wastage", label: "Wastage Report", icon: FileText },
-    { value: "activity", label: "Activity Report", icon: FileText },
+const getReportTypes = (labels) => [
+    { value: "sales", label: labels.salesReport, icon: FileText },
+    { value: "purchases", label: labels.purchaseReport, icon: FileText },
+    { value: "financial", label: labels.financialReport, icon: FileText },
+    { value: "credit-debit", label: labels.creditDebitReport, icon: FileText },
+    { value: "expenses", label: labels.expenseReport, icon: FileText },
+    { value: "suppliers", label: labels.supplierReport, icon: FileText },
+    { value: "wastage", label: labels.wastageReport, icon: FileText },
+    { value: "activity", label: labels.activityReport, icon: FileText },
 ];
 
-const PAYMENT_METHODS = [
-    { value: "cash", label: "Cash" },
-    { value: "online", label: "Online" },
-    { value: "credit", label: "Credit (Qarza)" },
-    { value: "hybrid", label: "Hybrid" },
+const getPaymentMethods = (labels) => [
+    { value: "cash", label: labels.cash },
+    { value: "online", label: labels.online },
+    { value: "credit", label: labels.credit },
+    { value: "hybrid", label: labels.hybrid },
 ];
 
 function Card({ children, className = "" }) {
@@ -53,6 +55,13 @@ function Card({ children, className = "" }) {
 
 export default function ReportsPage() {
     const navigate = useNavigate();
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportLabels(language);
+    
+    const REPORT_TYPES = getReportTypes(labels);
+    const PAYMENT_METHODS = getPaymentMethods(labels);
+    
     const [selectedReport, setSelectedReport] = useState("sales");
     const [filters, setFilters] = useState({
         fromDate: "",
@@ -108,7 +117,7 @@ export default function ReportsPage() {
 
     // Handle errors
     if (error) {
-        showError(error?.data?.message || error?.message || `Failed to load ${selectedReport} report`);
+        showError(error?.data?.message || error?.message || labels.failedToLoadReport.replace("{report}", selectedReport));
     }
 
     const handleFilterChange = (key, value) => {
@@ -139,28 +148,28 @@ export default function ReportsPage() {
         const cards = [];
 
         if (summary.totalSales !== undefined) {
-            cards.push({ label: "Total Sales", value: summary.totalSales, color: "bg-green-500" });
+            cards.push({ label: labels.totalSales, value: summary.totalSales, color: "bg-green-500" });
         }
         if (summary.totalPurchases !== undefined) {
-            cards.push({ label: "Total Purchases", value: summary.totalPurchases, color: "bg-blue-500" });
+            cards.push({ label: labels.totalPurchases, value: summary.totalPurchases, color: "bg-blue-500" });
         }
         if (summary.totalExpenses !== undefined) {
-            cards.push({ label: "Total Expenses", value: summary.totalExpenses, color: "bg-red-500" });
+            cards.push({ label: labels.totalExpenses, value: summary.totalExpenses, color: "bg-red-500" });
         }
         if (summary.totalItems !== undefined) {
-            cards.push({ label: "Total Items", value: summary.totalItems, color: "bg-purple-500" });
+            cards.push({ label: labels.totalItems, value: summary.totalItems, color: "bg-purple-500" });
         }
         if (summary.totalQuantity !== undefined) {
-            cards.push({ label: "Total Quantity", value: summary.totalQuantity, color: "bg-cyan-500" });
+            cards.push({ label: labels.totalQuantity, value: summary.totalQuantity, color: "bg-cyan-500" });
         }
         if (summary.totalValue !== undefined) {
-            cards.push({ label: "Total Value", value: summary.totalValue, color: "bg-orange-500" });
+            cards.push({ label: labels.totalValue, value: summary.totalValue, color: "bg-orange-500" });
         }
         if (summary.totalBalance !== undefined) {
-            cards.push({ label: "Total Balance", value: summary.totalBalance, color: "bg-indigo-500" });
+            cards.push({ label: labels.totalBalance, value: summary.totalBalance, color: "bg-indigo-500" });
         }
         if (summary.totalOrders !== undefined) {
-            cards.push({ label: "Total Orders", value: summary.totalOrders, color: "bg-pink-500" });
+            cards.push({ label: labels.totalOrders, value: summary.totalOrders, color: "bg-pink-500" });
         }
 
         if (cards.length === 0) return null;
@@ -183,7 +192,7 @@ export default function ReportsPage() {
         if (!data?.data || data.data.length === 0) {
             return (
                 <Card>
-                    <p className="text-center text-gray-500 py-8">No data available</p>
+                    <p className="text-center text-gray-500 py-8">{labels.noDataAvailable}</p>
                 </Card>
             );
         }
@@ -225,7 +234,7 @@ export default function ReportsPage() {
                 {data.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                         <p className="text-sm text-gray-500">
-                            Page {data.page} of {data.totalPages} ({data.total} total)
+                            {labels.pageOf.replace("{page}", data.page).replace("{totalPages}", data.totalPages).replace("{total}", data.total)}
                         </p>
                         <div className="flex gap-2">
                             <button
@@ -233,14 +242,14 @@ export default function ReportsPage() {
                                 disabled={data.page === 1}
                                 className="px-3 py-1 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                             >
-                                Previous
+                                {labels.previous}
                             </button>
                             <button
                                 onClick={() => handlePageChange(data.page + 1)}
                                 disabled={data.page === data.totalPages}
                                 className="px-3 py-1 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                             >
-                                Next
+                                {labels.next}
                             </button>
                         </div>
                     </div>
@@ -254,8 +263,8 @@ export default function ReportsPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Reports</h1>
-                    <p className="text-sm text-gray-500">Generate and view business reports</p>
+                    <h1 className="text-2xl font-bold text-gray-800">{labels.reports}</h1>
+                    <p className="text-sm text-gray-500">{labels.generateViewReports}</p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -263,14 +272,14 @@ export default function ReportsPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         <Filter size={16} />
-                        Filters
+                        {labels.filters}
                     </button>
                     <button
                         onClick={handleRefresh}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         <RefreshCw size={16} />
-                        Refresh
+                        {labels.refresh}
                     </button>
                 </div>
             </div>
@@ -281,23 +290,23 @@ export default function ReportsPage() {
                     options={REPORT_TYPES}
                     value={selectedReport}
                     onChange={handleReportChange}
-                    placeholder="Select a report..."
+                    placeholder={labels.selectReport}
                 />
             </div>
 
             {/* Filters */}
             {showFilters && (
                 <Card className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Filters</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">{labels.filters}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <FormField label="From Date">
+                        <FormField label={labels.fromDate}>
                             <Input
                                 type="date"
                                 value={filters.fromDate}
                                 onChange={(e) => handleFilterChange("fromDate", e.target.value)}
                             />
                         </FormField>
-                        <FormField label="To Date">
+                        <FormField label={labels.toDate}>
                             <Input
                                 type="date"
                                 value={filters.toDate}
@@ -305,18 +314,18 @@ export default function ReportsPage() {
                             />
                         </FormField>
                         {(selectedReport === "sales" || selectedReport === "financial") && (
-                            <FormField label="Payment Method">
+                            <FormField label={labels.paymentMethod}>
                                 <SearchableSelect
                                     options={PAYMENT_METHODS}
                                     value={filters.paymentMethod}
                                     onChange={(value) => handleFilterChange("paymentMethod", value)}
-                                    placeholder="All methods"
+                                    placeholder={labels.allMethods}
                                 />
                             </FormField>
                         )}
-                        <FormField label="Search">
+                        <FormField label={labels.search}>
                             <Input
-                                placeholder="Search..."
+                                placeholder={labels.searchPlaceholder}
                                 value={filters.search}
                                 onChange={(e) => handleFilterChange("search", e.target.value)}
                             />
@@ -332,28 +341,28 @@ export default function ReportsPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
                     <File size={16} />
-                    Export PDF
+                    {labels.exportPdf}
                 </button>
                 <button
                     onClick={() => handleExport("excel")}
                     className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                 >
                     <FileSpreadsheet size={16} />
-                    Export Excel
+                    {labels.exportExcel}
                 </button>
                 <button
                     onClick={() => handleExport("csv")}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                     <Download size={16} />
-                    Export CSV
+                    {labels.exportCsv}
                 </button>
                 <button
                     onClick={handlePrint}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
                 >
                     <Printer size={16} />
-                    Print
+                    {labels.print}
                 </button>
             </div>
 

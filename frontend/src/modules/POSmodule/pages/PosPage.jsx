@@ -619,7 +619,7 @@ export default function PosPage() {
               <Filter size={20} />
             </button>
             <h1 className="text-xl font-bold text-[var(--accent-2)] font-display tracking-tight">
-              Point of Sale
+              {labels.pointOfSale}
             </h1>
           </div>
 
@@ -627,21 +627,21 @@ export default function PosPage() {
             <div onClick={() => toggleModal("heldOrders")}>
               <ScreenTabButton
                 lucideIcon={ClipboardList}
-                text={`Held Orders (${heldOrders.length})`}
+                text={`${labels.heldOrders} (${heldOrders.length})`}
               />
             </div>
 
             <div onClick={() => navigate("/product-return")}>
               <ScreenTabButton
                 lucideIcon={RotateCcw}
-                text="Product Return"
+                text={labels.productReturn}
               />
             </div>
 
             <div onClick={() => navigate("/order-history")}>
               <ScreenTabButton
                 lucideIcon={History}
-                text="Order History"
+                text={labels.orderHistory}
               />
             </div>
           </div>
@@ -665,9 +665,9 @@ export default function PosPage() {
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
                       <th className="p-2 text-left text-xs font-semibold text-[var(--muted)] w-10"></th>
-                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">Product</th>
-                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">Price</th>
-                      <th className="p-2 text-center text-xs font-semibold text-[var(--muted)]">Stock</th>
+                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">{labels.product}</th>
+                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">{labels.price}</th>
+                      <th className="p-2 text-center text-xs font-semibold text-[var(--muted)]">{labels.stock}</th>
                     </tr>
                   </thead>
                   <tbody>

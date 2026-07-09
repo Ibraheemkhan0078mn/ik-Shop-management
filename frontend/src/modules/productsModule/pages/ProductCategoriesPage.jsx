@@ -1,6 +1,6 @@
 // features/productsModule/pages/ProductCategoriesPage.jsx
 import { useMemo, useState } from "react";
-import { Plus, Edit, Trash2, FolderTree, AlertTriangle, Printer, Download } from "lucide-react";
+import { Plus, Edit, Trash2, FolderTree, AlertTriangle } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -155,16 +155,6 @@ export default function ProductCategoriesPage() {
                         <div onClick={handleCreate}>
                             <ScreenTabButton lucideIcon={Plus} text={labels.add} />
                         </div>
-                    }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
                     }
                 />
             </div>

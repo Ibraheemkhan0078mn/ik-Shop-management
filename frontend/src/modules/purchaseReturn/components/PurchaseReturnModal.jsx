@@ -8,7 +8,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Search, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
-import { useSelector } from "react-redux";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import {
     createPurchaseReturnApi,
     updatePurchaseReturnApi,
@@ -33,6 +34,22 @@ const CONDITIONS = [
     { label: "Fair", value: "fair" },
     { label: "Poor", value: "poor" },
     { label: "Damaged", value: "damaged" },
+];
+
+const getLocalizedReasons = (labels) => [
+    { label: labels.damaged, value: "damaged" },
+    { label: labels.expired, value: "expired" },
+    { label: labels.wrongItem, value: "wrong_item" },
+    { label: labels.excess, value: "excess" },
+    { label: labels.qualityIssue, value: "quality_issue" },
+    { label: labels.other, value: "other" },
+];
+
+const getLocalizedConditions = (labels) => [
+    { label: labels.good, value: "good" },
+    { label: labels.fair, value: "fair" },
+    { label: labels.poor, value: "poor" },
+    { label: labels.damaged, value: "damaged" },
 ];
 
 const emptyForm = () => ({
@@ -169,8 +186,10 @@ const Card = ({ title, children, className = "" }) => (
 );
 
 export default function PurchaseReturnModal({ mode = "create", purchaseReturnId, onClose, onSuccess }) {
-    const language = useSelector((s) => s.auth?.user?.language ?? "en");
-    const t = (en, ur) => (language === "en" ? en : ur);
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseReturnLabels(language);
+    
     const isUpdate = mode === "update";
 
     const [existingPurchaseReturn, setExistingPurchaseReturn] = useState(null);
@@ -184,6 +203,9 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [selectedItems, setSelectedItems] = useState({});
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+
+    const localizedReasons = useMemo(() => getLocalizedReasons(labels), [labels]);
+    const localizedConditions = useMemo(() => getLocalizedConditions(labels), [labels]);
 
     const update = (f, v) => setForm((p) => ({ ...p, [f]: v }));
 
@@ -221,7 +243,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 });
                 setSelectedItems(selected);
             } catch (e) {
-                showError(e?.response?.data?.message || "Failed to load purchase return");
+                showError(e?.response?.data?.message || labels.failedToCreate);
             } finally {
                 setIsFetching(false);
             }
@@ -231,7 +253,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     }, [isUpdate, purchaseReturnId]);
 
     const handleSearchInvoice = async () => {
-        if (!invoiceNumber.trim()) return showError("Please enter an invoice number");
+        if (!invoiceNumber.trim()) return showError(labels.pleaseEnterInvoice);
 
         setIsSearching(true);
         try {
@@ -245,12 +267,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     supplier: result.data.supplier?._id,
                 }));
                 setSelectedItems({});
-                showSuccess("Purchase found!");
+                showSuccess(labels.purchaseFound);
             } else {
-                showError(result?.message || "Purchase not found");
+                showError(result?.message || labels.purchaseNotFound);
             }
         } catch (e) {
-            showError(e?.response?.data?.message || e?.message || "Failed to search purchase");
+            showError(e?.response?.data?.message || e?.message || labels.failedToSearch);
         } finally {
             setIsSearching(false);
         }
@@ -305,14 +327,14 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
     const handleSubmit = async () => {
         console.log("the submit is running.")
-        if (!purchaseData) return showError("Please search and select a purchase first");
-        if (Object.keys(selectedItems).length === 0) return showError("Please select at least one item to return");
+        if (!purchaseData) return showError(labels.pleaseSelectPurchase);
+        if (Object.keys(selectedItems).length === 0) return showError(labels.pleaseSelectItem);
 
         // Validate all selected items
         for (const [batchId, details] of Object.entries(selectedItems)) {
-            if (!details.returnReason) return showError("Please specify return reason for all selected items");
-            if (!details.condition) return showError("Please specify condition for all selected items");
-            if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError("Please specify valid return quantity for all selected items");
+            if (!details.returnReason) return showError(labels.specifyReturnReason);
+            if (!details.condition) return showError(labels.specifyCondition);
+            if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError(labels.specifyValidQuantity);
         }
 
         // Build payload
@@ -348,11 +370,11 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             if (isUpdate) {
                 setIsUpdating(true);
                 await updatePurchaseReturnApi(purchaseReturnId, payload);
-                showSuccess(t("Purchase return updated!", "خریداری واپسی اپڈیٹ ہو گیا۔"));
+                showSuccess(labels.returnUpdated);
             } else {
                 setIsCreating(true);
                 await createPurchaseReturnApi(payload);
-                showSuccess(t("Purchase return recorded!", "خریداری واپسی محفوظ ہو گیا۔"));
+                showSuccess(labels.returnCreated);
                 setForm(emptyForm());
                 setPurchaseData(null);
                 setSelectedItems({});
@@ -361,7 +383,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || labels.operationFailed);
         } finally {
             setIsCreating(false);
             setIsUpdating(false);
@@ -372,11 +394,11 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         if (!purchaseReturnId) return;
         try {
             await submitPurchaseReturnApi(purchaseReturnId);
-            showSuccess(t("Submitted for approval", "منظوری کے لیے پیش کیا گیا"));
+            showSuccess(labels.submittedForApproval);
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || labels.operationFailed);
         }
     };
 
@@ -384,25 +406,25 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         if (!purchaseReturnId) return;
         try {
             await approvePurchaseReturnApi(purchaseReturnId);
-            showSuccess(t("Purchase return approved", "خریداری واپسی منظور ہو گئی"));
+            showSuccess(labels.returnApproved);
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || labels.operationFailed);
         }
     };
 
     const handleReject = async () => {
         if (!purchaseReturnId) return;
-        const reason = prompt("Enter rejection reason:");
+        const reason = prompt(labels.enterRejectionReason);
         if (!reason) return;
         try {
             await rejectPurchaseReturnApi(purchaseReturnId, reason);
-            showSuccess(t("Purchase return rejected", "خریداری واپسی مسترد ہو گئی"));
+            showSuccess(labels.returnRejected);
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.response?.data?.message || e?.message || t("Operation failed.", "ناکام۔"));
+            showError(e?.response?.data?.message || e?.message || labels.operationFailed);
         }
     };
 
@@ -434,10 +456,10 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                         </div>
                         <div>
                             <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>
-                                {isUpdate ? t("Update Purchase Return", "خریداری واپسی اپڈیٹ") : t("Record Purchase Return", "خریداری واپسی ریکارڈ")}
+                                {isUpdate ? labels.updatePurchaseReturn : labels.recordPurchaseReturn}
                             </h2>
                             <p className="text-xs" style={{ color: "var(--muted)" }}>
-                                {t("Return items to supplier", "آئٹمز سپلائر کو واپس کریں")}
+                                {labels.returnItemsToSupplier}
                             </p>
                         </div>
                     </div>
@@ -456,10 +478,10 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                         <Card>
                             <div className="flex gap-3">
                                 <Field className="flex-1">
-                                    <Label>Search by Invoice Number</Label>
+                                    <Label>{labels.searchByInvoice}</Label>
                                     <div className="flex gap-2">
                                         <Inp
-                                            placeholder="Enter invoice number..."
+                                            placeholder={labels.enterInvoiceNumber}
                                             value={invoiceNumber}
                                             onChange={(e) => setInvoiceNumber(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && handleSearchInvoice()}
@@ -475,28 +497,28 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
                     {/* Purchase details (read-only) */}
                     {purchaseData && (
-                        <Card title="Purchase Details">
+                        <Card title={labels.purchaseDetails}>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <Field>
-                                    <Label>Supplier</Label>
+                                    <Label>{labels.supplier}</Label>
                                     <div className="px-3 py-2 text-sm rounded-xl" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
                                         {purchaseData.supplier?.name || "—"}
                                     </div>
                                 </Field>
                                 <Field>
-                                    <Label>Invoice Number</Label>
+                                    <Label>{labels.invoiceNumber}</Label>
                                     <div className="px-3 py-2 text-sm rounded-xl font-mono" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
                                         {purchaseData.invoiceNumber || "—"}
                                     </div>
                                 </Field>
                                 <Field>
-                                    <Label>Purchase Date</Label>
+                                    <Label>{labels.purchaseDate}</Label>
                                     <div className="px-3 py-2 text-sm rounded-xl" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
                                         {purchaseData.date ? new Date(purchaseData.date).toLocaleDateString() : "—"}
                                     </div>
                                 </Field>
                                 <Field>
-                                    <Label>Total Amount</Label>
+                                    <Label>{labels.totalAmount}</Label>
                                     <div className="px-3 py-2 text-sm rounded-xl font-semibold" style={{ background: "var(--surface-muted)", color: "var(--accent)" }}>
                                         Rs. {Number(purchaseData.totalAmount || 0).toFixed(2)}
                                     </div>
@@ -507,15 +529,15 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
                     {/* Return details */}
                     {purchaseData && (
-                        <Card title="Return Details">
+                        <Card title={labels.returnDetails}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
-                                    <Label>Return Date *</Label>
+                                    <Label>{labels.returnDate} *</Label>
                                     <Inp type="date" value={form.returnDate} onChange={(e) => update("returnDate", e.target.value)} />
                                 </Field>
                                 <Field>
-                                    <Label>Return Reason (Overall)</Label>
-                                    <Txt rows={2} placeholder="Overall return reason..." value={form.returnReason} onChange={(e) => update("returnReason", e.target.value)} />
+                                    <Label>{labels.overallReturnReason}</Label>
+                                    <Txt rows={2} placeholder={labels.overallReturnReason + "..."} value={form.returnReason} onChange={(e) => update("returnReason", e.target.value)} />
                                 </Field>
                             </div>
                         </Card>
@@ -523,7 +545,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
                     {/* Items as checkboxes */}
                     {purchaseData && (
-                        <Card title={`Purchase Items (${purchaseData.items?.length || 0})`}>
+                        <Card title={`${labels.purchaseItems} (${purchaseData.items?.length || 0})`}>
                             <div className="space-y-3">
                                 {purchaseData.items?.map((item, idx) => {
                                     const batchId = item.batch?._id || item.batch;
@@ -555,13 +577,13 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.product?.name || "—"}</span>
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
-                                                        Qty: {item.quantity}
+                                                        {labels.items}: {item.quantity}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
-                                                        Price: Rs. {Number(item.price || 0).toFixed(2)}
+                                                        {labels.price}: Rs. {Number(item.price || 0).toFixed(2)}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
-                                                        Batch: {item.batch?.batchNumber || "—"}
+                                                        {labels.batch}: {item.batch?.batchNumber || "—"}
                                                     </div>
                                                 </div>
                                             </div>
@@ -571,7 +593,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                 <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                                         <Field>
-                                                            <Label>Return Quantity *</Label>
+                                                            <Label>{labels.returnQuantity} *</Label>
                                                             <Inp
                                                                 type="number"
                                                                 min={1}
@@ -581,27 +603,27 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                             />
                                                         </Field>
                                                         <Field>
-                                                            <Label>Return Reason *</Label>
+                                                            <Label>{labels.returnReason} *</Label>
                                                             <SSelect
-                                                                options={REASONS}
+                                                                options={localizedReasons}
                                                                 value={details.returnReason}
                                                                 onChange={(v) => handleItemDetailChange(batchId, "returnReason", v)}
-                                                                placeholder="Select reason…"
+                                                                placeholder={labels.returnReason + "…"}
                                                                 zIndex={70}
                                                             />
                                                         </Field>
                                                         <Field>
-                                                            <Label>Condition *</Label>
+                                                            <Label>{labels.condition} *</Label>
                                                             <SSelect
-                                                                options={CONDITIONS}
+                                                                options={localizedConditions}
                                                                 value={details.condition}
                                                                 onChange={(v) => handleItemDetailChange(batchId, "condition", v)}
-                                                                placeholder="Select condition…"
+                                                                placeholder={labels.condition + "…"}
                                                                 zIndex={70}
                                                             />
                                                         </Field>
                                                         <Field>
-                                                            <Label>Cut (Amount)</Label>
+                                                            <Label>{labels.cutAmount}</Label>
                                                             <Inp
                                                                 type="number"
                                                                 min={0}
@@ -611,7 +633,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         </Field>
                                                     </div>
                                                     <Field className="mt-3">
-                                                        <Label>Refund Preview</Label>
+                                                        <Label>{labels.refundPreview}</Label>
                                                         <div className="px-3 py-2 text-sm rounded-xl font-semibold" style={{ background: "var(--surface)", color: "var(--accent)" }}>
                                                             Rs. {refund.toFixed(2)} = ({details.returnQuantity} × Rs. {Number(item.price || 0).toFixed(2)}) - Rs. {Number(details.cut || 0).toFixed(2)}
                                                         </div>
@@ -630,7 +652,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                         <Card>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                                    Total Refund Amount ({Object.keys(selectedItems).length} items)
+                                    {labels.totalRefundAmount} ({Object.keys(selectedItems).length} {labels.items})
                                 </span>
                                 <span className="text-xl font-black tabular-nums" style={{ color: "var(--accent)" }}>
                                     Rs. {totalRefund.toFixed(2)}
@@ -642,18 +664,18 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     {/* footer */}
                     <div className="flex justify-between gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
                         <div className="flex gap-2">
-                            {isUpdate && existingPurchaseReturn?.status === "draft" && <Btn variant="secondary" onClick={handleSubmitForApproval}>Submit for Approval</Btn>}
+                            {isUpdate && existingPurchaseReturn?.status === "draft" && <Btn variant="secondary" onClick={handleSubmitForApproval}>{labels.submitForApproval}</Btn>}
                             {isUpdate && existingPurchaseReturn?.status === "pending" && (
                                 <>
-                                    <Btn variant="secondary" onClick={handleApprove}>Approve</Btn>
-                                    <Btn variant="danger" onClick={handleReject}>Reject</Btn>
+                                    <Btn variant="secondary" onClick={handleApprove}>{labels.approve}</Btn>
+                                    <Btn variant="danger" onClick={handleReject}>{labels.reject}</Btn>
                                 </>
                             )}
                         </div>
                         <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+                            <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
                             <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting || !purchaseData || Object.keys(selectedItems).length === 0}>
-                                {isSubmitting ? (isUpdate ? "Updating…" : "Saving…") : isUpdate ? t(`Update Return`, `اپڈیٹ`) : t(`Save Return`, `محفوظ`)}
+                                {isSubmitting ? (isUpdate ? labels.updating : labels.saving) : isUpdate ? labels.updatePurchaseReturn : labels.saveReturn}
                             </Btn>
                         </div>
                     </div>

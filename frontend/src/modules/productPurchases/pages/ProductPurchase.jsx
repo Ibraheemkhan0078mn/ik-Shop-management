@@ -1,6 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Printer, Download, Check, X, DollarSign } from "lucide-react";
+import { Plus, Check, X, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
@@ -88,16 +88,6 @@ export default function ProductPurchasePage() {
                             <ScreenTabButton lucideIcon={Plus} text={labels.addPurchase} />
                         </div>
                     }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
-                    }
                 />
             </div>
 
@@ -113,14 +103,13 @@ export default function ProductPurchasePage() {
                         <table className="w-full text-sm text-left">
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-
-                                    <th className="px-4 py-3 font-semibold">Invoice</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Total</th>
-                                    <th className="px-4 py-3 font-semibold">Date</th>
-                                    <th className="px-4 py-3 font-semibold">Status</th>
-                                    <th className="px-4 py-3 font-semibold">Payment</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.invoice}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">{labels.total}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.status}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.payment}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -141,7 +130,7 @@ export default function ProductPurchasePage() {
                 )}
                 renderEmpty={() => (
                     <p className="text-center py-12 text-sm text-ink-muted">
-                        No purchases found.
+                        {labels.noPurchasesFound}
                     </p>
                 )}
             />
@@ -150,6 +139,10 @@ export default function ProductPurchasePage() {
 }
 
 function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPayment }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPurchaseLabels(language);
+    
     const purchaseId = purchase?._id ?? "";
     const dateStr = purchase?.date ?? purchase?.createdAt ?? "";
     const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
@@ -174,6 +167,24 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
         }
     };
 
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'ordered': return labels.ordered;
+            case 'delivered': return labels.delivered;
+            case 'rejected': return labels.rejected;
+            default: return status;
+        }
+    };
+
+    const getPaymentStatusLabel = (status) => {
+        switch (status) {
+            case 'pending': return labels.paymentPending;
+            case 'partial': return labels.paymentPartial;
+            case 'full': return labels.paymentFull;
+            default: return status;
+        }
+    };
+
     return (
         <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
             onClick={onView}>
@@ -190,12 +201,12 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
             <td className="px-4 py-3 text-ink-muted">{date}</td>
             <td className="px-4 py-3">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}>
-                    {status}
+                    {getStatusLabel(status)}
                 </span>
             </td>
             <td className="px-4 py-3">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(paymentStatus)}`}>
-                    {paymentStatus}
+                    {getPaymentStatusLabel(paymentStatus)}
                 </span>
             </td>
             <td className="px-4 py-3">
@@ -206,13 +217,13 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
                                 onClick={e => onStatusUpdate(purchaseId, 'delivered', e)}
                                 className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
                                 <Check className="w-3 h-3" />
-                                Delivered
+                                {labels.delivered}
                             </button>
                             <button 
                                 onClick={e => onStatusUpdate(purchaseId, 'rejected', e)}
                                 className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
                                 <X className="w-3 h-3" />
-                                Rejected
+                                {labels.rejected}
                             </button>
                         </>
                     )}
@@ -221,16 +232,16 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
                             onClick={onPayment}
                             className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
                             <DollarSign className="w-3 h-3" />
-                                Pay
-                            </button>
+                            {labels.pay}
+                        </button>
                     )}
                     <button onClick={onEdit}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
-                        Edit
+                        {labels.edit}
                     </button>
                     <button onClick={onDelete}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
-                        Delete
+                        {labels.delete}
                     </button>
                 </div>
             </td>

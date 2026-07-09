@@ -6,6 +6,7 @@ export const purchaseLabels = {
     addPurchase: "Add Purchase",
     editPurchase: "Edit Purchase",
     viewPurchase: "View Purchase",
+    newPurchaseBill: "New Purchase Bill",
     
     // Form labels
     purchaseNumber: "Purchase #",
@@ -16,12 +17,32 @@ export const purchaseLabels = {
     remainingAmount: "Remaining Amount",
     status: "Status",
     notes: "Notes",
+    invoiceNo: "Invoice No",
     
     // Status values
     pending: "Pending",
     completed: "Completed",
     cancelled: "Cancelled",
     partial: "Partial",
+    ordered: "Ordered",
+    delivered: "Delivered",
+    rejected: "Rejected",
+    full: "Full",
+    
+    // Payment status
+    paymentStatus: "Payment",
+    paymentPending: "Pending",
+    paymentPartial: "Partial",
+    paymentFull: "Full",
+    
+    // Table headers
+    invoice: "Invoice",
+    items: "Items",
+    total: "Total",
+    date: "Date",
+    status: "Status",
+    payment: "Payment",
+    actions: "Actions",
     
     // Table headers
     actions: "Actions",
@@ -35,6 +56,8 @@ export const purchaseLabels = {
     approve: "Approve",
     reject: "Reject",
     pay: "Pay",
+    import: "Import",
+    export: "Export",
     
     // Messages
     loading: "Loading...",
@@ -49,12 +72,79 @@ export const purchaseLabels = {
     failedToDelete: "Failed to delete purchase",
     failedToApprove: "Failed to approve purchase",
     deleteConfirm: "Are you sure you want to delete this purchase?",
+    operationFailed: "Operation failed",
+    
+    // Validation messages
+    selectSupplierFirst: "Select supplier first",
+    selectItem: "Select item",
+    enterValidQuantity: "Enter valid quantity",
+    enterValidPrice: "Enter valid price",
+    selectBatch: "Select batch",
+    batchNumberRequired: "Batch number required",
+    selectSupplier: "Select supplier",
+    addAtLeastOneItem: "Add at least one item",
+    
+    // Item form
+    addItem: "Add Item",
+    editItem: "Edit Item",
+    product: "Product",
+    batchMode: "Batch Mode",
+    new: "New",
+    existing: "Existing",
+    selectBatchPlaceholder: "Select batch…",
+    batchNumber: "Batch Number",
+    batchNo: "Batch No",
+    quantity: "Quantity",
+    perItemPrice: "Price per Item",
+    price: "Price",
+    mfgDate: "Mfg Date",
+    expiryDate: "Expiry Date",
+    discount: "Discount",
+    discountType: "Disc. Type",
+    tax: "Tax",
+    taxPercent: "Tax (%)",
+    updateItem: "Update Item",
+    addToBill: "Add to Bill",
+    items: "Items",
+    item: "Item",
+    batch: "Batch",
+    qty: "Qty",
+    total: "Total",
+    actions: "Actions",
+    edit: "Edit",
+    remove: "Remove",
+    
+    // Bill details
+    billDetails: "Bill Details",
+    date: "Date",
+    taxGst: "Tax / GST (%)",
+    shipping: "Shipping",
+    notes: "Notes",
+    optionalNote: "Optional note…",
+    percentage: "%",
+    fixed: "Fixed",
     
     // Summary
+    summary: "Summary",
     totalPurchases: "Total Purchases",
-    totalAmount: "Total Amount",
     thisMonth: "This Month",
     lastMonth: "Last Month",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    gst: "GST",
+    shipping: "Shipping",
+    total: "Total",
+    updating: "Updating…",
+    submitting: "Submitting…",
+    updateBill: "Update Bill →",
+    submitBill: "Submit Bill →",
+    
+    // Other
+    frequentlyPurchased: "Frequently purchased",
+    importCsvJson: "Import CSV / JSON",
+    formatHint: "Format: name,quantity,unit,price,batchNumber,expiryDate",
+    importedItems: "Imported {count} items",
+    importFailed: "Import failed — check file format",
   },
   ur: {
     // Page titles
@@ -79,8 +169,24 @@ export const purchaseLabels = {
     completed: "مکمل",
     cancelled: "منسوخ",
     partial: "جزوی",
+    ordered: "آرڈر شدہ",
+    delivered: "پہنچایا گیا",
+    rejected: "مسترد",
+    full: "مکمل",
+    
+    // Payment status
+    paymentStatus: "ادائیگی",
+    paymentPending: "زیر التوا",
+    paymentPartial: "جزوی",
+    paymentFull: "مکمل",
     
     // Table headers
+    invoice: "انوائس",
+    items: "آئٹمز",
+    total: "کل",
+    date: "تاریخ",
+    status: "حیثیت",
+    payment: "ادائیگی",
     actions: "اقدامات",
     view: "دیکھیں",
     
@@ -136,8 +242,24 @@ export const purchaseLabels = {
     completed: "مکمل / Completed",
     cancelled: "منسوخ / Cancelled",
     partial: "جزوی / Partial",
+    ordered: "آرڈر شدہ / Ordered",
+    delivered: "پہنچایا گیا / Delivered",
+    rejected: "مسترد / Rejected",
+    full: "مکمل / Full",
+    
+    // Payment status
+    paymentStatus: "ادائیگی / Payment",
+    paymentPending: "زیر التوا / Pending",
+    paymentPartial: "جزوی / Partial",
+    paymentFull: "مکمل / Full",
     
     // Table headers
+    invoice: "انوائس / Invoice",
+    items: "آئٹمز / Items",
+    total: "کل / Total",
+    date: "تاریخ / Date",
+    status: "حیثیت / Status",
+    payment: "ادائیگی / Payment",
     actions: "اقدامات / Actions",
     view: "دیکھیں / View",
     

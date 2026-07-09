@@ -1,4 +1,6 @@
 import { X } from "lucide-react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getPosLabels } from "../labels/posLabels.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PortionModal
@@ -14,7 +16,6 @@ import { X } from "lucide-react";
 //    setCustomPrice        — updates the custom price
 //    onClose               — closes the modal without saving
 //    onConfirm             — applies the change to the cart
-//    language              — "en" or "ur"
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PortionModal({
     product,
@@ -24,8 +25,11 @@ export default function PortionModal({
     setCustomPrice,
     onClose,
     onConfirm,
-    language,
 }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPosLabels(language);
+
     if (!product) return null;
 
     // Base price of this item (before any portion split)
@@ -33,9 +37,9 @@ export default function PortionModal({
     const basePrice = Number(product.originalPrice) || Number(product.unitPrice) || 0;
 
     const PORTIONS = [
-        { key: "full", label: language === "en" ? "Full" : "پورا", price: basePrice },
-        { key: "half", label: language === "en" ? "Half" : "آدھا", price: basePrice / 2 },
-        { key: "custom", label: language === "en" ? "Custom Price" : "کسٹم قیمت", price: null },
+        { key: "full", label: labels.full, price: basePrice },
+        { key: "half", label: labels.half, price: basePrice / 2 },
+        { key: "custom", label: labels.customPrice, price: null },
     ];
 
     return (
@@ -45,7 +49,7 @@ export default function PortionModal({
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-gray-800">
-                        {language === "en" ? "Select Portion" : "حصہ منتخب کریں"}
+                        {labels.selectPortion}
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-5 h-5" />
@@ -83,7 +87,7 @@ export default function PortionModal({
                 {selectedPortionType === "custom" && (
                     <div className="mb-6">
                         <label className="block text-sm text-gray-600 mb-1">
-                            {language === "en" ? "Enter Custom Price" : "کسٹم قیمت درج کریں"}
+                            {labels.enterCustomPrice}
                         </label>
                         <input
                             type="number"
@@ -100,11 +104,11 @@ export default function PortionModal({
                 <div className="flex justify-end gap-3">
                     <button onClick={onClose}
                         className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700">
-                        {language === "en" ? "Cancel" : "منسوخ کریں"}
+                        {labels.cancel}
                     </button>
                     <button onClick={onConfirm}
                         className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition">
-                        {language === "en" ? "Update Cart" : "اپ ڈیٹ کریں"}
+                        {labels.updateCart}
                     </button>
                 </div>
             </div>

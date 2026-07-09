@@ -4,6 +4,8 @@ import PaymentCreationOfQarzaWithoutAccount from '../components/PaymentCreationO
 import { Clock, DollarSign, Edit2, Home, NotebookTabs, PlusCircle, Trash2, UserCheck } from 'lucide-react'
 import PaymentUpdateOfQarzaWithoutAccount from '../components/PaymentUpdateOfQarzaWithoutAccount'
 import { useSelector } from 'react-redux'
+import { useSettings } from "../../settings/hooks/useSettings.js"
+import { getQarzaLabels } from "../labels/qarzaLabels.js"
 import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
 import api from "../../../shared/services/axiosInstance.js"
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js"
@@ -12,6 +14,9 @@ const QarzaWithoutAccount = () => {
 
     let navigate = useNavigate()
     let qarzawithoutAccountContainerRef = useRef()
+    const { settings } = useSettings()
+    const language = settings?.language || "en"
+    const labels = getQarzaLabels(language)
     let loggedInUserData = useSelector(state => state.user.loggedInUserData)
     let userPermissions = new Set(loggedInUserData?.permissions || [])
     let [mode, setMode] = useState(false)
@@ -65,13 +70,13 @@ const QarzaWithoutAccount = () => {
 
 
     async function deleteQarzaAccountBtnClick(paymentId) {
-        if (!window.confirm("Delete this payment?")) return;
+        if (!window.confirm(labels.deletePaymentConfirm)) return;
         try {
             let res = await api.delete(`/qarzaRoutes/deletePaymentWihtoutAccount`, { data: { paymentId } })
             setData(res.data.allPayments)
-            showSuccess("Payment deleted successfully")
+            showSuccess(labels.paymentDeleted)
         } catch (error) {
-            showError(error?.response?.data?.message || error?.message || "Failed to delete payment")
+            showError(error?.response?.data?.message || error?.message || labels.failedToDeletePayment)
         }
     }
 
@@ -116,10 +121,10 @@ const QarzaWithoutAccount = () => {
                 {/* Header Section */}
                 <div className="mb-10">
                     <h1 className="w-max bg-gradient-to-r from-cyan-600 to-blue-800 bg-clip-text text-4xl font-bold text-transparent">
-                        Direct Qarza
+                        {labels.directQarza}
                     </h1>
                     <p className="text-slate-500 text-lg font-medium">
-                        All direct qarza is present here.
+                        {labels.allDirectQarzaPresent}
                     </p>
                 </div>
 
@@ -157,7 +162,7 @@ const QarzaWithoutAccount = () => {
                             <div
                                 onClick={() => { setPaymentCreationVisibility(true) }}
                             >
-                                <ScreenTabButton text={"Add"} lucideIcon={PlusCircle} />
+                                <ScreenTabButton text={labels.add} lucideIcon={PlusCircle} />
                             </div>
                         )
                     }
@@ -175,8 +180,8 @@ const QarzaWithoutAccount = () => {
                             }}
                         >
 
-                            <option className='bg-white text-black ' value="directQarza">Direct Qarza</option>
-                            <option className='bg-white text-black' value="accountQarza">Account Qarza</option>
+                            <option className='bg-white text-black ' value="directQarza">{labels.directQarzaNav}</option>
+                            <option className='bg-white text-black' value="accountQarza">{labels.accountQarza}</option>
                         </select>
                     </div>
 
@@ -205,7 +210,7 @@ const QarzaWithoutAccount = () => {
                         type="text"
                         name="qarzaWithoutAccSearch"
                         className=" group flex-1 hover:shadow-lg transition-shadow duration-150   transition-colors duration-100 flex items-center gap-3 bg-white border-2 border-slate-200 shadow-sm cursor-pointer text-zinc-700 p-2.5 px-6 rounded-xl font-semibold"
-                        placeholder='Search Qarza Payments.... '
+                        placeholder={labels.searchQarzaPayments}
                         value={qarzaWithoutAccSearch}
                         onChange={(e) => { setQarzaWithoutAccSearch(e.target.value) }}
                     />
@@ -229,7 +234,7 @@ const QarzaWithoutAccount = () => {
                                 data?.length < 1
                                     ?
 
-                                    <div className='text-gray-600 h-[50vh] w-full flex justify-center items-center'>No Qarza Payments are not found.</div>
+                                    <div className='text-gray-600 h-[50vh] w-full flex justify-center items-center'>{labels.noQarzaPaymentsFound}</div>
 
                                     :
                                     data?.map((item, index) => {
@@ -260,7 +265,7 @@ const QarzaWithoutAccount = () => {
 
                                                     {/* MAIN AMOUNT: BOLD & CLEAN */}
                                                     <div className="mb-4  bg-slate-50 rounded-[1.2rem] p-3 border border-slate-200 group-hover:border-blue-50 transition-all">
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">Balance</p>
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">{labels.balance}</p>
                                                         <div className="flex items-baseline gap-1">
                                                             <span className="text-xs font-bold text-[#0e8dc7]">Rs</span>
                                                             <span className="text-2xl font-black text-slate-800 tracking-tighter">
@@ -300,7 +305,7 @@ const QarzaWithoutAccount = () => {
                                                                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-linear-to-r from-[#0e8dc7] to-[#109fe1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:shadow-blue-200 hover:scale-[1.03] active:scale-95 transition-all"
                                                             >
                                                                 <Edit2 className="w-3 h-3" />
-                                                                Edit
+                                                                {labels.edit}
                                                             </button>
                                                         )}
 

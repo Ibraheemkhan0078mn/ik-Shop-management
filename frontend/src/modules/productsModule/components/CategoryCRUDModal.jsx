@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useCreateCategoryMutation, useUpdateCategoryMutation, useGetCategoryByIdQuery } from "../services/category.service";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import { getProductLabels } from "../labels/productLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 export default function CategoryCRUDModal({ mode = "create", categoryId = null, open, onClose, onCategoryCreated }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getProductLabels(language);
+    
     const isCreate = mode === "create";
     const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation();
     const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation();
@@ -49,7 +55,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
     const validateForm = () => {
         const newErrors = {};
         if (!formData.name?.trim()) {
-            newErrors.name = "Category name is required";
+            newErrors.name = labels.categoryNameRequired;
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -62,10 +68,10 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
             let result;
             if (isCreate) {
                 result = await createCategory(formData).unwrap();
-                showSuccess("Category created successfully");
+                showSuccess(labels.categoryCreated);
             } else {
                 result = await updateCategory({ id: categoryId, ...formData }).unwrap();
-                showSuccess("Category updated successfully");
+                showSuccess(labels.categoryUpdated);
             }
             onClose();
             // Callback to notify parent that category was created
@@ -73,7 +79,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                 onCategoryCreated(result);
             }
         } catch (error) {
-            const errorMessage = error?.data?.message || error?.message || "Something went wrong while saving the category.";
+            const errorMessage = error?.data?.message || error?.message || labels.somethingWentWrong;
             showError(errorMessage);
         }
     };
@@ -84,7 +90,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
         return (
             <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-md">
                 <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm">
-                    Category load ho raha hai...
+                    {labels.categoryLoading}
                 </div>
             </div>
         );
@@ -102,7 +108,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                 {/* Header */}
                 <div className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)] shrink-0 bg-[var(--surface-muted)]">
                     <h2 className="text-xl font-bold text-[var(--ink)] tracking-tight">
-                        {isCreate ? "Add New Category" : "Edit Category"}
+                        {isCreate ? labels.addNewCategory : labels.editCategory}
                     </h2>
                     <button
                         type="button"
@@ -119,11 +125,11 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                         {/* Category Name */}
                         <div>
                             <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                * Category Name
+                                * {labels.categoryName}
                             </label>
                             <input
                                 type="text"
-                                placeholder="Category ka naam likhein"
+                                placeholder={labels.categoryPlaceholder}
                                 value={formData.name}
                                 onChange={(e) => updateField('name', e.target.value)}
                                 className={`w-full px-4 py-2.5 rounded-lg border ${
@@ -138,10 +144,10 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                         {/* Description */}
                         <div className="col-span-full">
                             <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                Description
+                                {labels.categoryDescription}
                             </label>
                             <textarea
-                                placeholder="Category description likhein"
+                                placeholder={labels.categoryDescriptionPlaceholder}
                                 rows={4}
                                 value={formData.description}
                                 onChange={(e) => updateField('description', e.target.value)}
@@ -159,7 +165,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                                        rounded-lg bg-[var(--accent-2)] text-[var(--surface)] hover:bg-[var(--accent-2)]/80
                                        active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isCreating || isUpdating ? "Saving..." : (isCreate ? "Save Category" : "Update Category")} →
+                            {isCreating || isUpdating ? labels.saving : (isCreate ? labels.saveCategory : labels.updateCategory)} →
                         </button>
                     </div>
                 </div>

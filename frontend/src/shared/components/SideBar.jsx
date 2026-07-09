@@ -31,9 +31,9 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // const settings = settingsData?.data || {};
-  const shopName = settings.shop?.name || "Shop Manager";
-  const shopImageUrl = settings.shop?.imageUrl || "";
-  const moduleVisibility = settings.modules || {};
+  const shopName = "Shop Manager";
+  const shopImageUrl = settings?.shop?.imageUrl || "";
+  const moduleVisibility = settings?.modules || {};
 
   const navItems = useMemo(() => sidebarData(language).navMain, [language]);
 

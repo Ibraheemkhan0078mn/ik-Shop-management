@@ -1,6 +1,6 @@
 // features/products/pages/Products.jsx
 import { useState, useCallback } from "react";
-import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Printer, Download } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import { getProductLabels } from "../labels/productLabels.js";
@@ -264,16 +264,6 @@ export default function Products() {
                             <div id="products-add-button" onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
                                 <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
                             </div>
-                        </>
-                    }
-                    rightActions={
-                        <>
-                            <button id="products-print-button" onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button id="products-export-button" onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
                         </>
                     }
                 />

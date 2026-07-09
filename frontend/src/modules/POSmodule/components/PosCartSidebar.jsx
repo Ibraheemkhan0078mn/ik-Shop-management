@@ -3,6 +3,8 @@ import { ShoppingCart, Trash2, RotateCcw, Pause } from "lucide-react";
 import { usePaginatedOrders } from "../../orders/services/orders.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { useEffect } from "react";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getPosLabels } from "../labels/posLabels.js";
 
 const PORTION_LABEL = { full: "", half: " ½", custom: " custom" };
 
@@ -34,8 +36,9 @@ export default function PosCartSidebar({
     handleResumeOrder,
     handleDeleteHeldOrder,
 }) {
-
-
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getPosLabels(language);
 
     const [activeDrawerTab, setActiveDrawerTab] = useState("held");
     const totalItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -70,7 +73,7 @@ export default function PosCartSidebar({
                 >
                     <ShoppingCart size={18} style={{ color: "var(--accent-2)" }} />
                     <h2 className="font-bold text-sm" style={{ color: "var(--ink)" }}>
-                        Current Order
+                        {labels.currentOrder}
                     </h2>
 
                     {resumedHoldId && (
@@ -82,7 +85,7 @@ export default function PosCartSidebar({
                                 border: "1px solid rgba(180,83,9,0.2)",
                             }}
                         >
-                            Resumed
+                            {labels.resumed}
                         </span>
                     )}
 
@@ -104,8 +107,8 @@ export default function PosCartSidebar({
                             style={{ color: "var(--muted)" }}
                         >
                             <ShoppingCart size={40} strokeWidth={1} />
-                            <p className="text-sm font-medium">Cart is empty</p>
-                            <p className="text-xs">Click a product to add it</p>
+                            <p className="text-sm font-medium">{labels.cartEmpty}</p>
+                            <p className="text-xs">{labels.clickProductToAdd}</p>
                         </div>
                     ) : (
                         cart.map((cartItem, index) => (
@@ -118,6 +121,7 @@ export default function PosCartSidebar({
                                 onRemove={() => removeFromCart(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
                                 onQtyChange={(newQty) => setCartItemQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId, newQty)}
                                 onEditPortion={() => openPortionModal(cartItem, index)}
+                                labels={labels}
                             />
                         ))
                     )}
@@ -137,13 +141,13 @@ export default function PosCartSidebar({
                         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                     >
                         <div className="flex items-center gap-2">
-                            <span className="text-xs" style={{ color: "var(--muted)" }}>Items</span>
+                            <span className="text-xs" style={{ color: "var(--muted)" }}>{labels.items}</span>
                             <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md" style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
                                 {totalItemCount}
                             </span>
                         </div>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Subtotal</span>
+                            <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>{labels.subtotal}</span>
                             <span className="text-base font-bold" style={{ color: "var(--ink)" }}>
                                 Rs {subtotal.toLocaleString()}
                             </span>
@@ -165,7 +169,7 @@ export default function PosCartSidebar({
                                 opacity: isCartEmpty ? 0.6 : 1,
                             }}
                         >
-                            <Pause size={13} /> Hold
+                            <Pause size={13} /> {labels.hold}
                         </button>
 
                         <button
@@ -182,7 +186,7 @@ export default function PosCartSidebar({
                                 boxShadow: isCartEmpty ? "none" : "0 4px 14px rgba(15,118,110,0.25)",
                             }}
                         >
-                            {isCartEmpty ? "Cart is empty" : "Checkout  ⇧"}
+                            {isCartEmpty ? labels.cartEmpty : labels.checkoutShortcut}
                         </button>
                     </div>
                 </div>
@@ -215,7 +219,7 @@ export default function PosCartSidebar({
         className="text-sm font-semibold"
         style={{ color: "var(--text)" }}
       >
-        Held Orders ({holdOrders.length})
+        {labels.heldOrders} ({holdOrders.length})
       </h2>
 
       <button
@@ -230,7 +234,7 @@ export default function PosCartSidebar({
     {/* Content */}
     <div className="flex-1 overflow-y-auto p-4 space-y-3">
       {holdOrders.length === 0 ? (
-        <EmptyState message="No held orders" />
+        <EmptyState message={labels.noHeldOrders} />
       ) : (
         holdOrders.map((heldOrder) => (
           <HeldOrderCard
@@ -240,6 +244,7 @@ export default function PosCartSidebar({
             canDelete={user?.permissions?.deleteOrders}
             onResume={() => handleResumeOrder(heldOrder)}
             onDelete={() => handleDeleteHeldOrder(heldOrder._id)}
+            labels={labels}
           />
         ))
       )}
@@ -252,7 +257,7 @@ export default function PosCartSidebar({
 
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
 
-function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemove, onQtyChange, onEditPortion }) {
+function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemove, onQtyChange, onEditPortion, labels }) {
     return (
         <div
             className="rounded-lg p-2.5 group transition-all"
@@ -329,7 +334,7 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
 
             {cartItem.batchNumber && (
                 <p className="text-[10px] mt-1" style={{ color: "var(--muted)" }}>
-                    Batch: {cartItem.batchNumber}
+                    {labels.batch}: {cartItem.batchNumber}
                 </p>
             )}
         </div>
@@ -338,7 +343,7 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
 
 // ─── Held Order Card ──────────────────────────────────────────────────────────
 
-function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDelete }) {
+function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDelete, labels }) {
     return (
         <div
             className="rounded-xl p-3 flex items-center justify-between gap-2"
@@ -358,15 +363,15 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDe
                             className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
                             style={{ background: "var(--accent-2)", color: "white" }}
                         >
-                            In cart
+                            {labels.inCart}
                         </span>
                     )}
                 </div>
                 <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
-                    {heldOrder.customerName || "No name"} · Rs {(heldOrder.totalAmount || 0).toLocaleString()}
+                    {heldOrder.customerName || labels.noName} · Rs {(heldOrder.totalAmount || 0).toLocaleString()}
                 </p>
                 <p className="text-xs" style={{ color: "var(--muted)" }}>
-                    {heldOrder.items?.length || 0} item{heldOrder.items?.length !== 1 ? "s" : ""}
+                    {heldOrder.items?.length || 0} {heldOrder.items?.length !== 1 ? labels.itemsPlural : labels.item}
                 </p>
             </div>
 
@@ -374,7 +379,7 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDe
             <div className="flex gap-1.5 shrink-0">
                 <button
                     onClick={onResume}
-                    title="Resume"
+                    title={labels.resume}
                     className="p-1.5 rounded-lg transition"
                     style={{ background: "var(--accent-2)", color: "white" }}
                 >
@@ -383,7 +388,7 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDe
                 {canDelete && (
                     <button
                         onClick={onDelete}
-                        title="Delete"
+                        title={labels.delete}
                         className="p-1.5 rounded-lg transition"
                         style={{
                             background: "rgba(220,38,38,0.08)",

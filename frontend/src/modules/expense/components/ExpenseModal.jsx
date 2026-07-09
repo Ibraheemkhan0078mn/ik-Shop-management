@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { X, DollarSign } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getExpenseLabels } from "../labels/expenseLabels.js";
 import { useCreateExpense, useUpdateExpense, useExpenseCategories } from "../services/expense.service.js";
-import { useSelector } from "react-redux";
 
 const today = () => new Date().toISOString().split("T")[0];
 const emptyForm = () => ({ amount: "", category: "general", date: today(), notes: "" });
@@ -42,8 +43,11 @@ const Btn = ({ children, variant = "primary", className = "", ...p }) => {
 };
 
 export default function ExpenseModal({ mode = "create", expense, onClose, onSuccess }) {
-    const language  = useSelector(s => s.auth?.user?.language ?? "en");
-    const isUpdate  = mode === "update";
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getExpenseLabels(language);
+    
+    const isUpdate = mode === "update";
 
     const { data: categories = [] } = useExpenseCategories();
     const [createExpense, { isLoading: isCreating }] = useCreateExpense();
@@ -73,16 +77,16 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
         try {
             if (isUpdate) {
                 await updateExpense(payload).unwrap();
-                showSuccess("Expense updated!");
+                showSuccess(labels.expenseUpdated);
             } else {
                 await createExpense(payload).unwrap();
-                showSuccess("Expense recorded!");
+                showSuccess(labels.expenseCreated);
                 setForm(emptyForm());
             }
             onSuccess?.();
             onClose();
         } catch (e) {
-            showError(e?.data?.message ?? "Operation failed");
+            showError(e?.data?.message ?? labels.failedToUpdate);
         }
     };
 
@@ -103,7 +107,7 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
                         </div>
                         <div>
                             <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>
-                                {isUpdate ? "Edit Expense" : "New Expense"}
+                                {isUpdate ? labels.editExpense : labels.addExpense}
                             </h2>
                             <p className="text-xs" style={{ color: "var(--muted)" }}>
                                 {language === "en" ? "Record spending" : "اخراجات ریکارڈ کریں"}
@@ -118,7 +122,7 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
 
                 <div className="p-5 space-y-4">
                     <Field>
-                        <Label>Amount *</Label>
+                        <Label>{labels.amount} *</Label>
                         <Inp type="number" min={0} placeholder="0.00"
                             value={form.amount} onChange={e => update("amount", e.target.value)}
                             onWheel={e => e.target.blur()} autoFocus />
@@ -126,30 +130,30 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field>
-                            <Label>Category</Label>
+                            <Label>{labels.category}</Label>
                             <Sel value={form.category} onChange={e => update("category", e.target.value)}>
-                                <option value="general">General</option>
+                                <option value="general">{language === "en" ? "General" : "عام"}</option>
                                 {categories.map((c, i) => (
                                     <option key={c._id ?? i} value={c.name}>{c.name}</option>
                                 ))}
                             </Sel>
                         </Field>
                         <Field>
-                            <Label>Date *</Label>
+                            <Label>{labels.date} *</Label>
                             <Inp type="date" value={form.date} onChange={e => update("date", e.target.value)} />
                         </Field>
                     </div>
 
                     <Field>
-                        <Label>Notes</Label>
-                        <Txt rows={3} placeholder="Optional details…"
+                        <Label>{labels.description}</Label>
+                        <Txt rows={3} placeholder={language === "en" ? "Optional details…" : "اختیاری تفصیلات…"}
                             value={form.notes} onChange={e => update("notes", e.target.value)} />
                     </Field>
 
                     <div className="flex justify-end gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                        <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+                        <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
                         <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
-                            {isSubmitting ? "Saving…" : isUpdate ? "Update" : "Save Expense"}
+                            {isSubmitting ? (language === "en" ? "Saving…" : "محفوظ ہو رہا ہے…") : isUpdate ? labels.edit : labels.addExpense}
                         </Btn>
                     </div>
                 </div>

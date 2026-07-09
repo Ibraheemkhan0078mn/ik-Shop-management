@@ -1,6 +1,6 @@
 // src/modules/wastage/pages/WastagePage.jsx
 import { useState } from "react";
-import { Plus, CheckCircle, Printer, Download, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
+import { Plus, CheckCircle, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteWastage, useWastages, useApproveWastage } from "../services/wastage.service.js";
 import { getWastageLabels } from "../labels/wastageLabels.js";
@@ -89,16 +89,6 @@ export default function WastagePage() {
                             </div>
                         </>
                     }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
-                    }
                 />
             </div>
 
@@ -114,14 +104,14 @@ export default function WastagePage() {
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider"
                                     style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                    <th className="px-4 py-3 font-semibold">Wastage #</th>
-                                    <th className="px-4 py-3 font-semibold">Reason</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Total Qty</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Total Loss</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                    <th className="px-4 py-3 font-semibold">Date</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.wastageNumber}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.reason}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.totalQty}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">{labels.totalLossAmount}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -140,7 +130,7 @@ export default function WastagePage() {
                 )}
                 renderEmpty={() => (
                     <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>
-                        No wastage records found.
+                        {labels.noWastageFound}
                     </p>
                 )}
             />
@@ -149,6 +139,10 @@ export default function WastagePage() {
 }
 
 function WastageRow({ wastage, onClick, onEdit, onDelete }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getWastageLabels(language);
+    
     const date   = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
     const status = wastage?.status ?? "draft";
     const style  = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
@@ -178,7 +172,7 @@ function WastageRow({ wastage, onClick, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3 text-center">
                 <span className="px-2 py-0.5 rounded-lg text-xs font-semibold capitalize" style={style}>
-                    {status}
+                    {labels[status] || status}
                 </span>
             </td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{date}</td>
@@ -189,14 +183,14 @@ function WastageRow({ wastage, onClick, onEdit, onDelete }) {
                         style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
                         onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                        Edit
+                        {labels.edit}
                     </button>
                     <button onClick={onDelete}
                         className="px-3 py-1 text-xs rounded-lg font-medium transition"
                         style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
                         onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                        Delete
+                        {labels.delete}
                     </button>
                 </div>
             </td>
@@ -205,7 +199,9 @@ function WastageRow({ wastage, onClick, onEdit, onDelete }) {
 }
 
 function WastageApprovalModal({ onClose, onApprove, onDelete }) {
-    const language = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getWastageLabels(language);
     const { data, isLoading } = useWastages({ status: "pending", page: 1, limit: 20 });
 
     const wastages = data?.data ?? [];
@@ -215,16 +211,16 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b">
                     <h2 className="text-lg font-semibold">
-                        {language === "en" ? "Approve Wastage Requests" : "ضیاع کی درخواستیں منظور کریں"}
+                        {labels.approveWastageRequests}
                     </h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
                 </div>
                 <div className="overflow-y-auto max-h-[65vh]">
                     {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">Loading...</div>
+                        <div className="p-8 text-center text-gray-500">{labels.loading}</div>
                     ) : wastages.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
-                            {language === "en" ? "No pending wastage requests" : "زیر التواء ضیاع کی درخواستیں نہیں"}
+                            {labels.noPendingRequests}
                         </div>
                     ) : (
                         <div className="overflow-x-auto rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
@@ -232,14 +228,14 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                                 <thead>
                                     <tr className="text-xs uppercase tracking-wider"
                                         style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                        <th className="px-4 py-3 font-semibold">Wastage #</th>
-                                        <th className="px-4 py-3 font-semibold">Reason</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Items</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Total Qty</th>
-                                        <th className="px-4 py-3 font-semibold text-right">Total Loss</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                        <th className="px-4 py-3 font-semibold">Date</th>
-                                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.wastageNumber}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.reason}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.totalQty}</th>
+                                        <th className="px-4 py-3 font-semibold text-right">{labels.totalLossAmount}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                        <th className="px-4 py-3 font-semibold">{labels.date}</th>
+                                        <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -265,7 +261,7 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                                             <td className="px-4 py-3 text-center">
                                                 <span className="px-2 py-0.5 rounded-lg text-xs font-semibold capitalize"
                                                     style={STATUS_STYLE[w?.status ?? "pending"]}>
-                                                    {w?.status ?? "pending"}
+                                                    {labels[w?.status ?? "pending"] || w?.status || "pending"}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>
@@ -279,7 +275,7 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                                                         style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
                                                         onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
                                                         onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                                                        Approve
+                                                        {labels.approve}
                                                     </button>
                                                     <button
                                                         onClick={e => onDelete(w._id, e)}
@@ -287,7 +283,7 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                                                         style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
                                                         onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
                                                         onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                                                        Delete
+                                                        {labels.delete}
                                                     </button>
                                                 </div>
                                             </td>
@@ -300,7 +296,7 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                 </div>
                 {data?.totalPages > 1 && (
                     <div className="p-4 border-t text-center text-xs" style={{ color: "var(--muted)" }}>
-                        Showing {wastages.length} of {data.total} pending requests
+                        {labels.showingPendingRequests.replace('{count}', wastages.length).replace('{total}', data.total)}
                     </div>
                 )}
             </div>
@@ -309,7 +305,9 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
 }
 
 function WastageDetailModal({ wastage, onClose }) {
-    const language = useSelector(s => s.auth?.user?.language ?? "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getWastageLabels(language);
     const status = wastage?.status ?? "draft";
     const style = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
 
@@ -328,10 +326,10 @@ function WastageDetailModal({ wastage, onClose }) {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-[var(--ink)] flex items-center gap-2">
-                                {wastage?.wastageNumber || "Wastage Details"}
+                                {wastage?.wastageNumber || labels.wastageDetails}
                             </h2>
                             <p className="text-sm text-[var(--muted)]">
-                                {language === "en" ? "Wastage Record Details" : "ضیاع ریکارڈ کی تفصیلات"}
+                                {labels.wastageRecordDetails}
                             </p>
                         </div>
                     </div>
@@ -347,7 +345,7 @@ function WastageDetailModal({ wastage, onClose }) {
                         <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
                             <div className="flex items-center gap-2 mb-2">
                                 <Calendar size={18} className="text-[var(--muted)]" />
-                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Date" : "تاریخ"}</span>
+                                <span className="text-sm text-[var(--muted)]">{labels.date}</span>
                             </div>
                             <p className="text-lg font-semibold text-[var(--ink)]">
                                 {new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString()}
@@ -356,16 +354,16 @@ function WastageDetailModal({ wastage, onClose }) {
                         <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
                             <div className="flex items-center gap-2 mb-2">
                                 <AlertTriangle size={18} className="text-[var(--muted)]" />
-                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Status" : "حیثیت"}</span>
+                                <span className="text-sm text-[var(--muted)]">{labels.status}</span>
                             </div>
                             <span className="px-3 py-1 rounded-lg text-sm font-semibold capitalize" style={style}>
-                                {status}
+                                {labels[status] || status}
                             </span>
                         </div>
                         <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
                             <div className="flex items-center gap-2 mb-2">
                                 <DollarSign size={18} className="text-[var(--muted)]" />
-                                <span className="text-sm text-[var(--muted)]">{language === "en" ? "Total Loss" : "کل نقصان"}</span>
+                                <span className="text-sm text-[var(--muted)]">{labels.totalLoss}</span>
                             </div>
                             <p className="text-lg font-semibold text-[var(--accent)]">
                                 Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
@@ -377,7 +375,7 @@ function WastageDetailModal({ wastage, onClose }) {
                     <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
                         <h3 className="text-base font-semibold text-[var(--ink)] mb-2 flex items-center gap-2">
                             <AlertTriangle size={18} className="text-[var(--accent)]" />
-                            {language === "en" ? "Reason" : "وجہ"}
+                            {labels.reason}
                         </h3>
                         <p className="text-sm text-[var(--ink)] capitalize">
                             {wastage?.reason?.replace(/_/g, " ") || "—"}
@@ -394,9 +392,9 @@ function WastageDetailModal({ wastage, onClose }) {
                         <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-muted)]">
                             <h3 className="text-base font-semibold text-[var(--ink)] flex items-center gap-2">
                                 <Package size={18} className="text-[var(--accent-2)]" />
-                                {language === "en" ? "Wasted Items" : "ضائع شدہ آئٹمز"}
+                                {labels.wastedItems}
                                 <span className="ml-auto text-xs bg-[var(--surface)] px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--muted)]">
-                                    {wastage?.items?.length || 0} {language === "en" ? "items" : "آئٹمز"}
+                                    {wastage?.items?.length || 0} {labels.items.toLowerCase()}
                                 </span>
                             </h3>
                         </div>
@@ -405,10 +403,10 @@ function WastageDetailModal({ wastage, onClose }) {
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-[var(--surface)] border-b border-[var(--border)] text-[var(--muted)] uppercase tracking-wider text-xs">
                                     <tr>
-                                        <th className="px-5 py-3 font-semibold">{language === "en" ? "Product" : "پروڈکٹ"}</th>
-                                        <th className="px-5 py-3 font-semibold text-center">{language === "en" ? "Quantity" : "مقدار"}</th>
-                                        <th className="px-5 py-3 font-semibold text-right">{language === "en" ? "Cost Price" : "قیمت"}</th>
-                                        <th className="px-5 py-3 font-semibold text-right">{language === "en" ? "Total Loss" : "کل نقصان"}</th>
+                                        <th className="px-5 py-3 font-semibold">{labels.product}</th>
+                                        <th className="px-5 py-3 font-semibold text-center">{labels.quantity}</th>
+                                        <th className="px-5 py-3 font-semibold text-right">{labels.costPrice}</th>
+                                        <th className="px-5 py-3 font-semibold text-right">{labels.totalLoss}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
@@ -449,15 +447,15 @@ function WastageDetailModal({ wastage, onClose }) {
                     {/* Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]">
                         <div>
-                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Items" : "کل آئٹمز"}</p>
+                            <p className="text-sm text-[var(--muted)]">{labels.totalItems}</p>
                             <p className="text-xl font-bold text-[var(--ink)]">{wastage?.totalItems || wastage?.items?.length || 0}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Quantity" : "کل مقدار"}</p>
+                            <p className="text-sm text-[var(--muted)]">{labels.totalQuantity}</p>
                             <p className="text-xl font-bold text-[var(--ink)]">{wastage?.totalQuantity || 0}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-[var(--muted)]">{language === "en" ? "Total Loss Amount" : "کل نقصان کی رقم"}</p>
+                            <p className="text-sm text-[var(--muted)]">{labels.totalLossAmount}</p>
                             <p className="text-xl font-bold text-[var(--accent)]">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
                         </div>
                     </div>

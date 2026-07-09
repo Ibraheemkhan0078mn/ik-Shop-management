@@ -5,7 +5,8 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { useCreateWastage, useUpdateWastage, useWastage } from "../services/wastage.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
 import { useBatchesByProduct } from "../../productPurchases/services/batch.service.js";
-import { useSelector } from "react-redux";
+import { getWastageLabels } from "../labels/wastageLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const REASONS = [
@@ -98,8 +99,10 @@ const Card = ({ title, children, className = "" }) => (
 
 // ─── Main Modal ─────────────────────────────────────────────────────────────
 export default function WastageModal({ mode = "create", wastageId, onClose, onSuccess }) {
-  const language = useSelector(s => s.auth?.user?.language ?? "en");
-  const t = (en, ur) => language === "en" ? en : ur;
+  const { settings } = useSettings();
+  const language = settings?.language || "en";
+  const labels = getWastageLabels(language);
+  
   const isUpdate = mode === "update";
 
   const { data: existingWastage, isLoading: isFetching } = useWastage(wastageId, { skip: !isUpdate || !wastageId });
@@ -156,7 +159,14 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
   }, [currentItem.product, products]);
 
   const unitOptions = UNITS.map(u => ({ label: u, value: u }));
-  const reasonOptions = REASONS;
+  const reasonOptions = useMemo(() => [
+    { label: labels.expired, value: "expired" },
+    { label: labels.damaged, value: "damaged" },
+    { label: labels.stolen, value: "stolen" },
+    { label: labels.spillage, value: "spillage" },
+    { label: labels.qualityIssue, value: "quality_issue" },
+    { label: labels.other, value: "other" },
+  ], [labels]);
 
   const totalLoss = useMemo(() =>
     items.reduce((sum, it) => sum + (Number(it.quantity || 0) * Number(it.costPrice || 0)), 0),
@@ -168,15 +178,15 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
     console.log("Adding item:", currentItem);
     
     if (!currentItem.product) {
-      showError("Select a product");
+      showError(labels.selectProduct);
       return;
     }
     if (!currentItem.quantity || Number(currentItem.quantity) <= 0) {
-      showError("Enter a valid quantity");
+      showError(labels.enterValidQuantity);
       return;
     }
     if (!currentItem.reason) {
-      showError("Select a reason");
+      showError(labels.selectReason);
       return;
     }
 
@@ -217,7 +227,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
 
   const handleSubmit = async () => {
     if (!items.length) {
-      showError("Add at least one item");
+      showError(labels.addAtLeastOneItem);
       return;
     }
 
@@ -227,10 +237,10 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
     try {
       if (isUpdate) {
         await updateWastage({ id: wastageId, ...payload }).unwrap();
-        showSuccess("Wastage updated!");
+        showSuccess(labels.wastageUpdated);
       } else {
         await createWastage(payload).unwrap();
-        showSuccess("Wastage recorded!");
+        showSuccess(labels.wastageCreated);
         setForm(emptyForm());
         setItems([]);
       }
@@ -238,7 +248,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
       onClose();
     } catch (e) {
       console.error("Submit error:", e);
-      showError(e?.data?.message ?? "Operation failed.");
+      showError(e?.data?.message ?? labels.operationFailed);
     }
   };
 
@@ -246,7 +256,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
   if (isUpdate && isFetching && !existingWastage) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="rounded-2xl p-8 text-sm bg-[var(--surface)] text-[var(--muted)]">Loading…</div>
+        <div className="rounded-2xl p-8 text-sm bg-[var(--surface)] text-[var(--muted)]">{labels.loading}</div>
       </div>
     );
   }
@@ -269,9 +279,9 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
             </div>
             <div>
               <h2 className="text-base font-bold leading-tight text-[var(--ink)] font-display">
-                {isUpdate ? "Update Wastage" : "Record Wastage"}
+                {isUpdate ? labels.updateWastage : labels.recordWastage}
               </h2>
-              <p className="text-xs text-[var(--muted)]">Track product losses</p>
+              <p className="text-xs text-[var(--muted)]">{labels.trackProductLosses}</p>
             </div>
           </div>
           <button
@@ -288,7 +298,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
           <Card>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field>
-                <Label>Wastage Date *</Label>
+                <Label>{labels.wastageDate} *</Label>
                 <Input
                   type="date"
                   value={form.wastageDate}
@@ -296,9 +306,9 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                 />
               </Field>
               <Field>
-                <Label>Notes</Label>
+                <Label>{labels.notes}</Label>
                 <Input
-                  placeholder="Optional overall notes…"
+                  placeholder={labels.optionalOverallNotes}
                   value={form.notes}
                   onChange={e => updateForm("notes", e.target.value)}
                 />
@@ -307,11 +317,11 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
           </Card>
 
           {/* Item Form */}
-          <Card title={editingIndex >= 0 ? `Editing Item #${editingIndex + 1}` : "Add Item"}>
+          <Card title={editingIndex >= 0 ? `${labels.updateItem} #${editingIndex + 1}` : labels.addItem}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
-                  <Label>Product *</Label>
+                  <Label>{labels.product} *</Label>
                   <select
                     value={currentItem.product}
                     onChange={e => {
@@ -325,20 +335,20 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                     }}
                     className="w-full px-3 py-2 text-sm rounded-xl outline-none transition focus:ring-2 focus:ring-[var(--accent-2)] bg-[var(--surface)] border border-[var(--border)] text-[var(--ink)] cursor-pointer"
                   >
-                    <option value="">Select product…</option>
+                    <option value="">{labels.selectProductPlaceholder}</option>
                     {productOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
                 </Field>
                 <Field>
-                  <Label>Reason *</Label>
+                  <Label>{labels.reason} *</Label>
                   <select
                     value={currentItem.reason}
                     onChange={e => updateCurrent("reason", e.target.value)}
                     className="w-full px-3 py-2 text-sm rounded-xl outline-none transition focus:ring-2 focus:ring-[var(--accent-2)] bg-[var(--surface)] border border-[var(--border)] text-[var(--ink)] cursor-pointer"
                   >
-                    <option value="">Select reason…</option>
+                    <option value="">{labels.selectReasonPlaceholder}</option>
                     {reasonOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
@@ -350,7 +360,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <Field>
-                      <Label>Quantity *</Label>
+                      <Label>{labels.quantity} *</Label>
                       <Input
                         type="number"
                         min="0.01"
@@ -361,13 +371,13 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                       />
                     </Field>
                     <Field>
-                      <Label>Unit</Label>
+                      <Label>{labels.unit}</Label>
                       <select
                         value={currentItem.unit}
                         onChange={e => updateCurrent("unit", e.target.value)}
                         className="w-full px-3 py-2 text-sm rounded-xl outline-none transition focus:ring-2 focus:ring-[var(--accent-2)] bg-[var(--surface)] border border-[var(--border)] text-[var(--ink)] cursor-pointer"
                       >
-                        <option value="">Unit…</option>
+                        <option value="">{labels.unitPlaceholder}</option>
                         {unitOptions.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
@@ -377,7 +387,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
 
                   <div className="grid grid-cols-2 gap-4">
                     <Field>
-                      <Label>Batch</Label>
+                      <Label>{labels.batch}</Label>
                       <select
                         value={currentItem.batchNumber}
                         onChange={e => {
@@ -390,14 +400,14 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                         }}
                         className="w-full px-3 py-2 text-sm rounded-xl outline-none transition focus:ring-2 focus:ring-[var(--accent-2)] bg-[var(--surface)] border border-[var(--border)] text-[var(--ink)] cursor-pointer"
                       >
-                        <option value="">Select batch…</option>
+                        <option value="">{labels.selectBatchPlaceholder}</option>
                         {batchOptions.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
                     </Field>
                     <Field>
-                      <Label>Expiry Date</Label>
+                      <Label>{labels.expiryDate}</Label>
                       <Input
                         type="date"
                         value={currentItem.expiryDate}
@@ -407,10 +417,10 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                   </div>
 
                   <Field>
-                    <Label>Notes {currentItem.reason === "other" ? "*" : ""}</Label>
+                    <Label>{labels.notes} {currentItem.reason === "other" ? "*" : ""}</Label>
                     <Textarea
                       rows={2}
-                      placeholder="Item-level notes…"
+                      placeholder={labels.itemLevelNotes}
                       value={currentItem.notes}
                       onChange={e => updateCurrent("notes", e.target.value)}
                     />
@@ -419,7 +429,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                   <div className="flex gap-2 justify-end">
                     {editingIndex >= 0 && (
                       <Button variant="secondary" size="sm" onClick={cancelEdit}>
-                        Cancel Edit
+                        {labels.cancelEdit}
                       </Button>
                     )}
                     <Button
@@ -431,12 +441,12 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                       {editingIndex >= 0 ? (
                         <>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          Update Item
+                          {labels.updateItem}
                         </>
                       ) : (
                         <>
                           <Plus className="w-3.5 h-3.5" />
-                          Add Item
+                          {labels.addItem}
                         </>
                       )}
                     </Button>
@@ -448,7 +458,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
 
           {/* Confirmed Items */}
           {items.length > 0 && (
-            <Card title={`Items (${items.length})`}>
+            <Card title={`${labels.items} (${items.length})`}>
               <div className="space-y-2">
                 {items.map((item, i) => (
                   <div
@@ -467,7 +477,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                         Qty: {item.quantity}
                         {item.unit && ` · ${item.unit}`}
                         {item.batchNumber && ` · Batch: ${item.batchNumber}`}
-                        {" · "}{REASONS.find(r => r.value === item.reason)?.label ?? item.reason}
+                        {" · "}{reasonOptions.find(r => r.value === item.reason)?.label ?? item.reason}
                         {Number(item.costPrice) > 0 && ` · Loss: Rs. ${(Number(item.quantity) * Number(item.costPrice)).toFixed(2)}`}
                       </span>
                     </div>
@@ -489,7 +499,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
                 ))}
 
                 <div className="flex justify-between items-center pt-3 mt-1 border-t border-[var(--border)]">
-                  <span className="text-sm font-semibold text-[var(--ink)]">Total Loss</span>
+                  <span className="text-sm font-semibold text-[var(--ink)]">{labels.totalLoss}</span>
                   <span className="text-base font-black tabular-nums text-[var(--accent)]">
                     Rs. {totalLoss.toFixed(2)}
                   </span>
@@ -502,7 +512,7 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
         {/* ─── Footer ────────────────────────────────────────────────────── */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-[var(--border)] bg-[var(--app-bg)]">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {labels.cancel}
           </Button>
           <Button
             variant="primary"
@@ -510,10 +520,10 @@ export default function WastageModal({ mode = "create", wastageId, onClose, onSu
             disabled={isSubmitting || !items.length}
           >
             {isSubmitting
-              ? (isUpdate ? "Updating..." : "Saving...")
+              ? (isUpdate ? labels.updating : labels.saving)
               : isUpdate
-                ? `Update (${items.length} items)`
-                : `Save Wastage (${items.length} items)`
+                ? `${labels.updateWastage} (${items.length} ${labels.items.toLowerCase()})`
+                : `${labels.saveWastage} (${items.length} ${labels.items.toLowerCase()})`
             }
           </Button>
         </div>

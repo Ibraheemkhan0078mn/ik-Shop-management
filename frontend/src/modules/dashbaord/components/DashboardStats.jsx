@@ -18,6 +18,8 @@ import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import api from "../../../shared/services/api.js";
 import { sidebarData } from "../../../shared/data/sidebar.js";
+import { getDashboardLabels } from '../labels/dashboardLabels.js';
+import { useSettings } from '../../settings/hooks/useSettings.js';
 
 export default function DashboardStats({
     stats,
@@ -25,7 +27,9 @@ export default function DashboardStats({
     onCustomDateSelect,
     onFilterChange,
 }) {
-    const language = useSelector((state) => state.auth?.language || "en");
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getDashboardLabels(language);
 
     const [selected, setSelected] = useState("Today");
     const [open, setOpen] = useState(false);
@@ -40,6 +44,15 @@ export default function DashboardStats({
         "30 Days": "thirtyDays",
         Custom: "custom",
     };
+
+    // Localized filter options
+    const filterOptions = [
+        { key: "Today", label: labels.today },
+        { key: "3 Days", label: labels.days3 },
+        { key: "7 Days", label: labels.days7 },
+        { key: "30 Days", label: labels.days30 },
+        { key: "Custom", label: labels.customRange },
+    ];
 
     const rangeKey = keyMap[selected];
 
@@ -313,7 +326,7 @@ export default function DashboardStats({
                     className="w-full flex justify-between items-center px-4 py-2 bg-(--surface) dark:bg-(--surface) border border-(--border) dark:border-(--border) rounded-full shadow-sm hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-(--accent-2)/20 dark:focus:ring-(--accent-2)/20"
                 >
                     <span className="text-sm font-medium text-(--ink) dark:text-(--ink)">
-                        {selected}
+                        {filterOptions.find(opt => opt.key === selected)?.label || selected}
                     </span>
                     <ChevronDown
                         className={`w-5 h-5 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
@@ -322,17 +335,17 @@ export default function DashboardStats({
 
                 {open && (
                     <ul className="absolute right-0 mt-2 w-full bg-(--surface) dark:bg-(--surface) rounded-xl shadow-lg border border-(--border) dark:border-(--border) z-20 overflow-hidden">
-                        {Object.keys(keyMap).map((f) => (
+                        {filterOptions.map((opt) => (
                             <li
-                                key={f}
-                                onClick={() => handleFilterSelect(f)}
+                                key={opt.key}
+                                onClick={() => handleFilterSelect(opt.key)}
                                 className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
-                                    f === selected
+                                    opt.key === selected
                                         ? "bg-(--surface-muted) dark:bg-(--surface) font-semibold text-(--ink) dark:text-white"
                                         : "hover:bg-(--surface-muted) dark:hover:bg-(--surface-muted) text-(--ink) dark:text-(--muted)"
                                 }`}
                             >
-                                {f}
+                                {opt.label}
                             </li>
                         ))}
                     </ul>
