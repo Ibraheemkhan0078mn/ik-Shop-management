@@ -1,5 +1,6 @@
 // features/products/pages/Products.jsx
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
@@ -14,9 +15,9 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
-const PlaceholderImg = ({ size = 12 }) => (
+const PlaceholderImg = ({ size = 12, name = "" }) => (
     <div className={`w-${size} h-${size} rounded-xl bg-(--surface-muted) flex items-center justify-center`}>
-        <Package className="w-5 h-5 text-(--muted)" strokeWidth={1.5} />
+        {name ? <span className="text-lg font-bold text-(--muted)">{name.charAt(0).toUpperCase()}</span> : <Package className="w-5 h-5 text-(--muted)" strokeWidth={1.5} />}
     </div>
 );
 
@@ -41,6 +42,7 @@ const IconBtn = ({ onClick, icon: Icon, hoverClass }) => (
 );
 
 export default function Products() {
+    const navigate = useNavigate();
     const { data: userQuery } = useUser();
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -101,13 +103,12 @@ export default function Products() {
         return (
             <div className="flex flex-col gap-0">
                 {/* Desktop header */}
-                <div className="hidden md:grid md:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
+                <div className="hidden md:grid md:grid-cols-11 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
                     <div className="col-span-1">{labels.image}</div>
                     <div className="col-span-2">{labels.name}</div>
-                    <div className="col-span-2">{labels.sku}</div>
+                    <div className="col-span-2">Product Code</div>
                     <div className="col-span-2">{labels.barcode}</div>
-                    <div className="col-span-1">{labels.price}</div>
                     <div className="col-span-1">{labels.stock}</div>
                     <div className="col-span-1">{labels.category}</div>
                     <div className="col-span-1">{labels.status}</div>
@@ -117,17 +118,17 @@ export default function Products() {
                 {/* Desktop rows */}
                 {items.map((item, i) => (
                     <div key={item._id}
-                        className="hidden md:grid md:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
+                        onClick={() => navigate(`/products/${item._id}`)}
+                        className="hidden md:grid md:grid-cols-11 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group cursor-pointer"
                         style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
                         <div className="col-span-1">
                             {item.image
                                 ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" />
-                                : <PlaceholderImg size={11} />}
+                                : <PlaceholderImg size={11} name={item.name} />}
                         </div>
                         <div className="col-span-2 font-semibold text-(--ink) truncate text-sm">{item.name}</div>
                         <div className="col-span-2 text-sm text-(--muted) font-mono">{item.productCode || "—"}</div>
                         <div className="col-span-2 text-sm text-(--muted) font-mono">{item.barcode || "—"}</div>
-                        <div className="col-span-1 text-sm font-semibold text-(--ink)">{item.defaultRetailPrice ?? 0}</div>
                         <div className="col-span-1"><StockBadge qty={item.currentStockLevel} /></div>
                         <div className="col-span-1 text-xs text-(--muted) truncate">
                             {item.category?.name}{item.subCategory?.name && <span className="text-(--muted)/50"> › {item.subCategory.name}</span>}
@@ -152,16 +153,15 @@ export default function Products() {
                             <div className="flex items-start gap-3">
                                 {item.image
                                     ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-(--border)" />
-                                    : <PlaceholderImg size={16} />}
+                                    : <PlaceholderImg size={16} name={item.name} />}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                         <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.name}</h3>
                                         <StatusBadge active={item.isActive} labels={labels} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
-                                        {item.productCode && <span>{labels.sku}: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
+                                        {item.productCode && <span>Product Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
                                         {item.barcode && <span>{labels.barcode}: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
-                                        <span>{labels.price}: <span className="font-semibold text-(--ink)">{item.defaultRetailPrice ?? 0}</span></span>
                                         <span>{labels.stock}: <StockBadge qty={item.currentStockLevel} /></span>
                                     </div>
                                     {(item.category?.name) && (
@@ -259,7 +259,7 @@ export default function Products() {
                     leftActions={
                         <>
                             <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
-                                <ScreenTabButton lucideIcon={Filter} text={labels.filterByCategory} />
+                                <ScreenTabButton lucideIcon={Filter} text="Filter" />
                             </div>
                             <div id="products-add-button" onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
                                 <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />

@@ -76,6 +76,38 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/by-customer
+//  Returns orders for a specific customer with date filtering
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrdersByCustomer = asyncHandler(async (req, res) => {
+    const { customerId, startDate, endDate } = req.query;
+    const OrderModel = getLocalOrderModel();
+
+    const filter = { customerId };
+    
+    if (startDate || endDate) {
+        filter.createdAt = {};
+        if (startDate) {
+            filter.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const endDateTime = new Date(endDate);
+            endDateTime.setHours(23, 59, 59, 999);
+            filter.createdAt.$lte = endDateTime;
+        }
+    }
+
+    const orders = await OrderModel.find(filter)
+        .sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        message: "Customer orders fetched successfully",
+        data: orders
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  POST /orders
 //  Creates a new completed order.
 //  Accepts both qty/quantity and price/unitPrice field names from the frontend.

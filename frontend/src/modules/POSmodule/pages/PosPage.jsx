@@ -463,6 +463,8 @@ export default function PosPage() {
       hybridQarza,
       hybridQarzaAccountId,
       orderType,
+      customerType,
+      selectedCustomerId,
     } = paymentFormData;
 
     try {
@@ -479,6 +481,8 @@ export default function PosPage() {
         totalAmount,
         items: buildOrderItemsFromCart(cartItems),
         customerName: paymentMethod === "credit" ? "" : customerName,
+        customerType,
+        customerId: customerType === "regular" ? selectedCustomerId : null,
         waiter: selectedWaiter,
         staffId: selectedStaffId || null,
         paymentMethod,
@@ -570,7 +574,8 @@ export default function PosPage() {
       showSuccess(isUrdu ? "آرڈر مکمل ہو گیا!" : "Order completed successfully!");
     } catch (err) {
       console.error("Checkout error:", err);
-      showError(err?.response?.data?.message || err?.message || "Failed to create order.");
+      const errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || "Failed to create order.";
+      showError(errorMessage);
     }
   };
 

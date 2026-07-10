@@ -21,7 +21,6 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
 
     const [formData, setFormData] = useState({
         name: "",
-        description: "",
     });
 
     const [errors, setErrors] = useState({});
@@ -31,7 +30,6 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
         if (!isCreate && categoryData) {
             setFormData({
                 name: categoryData.name || "",
-                description: categoryData.description || "",
             });
         }
     }, [isCreate, categoryData]);
@@ -41,7 +39,6 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
         if (isCreate && open) {
             setFormData({
                 name: "",
-                description: "",
             });
             setErrors({});
         }
@@ -139,20 +136,6 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                                 } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
                             />
                             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-                        </div>
-
-                        {/* Description */}
-                        <div className="col-span-full">
-                            <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                {labels.categoryDescription}
-                            </label>
-                            <textarea
-                                placeholder={labels.categoryDescriptionPlaceholder}
-                                rows={4}
-                                value={formData.description}
-                                onChange={(e) => updateField('description', e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all resize-none"
-                            />
                         </div>
                     </div>
 

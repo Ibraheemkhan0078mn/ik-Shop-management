@@ -5,6 +5,7 @@ import Profile from "../modules/auth/pages/Profile.jsx";
 import UserManagement from "../modules/auth/pages/UserManagement.jsx";
 import ProtectedRoute from "../shared/components/ProtectedRoute.jsx";
 import Products from "../modules/productsModule/pages/Products.jsx";
+import ProductDetail from "../modules/productsModule/pages/ProductDetail.jsx";
 import Analytics from "../modules/dashbaord/pages/Analytics.jsx";
 import Dashboard from "../modules/dashbaord/pages/Dashboard.jsx";
 import Generals from "../modules/setting/pages/Generals.jsx";
@@ -32,6 +33,7 @@ import AccountsReports from "../modules/reports/pages/AccountsReports.jsx";
 import ReportDetailsPage from "../modules/reports/pages/ReportDetailsPage.jsx";
 import ProductReturnList from "../modules/orderReturn/pages/OrderReturnList.jsx";
 import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
+import CustomerDetail from "../modules/customers/pages/CustomerDetail.jsx";
 import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
@@ -58,6 +60,7 @@ function AppRoutes() {
             <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/quick-list" element={<ProtectedRoute><QuickActions /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
             <Route path="/products/categories" element={<ProtectedRoute><ProductCategoriesPage /></ProtectedRoute>} />
             <Route path="/products/sub-categories" element={<ProtectedRoute><ProductSubCategoriesPage /></ProtectedRoute>} />
             <Route path="/products/view/:id" element={<ProtectedRoute><ViewProductPage /></ProtectedRoute>} />
@@ -71,6 +74,7 @@ function AppRoutes() {
             <Route path="/purchase-returns" element={<ProtectedRoute><PurchaseReturnPage /></ProtectedRoute>} />
             <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
+            <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
             <Route path="/qarzaAccount" element={<ProtectedRoute><QarzaAccounts /></ProtectedRoute>} />
             <Route path="/EachQarzaAccountRecord/:id" element={<ProtectedRoute><EachQarzaAccountRecords /></ProtectedRoute>} />

@@ -19,12 +19,12 @@ const productSchema = new mongoose.Schema(
 
         // ─── Pricing ──────────────────────────────────────────────
         defaultCostPrice: { type: Number, default: 0 },
-        defaultRetailPrice: { type: Number, default: 0 },
-        defaultWholesalePrice: { type: Number, default: 0 },
+        defaultSalePrice: { type: Number, default: 0 },
         taxPercent: { type: Number, default: 0 },
         taxType: { type: String, default: "percentage" },
         isDiscountAllowed: { type: Boolean, default: true },
         maxDiscountPercent: { type: Number, default: 0 },
+        discountLimit: { type: Number, default: 0 },
 
         // ─── Stock ────────────────────────────────────────────────
         minStockLevel: { type: Number, default: 5 },

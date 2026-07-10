@@ -11,6 +11,7 @@ const INITIAL_FILTERS = {
   stockStatus: '',
   isActive: '',
   searchText: '',
+  productCode: '',
 };
 
 export const useProductFilters = () => {
@@ -88,6 +89,9 @@ export const useProductFilters = () => {
     }
     if (debouncedFilters.searchText) {
       params.searchText = debouncedFilters.searchText;
+    }
+    if (debouncedFilters.productCode) {
+      params.productCode = debouncedFilters.productCode;
     }
 
     return params;

@@ -26,8 +26,15 @@ import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
+import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
 import { changeTrackDocsCreationFunc } from "../common/services/onlineSync/changeTrackModelCreation.js";
+import appThemeSchema from "../modules/settings/models/appTheme.model.js";
+
+
+
+
+
 
 // Function to add change tracking middleware to a schema
 const addChangeTrackingMiddleware = (schema, modelName) => {
@@ -73,6 +80,8 @@ let StaffSalaryPaymentModel = null;
 let StaffSaleBillModel = null;
 let StaffAttendanceModel = null;
 let SettingsModel = null;
+let PaymentMethodModel = null;
+let AppThemeModel = null;
 
 export const connectDb = async () => {
     console.log("the connection is running")
@@ -113,6 +122,8 @@ export const connectDb = async () => {
     addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
     addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
     addChangeTrackingMiddleware(settingsSchema, "Settings");
+    addChangeTrackingMiddleware(paymentMethodSchema, "PaymentMethods");
+    addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
 
     UserModel = LocalConnection.model("Users", userSchema);
     ProductModel = LocalConnection.model("Products", productSchema);
@@ -143,12 +154,14 @@ export const connectDb = async () => {
     StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
     StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
     SettingsModel = LocalConnection.model("Settings", settingsSchema)
+    PaymentMethodModel = LocalConnection.model("PaymentMethods", paymentMethodSchema)
+    AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
 
     console.log("📝 Automatic change tracking enabled for local database models");
 };
 
 
-
+export const getLocalAppThemeModel= () => AppThemeModel || null;
 export const getLocalPurchaseReturnModel = () => PurchaseReturnModel || null;
 export const getLocalProductReturnModel = () => ProductReturnModel || null;
 export const getLocalWastageModel = () => WastageModel || null;
@@ -175,3 +188,4 @@ export const getLocalStaffSalaryPaymentModel = () => StaffSalaryPaymentModel || 
 export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
 export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;
 export const getLocalSettingsModel = () => SettingsModel || null;
+export const getLocalPaymentMethodModel = () => PaymentMethodModel || null;

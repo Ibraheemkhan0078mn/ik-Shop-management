@@ -26,8 +26,7 @@ const EMPTY_FORM = {
   subCategory: "",
   unit: "pcs",
   defaultCostPrice: 0,
-  defaultRetailPrice: 0,
-  defaultWholesalePrice: 0,
+  defaultSalePrice: 0,
   taxPercent: 0,
   taxType: "percentage",
   minStockLevel: 5,
@@ -35,6 +34,7 @@ const EMPTY_FORM = {
   allowNegativeStock: false,
   isDiscountAllowed: false,
   maxDiscountPercent: 0,
+  discountLimit: 0,
   rackLocation: "",
   isActive: true,
   image: "",
@@ -176,9 +176,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
     // Always required
     if (!form.name?.trim()) newErrors.name = labels.productNameRequired;
-    if (!form.image) newErrors.image = labels.productImageRequired;
-    if (!form.category) newErrors.category = labels.categoryRequired;
-    if (!form.subCategory) newErrors.subCategory = labels.subCategoryRequired;
 
     // Required inside "more options"
     if (showMore || !isCreate) {
@@ -186,7 +183,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       if (!form.barcode?.trim()) newErrors.barcode = labels.barcodeRequired;
       if (!form.description?.trim()) newErrors.description = labels.descriptionRequired;
       if (!form.unit) newErrors.unit = labels.unitRequired;
-      const priceFields = ["defaultCostPrice", "defaultRetailPrice", "defaultWholesalePrice"];
+      const priceFields = ["defaultCostPrice", "defaultSalePrice"];
       priceFields.forEach((f) => {
         if (form[f] === "" || form[f] === null || form[f] === undefined || isNaN(form[f]))
           newErrors[f] = `${f.replace("default", "").replace(/([A-Z])/g, " $1").trim()} is required`;
@@ -204,7 +201,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     if (count > 0) {
       // Auto-expand if errors are in optional section
       const optionalKeys = ["brandName", "barcode", "description", "unit", "defaultCostPrice",
-        "defaultRetailPrice", "defaultWholesalePrice", "minStockLevel", "maxStockLevel", "maxDiscountPercent"];
+        "defaultSalePrice", "minStockLevel", "maxStockLevel", "maxDiscountPercent", "discountLimit"];
       if (optionalKeys.some((k) => newErrors[k])) setShowMore(true);
       setBanner(labels.fixErrors.replace('{count}', count));
       return false;
@@ -291,7 +288,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               {/* Image Upload */}
               <div className="sm:col-span-2">
                 <label className="text-xs font-medium text-[var(--muted)] mb-1.5 block">
-                  {labels.productImage} <span className="text-red-500">*</span>
+                  {labels.productImage}
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -387,14 +384,14 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
             </div>
 
             {/* ── More Options Toggle ── */}
-            <button
-              type="button"
-              onClick={() => setShowMore((p) => !p)}
-              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] text-sm text-[var(--muted)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all"
-            >
-              <span>{showMore ? labels.hideAdditionalFields : labels.showMoreOptions}</span>
-              {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
+            <label className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] cursor-pointer transition-all">
+              <span className="text-sm text-[var(--muted)]">{labels.showMoreOptions}</span>
+              <div className="relative">
+                <input type="checkbox" checked={showMore} onChange={() => setShowMore((p) => !p)} className="sr-only peer" />
+                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${showMore ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
+                <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${showMore ? 'translate-x-5' : ''}`}></div>
+              </div>
+            </label>
 
             {/* ── Optional Fields ── */}
             {showMore && (
@@ -454,21 +451,11 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 <Field
-                  label={labels.defaultRetailPrice}
-                  name="defaultRetailPrice"
-                  value={form.defaultRetailPrice}
+                  label={labels.defaultSalePrice}
+                  name="defaultSalePrice"
+                  value={form.defaultSalePrice}
                   onChange={updateField}
-                  error={errors.defaultRetailPrice}
-                  type="number"
-                  placeholder="0.00"
-                />
-
-                <Field
-                  label={labels.defaultWholesalePrice}
-                  name="defaultWholesalePrice"
-                  value={form.defaultWholesalePrice}
-                  onChange={updateField}
-                  error={errors.defaultWholesalePrice}
+                  error={errors.defaultSalePrice}
                   type="number"
                   placeholder="0.00"
                 />
@@ -529,15 +516,26 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 />
 
                 {form.isDiscountAllowed && (
-                  <Field
-                    label={labels.maxDiscountPercent}
-                    name="maxDiscountPercent"
-                    value={form.maxDiscountPercent}
-                    onChange={updateField}
-                    error={errors.maxDiscountPercent}
-                    type="number"
-                    placeholder="e.g., 10"
-                  />
+                  <>
+                    <Field
+                      label={labels.maxDiscountPercent}
+                      name="maxDiscountPercent"
+                      value={form.maxDiscountPercent}
+                      onChange={updateField}
+                      error={errors.maxDiscountPercent}
+                      type="number"
+                      placeholder="e.g., 10"
+                    />
+                    <Field
+                      label="Discount Limit"
+                      name="discountLimit"
+                      value={form.discountLimit}
+                      onChange={updateField}
+                      error={errors.discountLimit}
+                      type="number"
+                      placeholder="e.g., 50"
+                    />
+                  </>
                 )}
 
                 <Field
@@ -641,8 +639,11 @@ function ToggleField({ label, name, value, onChange }) {
   return (
     <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-3 py-2.5 cursor-pointer hover:border-[var(--accent-2)]/50 transition-colors">
       <span className="text-sm text-[var(--ink)]">{label}</span>
-      <input type="checkbox" checked={!!value} onChange={(e) => onChange(name, e.target.checked)}
-        className="h-4 w-4 rounded accent-[var(--accent-2)] cursor-pointer" />
+      <div className="relative">
+        <input type="checkbox" checked={!!value} onChange={(e) => onChange(name, e.target.checked)} className="sr-only peer" />
+        <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${value ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
+        <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${value ? 'translate-x-5' : ''}`}></div>
+      </div>
     </label>
   );
 }

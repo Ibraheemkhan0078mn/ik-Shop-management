@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DollarSign, Calendar, X, Plus } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
+import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 
 export default function PurchasePaymentModal({ purchase, payment, onClose, onSuccess }) {
@@ -10,9 +11,11 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
     const [paymentMethod, setPaymentMethod] = useState(payment?.paymentMethod || "cash");
     const [creditAccountId, setCreditAccountId] = useState(payment?.creditAccount?._id || "");
     const [cashAmount, setCashAmount] = useState(payment?.cashAmount?.toString() || "");
+    const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(payment?.paymentMethodId || "");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
 
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
+    const { data: paymentMethodsData = [] } = usePaymentMethods();
 
     const remainingAmount = purchase?.totalAmount - (purchase?.paidAmount || 0);
     const editingAmount = payment?.amount || remainingAmount;
@@ -38,6 +41,8 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
             purchase: purchase._id,
             paymentDate,
             paymentMethod,
+            paymentMethodId: selectedPaymentMethodId,
+            paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
             creditAccount: null,
             cashAmount: 0,
             creditAmount: 0,
@@ -186,9 +191,25 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                     </div>
 
                     {paymentMethod === 'cash' && (
-                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                            <p className="text-sm text-green-800">Full payment of Rs {remainingAmount.toLocaleString()} will be recorded as cash.</p>
-                        </div>
+                        <>
+                            <div>
+                                <label className="block text-sm text-[var(--muted)] mb-1">Payment Method</label>
+                                <select
+                                    value={selectedPaymentMethodId}
+                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                    required
+                                >
+                                    <option value="">Select payment method</option>
+                                    {paymentMethodsData.map(pm => (
+                                        <option key={pm._id} value={pm._id}>{pm.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                                <p className="text-sm text-green-800">Full payment of Rs {remainingAmount.toLocaleString()} will be recorded as cash.</p>
+                            </div>
+                        </>
                     )}
 
                     {paymentMethod === 'credit' && (
@@ -223,6 +244,20 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
 
                     {paymentMethod === 'hybrid' && (
                         <>
+                            <div>
+                                <label className="block text-sm text-[var(--muted)] mb-1">Payment Method</label>
+                                <select
+                                    value={selectedPaymentMethodId}
+                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                    required
+                                >
+                                    <option value="">Select payment method</option>
+                                    {paymentMethodsData.map(pm => (
+                                        <option key={pm._id} value={pm._id}>{pm.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Cash Amount</label>
                                 <input

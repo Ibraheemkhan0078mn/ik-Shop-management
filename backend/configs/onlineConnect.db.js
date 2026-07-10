@@ -26,6 +26,8 @@ import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
+import paymentMethodSchema from "../modules/paymentMethod/models/paymentMethod.model.js";
+import appThemeSchema from "../modules/appTheme/models/appTheme.model.js";
 import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
@@ -54,6 +56,10 @@ let OnlineStaffSalaryPaymentModel = null;
 let OnlineStaffSaleBillModel = null;
 let OnlineStaffAttendanceModel = null;
 let OnlineSettingsModel = null;
+let PaymentMethodModel= null;
+let AppThemeModel = null
+
+
 
 export const connectOnlineDb = async () => {
     console.log("Online connection is running");
@@ -99,6 +105,8 @@ export const connectOnlineDb = async () => {
     OnlineStaffSaleBillModel = OnlineConnection.model("StaffSaleBill", staffSaleBillSchema)
     OnlineStaffAttendanceModel = OnlineConnection.model("StaffAttendance", staffAttendanceSchema)
     OnlineSettingsModel = OnlineConnection.model("Settings", settingsSchema)
+    OnlinePaymentMethodModel = OnlineConnection.model("PaymentMethods", paymentMethodSchema)
+    OnlineAppThemeModel = OnlineConnection.model("AppThemes", appThemeSchema)
 
     // Change stream tracking disabled - using local database tracking instead
     // startChangeStreamTracking(OnlineConnection)

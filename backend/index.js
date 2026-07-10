@@ -35,7 +35,8 @@ import CustomerRouter from './modules/customer/routes/customer.route.js'
 import DashboardRouter from './modules/dashboard/dashboard.route.js'
 import StaffRouter from './modules/staff/routes/staff.route.js'
 import SettingsRouter from './modules/settings/routes/settings.route.js'
-
+import PaymentMethodRouter from './modules/settings/routes/paymentMethod.router.js'
+import themeRoutes from './modules/settings/routes/appTheme.route.js'
 dontenv.config();
 const app = express();
 app.use(express.json());
@@ -94,6 +95,8 @@ app.use("/api/customers", CustomerRouter)
 app.use("/api/dashboard", DashboardRouter)
 app.use("/api/staff", StaffRouter)
 app.use("/api/settings", SettingsRouter)
+app.use("/api/payment-methods", PaymentMethodRouter)
+app.use("/api/theme", themeRoutes)
 
 app.use(errorHandler);
 

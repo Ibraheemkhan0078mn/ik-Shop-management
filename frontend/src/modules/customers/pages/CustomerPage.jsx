@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
@@ -16,6 +17,7 @@ export default function CustomerPage() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getCustomerLabels(language);
+    const navigate = useNavigate();
     
     const [deleteCustomer] = useDeleteCustomer();
     const [modal, setModal] = useState(null);
@@ -29,6 +31,10 @@ export default function CustomerPage() {
         } catch (error) {
             showError(error?.data?.message || labels.failedToDelete);
         }
+    };
+
+    const handleRowClick = (customerId) => {
+        navigate(`/customers/${customerId}`);
     };
 
     return (
@@ -73,6 +79,7 @@ export default function CustomerPage() {
                                         customer={customer}
                                         onEdit={(e) => { e.stopPropagation(); setModal({ mode: "update", id: customer._id }); }}
                                         onDelete={(e) => handleDelete(customer._id, e)}
+                                        onRowClick={() => handleRowClick(customer._id)}
                                     />
                                 ))}
                             </tbody>
@@ -85,7 +92,7 @@ export default function CustomerPage() {
     );
 }
 
-function CustomerRow({ customer, onEdit, onDelete }) {
+function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getCustomerLabels(language);
@@ -93,7 +100,13 @@ function CustomerRow({ customer, onEdit, onDelete }) {
     const isActive = customer?.isActive ?? true;
 
     return (
-        <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-muted)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+        <tr 
+            className="transition cursor-pointer" 
+            style={{ borderBottom: "1px solid var(--border)" }} 
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-muted)")} 
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            onClick={onRowClick}
+        >
             <td className="px-4 py-3">
                 <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
                     {customer?.image ? (

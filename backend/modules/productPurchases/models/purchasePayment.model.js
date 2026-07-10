@@ -21,6 +21,14 @@ const purchasePaymentSchema = new mongoose.Schema(
             enum: ["cash", "credit", "hybrid"],
             default: "cash",
         },
+        paymentMethodId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PaymentMethods",
+        },
+        paymentMethodName: {
+            type: String,
+            default: "",
+        },
         creditAccount: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "QarzaAccount",

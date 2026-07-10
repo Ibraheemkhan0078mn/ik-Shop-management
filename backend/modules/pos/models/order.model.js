@@ -31,6 +31,8 @@ const orderSchema = new mongoose.Schema(
 
         // Who
         customerName: { type: String, default: "" },
+        customerType: { type: String, enum: ["walkin", "regular"], default: "walkin" },
+        customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", default: null },
         waiter: { type: String, default: "" },
         staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", default: null },
 
@@ -47,6 +49,7 @@ const orderSchema = new mongoose.Schema(
             enum: ["cash", "online", "credit", "hybrid", "free"],
             default: "cash",
         },
+        paymentMethodName: { type: String, default: "" },
         cashReceived: { type: Number, default: 0 },
         change: { type: Number, default: 0 },
 

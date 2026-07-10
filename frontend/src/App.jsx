@@ -3,6 +3,7 @@ import Sidebar from "./shared/components/SideBar.jsx";
 import { Toaster } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
+import { useEffect } from "react";
 
 const NO_CHROME_ROUTES = ["/", "/login", "/signup", "/pos"];
 
@@ -10,6 +11,16 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const showChrome = !NO_CHROME_ROUTES.includes(location.pathname);
+
+  // App.jsx or a ThemeProvider
+useEffect(() => {
+  fetch("/api/theme/active")
+    .then(res => res.json())
+    .then(theme => applyTheme(theme?.colors))
+    .catch(() => {}); // silently fall back to :root defaults
+}, []);
+
+
 
   return (
     <div className="flex w-screen">
