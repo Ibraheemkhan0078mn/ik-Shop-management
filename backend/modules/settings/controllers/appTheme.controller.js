@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { getLocalAppThemeModel } from "../../../configs/connect.db";
+import { getLocalAppThemeModel } from "../../../configs/connect.db.js";
 
 
 
@@ -36,6 +36,48 @@ const sanitizeColors = (colors = {}) => {
     return { clean, errors };
 };
 
+const createDefaultTheme = async (Theme) => {
+    const defaultTheme = {
+        name: "Default Theme",
+        isActive: true,
+        colors: {
+            appBg: null,
+            appBg2: null,
+            surface: null,
+            surfaceMuted: null,
+            ink: null,
+            muted: null,
+            accent: null,
+            accent2: null,
+            border: null,
+        },
+    };
+
+    return Theme.create(defaultTheme);
+};
+
+// GET /api/theme/active
+export const getActiveTheme = async (req, res) => {
+    const Theme = getLocalAppThemeModel();
+    try {
+        let theme = await Theme.findOne({ isActive: true }).lean();
+
+        if (!theme) {
+            const existingTheme = await Theme.findOne({}).sort({ updatedAt: -1 }).lean();
+            if (existingTheme) {
+                theme = existingTheme;
+            } else {
+                theme = await createDefaultTheme(Theme);
+            }
+        }
+
+        return res.status(200).json(theme);
+    } catch (err) {
+        console.error("getActiveTheme error:", err);
+        return res.status(500).json({ message: "Failed to fetch active theme" });
+    }
+};
+
 // GET /api/theme
 export const getAllThemes = async (req, res) => {
     const Theme = getLocalAppThemeModel();
@@ -70,6 +112,55 @@ export const getThemeById = async (req, res) => {
     } catch (err) {
         console.error("getThemeById error:", err);
         return res.status(500).json({ message: "Failed to fetch theme" });
+    }
+};
+
+// PUT /api/theme/active
+export const putActiveTheme = async (req, res) => {
+    const Theme = getLocalAppThemeModel();
+    try {
+        const { name, colors } = req.body;
+        const { clean, errors } = sanitizeColors(colors || {});
+
+        if (errors.length) {
+            return res.status(400).json({ message: "Invalid color values", errors });
+        }
+
+        let activeTheme = await Theme.findOne({ isActive: true });
+        let themeToUpdate = activeTheme;
+
+        if (!themeToUpdate) {
+            const existingTheme = await Theme.findOne({}).sort({ updatedAt: -1 });
+            themeToUpdate = existingTheme;
+        }
+
+        if (themeToUpdate) {
+            if (name && typeof name === "string") themeToUpdate.name = name.trim();
+            themeToUpdate.colors = {
+                ...(themeToUpdate.colors?.toObject?.() || themeToUpdate.colors || {}),
+                ...clean,
+            };
+            themeToUpdate.isActive = true;
+            await themeToUpdate.save();
+
+            await Theme.updateMany(
+                { _id: { $ne: themeToUpdate._id } },
+                { $set: { isActive: false } }
+            );
+
+            return res.status(200).json(themeToUpdate);
+        }
+
+        const createdTheme = await Theme.create({
+            name: name && typeof name === "string" ? name.trim() : "Default Theme",
+            isActive: true,
+            colors: clean,
+        });
+
+        return res.status(201).json(createdTheme);
+    } catch (err) {
+        console.error("putActiveTheme error:", err);
+        return res.status(500).json({ message: "Failed to save active theme" });
     }
 };
 

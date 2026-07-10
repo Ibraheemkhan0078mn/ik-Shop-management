@@ -11,11 +11,34 @@ const cssVarMap = {
   border: "--border",
 };
 
+export function getApiUrl(path = "") {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const baseUrl = import.meta.env.VITE_BACKEND_API_URL;
+
+  if (baseUrl) {
+    return `${baseUrl.replace(/\/$/, "")}${normalizedPath}`;
+  }
+
+  return normalizedPath;
+}
+
 export function applyTheme(colors) {
-  if (!colors) return; // fallback to CSS defaults, do nothing
   const root = document.documentElement;
+
+  if (!colors || typeof colors !== "object") {
+    Object.values(cssVarMap).forEach((cssVar) => root.style.removeProperty(cssVar));
+    return;
+  }
+
   Object.entries(colors).forEach(([key, value]) => {
     const cssVar = cssVarMap[key];
-    if (cssVar && value) root.style.setProperty(cssVar, value);
+    if (!cssVar) return;
+
+    if (value === null || value === undefined || value === "") {
+      root.style.removeProperty(cssVar);
+      return;
+    }
+
+    root.style.setProperty(cssVar, value);
   });
 }

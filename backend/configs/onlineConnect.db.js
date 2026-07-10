@@ -26,8 +26,8 @@ import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
-import paymentMethodSchema from "../modules/paymentMethod/models/paymentMethod.model.js";
-import appThemeSchema from "../modules/appTheme/models/appTheme.model.js";
+import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
+import appThemeSchema from "../modules/settings/models/appTheme.model.js";
 import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
@@ -56,8 +56,8 @@ let OnlineStaffSalaryPaymentModel = null;
 let OnlineStaffSaleBillModel = null;
 let OnlineStaffAttendanceModel = null;
 let OnlineSettingsModel = null;
-let PaymentMethodModel= null;
-let AppThemeModel = null
+let OnlinePaymentMethodModel = null;
+let OnlineAppThemeModel = null;
 
 
 

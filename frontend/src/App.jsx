@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useEffect } from "react";
+import { applyTheme, getApiUrl } from "./shared/utilities/themeApplier.js";
 
 const NO_CHROME_ROUTES = ["/", "/login", "/signup", "/pos"];
 
@@ -12,13 +13,12 @@ function App() {
   const navigate = useNavigate();
   const showChrome = !NO_CHROME_ROUTES.includes(location.pathname);
 
-  // App.jsx or a ThemeProvider
-useEffect(() => {
-  fetch("/api/theme/active")
-    .then(res => res.json())
-    .then(theme => applyTheme(theme?.colors))
-    .catch(() => {}); // silently fall back to :root defaults
-}, []);
+  useEffect(() => {
+    fetch(getApiUrl("/theme/active"))
+      .then((res) => res.json())
+      .then((theme) => applyTheme(theme?.colors))
+      .catch(() => {});
+  }, []);
 
 
 

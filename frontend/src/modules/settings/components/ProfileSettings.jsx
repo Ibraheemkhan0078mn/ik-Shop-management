@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 export default function ProfileSettings({ labels }) {
     const { name, email, phoneNo, role } = useSelector(s => s.auth) || {};
     const [profileName, setProfileName] = useState("");
-    const [profileEmail, setProfileEmail] = useState("");
+    const [profileEmail, setProfileEmail] = useState(""); 
     const [profilePhone, setProfilePhone] = useState("");
 
     useEffect(() => {
