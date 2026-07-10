@@ -1,13 +1,11 @@
 import { useSelector } from "react-redux";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePaginatedOrders, useDeleteOrder } from "../services/orders.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
-import { Eye, Trash2, X, ArrowLeft, Receipt } from "lucide-react";
+import { Eye, Trash2, X, ArrowLeft, Receipt, Calendar, Download, Printer, Filter } from "lucide-react";
 
 // ── Shared payment-method styling ───────────────────────────────────────
-// Theme colors come straight from index.css; the rest (online/credit/hybrid)
-// are kept as standalone accents since the theme doesn't define them.
 const PAYMENT_METHOD_STYLES = {
     cash:   "bg-primary-hover text-primary border-edge-brand",
     online: "bg-[rgba(59,130,246,0.1)] text-[#3b82f6] border-[rgba(59,130,246,0.25)]",
@@ -25,33 +23,91 @@ function PaymentBadge({ method }) {
     );
 }
 
-// ── Order card ───────────────────────────────────────────────────────────
-function HistoryCard({ order, onView, onDelete }) {
-    return (
-        <div className="card !p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-semibold text-ink truncate">{order.orderNumber || "—"}</p>
-                        <PaymentBadge method={order.paymentMethod} />
-                    </div>
-                    <p className="text-sm mt-1 text-ink-subtle truncate">
-                        {order.customerName || "—"} · Rs {(order.totalAmount || 0).toLocaleString()}
-                    </p>
-                    <p className="text-xs mt-1 text-ink-subtle">
-                        {new Date(order.createdAt).toLocaleString()} · {order.items?.length || 0} item{order.items?.length !== 1 ? "s" : ""}
-                    </p>
-                </div>
+// ── Date Filter Component ───────────────────────────────────────────────
+function DateFilter({ startDate, endDate, onStartDateChange, onEndDateChange, onClear }) {
+    const [isOpen, setIsOpen] = useState(false);
 
-                <div className="flex gap-2 self-end sm:self-auto shrink-0">
-                    <button onClick={() => onView(order)} title="View" className="card-button">
-                        <Eye size={16} />
-                    </button>
-                    <button onClick={() => onDelete(order._id)} title="Delete" className="card-button text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300">
-                        <Trash2 size={16} />
-                    </button>
-                </div>
-            </div>
+    const hasFilters = startDate || endDate;
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    hasFilters
+                        ? 'bg-primary text-white border-2 border-primary'
+                        : 'border-2 border-edge text-ink-subtle hover:border-edge-brand hover:text-primary'
+                }`}
+            >
+                <Calendar size={16} />
+                <span>Filter by Date</span>
+                {hasFilters && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                        Active
+                    </span>
+                )}
+            </button>
+
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-50 w-80 rounded-xl border-2 border-edge bg-(--surface) shadow-2xl p-4 space-y-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-ink">Date Range</h3>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="text-ink-subtle hover:text-ink"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-ink-subtle mb-1.5">
+                                    Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => onStartDateChange(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border-2 border-edge bg-(--surface-muted) text-ink focus:border-primary outline-none transition-colors"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-ink-subtle mb-1.5">
+                                    End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => onEndDateChange(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border-2 border-edge bg-(--surface-muted) text-ink focus:border-primary outline-none transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <button
+                                onClick={() => {
+                                    onClear();
+                                    setIsOpen(false);
+                                }}
+                                className="flex-1 px-4 py-2 rounded-lg border-2 border-edge text-ink-subtle hover:border-edge-brand hover:text-ink font-medium transition-colors"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="flex-1 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -62,8 +118,8 @@ function OrderDetailModal({ order, onClose }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 app-overlay" onClick={onClose} />
 
-            <div className="app-enter relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl shadow-2xl bg-(--surface) border border-edge">
-                <div className="sticky top-0 z-10 px-5 py-4 flex items-center justify-between border-b border-edge bg-(--surface)">
+            <div className="app-enter relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl shadow-2xl bg-(--surface) border-2 border-edge">
+                <div className="sticky top-0 z-10 px-5 py-4 flex items-center justify-between border-b-2 border-edge bg-(--surface)">
                     <h2 className="text-lg sm:text-xl font-bold text-ink truncate">Order {order.orderNumber}</h2>
                     <button onClick={onClose} className="btn-close p-2 shrink-0">
                         <X size={20} />
@@ -97,10 +153,10 @@ function OrderDetailModal({ order, onClose }) {
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-edge space-y-1">
+                    <div className="pt-4 border-t-2 border-edge space-y-1">
                         <SummaryRow label="Subtotal" value={order.subtotal} />
                         <SummaryRow label="Discount" value={order.discountAmount} />
-                        <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-edge">
+                        <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t-2 border-edge">
                             <span className="text-ink">Total</span>
                             <span className="text-primary">Rs {(order.totalAmount || 0).toLocaleString()}</span>
                         </div>
@@ -129,14 +185,18 @@ function SummaryRow({ label, value }) {
     );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OrderHistory() {
     const navigate = useNavigate();
     const authUser = useSelector(s => s.auth);
     const user = authUser?.role ? authUser : { role: "admin", permissions: { deleteOrders: true } };
     const language = user?.language || "en";
+    
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [deleteOrder] = useDeleteOrder();
+    const paginatedListRef = useRef(null);
 
     const handleDelete = async (id) => {
         if (window.confirm(language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟")) {
@@ -148,47 +208,161 @@ export default function OrderHistory() {
         }
     };
 
+    const handleClearFilters = () => {
+        setStartDate("");
+        setEndDate("");
+    };
+
+    // Build filter object for PaginatedList
+    const dateFilter = {};
+    if (startDate) dateFilter.startDate = startDate;
+    if (endDate) dateFilter.endDate = endDate;
+
     return (
-        <div className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-                <button
-                    onClick={() => navigate(-1)}
-                    title="Back"
-                    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-edge text-ink-subtle hover:text-primary hover:border-edge-brand hover:bg-primary-hover transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                </button>
-                <h1 className="text-xl sm:text-2xl font-bold text-ink">
-                    {language === "en" ? "Order History" : "آرڈر کی تاریخ"}
-                </h1>
+        <div className="h-screen flex flex-col bg-app-bg">
+            {/* ── Header ── */}
+            <div className="flex-none px-6 pt-4 pb-3">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate(-1)}
+                            title="Back"
+                            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border-2 border-edge text-ink-subtle hover:text-primary hover:border-edge-brand hover:bg-primary-hover transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold text-ink">
+                                {language === "en" ? "Order History" : "آرڈر کی تاریخ"}
+                            </h1>
+                            <p className="text-sm text-ink-subtle mt-0.5">
+                                {language === "en" ? "View and manage all orders" : "تمام آرڈرز دیکھیں اور منظم کریں"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <DateFilter
+                            startDate={startDate}
+                            endDate={endDate}
+                            onStartDateChange={setStartDate}
+                            onEndDateChange={setEndDate}
+                            onClear={handleClearFilters}
+                        />
+                        <button
+                            onClick={() => console.log("Print")}
+                            className="p-2 rounded-lg transition-all hover:bg-(--surface-muted) text-ink-subtle hover:text-ink"
+                            title="Print"
+                        >
+                            <Printer size={18} />
+                        </button>
+                        <button
+                            onClick={() => console.log("Export")}
+                            className="p-2 rounded-lg transition-all hover:bg-(--surface-muted) text-ink-subtle hover:text-ink"
+                            title="Export"
+                        >
+                            <Download size={18} />
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div className="rounded-2xl border border-edge bg-(--surface) shadow-[0_14px_30px_rgba(64,45,28,0.1)] p-3 sm:p-4">
+            {/* ── Table ── */}
+            <div className="flex-1 overflow-hidden px-6 pb-6">
                 <PaginatedList
+                    ref={paginatedListRef}
                     rtkQuery={usePaginatedOrders}
                     limit={20}
                     dataKey="data"
-                    renderItems={(orders) => (
-                        <div className="space-y-3">
-                            {orders.length === 0 ? (
-                                <div className="flex flex-col items-center gap-3 text-center py-12">
-                                    <div className="bg-(--surface-muted) w-14 h-14 rounded-full flex items-center justify-center">
-                                        <Receipt className="w-7 h-7 text-ink-subtle" />
-                                    </div>
-                                    <p className="text-sm text-ink-subtle">
-                                        {language === "en" ? "No orders yet" : "کوئی آرڈر نہیں"}
-                                    </p>
-                                </div>
-                            ) : (
-                                orders.map((order) => (
-                                    <HistoryCard
-                                        key={order._id || order.id}
-                                        order={order}
-                                        onView={setSelectedOrder}
-                                        onDelete={handleDelete}
-                                    />
-                                ))
+                    queryArgs={dateFilter}
+                    wrapperClassName="h-full"
+                    className="p-0"
+                    renderEmpty={() => (
+                        <div className="flex flex-col items-center gap-3 text-center py-12">
+                            <div className="bg-(--surface-muted) w-14 h-14 rounded-full flex items-center justify-center">
+                                <Receipt className="w-7 h-7 text-ink-subtle" />
+                            </div>
+                            <p className="text-sm text-ink-subtle">
+                                {language === "en" ? "No orders found" : "کوئی آرڈر نہیں ملا"}
+                            </p>
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={handleClearFilters}
+                                    className="text-sm text-primary hover:underline"
+                                >
+                                    Clear filters
+                                </button>
                             )}
+                        </div>
+                    )}
+                    renderItems={(orders) => (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="sticky top-0 z-10 bg-(--surface-muted)">
+                                    <tr className="text-xs uppercase tracking-wider text-ink-subtle border-b-2 border-edge">
+                                        <th className="px-4 py-3 font-semibold">Order #</th>
+                                        <th className="px-4 py-3 font-semibold">Customer</th>
+                                        <th className="px-4 py-3 font-semibold hidden sm:table-cell">Date</th>
+                                        <th className="px-4 py-3 font-semibold text-center hidden md:table-cell">Items</th>
+                                        <th className="px-4 py-3 font-semibold text-center">Payment</th>
+                                        <th className="px-4 py-3 font-semibold text-right">Total</th>
+                                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {orders.map((order) => (
+                                        <tr
+                                            key={order._id || order.id}
+                                            className="border-b border-edge transition-colors hover:bg-primary-hover"
+                                        >
+                                            <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">
+                                                {order.orderNumber || "—"}
+                                            </td>
+                                            <td className="px-4 py-3 text-ink">
+                                                <div>
+                                                    <p className="font-medium truncate">{order.customerName || "—"}</p>
+                                                    {order.waiter && (
+                                                        <p className="text-xs text-ink-subtle truncate">by {order.waiter}</p>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-ink-subtle hidden sm:table-cell whitespace-nowrap">
+                                                <div>
+                                                    <p>{new Date(order.createdAt).toLocaleDateString()}</p>
+                                                    <p className="text-xs">{new Date(order.createdAt).toLocaleTimeString()}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-center text-ink-subtle hidden md:table-cell">
+                                                {order.items?.length || 0}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <PaymentBadge method={order.paymentMethod} />
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-semibold text-primary whitespace-nowrap">
+                                                Rs {(order.totalAmount || 0).toLocaleString()}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-1 justify-center">
+                                                    <button
+                                                        onClick={() => setSelectedOrder(order)}
+                                                        title="View"
+                                                        className="p-2 rounded-lg transition-colors hover:bg-primary-hover text-ink-subtle hover:text-primary"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(order._id)}
+                                                        title="Delete"
+                                                        className="p-2 rounded-lg transition-colors hover:bg-red-100 text-red-500"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 />

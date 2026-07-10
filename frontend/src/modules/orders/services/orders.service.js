@@ -7,7 +7,10 @@ export const ordersApi = baseApi.injectEndpoints({
             providesTags: ["Orders"],
         }),
         getPaginatedOrders: build.query({
-            query: ({ page = 1, limit = 20 }) => ({ url: "/orders/paginated", params: { page, limit } }),
+            query: ({ page = 1, limit = 20, startDate, endDate }) => ({ 
+                url: "/orders/paginated", 
+                params: { page, limit, startDate, endDate } 
+            }),
             providesTags: ["Orders"],
         }),
         getOrdersByCustomer: build.query({

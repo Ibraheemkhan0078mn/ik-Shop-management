@@ -97,8 +97,8 @@ export default function AuthPage() {
         rememberMe
           ? localStorage.setItem(SAVED_CREDS_KEY, JSON.stringify({ email: formData.email, password: formData.password, rememberMe: true }))
           : localStorage.removeItem(SAVED_CREDS_KEY);
-        let response=await loginUser({ email: formData.email, password: formData.password, role: formData.role });
-     console.log(response, "The data")
+        const response = await loginUser({ email: formData.email, password: formData.password, role: formData.role });
+        console.log(response, "The data");
       } else {
         if (formData.password !== formData.confirmPassword) {
           toast.error(labels.passwordsDoNotMatch);

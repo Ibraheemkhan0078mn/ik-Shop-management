@@ -1,7 +1,7 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX } from "lucide-react";
+import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX, Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -201,13 +201,13 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
     return (
         <tr className="border-b border-edge transition-colors hover:bg-primary-hover">
             <td className="px-4 py-3 font-medium text-ink">{returnItem.returnNumber}</td>
-            <td className={`px-4 py-3 text-ink-subtle ${colClass(TABLE_COLUMNS[1])}`}>
+            <td className="px-4 py-3 text-ink-subtle hidden sm:table-cell">
                 {returnItem.referenceOrderNumber}
             </td>
-            <td className={`px-4 py-3 text-ink ${colClass(TABLE_COLUMNS[2])}`}>
+            <td className="px-4 py-3 text-ink hidden md:table-cell">
                 {returnItem.customerName || "—"}
             </td>
-            <td className={`px-4 py-3 text-ink-subtle ${colClass(TABLE_COLUMNS[3])}`}>
+            <td className="px-4 py-3 text-ink-subtle text-center hidden sm:table-cell">
                 {returnItem.items?.length || 0}
             </td>
             <td className="px-4 py-3 text-right font-semibold text-primary">
@@ -218,7 +218,7 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
                     {returnItem.returnStatus}
                 </span>
             </td>
-            <td className={`px-4 py-3 text-ink-subtle ${colClass(TABLE_COLUMNS[6])}`}>
+            <td className="px-4 py-3 text-ink-subtle hidden md:table-cell">
                 {new Date(returnItem.returnDate || returnItem.createdAt).toLocaleDateString()}
             </td>
             <td className="px-4 py-3">

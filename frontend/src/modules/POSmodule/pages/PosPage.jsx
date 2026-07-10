@@ -408,14 +408,13 @@ export default function PosPage() {
     ) return;
 
     const restoredCartItems = heldOrder.items.map((orderItem) => {
-      const matchedProduct = allProducts.find((p) => p._id === String(orderItem.product));
       return {
         _id: String(orderItem.product),
         name: orderItem.name,
         qty: orderItem.quantity ?? 1,
         unitPrice: Number(orderItem.unitPrice) ?? 0,
         originalPrice: Number(orderItem.originalPrice) ?? Number(orderItem.unitPrice) ?? 0,
-        image: toImageUrl(matchedProduct?.image),
+        image: orderItem.image ? toImageUrl(orderItem.image) : null,
         portionType: orderItem.portionType || "full",
         batchId: orderItem.batchId ?? null,
         batchNumber: orderItem.batchNumber ?? null,
