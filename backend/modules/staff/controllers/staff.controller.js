@@ -19,6 +19,12 @@ import {
 // Create Staff
 export const createStaffData = asyncHandler(async (req, res, next) => {
     const staffData = req.body;
+    
+    // If a photo was uploaded, add its filename to the staff data
+    if (req.file) {
+        staffData.photo = req.file.filename;
+    }
+    
     const staff = await createStaff(staffData);
 
     res.status(201).json({
@@ -56,6 +62,12 @@ export const getStaffDataById = asyncHandler(async (req, res, next) => {
 export const updateStaffData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
+    
+    // If a photo was uploaded, add its filename to the update data
+    if (req.file) {
+        updateData.photo = req.file.filename;
+    }
+    
     const staff = await updateStaff(id, updateData);
 
     res.status(200).json({

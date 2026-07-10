@@ -39,8 +39,8 @@ const translations = {
 };
 
 const NAV_ITEMS = [
-  { id: "dashboard", icon: BarChart3, url: "/dashboard", allowedUrls: ["/dashboard"] },
   { id: "quickList", icon: Package, url: "/quick-list", allowedUrls: ["/quick-list"] },
+  { id: "dashboard", icon: BarChart3, url: "/dashboard", allowedUrls: ["/dashboard"] },
   {
     id: "products", icon: Boxes, url: "/products",
     allowedUrls: ["/products", "/products/categories", "/products/sub-categories"],

@@ -12,7 +12,10 @@ const errorHandler = (err, req, res, next) => {
     }
 
     if (err.code === 11000) {
-        const message = "Duplicate field value entered";
+        // Extract the field name from the duplicate key error
+        const field = Object.keys(err.keyPattern || {})[0] || 'field';
+        const value = err.keyValue?.[field] || '';
+        const message = `${field.toUpperCase()} '${value}' already exists. Please use a unique ${field}.`;
         error = new ErrorResponse(message, 400);
     }
 

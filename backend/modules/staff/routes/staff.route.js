@@ -49,10 +49,10 @@ router.get("/:id/salary-breakdown", getSalaryBreakdownData);
 router.get("/:id/payment-summary", getPaymentSummaryData);
 
 // Staff Routes
-router.post("/", createStaffData);
+router.post("/", upload.single("photo"), createStaffData);
 router.get("/", getAllStaffData);
 router.get("/:id", getStaffDataById);
-router.put("/:id", updateStaffData);
+router.put("/:id", upload.single("photo"), updateStaffData);
 router.delete("/:id", deleteStaffData);
 router.post("/:id/images", upload.array("images", 10), addImagesToStaffData);
 router.delete("/:id/images/:imageId", removeImageFromStaffData);

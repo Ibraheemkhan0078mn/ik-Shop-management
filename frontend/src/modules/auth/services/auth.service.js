@@ -16,7 +16,7 @@ export const useLogin = () => {
             const result = await loginMutation(data).unwrap();
             dispatch(login(result.data));
             toast.success("Login Successful");
-            navigate("/dashboard");
+            navigate("/quick-list");
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.data?.message || "Login Failed";
             toast.error(errorMessage);
@@ -36,7 +36,7 @@ export const useSignup = () => {
             const result = await signupMutation(data).unwrap();
             dispatch(login(result.data));
             toast.success("Signup Successful");
-            navigate("/dashboard");
+            navigate("/quick-list");
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.data?.message || "Signup Failed";
             toast.error(errorMessage);

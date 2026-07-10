@@ -205,8 +205,35 @@ export default function StaffDetail() {
 
             {/* Profile Tab */}
             {activeTab === "profile" && (
-                <div className="card p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                    {/* Profile Photo Section */}
+                    {staff.photo && (
+                        <div className="card p-6">
+                            <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Profile Photo</h3>
+                            <div className="flex items-center gap-6">
+                                <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-[var(--border)] bg-[var(--surface-muted)]">
+                                    <img 
+                                        src={`http://localhost:5001/uploads/${staff.photo}`}
+                                        alt={staff.fullName}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-2xl">' + (staff.fullName?.charAt(0) || 'S') + '</div>';
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-[var(--ink)]">{staff.fullName}</h4>
+                                    <p className="text-sm text-[var(--muted)]">{staff.role} - {staff.salaryType} {labels.salary}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Staff Information */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Staff Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="text-sm text-[var(--muted)]">{labels.fullName}</label>
                             <p className="font-medium text-[var(--ink)]">{staff.fullName}</p>
@@ -269,6 +296,7 @@ export default function StaffDetail() {
                                 <p className="font-medium text-[var(--ink)]">{staff.notes}</p>
                             </div>
                         )}
+                        </div>
                     </div>
                 </div>
             )}
