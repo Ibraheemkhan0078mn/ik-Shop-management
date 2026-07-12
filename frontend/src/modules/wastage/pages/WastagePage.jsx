@@ -1,5 +1,6 @@
 // src/modules/wastage/pages/WastagePage.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, CheckCircle, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteWastage, useWastages, useApproveWastage } from "../services/wastage.service.js";
@@ -19,6 +20,7 @@ const STATUS_STYLE = {
 };
 
 export default function WastagePage() {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getWastageLabels(language);
@@ -28,7 +30,6 @@ export default function WastagePage() {
 
     const [modal,      setModal]      = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
-    const [viewWastage, setViewWastage] = useState(null);
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
@@ -65,13 +66,6 @@ export default function WastagePage() {
                     onClose={() => setApprovalModal(false)}
                     onApprove={handleApprove}
                     onDelete={handleDelete}
-                />
-            )}
-
-            {viewWastage && (
-                <WastageDetailModal
-                    wastage={viewWastage}
-                    onClose={() => setViewWastage(null)}
                 />
             )}
 
@@ -119,7 +113,6 @@ export default function WastagePage() {
                                     <WastageRow
                                         key={w._id}
                                         wastage={w}
-                                        onClick={() => setViewWastage(w)}
                                         onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: w._id }); }}
                                         onDelete={e => handleDelete(w._id, e)}
                                     />
@@ -138,7 +131,8 @@ export default function WastagePage() {
     );
 }
 
-function WastageRow({ wastage, onClick, onEdit, onDelete }) {
+function WastageRow({ wastage, onEdit, onDelete }) {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getWastageLabels(language);
@@ -151,7 +145,7 @@ function WastageRow({ wastage, onClick, onEdit, onDelete }) {
         <tr 
             className="transition cursor-pointer" 
             style={{ borderBottom: "1px solid var(--border)" }}
-            onClick={onClick}
+            onClick={() => navigate(`/wastage/${wastage._id}`)}
             onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 

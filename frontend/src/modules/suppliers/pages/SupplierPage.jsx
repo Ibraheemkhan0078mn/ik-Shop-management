@@ -1,5 +1,6 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
@@ -97,6 +98,7 @@ export default function SupplierPage() {
 }
 
 function SupplierRow({ supplier, onEdit, onDelete }) {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getSupplierLabels(language);
@@ -104,7 +106,10 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
     const isActive = supplier?.isActive ?? true;
 
     return (
-        <tr className="transition" style={{ borderBottom: "1px solid var(--border)" }}
+        <tr 
+            className="transition cursor-pointer" 
+            style={{ borderBottom: "1px solid var(--border)" }}
+            onClick={() => navigate(`/suppliers/${supplier._id}`)}
             onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 

@@ -8,23 +8,21 @@ import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PurchaseModal from "../components/PurchaseModal.jsx";
-import ViewPurchaseDetail from "../components/ViewPurchaseDetail.jsx";
 import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function ProductPurchasePage() {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseLabels(language);
     
-    const navigate         = useNavigate();
     const [deletePurchase] = useDeletePurchase();
     const [updateStatus] = useUpdatePurchaseStatus();
 
     const [modal,        setModal]        = useState(null);
-    const [viewPurchase, setViewPurchase] = useState(null);
     const [paymentModal, setPaymentModal] = useState(null);
 
     const listRef = useRef(null);
@@ -59,13 +57,6 @@ export default function ProductPurchasePage() {
                     mode={modal.mode}
                     purchaseId={modal.id}
                     onClose={() => setModal(null)}
-                />
-            )}
-            {viewPurchase && (
-                <ViewPurchaseDetail
-                    purchase={viewPurchase}
-                    language={language}
-                    onClose={() => setViewPurchase(null)}
                 />
             )}
             {paymentModal && (
@@ -117,7 +108,6 @@ export default function ProductPurchasePage() {
                                     <PurchaseRow
                                         key={p._id}
                                         purchase={p}
-                                        onView={() => setViewPurchase(p)}
                                         onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: p._id }); }}
                                         onDelete={e => handleDelete(p._id, e)}
                                         onStatusUpdate={handleStatusUpdate}
@@ -138,7 +128,8 @@ export default function ProductPurchasePage() {
     );
 }
 
-function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPayment }) {
+function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseLabels(language);
@@ -187,7 +178,7 @@ function PurchaseRow({ purchase, onView, onEdit, onDelete, onStatusUpdate, onPay
 
     return (
         <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
-            onClick={onView}>
+            onClick={() => navigate(`/purchases/${purchase._id}`)}>
 
             <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                 {purchase?.invoiceNumber ?? "—"}

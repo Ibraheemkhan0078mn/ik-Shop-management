@@ -10,9 +10,13 @@ import Analytics from "../modules/dashbaord/pages/Analytics.jsx";
 import Dashboard from "../modules/dashbaord/pages/Dashboard.jsx";
 import Generals from "../modules/setting/pages/Generals.jsx";
 import WastagePage from "../modules/wastage/pages/WastagePage.jsx";
+import WastageDetail from "../modules/wastage/pages/WastageDetail.jsx";
 import ProductPurchase from "../modules/productPurchases/pages/ProductPurchase.jsx";
+import PurchaseDetail from "../modules/productPurchases/pages/PurchaseDetail.jsx";
 import SupplierPage from "../modules/suppliers/pages/SupplierPage.jsx";
+import SupplierDetail from "../modules/suppliers/pages/SupplierDetail.jsx";
 import PurchaseReturnPage from "../modules/purchaseReturn/pages/PurchaseReturnPage.jsx";
+import PurchaseReturnDetail from "../modules/purchaseReturn/pages/PurchaseReturnDetail.jsx";
 import ViewProductPage from "../modules/productsModule/pages/Products.jsx";
 import QuickActions from "../modules/dashbaord/pages/QuickActions.jsx";
 import QarzaAccounts from "../modules/qarza/pages/QarzaAccounts.jsx";
@@ -70,12 +74,16 @@ function AppRoutes() {
 
 
             <Route path="/purchases" element={<ProtectedRoute><ProductPurchase /></ProtectedRoute>} />
+            <Route path="/purchases/:id" element={<ProtectedRoute><PurchaseDetail /></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><SupplierPage /></ProtectedRoute>} />
+            <Route path="/suppliers/:id" element={<ProtectedRoute><SupplierDetail /></ProtectedRoute>} />
             <Route path="/purchase-returns" element={<ProtectedRoute><PurchaseReturnPage /></ProtectedRoute>} />
+            <Route path="/purchase-returns/:id" element={<ProtectedRoute><PurchaseReturnDetail /></ProtectedRoute>} />
             <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
+            <Route path="/wastage/:id" element={<ProtectedRoute><WastageDetail /></ProtectedRoute>} />
             <Route path="/qarzaAccount" element={<ProtectedRoute><QarzaAccounts /></ProtectedRoute>} />
             <Route path="/EachQarzaAccountRecord/:id" element={<ProtectedRoute><EachQarzaAccountRecords /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />

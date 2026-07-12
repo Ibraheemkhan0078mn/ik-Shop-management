@@ -69,6 +69,16 @@ export const purchaseApi = baseApi.injectEndpoints({
             transformResponse: (raw) => raw.data || raw,
             providesTags: (result, error, purchaseId) => [{ type: "Purchase", id: `payments-${purchaseId}` }],
         }),
+
+        // Get Purchases by Supplier
+        getPurchasesBySupplier: build.query({
+            query: ({ supplierId, startDate, endDate, page = 1, limit = 20 }) => ({
+                url: "/purchases/pagination",
+                params: { supplier: supplierId, startDate, endDate, page, limit },
+            }),
+            transformResponse: (raw) => raw || {},
+            providesTags: ["Purchase"],
+        }),
     }),
 });
 
@@ -83,4 +93,5 @@ export const {
     useUpdatePurchaseStatusMutation: useUpdatePurchaseStatus,
     useCreatePurchasePaymentMutation: useCreatePurchasePayment,
     useGetPurchasePaymentsQuery: useGetPurchasePayments,
+    useGetPurchasesBySupplierQuery: usePurchasesBySupplier,
 } = purchaseApi;

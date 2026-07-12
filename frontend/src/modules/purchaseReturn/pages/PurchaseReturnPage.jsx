@@ -1,5 +1,6 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, CheckCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -156,6 +157,7 @@ export default function PurchaseReturnPage() {
 }
 
 function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
@@ -175,7 +177,10 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
     };
 
     return (
-        <tr className="transition border-b border-edge hover:bg-surface-muted">
+        <tr 
+            className="transition border-b border-edge hover:bg-surface-muted cursor-pointer"
+            onClick={() => navigate(`/purchase-returns/${purchaseReturn._id}`)}
+        >
             <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
                 {purchaseReturn?.purchaseReturnNumber ?? "—"}
             </td>
