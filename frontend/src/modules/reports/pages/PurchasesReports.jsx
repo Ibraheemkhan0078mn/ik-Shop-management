@@ -1,156 +1,270 @@
-import React, { useState } from "react";
-import {
-    StickyNote,
-    List,
-    Truck,
-    ShoppingBag,
-    Clock,
-    FileText,
-    ChevronRight,
-    ShoppingCart,
-    Factory,
-    Layers,
-    Tags,
-} from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Download, RefreshCw, Package, DollarSign, TrendingUp, Truck, Percent, ShoppingCart } from "lucide-react";
+import { useGetPurchaseKPIReportQuery } from "../services/reports.service.js";
+import { showError } from "../../../shared/utilities/toastHelpers.js";
+import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
+import { 
+    KpiCard, 
+    PeriodFilterBar, 
+    LoadingSpinner, 
+    SourceSection,
+    SummaryCard 
+} from "../components/ReportComponents.jsx";
 
-import { Link } from "react-router-dom";
+const SECTION_KEYS = ['suppliers', 'categories'];
 
-const App = () => {
-    const [language, setLanguage] = useState("en"); // 'en' or 'ur'
+export default function PurchasesReports() {
+    const targetRef = useRef(null);
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+    const [period, setPeriod] = useState("today");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [expandedSections, setExpandedSections] = useState({});
 
-    // Purchase Summary Stats Data
-    const stats = [
-        {
-            title: language === "en" ? "Total Purchases" : "کل خریداری",
-            value: "$85,200",
-        },
-        {
-            title: language === "en" ? "Active Orders" : "فعال آرڈرز",
-            value: "42",
-        },
-        {
-            title: language === "en" ? "Pending Amount" : "باقی رقم",
-            value: "$12,400",
-        },
-        {
-            title: language === "en" ? "Total Suppliers" : "کل سپلائرز",
-            value: "128",
-        },
-    ];
+    const filters = { period };
+    if (period === "custom" && fromDate && toDate) {
+        filters.fromDate = fromDate;
+        filters.toDate = toDate;
+    }
 
-    const purchaseReportItems = [
-        {
-            key: "purchase-summary",
-            module: "purchases",
-            title: {
-                en: "Purchase Summary",
-                ur: "خریداری کا خلاصہ",
-            },
-            description: "Overview of all purchases with totals and statistics",
-        },
-        {
-            key: "purchase-by-supplier",
-            module: "purchases",
-            title: {
-                en: "Purchase by Supplier",
-                ur: "سپلائر کے لحاظ سے خریداری",
-            },
-            description: "Purchase breakdown by supplier",
-        },
-        {
-            key: "purchase-by-category",
-            module: "purchases",
-            title: {
-                en: "Purchase by Category",
-                ur: "زمرہ کے لحاظ سے خریداری",
-            },
-            description: "Purchase breakdown by product category",
-        },
-    ];
+    const { data, isLoading, error, refetch } = useGetPurchaseKPIReportQuery(filters);
+
+    if (error) {
+        showError(error?.data?.message || "Failed to load purchases report");
+    }
+
+    const handleRefresh = () => refetch();
+
+    const toggleSection = (key) => {
+        setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleExpandAll = () => {
+        const all = {};
+        SECTION_KEYS.forEach(k => { all[k] = true; });
+        setExpandedSections(all);
+    };
+
+    const handleCollapseAll = () => {
+        setExpandedSections({});
+    };
+
+    const summary = data?.data?.summary || {};
+    const details = data?.data?.details || {};
+    const breakdowns = data?.data?.breakdowns || {};
+    const transactions = data?.data?.transactions || {};
 
     return (
-        <div
-            className={`min-h-screen bg-(--surface) p-6 rounded-3xl border border-(--border) shadow-[0_18px_50px_rgba(64,45,28,0.12)] ${language === "ur" ? "rtl" : "ltr"}`}
-            dir={language === "ur" ? "rtl" : "ltr"}
-        >
-            {/* Summary Stats Grid */}
-            <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                {stats.map((stat, idx) => (
-                    <div
-                        key={idx}
-                        className="bg-(--surface) p-6 rounded-3xl border border-(--border) shadow-[0_14px_30px_rgba(64,45,28,0.10)] flex items-center gap-4"
+        <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Purchases Report</h1>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>Complete purchase analysis with supplier and category breakdown</p>
+                </div>
+                <div className="flex gap-2 no-print">
+                    <button
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg border transition"
+                        style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--ink)' }}
                     >
-                        <div>
-                            <h3 className="text-(--muted) text-sm font-medium">
-                                {stat.title}
-                            </h3>
-                            <p className="text-2xl font-bold text-(--ink) mt-0.5">
-                                {stat.value}
-                            </p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Reports Grid Section */}
-            <div className="max-w-7xl mx-auto">
-                <h2 className="text-lg font-semibold text-(--ink) font-display mb-6 px-1">
-                    {language === "en"
-                        ? "Purchases Reports"
-                        : "خریداری کی رپورٹس"}
-                </h2>
-
-                <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
-                    {purchaseReportItems.map((item) => (
-                        <div
-                            key={item.key}
-                            className="bg-(--surface) border border-(--border) rounded-3xl shadow-[0_14px_30px_rgba(64,45,28,0.10)] p-4 flex flex-col hover:shadow-[0_18px_40px_rgba(64,45,28,0.16)] transition w-full sm:w-[300px] md:w-[320px]"
-                        >
-                            {/* Title */}
-                            <h2
-                                className={`text-lg font-semibold text-(--ink) font-display wrap-break-word ${!item.description ? "mb-0" : "mb-2"} capitalize`}
-                            >
-                                {item.title.en}
-                            </h2>
-
-                            {/* Info */}
-                            {item?.description && (
-                                <div className="space-y-1 text-xs text-(--muted) flex-1">
-                                    <div className="flex items-start gap-2">
-                                        <StickyNote className="w-3.5 h-3.5 text-(--muted) mt-0.5" />
-                                        <div className="wrap-break-word leading-relaxed">
-                                            <span className="font-medium text-(--ink)">
-                                                {language === "en"
-                                                    ? "Notes:"
-                                                    : "نوٹس:"}
-                                            </span>
-                                            {item.description || "-"}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Action */}
-                            <Link
-                                to={`/reports/${item.module}/details?reportKey=${item.key}`}
-                                className="mt-4 text-sm text-(--muted) font-medium hover:text-(--accent-2) flex items-center justify-between border-t border-(--border) pt-3 group cursor-pointer transition-colors"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <List className="w-4 h-4 text-(--muted) group-hover:text-(--accent-2)" />
-                                    {language === "en"
-                                        ? "View Details"
-                                        : "تفصیلات دیکھیں"}
-                                </div>
-                                <ChevronRight
-                                    className={`w-4 h-4 transition-transform group-hover:translate-x-1 ${language === "ur" ? "rotate-180 group-hover:-translate-x-1" : ""}`}
-                                />
-                            </Link>
-                        </div>
-                    ))}
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
+                    <button
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
+                        style={{ background: 'var(--accent-2)' }}
+                    >
+                        <Download size={16} />
+                        Export PDF
+                    </button>
                 </div>
             </div>
+
+            {/* Date filter */}
+            <PeriodFilterBar
+                period={period}
+                onPeriodChange={setPeriod}
+                fromDate={fromDate}
+                toDate={toDate}
+                onFromDateChange={setFromDate}
+                onToDateChange={setToDate}
+                onExpandAll={handleExpandAll}
+                onCollapseAll={handleCollapseAll}
+            />
+
+            {/* Content */}
+            {isLoading ? (
+                <LoadingSpinner />
+            ) : (
+                <div ref={targetRef}>
+                    {/* KPI Grid Row 1 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <KpiCard 
+                            label="Total Purchases" 
+                            value={summary.totalPurchases} 
+                            icon={Package} 
+                            color="#3b82f6" 
+                            description={`${details.purchaseCount || 0} purchases`} 
+                        />
+                        <KpiCard 
+                            label="Average Order Cost" 
+                            value={summary.averageOrderCost} 
+                            icon={DollarSign} 
+                            color="#2563eb" 
+                            description="Per purchase"
+                        />
+                        <KpiCard 
+                            label="Total Suppliers" 
+                            value={details.supplierCount || 0} 
+                            icon={Truck} 
+                            color="#8b5cf6" 
+                            description="Unique suppliers" 
+                            isCurrency={false}
+                        />
+                        <KpiCard 
+                            label="Total Categories" 
+                            value={details.categoryCount || 0} 
+                            icon={ShoppingCart} 
+                            color="#0891b2" 
+                            description="Product categories" 
+                            isCurrency={false}
+                        />
+                    </div>
+
+                    {/* KPI Grid Row 2 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <KpiCard 
+                            label="Most Purchased" 
+                            value={summary.totalQuantity || 0} 
+                            icon={ShoppingCart} 
+                            color="#10b981" 
+                            description="Total units" 
+                            isCurrency={false}
+                        />
+                        <KpiCard 
+                            label="Average Unit Cost" 
+                            value={summary.avgUnitCost} 
+                            icon={DollarSign} 
+                            color="#059669" 
+                            description="Per unit"
+                        />
+                        <KpiCard 
+                            label="Purchase Returns" 
+                            value={summary.totalReturns} 
+                            icon={TrendingUp} 
+                            color="#06b6d4" 
+                            description={`${details.returnCount || 0} returns`}
+                        />
+                        <KpiCard 
+                            label="Top Supplier" 
+                            value={summary.topSupplierPurchases || 0} 
+                            icon={Truck} 
+                            color="#7c3aed" 
+                            description="By amount"
+                        />
+                    </div>
+
+                    {/* Summary Card */}
+                    <div className="rounded-xl border-2 shadow-sm p-6 mb-6" style={{ background: 'var(--surface)', borderColor: '#3b82f6' }}>
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Package size={22} style={{ color: '#3b82f6' }} />
+                                    <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>PURCHASES SUMMARY</span>
+                                </div>
+                                <p className="text-3xl font-bold" style={{ color: '#3b82f6' }}>
+                                    Rs {(summary.totalPurchases || 0).toLocaleString()}
+                                </p>
+                                <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                                    Total cost of all purchases
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm" style={{ color: 'var(--muted)' }}>Purchase Orders</p>
+                                <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{details.purchaseCount || 0}</p>
+                                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>Total Units</p>
+                                <p className="text-lg font-bold" style={{ color: 'var(--ink)' }}>{summary.totalQuantity || 0}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Detailed Sections */}
+                    <div className="space-y-4 mb-6">
+                        <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Purchases Breakdown</h2>
+
+                        {/* Suppliers Section */}
+                        <SourceSection
+                            title="Top Suppliers"
+                            icon={Truck}
+                            color="#3b82f6"
+                            kpiValue={summary.totalPurchases}
+                            kpiDescription="Purchases by supplier"
+                            count={details.supplierCount || 0}
+                            breakdown={breakdowns.purchasesBySupplier}
+                            breakdownLabelKey="supplierName"
+                            transactions={transactions.purchases}
+                            transactionType="purchases"
+                            isExpanded={!!expandedSections.suppliers}
+                            onToggle={() => toggleSection('suppliers')}
+                        />
+
+                        {/* Categories Section */}
+                        {breakdowns.purchasesByCategory && breakdowns.purchasesByCategory.length > 0 && (
+                            <SourceSection
+                                title="Purchases by Category"
+                                icon={ShoppingCart}
+                                color="#2563eb"
+                                kpiValue={summary.totalPurchases}
+                                kpiDescription="Purchases by category"
+                                count={details.categoryCount || 0}
+                                breakdown={breakdowns.purchasesByCategory}
+                                breakdownLabelKey="category"
+                                isExpanded={!!expandedSections.categories}
+                                onToggle={() => toggleSection('categories')}
+                            />
+                        )}
+                    </div>
+
+                    {/* Additional Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <SummaryCard 
+                            icon={Percent}
+                            label="Return Rate"
+                            value={summary.returnRate || 0}
+                            description="Percentage of returns"
+                            isCurrency={false}
+                            color="var(--ink)"
+                        />
+                        <SummaryCard 
+                            icon={DollarSign}
+                            label="Avg Supplier Spend"
+                            value={summary.avgSupplierSpend || 0}
+                            description="Per supplier"
+                            isCurrency={true}
+                            color="var(--ink)"
+                        />
+                        <SummaryCard 
+                            icon={TrendingUp}
+                            label="Most Purchased Category"
+                            value={summary.topCategory || 'N/A'}
+                            description="By quantity"
+                            isCurrency={false}
+                            color="var(--ink)"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* PDF Modal */}
+            {isPdfModalOpen && (
+                <PdfPreviewModal
+                    title="Purchases Report"
+                    contentRef={targetRef}
+                    onClose={() => setIsPdfModalOpen(false)}
+                />
+            )}
         </div>
     );
-};
-
-export default App;
+}

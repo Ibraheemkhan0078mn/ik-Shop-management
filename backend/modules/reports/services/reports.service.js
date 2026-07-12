@@ -24,13 +24,15 @@ import {
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
     const filter = {};
-    if (fromDate) filter.createdAt = { $gte: new Date(fromDate) };
+    if (fromDate) {
+        const startDate = new Date(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        filter.createdAt = { ...filter.createdAt, $gte: startDate };
+    }
     if (toDate) {
-        if (filter.createdAt) {
-            filter.createdAt.$lte = new Date(toDate);
-        } else {
-            filter.createdAt = { $lte: new Date(toDate) };
-        }
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        filter.createdAt = { ...filter.createdAt, $lte: endDate };
     }
     return filter;
 };
@@ -38,9 +40,35 @@ const buildDateFilter = (fromDate, toDate) => {
 // Helper function to get today's date range
 const getTodayRange = () => {
     const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
     return { startOfDay, endOfDay };
+};
+
+const getYesterdayRange = () => {
+    const now = new Date();
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    return { startOfDay, endOfDay };
+};
+
+const getWeekRange = () => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return { startOfWeek, endOfWeek };
+};
+
+const getMonthRange = () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { startOfMonth, endOfMonth };
 };
 
 // Dashboard Summary
@@ -1480,27 +1508,32 @@ export const getMainBusinessReport = async (filters = {}) => {
     const PurchaseReturnModel = getLocalPurchaseReturnModel();
     const ProductReturnModel = getLocalProductReturnModel();
     const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
+    const QarzaAccountModel = getLocalQarzaAccountModel();
     const { fromDate, toDate, period = "today" } = filters;
 
     let dateFilter = {};
+    
     if (period === "custom" && fromDate && toDate) {
         dateFilter = buildDateFilter(fromDate, toDate);
     } else if (period === "today") {
         const { startOfDay, endOfDay } = getTodayRange();
-        dateFilter = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "yesterday") {
+        const { startOfDay, endOfDay } = getYesterdayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
     } else if (period === "week") {
-        const now = new Date();
-        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        const { startOfWeek, endOfWeek } = getWeekRange();
         dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
     } else if (period === "month") {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const { startOfMonth, endOfMonth } = getMonthRange();
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else {
+        // Default to current month if period is unrecognized
+        const { startOfMonth, endOfMonth } = getMonthRange();
         dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
     }
 
-    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, salesByPaymentMethod, expensesByCategory, productReturnsByReason, purchaseReturnsBySupplier, wastagesByProduct, salariesByStaff, salesList, purchasesList, expensesList, wastagesList, purchaseReturnsList, productReturnsList, salaryPaymentsList] = await Promise.all([
+    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivableData, qarzaPayableData, salesByPaymentMethod, expensesByCategory, productReturnsByReason, purchaseReturnsBySupplier, wastagesByProduct, salariesByStaff, salesList, purchasesList, expensesList, wastagesList, purchaseReturnsList, productReturnsList, salaryPaymentsList] = await Promise.all([
         OrderModel.aggregate([
             { $match: { ...dateFilter, status: "completed" } },
             { $group: { _id: null, totalSales: { $sum: "$totalAmount" }, totalDiscount: { $sum: "$discountAmount" }, count: { $sum: 1 } } }
@@ -1526,8 +1559,16 @@ export const getMainBusinessReport = async (filters = {}) => {
             { $group: { _id: null, totalProductReturns: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
         ]),
         StaffSalaryPaymentModel.aggregate([
-            { $match: dateFilter },
+            { $match: { ...dateFilter, status: 'paid' } },
             { $group: { _id: null, totalSalaries: { $sum: "$amount" }, count: { $sum: 1 } } }
+        ]),
+        QarzaAccountModel.aggregate([
+            { $match: { ...dateFilter, type: "receivable" } },
+            { $group: { _id: null, totalReceivable: { $sum: "$balance" }, count: { $sum: 1 } } }
+        ]),
+        QarzaAccountModel.aggregate([
+            { $match: { ...dateFilter, type: "payable" } },
+            { $group: { _id: null, totalPayable: { $sum: "$balance" }, count: { $sum: 1 } } }
         ]),
         OrderModel.aggregate([
             { $match: { ...dateFilter, status: "completed" } },
@@ -1561,7 +1602,7 @@ export const getMainBusinessReport = async (filters = {}) => {
         WastageModel.find(dateFilter).select('quantity costPrice productName createdAt').sort({ createdAt: -1 }).limit(100),
         PurchaseReturnModel.find(dateFilter).select('returnNumber totalAmount supplierName createdAt').sort({ createdAt: -1 }).limit(100),
         ProductReturnModel.find(dateFilter).select('returnNumber refundAmount customerName createdAt').sort({ createdAt: -1 }).limit(100),
-        StaffSalaryPaymentModel.find(dateFilter).select('amount staffId paymentDate').populate('staffId', 'name').sort({ paymentDate: -1 }).limit(100),
+        StaffSalaryPaymentModel.find({ ...dateFilter, status: 'paid' }).select('amount staffId paidAt').populate('staffId', 'name').sort({ paidAt: -1 }).limit(100),
     ]);
 
     const totalSales = sales[0]?.totalSales || 0;
@@ -1571,8 +1612,13 @@ export const getMainBusinessReport = async (filters = {}) => {
     const totalPurchaseReturns = purchaseReturns[0]?.totalPurchaseReturns || 0;
     const totalProductReturns = productReturns[0]?.totalProductReturns || 0;
     const totalSalaries = salaryPayments[0]?.totalSalaries || 0;
+    const totalReceivable = qarzaReceivableData[0]?.totalReceivable || 0;
+    const totalPayable = qarzaPayableData[0]?.totalPayable || 0;
 
+    const grossProfit = totalSales - totalPurchases;
+    const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
     const netProfit = totalSales - totalPurchases - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
+    const netMarginPercentage = totalSales > 0 ? Number(((netProfit / totalSales) * 100).toFixed(1)) : 0;
 
     return {
         summary: {
@@ -1583,7 +1629,12 @@ export const getMainBusinessReport = async (filters = {}) => {
             totalPurchaseReturns,
             totalProductReturns,
             totalWastage,
+            totalReceivable,
+            totalPayable,
+            grossProfit,
+            grossMarginPercentage,
             netProfit,
+            netMarginPercentage,
         },
         details: {
             salesCount: sales[0]?.count || 0,
@@ -1593,6 +1644,8 @@ export const getMainBusinessReport = async (filters = {}) => {
             purchaseReturnCount: purchaseReturns[0]?.count || 0,
             productReturnCount: productReturns[0]?.count || 0,
             salaryPaymentCount: salaryPayments[0]?.count || 0,
+            qarzaReceivableCount: qarzaReceivableData[0]?.count || 0,
+            qarzaPayableCount: qarzaPayableData[0]?.count || 0,
         },
         breakdowns: {
             salesByPaymentMethod: salesByPaymentMethod.map(item => ({
@@ -1683,7 +1736,7 @@ export const getMainBusinessReport = async (filters = {}) => {
                 id: payment._id,
                 amount: payment.amount,
                 staffName: payment.staffId?.name || 'Unknown',
-                date: payment.paymentDate
+                date: payment.paidAt
             }))
         }
     };
