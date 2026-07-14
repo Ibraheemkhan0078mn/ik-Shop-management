@@ -119,6 +119,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         discount: purchaseData.discount,
         discountType: purchaseData.discountType,
         gst: purchaseData.gst,
+        gstType: purchaseData.gstType,
         shippingCost: purchaseData.shippingCost,
         totalAmount: purchaseData.totalAmount,
         notes: purchaseData.notes,
@@ -184,7 +185,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         invoiceNumber: data.invoiceNumber, items: purchaseItems,
         subtotal: data.subtotal, discount: data.discount,
         discountType: data.discountType, gst: data.gst,
-        shippingCost: data.shippingCost, totalAmount: data.totalAmount,
+        gstType: data.gstType, shippingCost: data.shippingCost, totalAmount: data.totalAmount,
         notes: data.notes,
     });
 

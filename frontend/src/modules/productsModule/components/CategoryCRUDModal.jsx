@@ -85,7 +85,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
 
     if (!isCreate && isFetching && !categoryData) {
         return (
-            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-md">
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-md">
                 <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm">
                     {labels.categoryLoading}
                 </div>
@@ -95,7 +95,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
 
     return (
         <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
             onClick={() => onClose()}
         >
             <div

@@ -66,8 +66,9 @@ export const getSupplierById = asyncHandler(async (req, res, next) => {
 
 export const createSupplier = asyncHandler(async (req, res, next) => {
     const validatedData = req.body || {};
+    const { taxId: _taxId, ...supplierData } = validatedData;
 
-    const { name } = validatedData;
+    const { name } = supplierData;
 
     const supplierExists = await findSupplierByNameService(name);
 
@@ -77,7 +78,7 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
         );
     }
 
-    const supplier = await supplierCreateService(validatedData);
+    const supplier = await supplierCreateService(supplierData);
 
     res.status(201).json({
         success: true,
@@ -96,15 +97,16 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
     }
 
     const validatedData = req.body || {};
+    const { taxId: _taxId, ...supplierData } = validatedData;
 
-    if (validatedData.name && validatedData.name !== supplier.name) {
-        const nameExists = await findSupplierByNameService(validatedData.name);
+    if (supplierData.name && supplierData.name !== supplier.name) {
+        const nameExists = await findSupplierByNameService(supplierData.name);
         if (nameExists) {
             return next(new ErrorResponse("Supplier name already in use", 400));
         }
     }
 
-    supplier = await supplierUpdateService(id, validatedData);
+    supplier = await supplierUpdateService(id, supplierData);
 
     res.status(200).json({
         success: true,

@@ -28,6 +28,7 @@ export const createPurchaseSchema = yup.object({
         .oneOf(["percentage", "fixed"])
         .default("percentage"),
     gst: yup.number().min(0).default(0),
+    gstType: yup.string().oneOf(["percentage", "fixed"]).default("percentage"),
     shippingCost: yup.number().min(0).default(0),
     totalAmount: yup.number().min(0).required("Total amount is required"),
     notes: yup.string().nullable(),
@@ -61,6 +62,7 @@ export const updatePurchaseSchema = yup.object({
     discount: yup.number().min(0).default(0),
     discountType: yup.string().nullable(),
     gst: yup.number().min(0).default(0),
+    gstType: yup.string().oneOf(["percentage", "fixed"]).default("percentage"),
     shippingCost: yup.number().min(0).default(0),
     totalAmount: yup.number().min(0).default(0),
     notes: yup.string().nullable(),

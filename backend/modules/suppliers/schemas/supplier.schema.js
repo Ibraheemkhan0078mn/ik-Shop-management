@@ -8,7 +8,6 @@ export const createSupplierSchema = yup.object({
     address: yup.string().nullable(),
     isActive: yup.boolean().default(true),
     notes: yup.string().nullable(),
-    taxId: yup.string().nullable(),
     type: yup.string().nullable(),
 });
 
@@ -20,6 +19,5 @@ export const updateSupplierSchema = yup.object({
     address: yup.string().nullable(),
     isActive: yup.boolean(),
     notes: yup.string().nullable(),
-    taxId: yup.string().nullable(),
     type: yup.string().nullable(),
 });

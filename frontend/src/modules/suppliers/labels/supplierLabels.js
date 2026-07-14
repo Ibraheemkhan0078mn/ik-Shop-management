@@ -16,7 +16,6 @@ export const supplierLabels = {
     address: "Address",
     status: "Status",
     notes: "Notes",
-    taxId: "Tax ID / NTN",
     
     // Status values
     active: "Active",
@@ -62,7 +61,6 @@ export const supplierLabels = {
     namePlaceholder: "ABC Traders",
     phonePlaceholder: "0300-1234567",
     emailPlaceholder: "supplier@example.com",
-    taxIdPlaceholder: "1234567-8",
     addressPlaceholder: "Industrial Area, Karachi…",
     notesPlaceholder: "Payment terms, reliability…",
     
@@ -88,7 +86,6 @@ export const supplierLabels = {
     address: "پتہ",
     status: "حیثیت",
     notes: "نوٹس",
-    taxId: "ٹیکس آئی این ٹی این",
     
     // Status values
     active: "فعال",
@@ -134,7 +131,6 @@ export const supplierLabels = {
     namePlaceholder: "اے بی سی ٹریڈرز",
     phonePlaceholder: "0300-1234567",
     emailPlaceholder: "supplier@example.com",
-    taxIdPlaceholder: "1234567-8",
     addressPlaceholder: "صنعتی علاقہ، کراچی…",
     notesPlaceholder: "ادائیگی کی شرائط،可信性…",
     
@@ -160,7 +156,6 @@ export const supplierLabels = {
     address: "پتہ / Address",
     status: "حیثیت / Status",
     notes: "نوٹس / Notes",
-    taxId: "ٹیکس آئی این ٹی این / Tax ID / NTN",
     
     // Status values
     active: "فعال / Active",
@@ -206,7 +201,6 @@ export const supplierLabels = {
     namePlaceholder: "اے بی سی ٹریڈرز / ABC Traders",
     phonePlaceholder: "0300-1234567",
     emailPlaceholder: "supplier@example.com",
-    taxIdPlaceholder: "1234567-8",
     addressPlaceholder: "صنعتی علاقہ، کراچی… / Industrial Area, Karachi…",
     notesPlaceholder: "ادائیگی کی شرائط،可信性… / Payment terms, reliability…",
     

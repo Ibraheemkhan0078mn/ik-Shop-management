@@ -105,19 +105,31 @@ export const SearchableSelect = ({
                     {/* Options */}
                     <div className="max-h-48 overflow-y-auto">
                         {filteredOptions.length > 0 ? (
-                            filteredOptions.map((opt) => (
-                                <div
-                                    key={opt.value}
-                                    onClick={() => {
-                                        onChange && onChange(opt.value);
-                                        setOpen(false);
-                                        setSearch("");
-                                    }}
-                                    className="px-3 py-2 hover:bg-teal-100 cursor-pointer"
-                                >
-                                    {opt.label}
-                                </div>
-                            ))
+                            filteredOptions.map((opt) => {
+                                const isDisabled = Boolean(opt.disabled);
+                                return (
+                                    <div
+                                        key={opt.value}
+                                        onClick={() => {
+                                            if (isDisabled) return;
+                                            onChange && onChange(opt.value);
+                                            setOpen(false);
+                                            setSearch("");
+                                        }}
+                                        className={`px-3 py-2 ${isDisabled ? "cursor-not-allowed opacity-60" : "hover:bg-teal-100 cursor-pointer"}`}
+                                        aria-disabled={isDisabled}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span>{opt.label}</span>
+                                            {isDisabled && (
+                                                <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                                    Non Active
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
                         ) : (
                             <div className="p-2 text-sm text-gray-500">
                                 No results found

@@ -24,7 +24,7 @@ const getLocalizedTypes = (labels) => [
 const emptyForm = () => ({
     name: "", type: "Other",
     phone: "", email: "", address: "",
-    taxId: "", notes: "", isActive: true,
+    notes: "", isActive: true,
 });
 
 // ─── theme atoms ───────────────────────────────────────────────────────────
@@ -108,7 +108,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
             phone:         existingSupplier.phone         ?? "",
             email:         existingSupplier.email         ?? "",
             address:       existingSupplier.address       ?? "",
-            taxId:         existingSupplier.taxId         ?? "",
             notes:         existingSupplier.notes         ?? "",
             isActive:      existingSupplier.isActive      ?? true,
         });
@@ -132,7 +131,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
             phone:         form.phone.trim(),
             email:         form.email.trim(),
             address:       form.address.trim(),
-            taxId:         form.taxId.trim(),
             notes:         form.notes.trim(),
         };
 
@@ -226,10 +224,16 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                                 onChange={e => update("email", e.target.value)} />
                         </Field>
 
-                        <Field>
-                            <Label>{labels.taxId}</Label>
-                            <Inp value={form.taxId} placeholder={labels.taxIdPlaceholder}
-                                onChange={e => update("taxId", e.target.value)} />
+                        <Field className="sm:col-span-2">
+                            <Label>{labels.address}</Label>
+                            <Txt rows={2} value={form.address} placeholder={labels.addressPlaceholder}
+                                onChange={e => update("address", e.target.value)} />
+                        </Field>
+
+                        <Field className="sm:col-span-2">
+                            <Label>{labels.notes}</Label>
+                            <Txt rows={2} value={form.notes} placeholder={labels.notesPlaceholder}
+                                onChange={e => update("notes", e.target.value)} />
                         </Field>
 
                         {/* status toggle */}
@@ -250,18 +254,6 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                                     {form.isActive ? labels.active : labels.inactive}
                                 </span>
                             </div>
-                        </Field>
-
-                        <Field className="sm:col-span-2">
-                            <Label>{labels.address}</Label>
-                            <Txt rows={2} value={form.address} placeholder={labels.addressPlaceholder}
-                                onChange={e => update("address", e.target.value)} />
-                        </Field>
-
-                        <Field className="sm:col-span-2">
-                            <Label>{labels.notes}</Label>
-                            <Txt rows={2} value={form.notes} placeholder={labels.notesPlaceholder}
-                                onChange={e => update("notes", e.target.value)} />
                         </Field>
                     </div>
 

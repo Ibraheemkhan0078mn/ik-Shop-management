@@ -77,6 +77,11 @@ const purchaseSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        gstType: {
+            type: String,
+            enum: ["percentage", "fixed"],
+            default: "percentage",
+        },
         shippingCost: {
             type: Number,
             default: 0,

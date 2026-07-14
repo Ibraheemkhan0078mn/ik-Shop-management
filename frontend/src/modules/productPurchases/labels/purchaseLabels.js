@@ -83,6 +83,7 @@ export const purchaseLabels = {
     batchNumberRequired: "Batch number required",
     selectSupplier: "Select supplier",
     addAtLeastOneItem: "Add at least one item",
+    productAlreadyAdded: "This product is already added to the bill",
     
     // Item form
     addItem: "Add Item",

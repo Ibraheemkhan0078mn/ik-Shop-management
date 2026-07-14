@@ -41,11 +41,6 @@ const supplierSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-        // Financial details or Tax ID (optional)
-        taxId: {
-            type: String,
-            trim: true,
-        },
         // Status to toggle active/inactive suppliers without deleting records
         isActive: {
             type: Boolean,
