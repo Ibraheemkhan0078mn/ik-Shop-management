@@ -7,7 +7,6 @@ const wastageItemSchema = Yup.object({
     batchNumber: Yup.string().optional(),
     expiryDate: Yup.date().optional().nullable(),
     quantity: Yup.number().required("Quantity is required").min(1, "Quantity must be at least 1"),
-    unit: Yup.string().optional(),
     costPrice: Yup.number().optional().min(0, "Cost price cannot be negative"),
 });
 

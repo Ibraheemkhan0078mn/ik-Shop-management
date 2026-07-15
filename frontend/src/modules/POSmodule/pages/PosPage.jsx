@@ -218,6 +218,22 @@ export default function PosPage() {
 
   // ── Add to Cart ───────────────────────────────────────────────────────────
   const addProductToCart = (product, portionType = "full", customPrice = null, selectedBatch = null) => {
+    // Check stock
+    const batchStock = selectedBatch?.quantity ?? 0;
+    if (batchStock <= 0) {
+      showError(isUrdu ? "اس مصنوع کا اسٹاک صفر ہے" : "This product has zero stock");
+      return;
+    }
+
+    // Check if batch is expired
+    if (selectedBatch?.expiryDate) {
+      const expiryDate = new Date(selectedBatch.expiryDate);
+      if (expiryDate < new Date()) {
+        showError(isUrdu ? "یہ بیٹچ ختم ہو چکا ہے" : "This batch has expired");
+        return;
+      }
+    }
+
     const basePrice = Number(selectedBatch?.sellingPrice || product.price) || 0;
     const discountPercent = Number(product.discount) || 0;
     const priceAfterDiscount = basePrice - (basePrice * discountPercent) / 100;
