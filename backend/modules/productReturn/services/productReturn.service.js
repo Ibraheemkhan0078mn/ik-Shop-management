@@ -3,7 +3,7 @@ import { findOneOrderService } from "../../pos/services/order.crud.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 
 const generateReturnNumber = async () => {
-    const lastReturn = await findProductReturnService({}).sort({ createdAt: -1 }).limit(1);
+    const lastReturn = await findProductReturnService({}, { sort: { createdAt: -1 }, limit: 1 });
     const lastNumber = lastReturn.length ? parseInt(lastReturn[0].returnNumber.replace("RET-", "")) : 0;
     const newNumber = lastNumber + 1;
     return `RET-${String(newNumber).padStart(6, "0")}`;
@@ -46,12 +46,12 @@ const getAllProductReturns = async (filters = {}) => {
             { customerName: { $regex: search, $options: "i" } },
         ];
     }
-    const productReturns = await findProductReturnService(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .populate("referenceOrderId")
-        .populate("items.productId");
+    const productReturns = await findProductReturnService(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        populate: ["referenceOrderId", "items.productId"]
+    });
     const total = await countProductReturnService(query);
     return {
         data: productReturns,
@@ -73,12 +73,12 @@ const getPaginatedProductReturns = async (filters = {}) => {
             { customerName: { $regex: search, $options: "i" } },
         ];
     }
-    const productReturns = await findProductReturnService(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .populate("referenceOrderId")
-        .populate("items.productId");
+    const productReturns = await findProductReturnService(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        populate: ["referenceOrderId", "items.productId"]
+    });
     const total = await countProductReturnService(query);
     return {
         data: productReturns,
@@ -90,7 +90,7 @@ const getPaginatedProductReturns = async (filters = {}) => {
 };
 
 const getProductReturnById = async (id) => {
-    return await findByIdProductReturnService(id).populate("referenceOrderId").populate("items.productId");
+    return await findByIdProductReturnService(id, { populate: ["referenceOrderId", "items.productId"] });
 };
 
 const updateProductReturn = async (id, updateData) => {
@@ -144,7 +144,7 @@ const updateProductReturn = async (id, updateData) => {
         }
     }
 
-    return await updateProductReturnService(id, updateData).populate("referenceOrderId").populate("items.productId");
+    return await updateProductReturnService(id, updateData, { populate: ["referenceOrderId", "items.productId"] });
 };
 
 const deleteProductReturn = async (id) => {
@@ -183,7 +183,7 @@ const updateReturnStatus = async (id, status) => {
         }
     }
 
-    return await updateProductReturnService(id, { returnStatus: status }).populate("referenceOrderId").populate("items.productId");
+    return await updateProductReturnService(id, { returnStatus: status }, { populate: ["referenceOrderId", "items.productId"] });
 };
 
 export {

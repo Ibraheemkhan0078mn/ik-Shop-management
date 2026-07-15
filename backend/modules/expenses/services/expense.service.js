@@ -9,10 +9,11 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
     let expenses = [];
 
     if (date == "none") {
-        expenses = await findExpenseService()
-            .sort({ date: -1 })
-            .limit(limit)
-            .skip(skip);
+        expenses = await findExpenseService({}, {
+            sort: { date: -1 },
+            limit,
+            skip
+        });
     } else {
         let dateObj = new Date(date);
         let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
@@ -22,10 +23,11 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
                 $gte: startDateFormat,
                 $lte: endDateFormat
             }
-        })
-            .sort({ createdOn: -1 })
-            .limit(limit)
-            .skip(skip);
+        }, {
+            sort: { createdOn: -1 },
+            limit,
+            skip
+        });
     }
 
     return expenses;
@@ -42,10 +44,11 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
     let total = 0;
 
     if (date == "none") {
-        expenses = await findExpenseService(query)
-            .sort({ date: -1 })
-            .limit(limit)
-            .skip((page - 1) * limit);
+        expenses = await findExpenseService(query, {
+            sort: { date: -1 },
+            limit,
+            skip: (page - 1) * limit
+        });
         total = await countExpenseService(query);
     } else {
         let dateObj = new Date(date);
@@ -56,10 +59,11 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
             $lte: endDateFormat
         };
 
-        expenses = await findExpenseService(query)
-            .sort({ createdOn: -1 })
-            .limit(limit)
-            .skip((page - 1) * limit);
+        expenses = await findExpenseService(query, {
+            sort: { createdOn: -1 },
+            limit,
+            skip: (page - 1) * limit
+        });
         total = await countExpenseService(query);
     }
 
@@ -87,7 +91,7 @@ const getCatagBasedExpense = async (catagName) => {
 };
 
 const getAllExpenses = async () => {
-    return await findExpenseService().sort({ createdAt: -1 });
+    return await findExpenseService({}, { sort: { createdAt: -1 } });
 };
 
 export {

@@ -6,11 +6,11 @@ const qarzaAccountCreate = async (data) => {
 };
 
 const getAllQarzaAccounts = async (query = {}) => {
-    return await findQarzaAccountService(query).populate("payments");
+    return await findQarzaAccountService(query, { populate: "payments" });
 };
 
 const getQarzaAccountById = async (id) => {
-    return await findByIdQarzaAccountService(id).populate("payments");
+    return await findByIdQarzaAccountService(id, { populate: "payments" });
 };
 
 const findQarzaAccountById = async (id) => {
@@ -34,14 +34,11 @@ const qarzaPaymentCreate = async (data) => {
 };
 
 const getAllQarzaPayments = async (query = {}) => {
-    return await findQarzaPaymentService(query).sort({ date: -1 });
+    return await findQarzaPaymentService(query, { sort: { date: -1 } });
 };
 
 const getPaginatedQarzaPayments = async (query = {}, skip = 0, limit = 20) => {
-    return await findQarzaPaymentService(query)
-        .sort({ date: -1 })
-        .skip(skip)
-        .limit(limit);
+    return await findQarzaPaymentService(query, { sort: { date: -1 }, skip, limit });
 };
 
 const countQarzaPayments = async (query = {}) => {

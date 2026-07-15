@@ -8,17 +8,18 @@ import {
     countCategoryService,
 } from "./category.crud.js";
 import { paginateModel } from '../../../common/services/common.service.js';
+import { getLocalCategoryModel } from '../../../configs/connect.db.js';
 
 export const getCategories = async () => {
-    return findCategoryService().sort({ createdAt: -1 });
+    return findCategoryService({}, { sort: { createdAt: -1 } });
 };
 
 export const getPaginationCategories = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
-    const categories = await findCategoryService().sort({ createdAt: -1 });
+    const CategoryModel = getLocalCategoryModel();
     
     const result = await paginateModel({
-        data: categories,
+        model: CategoryModel,
         page,
         limit,
         sort: { createdAt: -1 }

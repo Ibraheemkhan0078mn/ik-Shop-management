@@ -49,7 +49,7 @@ export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
     }
 
     const [wastages, total] = await Promise.all([
-        getAllWastagesService(query).skip(skip).limit(limit),
+        getAllWastagesService(query, { skip, limit }),
         countWastagesService(query),
     ]);
 

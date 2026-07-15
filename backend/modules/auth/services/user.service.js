@@ -1,11 +1,11 @@
 import { createUserService, findUserService, findOneUserService, findByIdUserService, updateUserService, deleteOneUserService, countUserService } from "./user.crud.js";
 
 const getAllUsers = async (query = {}) => {
-    return await findUserService(query).select("-password").sort({ createdAt: -1 });
+    return await findUserService(query, { select: "-password", sort: { createdAt: -1 } });
 };
 
 const getUserById = async (id) => {
-    return await findByIdUserService(id).select("-password");
+    return await findByIdUserService(id, { select: "-password" });
 };
 
 const findUserById = async (id) => {

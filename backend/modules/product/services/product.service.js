@@ -69,11 +69,10 @@ const findConflictingUnique = async (id, { hotKeySku, productCode, barcode }) =>
 // ───────────────────────────────────────────────────────────────────
 
 const getProducts = async () => {
-    const products = await findProductService()
-        .populate("batches")
-        .populate("category")
-        .populate("subCategory")
-        .sort({ createdAt: -1 });
+    const products = await findProductService({}, {
+        populate: ["batches", "category", "subCategory"],
+        sort: { createdAt: -1 }
+    });
     return attachBatchSellingPrice(products);
 };
 
@@ -166,10 +165,13 @@ const getPaginationProduct = async (filters = {}) => {
 };
 
 const getProductById = async (id) => {
-    return await findByIdProductService(id)
-        .populate("category", "name")
-        .populate("subCategory", "name")
-        .populate("batches");
+    return await findByIdProductService(id, {
+        populate: [
+            { path: "category", select: "name" },
+            { path: "subCategory", select: "name" },
+            "batches"
+        ]
+    });
 };
 
 // ───────────────────────────────────────────────────────────────────

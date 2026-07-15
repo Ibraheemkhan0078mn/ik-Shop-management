@@ -27,7 +27,7 @@ export const findDocs = async ({ model, modelName, filter = {}, options = {} }) 
 
 export const findOneDoc = async ({ model, modelName, filter = {}, options = {} }) => {
   const Model = resolveModel({ model, modelName });
-  const { select, populate, lean = true } = options;
+  const { select, populate, lean = false } = options;
   let query = Model.findOne(filter);
   if (select) query = query.select(select);
   if (populate) query = query.populate(populate);

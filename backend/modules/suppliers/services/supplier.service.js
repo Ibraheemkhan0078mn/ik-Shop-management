@@ -5,7 +5,7 @@ const supplierCreate = async (data) => {
 };
 
 const getAllSuppliers = async (query = {}) => {
-    return await findSupplierService(query).sort({ createdAt: -1 });
+    return await findSupplierService(query, { sort: { createdAt: -1 } });
 };
 
 const getSupplierById = async (id) => {

@@ -5,7 +5,7 @@ const holdOrderCreate = async (data) => {
 };
 
 const getAllHoldOrders = async (query = {}) => {
-    return await findHoldOrderService(query).sort({ createdAt: -1 });
+    return await findHoldOrderService(query, { sort: { createdAt: -1 } });
 };
 
 const getHoldOrderById = async (id) => {

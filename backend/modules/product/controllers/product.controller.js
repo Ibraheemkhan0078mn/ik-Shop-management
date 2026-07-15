@@ -23,12 +23,11 @@ export const getPaginationProductData = asyncHandler(async (req, res) => {
 });
 
 export const getProductDataById = asyncHandler(async (req, res, next) => {
-    try {
-        const data = await getProductById(req.params.id);
-        res.status(200).json({ success: true, message: "Product retrieved successfully", data });
-    } catch {
-        next(new ErrorResponse("Product not found", 404));
+    const data = await getProductById(req.params.id);
+    if (!data) {
+        return next(new ErrorResponse("Product not found", 404));
     }
+    res.status(200).json({ success: true, message: "Product retrieved successfully", data });
 });
 
 const coerceBody = (body) => {

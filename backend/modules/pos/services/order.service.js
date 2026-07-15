@@ -5,7 +5,7 @@ const orderCreate = async (data) => {
 };
 
 const getAllOrders = async (query = {}) => {
-    return await findOrderService(query).sort({ createdAt: -1 });
+    return await findOrderService(query, { sort: { createdAt: -1 } });
 };
 
 const getOrderById = async (id) => {
@@ -28,10 +28,11 @@ const getPaginatedOrders = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
     
-    const orders = await findOrderService({})
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .skip(skip);
+    const orders = await findOrderService({}, {
+        sort: { createdAt: -1 },
+        limit,
+        skip
+    });
     
     const total = await countOrderService({});
     
@@ -60,7 +61,7 @@ const getOrdersByCustomer = async (filters = {}) => {
         }
     }
 
-    return await findOrderService(filter).sort({ createdAt: -1 });
+    return await findOrderService(filter, { sort: { createdAt: -1 } });
 };
 
 export {

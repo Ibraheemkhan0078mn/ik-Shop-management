@@ -10,7 +10,7 @@ import {
 
 const customerCreate = async (data) => await createCustomerService(data);
 
-const getAllCustomers = async (query = {}) => await findCustomerService(query).sort({ createdAt: -1 });
+const getAllCustomers = async (query = {}) => await findCustomerService(query, { sort: { createdAt: -1 } });
 
 const getCustomerById = async (id) => await findByIdCustomerService(id);
 
@@ -26,10 +26,11 @@ const getPaginatedCustomers = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
     
-    const customers = await findCustomerService({})
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
+    const customers = await findCustomerService({}, {
+        sort: { createdAt: -1 },
+        skip,
+        limit: parseInt(limit)
+    });
     
     const total = await countCustomerService({});
     

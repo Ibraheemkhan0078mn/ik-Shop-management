@@ -35,7 +35,7 @@ export async function createPurchaseReturn(data) {
 }
 
 export async function getPurchaseReturnById(id) {
-  return await findByIdPurchaseReturnService(id).populate("purchase").populate("products.productId").populate("products.batchId");
+  return await findByIdPurchaseReturnService(id, { populate: ["purchase", "products.productId", "products.batchId"] });
 }
 
 export async function updatePurchaseReturn(id, newData) {
