@@ -6,25 +6,12 @@ import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useD
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-
-const getPermissions = (labels) => [
-    { key: "dashboard", label: labels.dashboard },
-    { key: "pos", label: labels.pos },
-    { key: "products", label: labels.products },
-    { key: "purchases", label: labels.purchases },
-    { key: "expenses", label: labels.expenses },
-    { key: "reports", label: labels.reports },
-    { key: "accounts", label: labels.accounts },
-    { key: "staff", label: labels.staff },
-    { key: "manageUsers", label: labels.manageUsers },
-    { key: "settings", label: labels.settings },
-];
+import { PERMISSION_GROUPS } from "../../../shared/utilities/permissions.js";
 
 export default function UserManagement() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getUserLabels(language);
-    const PERMISSIONS = getPermissions(labels);
     
     const { data: response, refetch } = useGetAllUsersQuery();
     const users = response?.data || [];
@@ -40,7 +27,7 @@ export default function UserManagement() {
         password: "",
         confirmPassword: "",
         role: "staff",
-        permissions: {},
+        permissions: [],
     });
 
     const openCreateModal = () => {
@@ -51,7 +38,7 @@ export default function UserManagement() {
             password: "",
             confirmPassword: "",
             role: "staff",
-            permissions: {},
+            permissions: [],
         });
         setModal({ mode: "create" });
     };
@@ -63,19 +50,20 @@ export default function UserManagement() {
             email: user.email,
             phoneNo: user.phoneNo,
             role: user.role,
-            permissions: user.permissions || {},
+            permissions: user.permissions || [],
         });
         setModal({ mode: "edit" });
     };
 
-    const handlePermissionChange = (key) => {
-        setFormData(prev => ({
-            ...prev,
-            permissions: {
-                ...prev.permissions,
-                [key]: !prev.permissions[key],
-            },
-        }));
+    const handlePermissionChange = (permission) => {
+        setFormData(prev => {
+            const permissions = prev.permissions || [];
+            const nextPermissions = permissions.includes(permission)
+                ? permissions.filter((item) => item !== permission)
+                : [...permissions, permission];
+
+            return { ...prev, permissions: nextPermissions };
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -203,17 +191,27 @@ export default function UserManagement() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {PERMISSIONS.map(({ key, label }) => (
-                                        <label key={key} className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.permissions[key] || false}
-                                                onChange={() => handlePermissionChange(key)}
-                                                className="w-4 h-4"
-                                            />
-                                            <span className="text-sm">{label}</span>
-                                        </label>
+                                <div className="grid gap-3">
+                                    {PERMISSION_GROUPS.map((group) => (
+                                        <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                            <p className="font-semibold mb-2">{group.label}</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {group.actions.map(({ key, label }) => {
+                                                    const permission = `${group.module}.${key}`;
+                                                    return (
+                                                        <label key={permission} className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={(formData.permissions || []).includes(permission)}
+                                                                onChange={() => handlePermissionChange(permission)}
+                                                                className="w-4 h-4"
+                                                            />
+                                                            <span className="text-sm">{label}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>

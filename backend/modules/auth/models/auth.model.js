@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { normalizePermissions } from "../utils/permission.utils.js";
 
 const userSchema = new mongoose.Schema(
     {
@@ -25,16 +26,9 @@ const userSchema = new mongoose.Schema(
             default: "staff",
         },
         permissions: {
-            dashboard: { type: Boolean, default: false },
-            pos: { type: Boolean, default: false },
-            products: { type: Boolean, default: false },
-            purchases: { type: Boolean, default: false },
-            expenses: { type: Boolean, default: false },
-            reports: { type: Boolean, default: false },
-            accounts: { type: Boolean, default: false },
-            staff: { type: Boolean, default: false },
-            manageUsers: { type: Boolean, default: false },
-            settings: { type: Boolean, default: false },
+            type: [String],
+            default: [],
+            set: (value) => normalizePermissions(value),
         },
         language: { type: String, enum: ["en", "ur"], default: "en" },
         uploadSync: {

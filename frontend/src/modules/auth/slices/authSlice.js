@@ -6,6 +6,7 @@ const initialState = {
     email: null,
     phoneNo: null,
     role: null,
+    permissions: [],
 };
 
 const authSlice = createSlice({
@@ -18,6 +19,7 @@ const authSlice = createSlice({
             state.email = action.payload.email;
             state.phoneNo = action.payload.phoneNo;
             state.role = action.payload.role;
+            state.permissions = action.payload.permissions || [];
         },
         logout: (state) => {
             state.id = null;
@@ -25,6 +27,7 @@ const authSlice = createSlice({
             state.email = null;
             state.phoneNo = null;
             state.role = null;
+            state.permissions = [];
         },
     },
 });

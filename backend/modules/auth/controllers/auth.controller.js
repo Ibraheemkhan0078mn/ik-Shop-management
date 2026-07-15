@@ -32,6 +32,7 @@ export const loginUser = asyncHandler(async (req, res, next) => {
             email: user.email,
             phoneNo: user.phoneNo,
             role: user.role,
+            permissions: user.permissions || [],
         },
     });
 });
@@ -63,6 +64,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
             email: user.email,
             phoneNo: user.phoneNo,
             role: user.role,
+            permissions: user.permissions || [],
         },
     });
 });

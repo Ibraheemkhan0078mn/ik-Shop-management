@@ -47,7 +47,7 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const { confirmPassword: _, ...userData } = req.body;
-    const user = await UserModel.create(userData);
+    const user = await UserModel.create({ ...userData, permissions: userData.permissions });
 
     res.status(201).json({
         success: true,

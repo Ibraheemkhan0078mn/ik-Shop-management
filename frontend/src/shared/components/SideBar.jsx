@@ -8,17 +8,18 @@ import { useSettings } from "../../modules/settings/hooks/useSettings.js";
 import logo from "../assets/logo.png";
 import { sidebarData } from "../data/sidebar.js";
 import { useGetSettingsQuery } from "../../modules/settings/api/settings.api.js";
+import { hasPermission } from "../utilities/permissions.js";
 
 const PERMISSION_MAP = {
-  Sale:            p => p.pos,
-  "Menu Manager":  p => p.menuItems,
-  "Stock & Expenses": p => p.foodExpenses || p.otherExpenses,
-  Staff:           p => p.staff,
-  "Sales History": p => p.ordersPage,
-  "Business Qarza":p => p.qarza,
-  "Personal Qarza":p => p.personalQarza,
-  "Hostel Orders": p => p.hostelQarza || p.hostelOrders || p.hostelPos,
-  Dashboard:       p => p.dashboard,
+  Sale:            p => hasPermission(p, "pos.view"),
+  "Menu Manager":  p => hasPermission(p, "products.view"),
+  "Stock & Expenses": p => hasPermission(p, "expenses.view"),
+  Staff:           p => hasPermission(p, "staff.view"),
+  "Sales History": p => hasPermission(p, "reports.view"),
+  "Business Qarza":p => hasPermission(p, "accounts.view"),
+  "Personal Qarza":p => hasPermission(p, "accounts.view"),
+  "Hostel Orders": p => hasPermission(p, "accounts.view"),
+  Dashboard:       p => hasPermission(p, "dashboard.view"),
 };
 
 export default function Sidebar() {
@@ -26,7 +27,7 @@ export default function Sidebar() {
   const logoutUser = useLogout();
   const { settings } = useSettings();
   const language = settings?.language || "en";
-  const { permissions = {}, role, id: userId } = useSelector(s => s.auth) ?? {};
+  const { permissions = [], role, id: userId } = useSelector(s => s.auth) ?? {};
   // const { data: settingsData } = useGetSettingsQuery(userId);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -40,7 +41,7 @@ export default function Sidebar() {
   const canAccess = item => {
     const check = PERMISSION_MAP[item.permissions];
     if (check) return check(permissions);
-    if (item.id === "users") return permissions.manageUsers || role === "admin";
+    if (item.id === "users") return hasPermission(permissions, "users.manage") || role === "admin";
     return true;
   };
 
