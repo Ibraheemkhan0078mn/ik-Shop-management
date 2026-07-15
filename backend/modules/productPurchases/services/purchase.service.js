@@ -1,4 +1,5 @@
 import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
+import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
 const getPurchases = async () => {
@@ -61,13 +62,13 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
     const purchaseItems = [];
 
     for (const item of purchaseData.items) {
-        let batch = await BatchModel.findOne({
+        let batch = await findOneBatchService({
             batchNumber: item.batchNumber,
             product: item.product,
         });
 
         if (!batch) {
-            batch = await BatchModel.create({
+            batch = await createBatchService({
                 product: item.product,
                 batchNumber: item.batchNumber,
                 supplier: purchaseData.supplier,
@@ -82,18 +83,14 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 $push: { batches: batch._id },
             });
         } else {
-            batch.quantity += item.quantity;
-            batch.purchasePrice = item.price;
-            if (item.mfgDate) {
-                batch.mfgDate = item.mfgDate;
-            }
-            if (item.expiryDate) {
-                batch.expiryDate = item.expiryDate;
-            }
-            if (purchaseData.supplier) {
-                batch.supplier = purchaseData.supplier;
-            }
-            await batch.save();
+            const updatedQuantity = batch.quantity + item.quantity;
+            await updateBatchService(batch._id, {
+                quantity: updatedQuantity,
+                purchasePrice: item.price,
+                mfgDate: item.mfgDate,
+                expiryDate: item.expiryDate,
+                supplier: purchaseData.supplier,
+            });
         }
 
         purchaseItems.push({
@@ -152,40 +149,56 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
 
     const purchaseItems = [];
     for (const item of data.items) {
-        let batch = await BatchModel.findOne({ batchNumber: item.batchNumber, product: item.product });
+        let batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
 
         if (!batch) {
-            batch = await BatchModel.create({
-                product: item.product, batchNumber: item.batchNumber,
-                supplier: data.supplier, quantity: item.quantity,
-                purchasePrice: item.price, sellingPrice: item.price,
-                mfgDate: item.mfgDate, expiryDate: item.expiryDate,
+            batch = await createBatchService({
+                product: item.product, 
+                batchNumber: item.batchNumber,
+                supplier: data.supplier, 
+                quantity: item.quantity,
+                purchasePrice: item.price, 
+                sellingPrice: item.price,
+                mfgDate: item.mfgDate, 
+                expiryDate: item.expiryDate,
             });
             await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
         } else {
-            batch.quantity = item.quantity;
-            batch.purchasePrice = item.price;
-            if (item.mfgDate) batch.mfgDate = item.mfgDate;
-            if (item.expiryDate) batch.expiryDate = item.expiryDate;
-            if (data.supplier) batch.supplier = data.supplier;
-            await batch.save();
+            await updateBatchService(batch._id, {
+                quantity: item.quantity,
+                purchasePrice: item.price,
+                mfgDate: item.mfgDate,
+                expiryDate: item.expiryDate,
+                supplier: data.supplier,
+            });
         }
 
         purchaseItems.push({
-            product: item.product, batch: batch._id,
-            quantity: item.quantity, price: item.price,
-            discount: item.discount, discountType: item.discountType,
-            tax: item.tax, taxType: item.taxType,
-            mfgDate: item.mfgDate, expiryDate: item.expiryDate,
+            product: item.product, 
+            batch: batch._id,
+            quantity: item.quantity, 
+            price: item.price,
+            discount: item.discount, 
+            discountType: item.discountType,
+            tax: item.tax, 
+            taxType: item.taxType,
+            mfgDate: item.mfgDate, 
+            expiryDate: item.expiryDate,
         });
     }
 
     const purchase = await updatePurchaseService(id, {
-        supplier: data.supplier, date: data.date,
-        invoiceNumber: data.invoiceNumber, items: purchaseItems,
-        subtotal: data.subtotal, discount: data.discount,
-        discountType: data.discountType, gst: data.gst,
-        gstType: data.gstType, shippingCost: data.shippingCost, totalAmount: data.totalAmount,
+        supplier: data.supplier, 
+        date: data.date,
+        invoiceNumber: data.invoiceNumber, 
+        items: purchaseItems,
+        subtotal: data.subtotal, 
+        discount: data.discount,
+        discountType: data.discountType, 
+        gst: data.gst,
+        gstType: data.gstType, 
+        shippingCost: data.shippingCost, 
+        totalAmount: data.totalAmount,
         notes: data.notes,
     });
 

@@ -86,9 +86,14 @@ const getCatagBasedExpense = async (catagName) => {
     });
 };
 
+const getAllExpenses = async () => {
+    return await findExpenseService().sort({ createdAt: -1 });
+};
+
 export {
     expenseCreate,
     getExpenses,
+    getAllExpenses,
     getPaginatedExpenses,
     expenseUpdate,
     expenseDelete,

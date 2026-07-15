@@ -1,13 +1,13 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalProductModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { getProductModel, getBatchModel } from "../services/reconciliation.crud.js";
 
 // ─── RECONCILE INVENTORY ─────────────────────────────────────────────────────────
 // Validates that product.currentStockLevel equals sum of active batch quantities
 // Returns discrepancies and optionally fixes them
 export const reconcileInventory = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    const BatchModel = getLocalBatchModel();
+    const ProductModel = getProductModel();
+    const BatchModel = getBatchModel();
     const { fix = false } = req.query;
 
     const products = await ProductModel.find().populate("batches");
@@ -57,7 +57,7 @@ export const reconcileInventory = asyncHandler(async (req, res, next) => {
 // ─── VALIDATE BATCH STOCK ─────────────────────────────────────────────────────────
 // Checks for batches with negative stock or expired batches that are still active
 export const validateBatchStock = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel();
+    const BatchModel = getBatchModel();
 
     // Find batches with negative stock
     const negativeStockBatches = await BatchModel.find({ quantity: { $lt: 0 } })
@@ -98,8 +98,8 @@ export const validateBatchStock = asyncHandler(async (req, res, next) => {
 // ─── GET PRODUCT INVENTORY STATUS ─────────────────────────────────────────────────
 // Returns detailed inventory status for a specific product
 export const getProductInventoryStatus = asyncHandler(async (req, res, next) => {
-    const ProductModel = getLocalProductModel();
-    const BatchModel = getLocalBatchModel();
+    const ProductModel = getProductModel();
+    const BatchModel = getBatchModel();
     const { productId } = req.params;
 
     const product = await ProductModel.findById(productId).populate("batches");

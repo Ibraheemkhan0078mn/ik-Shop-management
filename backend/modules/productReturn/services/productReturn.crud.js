@@ -1,43 +1,39 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalProductReturnModel } from "../../../configs/connect.db.js";
 
+const ProductReturnModel = getLocalProductReturnModel();
+
 const createProductReturnService = (data) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.create(data);
+    return createDoc({ model: ProductReturnModel, data });
 };
 
 const findProductReturnService = (query = {}) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.find(query);
+    return findDocs({ model: ProductReturnModel, filter: query });
 };
 
 const findOneProductReturnService = (query) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.findOne(query);
+    return findOneDoc({ model: ProductReturnModel, filter: query });
 };
 
 const findByIdProductReturnService = (id) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.findById(id);
+    return findOneDoc({ model: ProductReturnModel, filter: { _id: id } });
 };
 
 const updateProductReturnService = (id, data) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: ProductReturnModel, filter: { _id: id }, data });
 };
 
 const deleteOneProductReturnService = (id) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.findByIdAndDelete(id);
+    return deleteDocs({ model: ProductReturnModel, filter: { _id: id } });
 };
 
 const countProductReturnService = (query) => {
-    const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
     return ProductReturnModel.countDocuments(query);
 };

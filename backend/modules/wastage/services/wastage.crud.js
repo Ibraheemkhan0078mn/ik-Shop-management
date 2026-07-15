@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalWastageModel } from "../../../configs/connect.db.js";
 
+const WastageModel = getLocalWastageModel();
+
 const createWastageService = (data) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.create(data);
+    return createDoc({ model: WastageModel, data });
 };
 
 const findWastageService = (query = {}) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.find(query);
+    return findDocs({ model: WastageModel, filter: query });
 };
 
 const findOneWastageService = (query) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.findOne(query);
+    return findOneDoc({ model: WastageModel, filter: query });
 };
 
 const findByIdWastageService = (id) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.findById(id);
+    return findOneDoc({ model: WastageModel, filter: { _id: id } });
 };
 
 const updateWastageService = (id, data) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: WastageModel, filter: { _id: id }, data });
 };
 
 const deleteOneWastageService = (id) => {
-    const WastageModel = getLocalWastageModel();
-    return WastageModel.findByIdAndDelete(id);
+    return deleteDocs({ model: WastageModel, filter: { _id: id } });
 };
 
 const countWastageService = (query) => {
-    const WastageModel = getLocalWastageModel();
     return WastageModel.countDocuments(query);
 };
 

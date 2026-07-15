@@ -1,38 +1,38 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalBatchModel } from "../../../configs/connect.db.js";
 
+const BatchModel = getLocalBatchModel();
+
 const createBatchService = (data) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.create(data);
+    return createDoc({ model: BatchModel, data });
 };
 
 const findBatchService = (query = {}) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.find(query);
+    return findDocs({ model: BatchModel, filter: query });
 };
 
 const findOneBatchService = (query) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.findOne(query);
+    return findOneDoc({ model: BatchModel, filter: query });
 };
 
 const findByIdBatchService = (id) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.findById(id);
+    return findOneDoc({ model: BatchModel, filter: { _id: id } });
 };
 
 const updateBatchService = (id, data) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: BatchModel, filter: { _id: id }, data });
 };
 
 const deleteOneBatchService = (id) => {
-    const BatchModel = getLocalBatchModel();
-    return BatchModel.findByIdAndDelete(id);
+    return deleteDocs({ model: BatchModel, filter: { _id: id } });
+};
+
+const deleteManyBatchService = (query) => {
+    return BatchModel.deleteMany(query);
 };
 
 const countBatchService = (query) => {
-    const BatchModel = getLocalBatchModel();
     return BatchModel.countDocuments(query);
 };
 
-export { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, countBatchService };
+export { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, deleteManyBatchService, countBatchService };

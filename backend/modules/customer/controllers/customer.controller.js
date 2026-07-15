@@ -1,7 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalCustomerModel } from "../../../configs/connect.db.js";
-import { paginateModel } from "../../../common/services/common.service.js";
 import { deleteProductImage } from "../../product/services/productImage.service.js";
 import {
     customerCreate as customerCreateService,
@@ -10,6 +8,7 @@ import {
     findCustomerByPhoneOrCnic as findCustomerByPhoneOrCnicService,
     customerUpdate as customerUpdateService,
     customerDelete as customerDeleteService,
+    getPaginatedCustomers as getPaginatedCustomersService,
 } from "../services/customer.service.js";
 
 const coerceCustomerBody = (body = {}) => {
@@ -45,12 +44,9 @@ export const getCustomers = asyncHandler(async (_req, res) => {
 });
 
 export const getPaginatedCustomers = asyncHandler(async (req, res) => {
-    const CustomerModel = getLocalCustomerModel();
-    const result = await paginateModel({
-        model: CustomerModel,
+    const result = await getPaginatedCustomersService({
         page: req.query.page || 1,
         limit: req.query.limit || 20,
-        sort: { createdAt: -1 },
     });
 
     return res.status(200).json({

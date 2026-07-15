@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalSupplierModel, getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
+import { getLocalSupplierModel } from "../../../configs/connect.db.js";
 import { paginateModel } from "../../../common/services/common.service.js";
 import {
     supplierCreate as supplierCreateService,
@@ -11,6 +11,8 @@ import {
     supplierDelete as supplierDeleteService,
     countSuppliers as countSuppliersService,
 } from "../services/supplier.service.js";
+import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
+import { countBatchService } from "../../productPurchases/services/batch.crud.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
     const suppliers = await getAllSuppliersService();
@@ -116,8 +118,6 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
 });
 
 export const deleteSupplier = asyncHandler(async (req, res, next) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    const BatchModel = getLocalBatchModel();
     const { id } = req.params;
 
     const supplier = await getSupplierByIdService(id);
@@ -127,13 +127,13 @@ export const deleteSupplier = asyncHandler(async (req, res, next) => {
     }
 
     // Check if supplier has associated purchases
-    const purchaseCount = await PurchaseModel.countDocuments({ supplier: id });
+    const purchaseCount = await countPurchaseService({ supplier: id });
     if (purchaseCount > 0) {
         return next(new ErrorResponse(`Cannot delete supplier with ${purchaseCount} associated purchase(s). Please delete or transfer purchases first.`, 400));
     }
 
     // Check if supplier has associated batches
-    const batchCount = await BatchModel.countDocuments({ supplier: id });
+    const batchCount = await countBatchService({ supplier: id });
     if (batchCount > 0) {
         return next(new ErrorResponse(`Cannot delete supplier with ${batchCount} associated batch(es). Please delete or transfer batches first.`, 400));
     }

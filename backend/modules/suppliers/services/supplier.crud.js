@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalSupplierModel } from "../../../configs/connect.db.js";
 
+const SupplierModel = getLocalSupplierModel();
+
 const createSupplierService = (data) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.create(data);
+    return createDoc({ model: SupplierModel, data });
 };
 
 const findSupplierService = (query = {}) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.find(query);
+    return findDocs({ model: SupplierModel, filter: query });
 };
 
 const findOneSupplierService = (query) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.findOne(query);
+    return findOneDoc({ model: SupplierModel, filter: query });
 };
 
 const findByIdSupplierService = (id) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.findById(id);
+    return findOneDoc({ model: SupplierModel, filter: { _id: id } });
 };
 
 const updateSupplierService = (id, data) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: SupplierModel, filter: { _id: id }, data });
 };
 
 const deleteOneSupplierService = (id) => {
-    const SupplierModel = getLocalSupplierModel();
-    return SupplierModel.findByIdAndDelete(id);
+    return deleteDocs({ model: SupplierModel, filter: { _id: id } });
 };
 
 const countSupplierService = (query) => {
-    const SupplierModel = getLocalSupplierModel();
     return SupplierModel.countDocuments(query);
 };
 

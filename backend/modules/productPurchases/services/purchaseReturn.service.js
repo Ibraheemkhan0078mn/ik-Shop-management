@@ -1,15 +1,22 @@
 // backend/modules/productPurchases/services/purchaseReturn.service.js
-import { getLocalBatchModel, getLocalProductModel, getLocalPurchaseReturnModel } from "../../../configs/connect.db.js";
+import { 
+    createPurchaseReturnService, 
+    findPurchaseReturnService, 
+    findOnePurchaseReturnService, 
+    findByIdPurchaseReturnService, 
+    updatePurchaseReturnService, 
+    deleteOnePurchaseReturnService 
+} from "./purchaseReturn.crud.js";
+import { updateBatchService } from "./batch.crud.js";
+import { updateProductService } from "../product/services/product.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 // Helper to adjust batch stock
 async function adjustBatchStock(batchId, delta) {
-  const BatchModel = getLocalBatchModel();
-  await BatchModel.findByIdAndUpdate(batchId, { $inc: { currentStock: delta } });
+  await updateBatchService(batchId, { $inc: { currentStock: delta } });
 }
 
 export async function createPurchaseReturn(data) {
-  const PurchaseReturnModel = getLocalPurchaseReturnModel();
   const { purchase, products } = data;
 
   // Adjust stocks for each returned product
@@ -18,63 +25,54 @@ export async function createPurchaseReturn(data) {
     // Decrease product stock
     await handleProductStockQuantity(productId, "update", quantity, batchId); // We'll treat as update with negative delta
     // Actually we need to decrement product stock by quantity
-    const ProductModel = getLocalProductModel();
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: -Number(quantity) } });
+    await updateProductService(productId, { $inc: { currentStockLevel: -Number(quantity) } });
     // Increase batch currentStock
     await adjustBatchStock(batchId, Number(quantity));
   }
 
-  const purchaseReturn = await PurchaseReturnModel.create({ purchase, products });
+  const purchaseReturn = await createPurchaseReturnService({ purchase, products });
   return purchaseReturn;
 }
 
 export async function getPurchaseReturnById(id) {
-  const PurchaseReturnModel = getLocalPurchaseReturnModel();
-  return await PurchaseReturnModel.findById(id).populate("purchase").populate("products.productId").populate("products.batchId");
+  return await findByIdPurchaseReturnService(id).populate("purchase").populate("products.productId").populate("products.batchId");
 }
 
 export async function updatePurchaseReturn(id, newData) {
-  const PurchaseReturnModel = getLocalPurchaseReturnModel();
-  const existing = await PurchaseReturnModel.findById(id);
+  const existing = await findByIdPurchaseReturnService(id);
   if (!existing) throw new Error("PurchaseReturn not found");
 
   // Revert old stock changes
   for (const oldItem of existing.products) {
     const { productId, batchId, quantity } = oldItem;
     // Revert: increase product stock, decrease batch stock
-    const ProductModel = getLocalProductModel();
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: Number(quantity) } });
+    await updateProductService(productId, { $inc: { currentStockLevel: Number(quantity) } });
     await adjustBatchStock(batchId, -Number(quantity));
   }
 
   // Apply new stock changes
   for (const newItem of newData.products) {
     const { productId, batchId, quantity } = newItem;
-    const ProductModel = getLocalProductModel();
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: -Number(quantity) } });
+    await updateProductService(productId, { $inc: { currentStockLevel: -Number(quantity) } });
     await adjustBatchStock(batchId, Number(quantity));
   }
 
-  // Update document
-  existing.purchase = newData.purchase;
-  existing.products = newData.products;
-  await existing.save();
-  return existing;
+  // Update document using CRUD service
+  const updated = await updatePurchaseReturnService(id, { purchase: newData.purchase, products: newData.products });
+  return updated;
 }
 
 export async function deletePurchaseReturn(id) {
-  const PurchaseReturnModel = getLocalPurchaseReturnModel();
-  const existing = await PurchaseReturnModel.findById(id);
+  const existing = await findByIdPurchaseReturnService(id);
   if (!existing) throw new Error("PurchaseReturn not found");
 
   // Revert stock changes
   for (const item of existing.products) {
     const { productId, batchId, quantity } = item;
-    const ProductModel = getLocalProductModel();
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: Number(quantity) } });
+    await updateProductService(productId, { $inc: { currentStockLevel: Number(quantity) } });
     await adjustBatchStock(batchId, -Number(quantity));
   }
 
-  await PurchaseReturnModel.deleteOne({ _id: id });
+  await deleteOnePurchaseReturnService(id);
   return { message: "Deleted successfully" };
 }

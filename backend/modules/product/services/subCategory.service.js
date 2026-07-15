@@ -1,8 +1,8 @@
-import { create, find, findOne, findById, update, deleteOne } from "./subCategory.crud.js";
+import { create, find, findOne, findById, update, deleteOne, count } from "./subCategory.crud.js";
 
-const getSubCategories = async () => {
+const getSubCategories = async () => { 
     return await find().populate("category", "name").sort({ createdAt: -1 });
-};
+}; 
 
 const getPaginationSubCategories = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
@@ -12,7 +12,7 @@ const getPaginationSubCategories = async (filters = {}) => {
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
         .populate("category");
-    const total = await require("./subCategory.crud.js").count(query);
+    const total = await count(query);
     return {
         data: subcategories,
         total,

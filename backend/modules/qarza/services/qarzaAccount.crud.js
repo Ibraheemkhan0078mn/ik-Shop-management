@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalQarzaAccountModel } from "../../../configs/connect.db.js";
 
+const QarzaAccountModel = getLocalQarzaAccountModel();
+
 const createQarzaAccountService = (data) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.create(data);
+    return createDoc({ model: QarzaAccountModel, data });
 };
 
 const findQarzaAccountService = (query = {}) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
     return QarzaAccountModel.find(query).sort({ createdAt: -1 });
 };
 
 const findOneQarzaAccountService = (query) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.findOne(query);
+    return findOneDoc({ model: QarzaAccountModel, filter: query });
 };
 
 const findByIdQarzaAccountService = (id) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.findById(id);
+    return findOneDoc({ model: QarzaAccountModel, filter: { _id: id } });
 };
 
 const updateQarzaAccountService = (id, data) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: QarzaAccountModel, filter: { _id: id }, data });
 };
 
 const deleteOneQarzaAccountService = (id) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.findByIdAndDelete(id);
+    return deleteDocs({ model: QarzaAccountModel, filter: { _id: id } });
 };
 
 const countQarzaAccountService = (query) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
     return QarzaAccountModel.countDocuments(query);
 };
 

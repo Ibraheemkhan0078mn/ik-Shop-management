@@ -31,4 +31,12 @@ const countPurchaseReturnService = (query) => {
     return PurchaseReturnModel.countDocuments(query);
 };
 
-export { createPurchaseReturnService, findPurchaseReturnService, findOnePurchaseReturnService, findByIdPurchaseReturnService, updatePurchaseReturnService, deleteOnePurchaseReturnService, countPurchaseReturnService };
+export { 
+    createPurchaseReturnService, 
+    findPurchaseReturnService, 
+    findOnePurchaseReturnService, 
+    findByIdPurchaseReturnService, 
+    updatePurchaseReturnService, 
+    deleteOnePurchaseReturnService,
+    countPurchaseReturnService 
+};

@@ -1,7 +1,6 @@
 import asyncHandler from "express-async-handler";
 import { getPurchaseById as getPurchaseDetails } from "../../productPurchases/services/purchase.service.js";
 import { ApiResponse, ApiError } from "../../../common/services/apiResponses.js";
-import { getLocalPurchaseModel, getLocalBatchModel } from "../../../configs/connect.db.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 import {
     createPurchaseReturnService,
@@ -11,14 +10,16 @@ import {
     deleteOnePurchaseReturnService,
     countPurchaseReturnService,
 } from "../services/purchaseReturn.crud.js";
+import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
+import { findByIdPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 
-const normalizePurchaseReturnItems = async (items = [], BatchModel) => {
+const normalizePurchaseReturnItems = async (items = []) => {
     if (!Array.isArray(items)) return [];
 
     const normalizedItems = [];
 
     for (const item of items) {
-        const batch = item.batch ? await BatchModel.findById(item.batch) : null;
+        const batch = item.batch ? await findByIdBatchService(item.batch) : null;
         normalizedItems.push({
             ...item,
             batchNumber: item.batchNumber?.trim() || batch?.batchNumber || "",
@@ -91,8 +92,6 @@ export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
 
 export const createPurchaseReturnData = asyncHandler(async (req, res) => {
     const userId = req.user?._id || req.user?.id || null;
-    const PurchaseModel = getLocalPurchaseModel();
-    const BatchModel = getLocalBatchModel();
 
     const data = req.body;
 
@@ -104,15 +103,15 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
     const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
     const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
 
-    const purchase = await PurchaseModel.findById(data.purchase);
+    const purchase = await findByIdPurchaseService(data.purchase);
     if (!purchase) {
         throw new Error("Purchase not found");
     }
 
-    const normalizedItems = await normalizePurchaseReturnItems(data.items, BatchModel);
+    const normalizedItems = await normalizePurchaseReturnItems(data.items);
 
     for (const item of normalizedItems) {
-        const batch = await BatchModel.findById(item.batch);
+        const batch = await findByIdBatchService(item.batch);
         if (!batch) {
             throw new Error(`Batch not found: ${item.batchNumber}`);
         }
@@ -140,7 +139,6 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
 
 export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const BatchModel = getLocalBatchModel();
 
     const existing = await findByIdPurchaseReturnService(id);
     if (!existing) throw new Error("Purchase return not found");
@@ -149,11 +147,11 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
 
     if (incomingItems) {
         // Step 1: Normalize items (resolves batchNumber, batch ref, etc.)
-        incomingItems = await normalizePurchaseReturnItems(incomingItems, BatchModel);
+        incomingItems = await normalizePurchaseReturnItems(incomingItems);
  
         // Step 2: Make sure every batch exists and has enough stock
         for (const item of incomingItems) {
-            const batch = await BatchModel.findById(item.batch);
+            const batch = await findByIdBatchService(item.batch);
             if (!batch) throw new Error(`Batch "${item.batchNumber}" not found`);
             if (batch.quantity < item.quantity)
                 throw new Error(`Not enough stock in batch "${item.batchNumber}". Available: ${batch.quantity}, Requested: ${item.quantity}`);

@@ -4,6 +4,7 @@ import { changeTrackDocsCreationFunc } from "../../../common/ikSync/changeTrackM
 import {
     expenseCreate as expenseCreateService,
     getExpenses as getExpensesService,
+    getAllExpenses as getAllExpensesService,
     getPaginatedExpenses as getPaginatedExpensesService,
     expenseUpdate as expenseUpdateService,
     expenseDelete as expenseDeleteService,
@@ -50,7 +51,7 @@ export const expenseCreate = async (req, res) => {
 
         await changeTrackDocsCreationFunc("create", expenseModel.modelName, createdExpense?._id);
 
-        let expenses = await expenseModel.find().sort({ createdAt: -1 });
+        let expenses = await getAllExpensesService();
 
         return res.json({ success: true, msg: "Expense created", expenses });
     } catch (err) {
@@ -126,7 +127,7 @@ export const expenseUpdate = async (req, res) => {
 
         await changeTrackDocsCreationFunc("update", expenseModel.modelName, updated?._id);
 
-        let expenses = await expenseModel.find().sort({ createdAt: -1 });
+        let expenses = await getAllExpensesService();
 
         return res.json({ success: true, msg: "Expense updated", expenses });
     } catch (err) {
@@ -157,13 +158,9 @@ export const expenseDelete = async (req, res) => {
             return res.json({ success: false, msg: "Expense not found" });
         }
 
+        await changeTrackDocsCreationFunc("delete", expenseModel.modelName, _id);
 
-
-        await changeTrackDocsCreationFunc("delete", expenseModel.modelName, _id)
-
-
-        let expenses = await expenseModel.find().sort({ createdAt: -1 });
-
+        let expenses = await getAllExpensesService();
 
         return res.json({ success: true, msg: "Expense deleted", expenses });
     } catch (err) {
@@ -181,23 +178,17 @@ export const expenseDelete = async (req, res) => {
 
 export const expenseCatagCreate = async (req, res) => {
     try {
-
-
         let { catagName } = req.body
         if (!catagName) {
             return res.json({ success: false, msg: "The catagory name is not found" })
         }
 
-
-
         let localExpenseCatagModel = getLocalExpenseCategoryModel()
         let createdExpenseCatag = await expenseCatagCreateService(catagName);
 
-
         await changeTrackDocsCreationFunc("create", localExpenseCatagModel.modelName, createdExpenseCatag?._id)
 
-        let allExpenseCatags = await localExpenseCatagModel.find()
-
+        let allExpenseCatags = await expenseCatagGetAllService();
 
         return res.json({ success: true, expenseCatags: allExpenseCatags })
     } catch (err) {
@@ -208,8 +199,6 @@ export const expenseCatagCreate = async (req, res) => {
 
 export const expenseCatagGetAll = async (req, res) => {
     try {
-        let localExpenseCatagModel = getLocalExpenseCategoryModel();
-
         const allExpenseCatags = await expenseCatagGetAllService();
         return res.json({ success: true, expenseCatags: allExpenseCatags });
     } catch (err) {
@@ -226,7 +215,7 @@ export const expenseCatagDelete = async (req, res) => {
             return res.json({ success: false, msg: "Catagory id not found" });
         }
 
-        let localExpenseCatagModel = getLocalExpensesModel();
+        let localExpenseCatagModel = getLocalExpenseCategoryModel();
 
         let deleted = await expenseCatagDeleteService(id);
 
@@ -238,7 +227,7 @@ export const expenseCatagDelete = async (req, res) => {
         await changeTrackDocsCreationFunc("delete", localExpenseCatagModel.modelName, id);
 
         // Return updated list
-        let allExpenseCatags = await localExpenseCatagModel.find();
+        let allExpenseCatags = await expenseCatagGetAllService();
 
         return res.json({ success: true, expenseCatags: allExpenseCatags });
     } catch (err) {
@@ -263,16 +252,12 @@ export const expenseCatagDelete = async (req, res) => {
 
 export async function getCatagBasedExpense(req, res) {
     try {
-
         let { catagName } = req.body
-        let localExpenseModel = getLocalExpensesModel()
         if (!catagName) {
             return res.json({ success: false, msg: "The catag is not found." })
         }
 
-
         let expenses = await getCatagBasedExpenseService(catagName);
-
 
         return res.json({ success: true, expenses })
 

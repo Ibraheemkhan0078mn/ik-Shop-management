@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalUserModel } from "../../../configs/connect.db.js";
 import {
     getAllUsers,
     getUserById,
@@ -8,6 +7,7 @@ import {
     userUpdate,
     userDelete,
 } from "../services/user.service.js";
+import { findOneUserService, createUserService } from "../services/user.crud.js";
 
 export const getAllUsersController = asyncHandler(async (req, res, next) => {
     const users = await getAllUsers();
@@ -34,20 +34,19 @@ export const getUserByIdController = asyncHandler(async (req, res, next) => {
 });
 
 export const createUserByAdminController = asyncHandler(async (req, res, next) => {
-    const UserModel = getLocalUserModel();
     const { email, password, confirmPassword } = req.body;
 
     if (password !== confirmPassword) {
         return next(new ErrorResponse("Passwords do not match", 400));
     }
 
-    const userExists = await UserModel.findOne({ email });
+    const userExists = await findOneUserService({ email });
     if (userExists) {
         return next(new ErrorResponse("User already exists with this email", 400));
     }
 
     const { confirmPassword: _, ...userData } = req.body;
-    const user = await UserModel.create({ ...userData, permissions: userData.permissions });
+    const user = await createUserService({ ...userData, permissions: userData.permissions });
 
     res.status(201).json({
         success: true,

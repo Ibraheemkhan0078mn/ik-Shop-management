@@ -34,24 +34,19 @@
 
 
 
-import { getLocalProductModel } from "../../../configs/connect.db.js";
+import { findByIdProductService, updateProductService } from "../../product/services/product.crud.js";
 
 export async function handleProductStockQuantity(productId, origin, quantity, batchId) {
     try {
-        const ProductModel = getLocalProductModel();
-
         if (!productId || !origin || quantity == null) return;
 
         if (origin === "create") {
             // New product/purchase created → increment stock
-            await ProductModel.findOneAndUpdate(
-                { _id: productId },
-                { $inc: { currentStockLevel: Number(quantity) } }
-            );
+            await updateProductService(productId, { $inc: { currentStockLevel: Number(quantity) } });
 
         } else if (origin === "update") {
             // Fetch current stock to calculate delta
-            const product = await ProductModel.findById(productId);
+            const product = await findByIdProductService(productId);
             if (!product) throw new Error("Product not found");
 
             const currentStock = product.currentStockLevel;
@@ -61,17 +56,11 @@ export async function handleProductStockQuantity(productId, origin, quantity, ba
 
             const delta = newQuantity - currentStock;
             // delta > 0 → inc, delta < 0 → dec (handled by $inc with negative)
-            await ProductModel.findOneAndUpdate(
-                { _id: productId },
-                { $inc: { currentStockLevel: delta } }
-            );
+            await updateProductService(productId, { $inc: { currentStockLevel: delta } });
 
         } else if (origin === "delete") {
             // Product/purchase deleted → decrement stock
-            await ProductModel.findOneAndUpdate(
-                { _id: productId },
-                { $inc: { currentStockLevel: Number(quantity) * -1 } }
-            );
+            await updateProductService(productId, { $inc: { currentStockLevel: Number(quantity) * -1 } });
         }
 
     } catch (error) {

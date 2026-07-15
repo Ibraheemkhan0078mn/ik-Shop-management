@@ -1,14 +1,19 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalPaymentMethodModel } from "../../../configs/connect.db.js";
+import {
+    getAllPaymentMethods as getAllPaymentMethodsService,
+    getPaymentMethodById as getPaymentMethodByIdService,
+    createPaymentMethod as createPaymentMethodService,
+    updatePaymentMethod as updatePaymentMethodService,
+    deletePaymentMethod as deletePaymentMethodService,
+} from "../services/paymentMethod.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /payment-methods
 //  Returns all payment methods
 // ─────────────────────────────────────────────────────────────────────────────
 export const getAllPaymentMethods = asyncHandler(async (req, res) => {
-    const PaymentMethodModel = getLocalPaymentMethodModel();
-    const paymentMethods = await PaymentMethodModel.find().sort({ name: 1 });
+    const paymentMethods = await getAllPaymentMethodsService();
 
     res.status(200).json({
         success: true,
@@ -22,8 +27,7 @@ export const getAllPaymentMethods = asyncHandler(async (req, res) => {
 //  Returns a single payment method by ID
 // ─────────────────────────────────────────────────────────────────────────────
 export const getPaymentMethodById = asyncHandler(async (req, res, next) => {
-    const PaymentMethodModel = getLocalPaymentMethodModel();
-    const paymentMethod = await PaymentMethodModel.findById(req.params.id);
+    const paymentMethod = await getPaymentMethodByIdService(req.params.id);
 
     if (!paymentMethod) {
         return next(new ErrorResponse("Payment method not found", 404));
@@ -47,24 +51,17 @@ export const createPaymentMethod = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Payment method name is required", 400));
     }
 
-    const PaymentMethodModel = getLocalPaymentMethodModel();
+    try {
+        const paymentMethod = await createPaymentMethodService({ name });
 
-    // Check if payment method with same name already exists
-    const existingMethod = await PaymentMethodModel.findOne({ name: name.trim() });
-    if (existingMethod) {
-        return next(new ErrorResponse("Payment method with this name already exists", 400));
+        res.status(201).json({
+            success: true,
+            message: "Payment method created successfully",
+            data: paymentMethod
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 400));
     }
-
-    const paymentMethod = await PaymentMethodModel.create({
-        name: name.trim(),
-        isActive: true
-    });
-
-    res.status(201).json({
-        success: true,
-        message: "Payment method created successfully",
-        data: paymentMethod
-    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -78,34 +75,17 @@ export const updatePaymentMethod = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Payment method name is required", 400));
     }
 
-    const PaymentMethodModel = getLocalPaymentMethodModel();
-    const paymentMethod = await PaymentMethodModel.findById(req.params.id);
+    try {
+        const paymentMethod = await updatePaymentMethodService(req.params.id, { name, isActive });
 
-    if (!paymentMethod) {
-        return next(new ErrorResponse("Payment method not found", 404));
+        res.status(200).json({
+            success: true,
+            message: "Payment method updated successfully",
+            data: paymentMethod
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 404));
     }
-
-    // Check if another payment method with same name exists
-    const existingMethod = await PaymentMethodModel.findOne({ 
-        name: name.trim(),
-        _id: { $ne: req.params.id }
-    });
-    if (existingMethod) {
-        return next(new ErrorResponse("Payment method with this name already exists", 400));
-    }
-
-    paymentMethod.name = name.trim();
-    if (typeof isActive === "boolean") {
-        paymentMethod.isActive = isActive;
-    }
-
-    await paymentMethod.save();
-
-    res.status(200).json({
-        success: true,
-        message: "Payment method updated successfully",
-        data: paymentMethod
-    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,18 +93,15 @@ export const updatePaymentMethod = asyncHandler(async (req, res, next) => {
 //  Deletes a payment method
 // ─────────────────────────────────────────────────────────────────────────────
 export const deletePaymentMethod = asyncHandler(async (req, res, next) => {
-    const PaymentMethodModel = getLocalPaymentMethodModel();
-    const paymentMethod = await PaymentMethodModel.findById(req.params.id);
+    try {
+        await deletePaymentMethodService(req.params.id);
 
-    if (!paymentMethod) {
-        return next(new ErrorResponse("Payment method not found", 404));
+        res.status(200).json({
+            success: true,
+            message: "Payment method deleted successfully",
+            data: {}
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 404));
     }
-
-    await paymentMethod.deleteOne();
-
-    res.status(200).json({
-        success: true,
-        message: "Payment method deleted successfully",
-        data: {}
-    });
 });

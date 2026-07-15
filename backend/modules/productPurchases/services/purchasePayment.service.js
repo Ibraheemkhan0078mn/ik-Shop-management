@@ -1,12 +1,23 @@
-import { getLocalPurchasePaymentModel, getLocalPurchaseModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
+import { 
+    createPurchasePaymentService, 
+    findPurchasePaymentService, 
+    findByIdPurchasePaymentService, 
+    deleteOnePurchasePaymentService 
+} from "./purchasePayment.crud.js";
+import { 
+    findByIdPurchaseService, 
+    updatePurchaseService 
+} from "./purchase.crud.js";
+import { 
+    findByIdQarzaAccountService, 
+    updateQarzaAccountService 
+} from "../../qarza/services/qarzaAccount.crud.js";
+import { 
+    createQarzaPaymentService 
+} from "../../qarza/services/qarzaPayment.crud.js";
 
 export const createPurchasePayment = async (paymentData) => {
-    const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-
-    const purchase = await PurchaseModel.findById(paymentData.purchase);
+    const purchase = await findByIdPurchaseService(paymentData.purchase);
     if (!purchase) {
         throw new Error("Purchase not found");
     }
@@ -26,8 +37,8 @@ export const createPurchasePayment = async (paymentData) => {
         paymentStatus = 'partial';
     }
 
-    // Create purchase payment
-    const purchasePayment = await PurchasePaymentModel.create({
+    // Create purchase payment using CRUD service
+    const purchasePayment = await createPurchasePaymentService({
         purchase: paymentData.purchase,
         amount: paymentData.amount,
         paymentDate: paymentData.paymentDate,
@@ -40,14 +51,15 @@ export const createPurchasePayment = async (paymentData) => {
     });
 
     // Update purchase
-    purchase.paidAmount = totalPaid;
-    purchase.paymentStatus = paymentStatus;
-    await purchase.save();
+    await updatePurchaseService(purchase._id, {
+        paidAmount: totalPaid,
+        paymentStatus: paymentStatus
+    });
 
     // Handle credit account payments
     if (paymentData.paymentMethod === 'credit' || paymentData.paymentMethod === 'hybrid') {
         if (paymentData.creditAccount) {
-            const creditAccount = await QarzaAccountModel.findById(paymentData.creditAccount);
+            const creditAccount = await findByIdQarzaAccountService(paymentData.creditAccount);
             if (!creditAccount) {
                 throw new Error("Credit account not found");
             }
@@ -55,7 +67,7 @@ export const createPurchasePayment = async (paymentData) => {
             const creditPaymentAmount = paymentData.creditAmount || paymentData.amount;
             
             // Create qarza payment for credit portion
-            await QarzaPaymentModel.create({
+            await createQarzaPaymentService({
                 qarzaAccountId: paymentData.creditAccount,
                 amount: creditPaymentAmount,
                 type: 'cashin', // We're receiving credit, so it's cashin
@@ -65,15 +77,16 @@ export const createPurchasePayment = async (paymentData) => {
             });
 
             // Update credit account balance (increase balance since we owe them)
-            creditAccount.balance += creditPaymentAmount;
-            await creditAccount.save();
+            await updateQarzaAccountService(creditAccount._id, {
+                balance: creditAccount.balance + creditPaymentAmount
+            });
         }
     }
 
     // If payment is full and there's excess payment (only for cash payments), adjust to credit account
     if (paymentStatus === 'full' && remainingAmount < 0 && paymentData.paymentMethod === 'cash') {
         if (paymentData.creditAccount) {
-            const creditAccount = await QarzaAccountModel.findById(paymentData.creditAccount);
+            const creditAccount = await findByIdQarzaAccountService(paymentData.creditAccount);
             if (!creditAccount) {
                 throw new Error("Credit account not found");
             }
@@ -81,7 +94,7 @@ export const createPurchasePayment = async (paymentData) => {
             const excessAmount = Math.abs(remainingAmount);
             
             // Create qarza payment for excess
-            await QarzaPaymentModel.create({
+            await createQarzaPaymentService({
                 qarzaAccountId: paymentData.creditAccount,
                 amount: excessAmount,
                 type: 'debit', // They owe us, so it's debit
@@ -91,8 +104,9 @@ export const createPurchasePayment = async (paymentData) => {
             });
 
             // Update credit account balance (decrease since they owe us)
-            creditAccount.balance -= excessAmount;
-            await creditAccount.save();
+            await updateQarzaAccountService(creditAccount._id, {
+                balance: creditAccount.balance - excessAmount
+            });
         }
     }
 
@@ -100,51 +114,45 @@ export const createPurchasePayment = async (paymentData) => {
 };
 
 export const getPurchasePayments = async (purchaseId) => {
-    const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    return await PurchasePaymentModel.find({ purchase: purchaseId })
+    return await findPurchasePaymentService({ purchase: purchaseId })
         .populate('creditAccount', 'name accountType')
         .sort({ paymentDate: -1 });
 };
 
 export const getPurchasePaymentById = async (id) => {
-    const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    return await PurchasePaymentModel.findById(id)
+    return await findByIdPurchasePaymentService(id)
         .populate('purchase')
         .populate('creditAccount', 'name accountType');
 };
 
 export const deletePurchasePayment = async (paymentId) => {
-    const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-
-    const payment = await PurchasePaymentModel.findById(paymentId);
+    const payment = await findByIdPurchasePaymentService(paymentId);
     if (!payment) {
         throw new Error("Payment not found");
     }
 
-    const purchase = await PurchaseModel.findById(payment.purchase);
+    const purchase = await findByIdPurchaseService(payment.purchase);
     if (!purchase) {
         throw new Error("Purchase not found");
     }
 
     // Reverse the credit account balance change if this was a credit payment
     if (payment.creditAccount && (payment.paymentMethod === 'credit' || payment.paymentMethod === 'hybrid')) {
-        const creditAccount = await QarzaAccountModel.findById(payment.creditAccount);
+        const creditAccount = await findByIdQarzaAccountService(payment.creditAccount);
         if (creditAccount) {
             const creditAmount = payment.creditAmount || payment.amount;
             // Reverse the balance change (decrease since we're reversing a cashin)
-            creditAccount.balance -= creditAmount;
-            await creditAccount.save();
+            await updateQarzaAccountService(creditAccount._id, {
+                balance: creditAccount.balance - creditAmount
+            });
         }
     }
 
-    // Delete the payment
-    await PurchasePaymentModel.findByIdAndDelete(paymentId);
+    // Delete the payment using CRUD service
+    await deleteOnePurchasePaymentService(paymentId);
 
     // Recalculate purchase paid amount and payment status
-    const allPayments = await PurchasePaymentModel.find({ purchase: purchase._id });
+    const allPayments = await findPurchasePaymentService({ purchase: purchase._id });
     const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
     const remainingAmount = purchase.totalAmount - totalPaid;
 
@@ -155,9 +163,10 @@ export const deletePurchasePayment = async (paymentId) => {
         paymentStatus = 'partial';
     }
 
-    purchase.paidAmount = totalPaid;
-    purchase.paymentStatus = paymentStatus;
-    await purchase.save();
+    await updatePurchaseService(purchase._id, {
+        paidAmount: totalPaid,
+        paymentStatus: paymentStatus
+    });
 
     return { message: "Payment deleted successfully", recalculatedStatus: paymentStatus };
 };

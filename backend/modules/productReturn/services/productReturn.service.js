@@ -1,5 +1,5 @@
 import { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService } from "./productReturn.crud.js";
-import { getLocalOrderModel } from "../../../configs/connect.db.js";
+import { findOneOrderService } from "../../pos/services/order.crud.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 
 const generateReturnNumber = async () => {
@@ -10,8 +10,7 @@ const generateReturnNumber = async () => {
 };
   
 const getOrderByNumber = async (orderNumber) => {
-    const OrderModel = getLocalOrderModel();
-    return await OrderModel.findOne({ orderNumber });
+    return await findOneOrderService({ orderNumber });
 };
 
 const createProductReturn = async (returnData) => {

@@ -1,17 +1,17 @@
 import {
-    getLocalOrderModel,
-    getLocalPurchaseModel,
-    getLocalExpensesModel,
-    getLocalProductModel,
-    getLocalCustomerModel,
-    getLocalSupplierModel,
-    getLocalBatchModel,
-    getLocalWastageModel,
-    getLocalPurchaseReturnModel,
-    getLocalProductReturnModel,
-    getLocalCategoryModel,
-    getLocalQarzaAccountModel,
-} from "../../configs/connect.db.js";
+    getOrderModel,
+    getPurchaseModel,
+    getExpenseModel,
+    getProductModel,
+    getCustomerModel,
+    getSupplierModel,
+    getBatchModel,
+    getWastageModel,
+    getPurchaseReturnModel,
+    getProductReturnModel,
+    getCategoryModel,
+    getQarzaAccountModel,
+} from "./dashboard.crud.js";
 
 // Helper function to get date range based on filter
 const getDateRange = (range) => {
@@ -67,18 +67,18 @@ const toNumber = (value) => {
 
 export const getDashboardData = async () => {
     try {
-        const OrderModel = getLocalOrderModel();
-        const PurchaseModel = getLocalPurchaseModel();
-        const ExpenseModel = getLocalExpensesModel();
-        const ProductModel = getLocalProductModel();
-        const CustomerModel = getLocalCustomerModel();
-        const SupplierModel = getLocalSupplierModel();
-        const BatchModel = getLocalBatchModel();
-        const WastageModel = getLocalWastageModel();
-        const PurchaseReturnModel = getLocalPurchaseReturnModel();
-        const ProductReturnModel = getLocalProductReturnModel();
-        const CategoryModel = getLocalCategoryModel();
-        const QarzaAccountModel = getLocalQarzaAccountModel();
+        const OrderModel = getOrderModel();
+        const PurchaseModel = getPurchaseModel();
+        const ExpenseModel = getExpenseModel();
+        const ProductModel = getProductModel();
+        const CustomerModel = getCustomerModel();
+        const SupplierModel = getSupplierModel();
+        const BatchModel = getBatchModel();
+        const WastageModel = getWastageModel();
+        const PurchaseReturnModel = getPurchaseReturnModel();
+        const ProductReturnModel = getProductReturnModel();
+        const CategoryModel = getCategoryModel();
+        const QarzaAccountModel = getQarzaAccountModel();
 
     const now = new Date();
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
@@ -367,7 +367,7 @@ export const getDashboardData = async () => {
 export const getSalesRevenueKPIs = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const orders = await OrderModel.find({
             createdAt: { $gte: startDate, $lte: endDate },
@@ -424,7 +424,7 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
 // Inventory Alert KPIs
 export const getInventoryAlertKPIs = async (range = '30D') => {
     try {
-        const BatchModel = getLocalBatchModel();
+        const BatchModel = getBatchModel();
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -472,8 +472,8 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
 // Expiry Products (paginated)
 export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => {
     try {
-        const BatchModel = getLocalBatchModel();
-        const ProductModel = getLocalProductModel();
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
         const now = new Date();
         const daysRange = range === '7D' ? 7 : 30;
         const expiryDate = new Date(now.getTime() + daysRange * 24 * 60 * 60 * 1000);
@@ -526,8 +526,8 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
 // Low Stock Products (paginated)
 export const getLowStockProducts = async (page = 1, limit = 10) => {
     try {
-        const BatchModel = getLocalBatchModel();
-        const ProductModel = getLocalProductModel();
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
 
         const batches = await BatchModel.find({
             isActive: true,
@@ -579,8 +579,8 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
 // Out of Stock Products (paginated)
 export const getOutOfStockProducts = async (page = 1, limit = 10) => {
     try {
-        const BatchModel = getLocalBatchModel();
-        const ProductModel = getLocalProductModel();
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
 
         const batches = await BatchModel.find({
             isActive: true,
@@ -627,7 +627,7 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
 export const getRevenueOverTime = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
@@ -667,7 +667,7 @@ export const getRevenueOverTime = async (range = '30D') => {
 export const getOrdersOverTime = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
@@ -707,7 +707,7 @@ export const getOrdersOverTime = async (range = '30D') => {
 export const getTopSellingProducts = async (range = '30D', metric = 'revenue') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const sortField = metric === 'revenue' ? 'totalRevenue' : 'totalQuantity';
 
@@ -761,7 +761,7 @@ export const getTopSellingProducts = async (range = '30D', metric = 'revenue') =
 export const getSalesByCategory = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const data = await OrderModel.aggregate([
             {
@@ -821,7 +821,7 @@ export const getSalesByCategory = async (range = '30D') => {
 export const getRetailVsWholesaleComparison = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getLocalOrderModel();
+        const OrderModel = getOrderModel();
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
@@ -860,9 +860,9 @@ export const getRetailVsWholesaleComparison = async (range = '30D') => {
 // Stock Level by Category
 export const getStockLevelByCategory = async () => {
     try {
-        const BatchModel = getLocalBatchModel();
-        const ProductModel = getLocalProductModel();
-        const CategoryModel = getLocalCategoryModel();
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
+        const CategoryModel = getCategoryModel();
 
         const data = await ProductModel.aggregate([
             { $match: { isActive: true } },

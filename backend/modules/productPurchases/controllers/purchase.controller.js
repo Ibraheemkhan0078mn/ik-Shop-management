@@ -268,9 +268,9 @@ export const deletePurchaseData = asyncHandler(async (req, res) => {
 
 export const updatePurchaseStatus = asyncHandler(async (req, res) => {
     const { getLocalPurchaseModel, getLocalBatchModel, getLocalProductModel } = await import("../../../configs/connect.db.js");
-    const PurchaseModel = getLocalPurchaseModel();
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
+    const { findByIdPurchaseService, updatePurchaseService } = await import("../services/purchase.crud.js");
+    const { findByIdBatchService, updateBatchService } = await import("../services/batch.crud.js");
+    const { findByIdProductService, updateProductService } = await import("../../product/services/product.crud.js");
 
     const { id } = req.params;
     const { status } = req.body;
@@ -279,7 +279,7 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid status" });
     }
 
-    const purchase = await PurchaseModel.findById(id);
+    const purchase = await findByIdPurchaseService(id);
     if (!purchase) {
         return res.status(404).json({ success: false, message: "Purchase not found" });
     }
@@ -289,17 +289,18 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
     // If changing from delivered to something else, reverse stock
     if (oldStatus === 'delivered' && status !== 'delivered') {
         for (const item of purchase.items) {
-            const batch = await BatchModel.findById(item.batch);
+            const batch = await findByIdBatchService(item.batch);
             if (batch) {
-                batch.quantity -= item.quantity;
-                if (batch.quantity < 0) batch.quantity = 0;
-                await batch.save();
+                const newQuantity = batch.quantity - item.quantity;
+                if (newQuantity < 0) {
+                    await updateBatchService(item.batch, { quantity: 0 });
+                } else {
+                    await updateBatchService(item.batch, { quantity: newQuantity });
+                }
             }
             
             // Reverse master product stock
-            await ProductModel.findByIdAndUpdate(item.product, {
-                $inc: { currentStockLevel: -item.quantity }
-            });
+            await updateProductService(item.product, { $inc: { currentStockLevel: -item.quantity } });
         }
     }
 
@@ -308,20 +309,17 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
     // If status is delivered (and wasn't before), increment stock for all items
     if (status === 'delivered' && oldStatus !== 'delivered') {
         for (const item of purchase.items) {
-            const batch = await BatchModel.findById(item.batch);
+            const batch = await findByIdBatchService(item.batch);
             if (batch) {
-                batch.quantity += item.quantity;
-                await batch.save();
+                await updateBatchService(item.batch, { quantity: batch.quantity + item.quantity });
             }
             
             // Increment master product stock
-            await ProductModel.findByIdAndUpdate(item.product, {
-                $inc: { currentStockLevel: item.quantity }
-            });
+            await updateProductService(item.product, { $inc: { currentStockLevel: item.quantity } });
         }
     }
 
-    await purchase.save();
+    await updatePurchaseService(id, { status });
 
     res.status(200).json({
         success: true,

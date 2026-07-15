@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalExpensesModel } from "../../../configs/connect.db.js";
 
+const ExpenseModel = getLocalExpensesModel();
+
 const createExpenseService = (data) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.create(data);
+    return createDoc({ model: ExpenseModel, data });
 };
 
 const findExpenseService = (query = {}) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.find(query);
+    return findDocs({ model: ExpenseModel, filter: query });
 };
 
 const findOneExpenseService = (query) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.findOne(query);
+    return findOneDoc({ model: ExpenseModel, filter: query });
 };
 
 const findByIdExpenseService = (id) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.findById(id);
+    return findOneDoc({ model: ExpenseModel, filter: { _id: id } });
 };
 
 const updateExpenseService = (id, data) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: ExpenseModel, filter: { _id: id }, data });
 };
 
 const deleteOneExpenseService = (id) => {
-    const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.findByIdAndDelete(id);
+    return deleteDocs({ model: ExpenseModel, filter: { _id: id } });
 };
 
 const countExpenseService = (query) => {
-    const ExpenseModel = getLocalExpensesModel();
     return ExpenseModel.countDocuments(query);
 };
 

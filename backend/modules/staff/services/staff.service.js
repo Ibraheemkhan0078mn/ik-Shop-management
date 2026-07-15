@@ -1,16 +1,38 @@
 import mongoose from "mongoose";
 import {
     getLocalStaffModel,
-    getLocalStaffSalaryPaymentModel,
-    getLocalStaffSaleBillModel,
     getLocalOrderModel,
-    getLocalStaffAttendanceModel,
 } from "../../../configs/connect.db.js";
+import {
+    createStaffService,
+    findStaffService,
+    findByIdStaffService,
+    updateStaffService,
+    deleteOneStaffService,
+    countStaffService
+} from "./staff.crud.js";
+import {
+    createStaffSalaryPaymentService,
+    findStaffSalaryPaymentService,
+    findByIdStaffSalaryPaymentService,
+    deleteOneStaffSalaryPaymentService,
+    countStaffSalaryPaymentService
+} from "./staffSalaryPayment.crud.js";
+import {
+    createStaffSaleBillService,
+    findByIdStaffSaleBillService,
+    updateStaffSaleBillService
+} from "./staffSaleBill.crud.js";
+import {
+    findStaffAttendanceService,
+    findOneStaffAttendanceService,
+    createStaffAttendanceService,
+    countStaffAttendanceService
+} from "./staffAttendance.crud.js";
 
 // Create staff sale bill from POS order
 export const createStaffSaleBillFromPOS = async (staffId, posOrder) => {
     const StaffModel = getLocalStaffModel();
-    const StaffSaleBillModel = getLocalStaffSaleBillModel();
     
     // Fetch the staff
     const staff = await StaffModel.findById(staffId);
@@ -34,7 +56,7 @@ export const createStaffSaleBillFromPOS = async (staffId, posOrder) => {
     const earnedAmount = (posOrder.totalAmount * staff.percentage) / 100;
     
     // Create and save StaffSaleBill
-    const staffSaleBill = await StaffSaleBillModel.create({
+    const staffSaleBill = await createStaffSaleBillService({
         staffId,
         items,
         totalAmount: posOrder.totalAmount,
@@ -50,13 +72,10 @@ export const createStaffSaleBillFromPOS = async (staffId, posOrder) => {
 
 // Staff CRUD operations
 export const createStaff = async (staffData) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.create(staffData);
-    return staff;
+    return await createStaffService(staffData);
 };
 
 export const getAllStaff = async (filters = {}) => {
-    const StaffModel = getLocalStaffModel();
     const { search, role, status, salaryType, page = 1, limit = 20 } = filters;
     
     const matchQuery = {};
@@ -76,11 +95,11 @@ export const getAllStaff = async (filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        StaffModel.find(matchQuery)
+        findStaffService(matchQuery)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit),
-        StaffModel.countDocuments(matchQuery)
+        countStaffService(matchQuery)
     ]);
     
     return {
@@ -93,8 +112,7 @@ export const getAllStaff = async (filters = {}) => {
 };
 
 export const getStaffById = async (staffId) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findByIdStaffService(staffId);
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -102,12 +120,7 @@ export const getStaffById = async (staffId) => {
 };
 
 export const updateStaff = async (staffId, updateData) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.findByIdAndUpdate(
-        staffId,
-        updateData,
-        { new: true, runValidators: true }
-    );
+    const staff = await updateStaffService(staffId, updateData);
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -115,8 +128,7 @@ export const updateStaff = async (staffId, updateData) => {
 };
 
 export const deleteStaff = async (staffId) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.findByIdAndDelete(staffId);
+    const staff = await deleteOneStaffService(staffId);
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -124,12 +136,7 @@ export const deleteStaff = async (staffId) => {
 };
 
 export const addDocumentToStaff = async (staffId, imageData) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.findByIdAndUpdate(
-        staffId,
-        { $push: { documents: { $each: imageData } } },
-        { new: true }
-    );
+    const staff = await updateStaffService(staffId, { $push: { documents: { $each: imageData } } });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -137,12 +144,7 @@ export const addDocumentToStaff = async (staffId, imageData) => {
 };
 
 export const removeDocumentFromStaff = async (staffId, documentId) => {
-    const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.findByIdAndUpdate(
-        staffId,
-        { $pull: { documents: { _id: documentId } } },
-        { new: true }
-    );
+    const staff = await updateStaffService(staffId, { $pull: { documents: { _id: documentId } } });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -151,13 +153,11 @@ export const removeDocumentFromStaff = async (staffId, documentId) => {
 
 // Staff Salary Payment operations
 export const createSalaryPayment = async (paymentData) => {
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    const payment = await StaffSalaryPaymentModel.create(paymentData);
+    const payment = await createStaffSalaryPaymentService(paymentData);
     return payment;
 };
 
 export const getSalaryPaymentsByStaff = async (staffId, filters = {}) => {
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
     const { page = 1, limit = 20 } = filters;
     
     const matchQuery = { staffId };
@@ -165,11 +165,11 @@ export const getSalaryPaymentsByStaff = async (staffId, filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        StaffSalaryPaymentModel.find(matchQuery)
+        findStaffSalaryPaymentService(matchQuery)
             .sort({ paidAt: -1 })
             .skip(skip)
             .limit(limit),
-        StaffSalaryPaymentModel.countDocuments(matchQuery)
+        countStaffSalaryPaymentService(matchQuery)
     ]);
     
     return {
@@ -182,8 +182,7 @@ export const getSalaryPaymentsByStaff = async (staffId, filters = {}) => {
 };
 
 export const deleteSalaryPayment = async (paymentId) => {
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    const payment = await StaffSalaryPaymentModel.findByIdAndDelete(paymentId);
+    const payment = await deleteOneStaffSalaryPaymentService(paymentId);
     if (!payment) {
         throw new Error('Salary payment not found');
     }
@@ -192,8 +191,7 @@ export const deleteSalaryPayment = async (paymentId) => {
 
 // Staff Sale Bill operations
 export const createSaleBill = async (billData) => {
-    const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    const bill = await StaffSaleBillModel.create(billData);
+    const bill = await createStaffSaleBillService(billData);
     return bill;
 };
 
@@ -236,12 +234,7 @@ export const getSaleBillsByStaff = async (staffId, filters = {}) => {
 };
 
 export const markSaleBillAsPaid = async (billId) => {
-    const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    const bill = await StaffSaleBillModel.findByIdAndUpdate(
-        billId,
-        { isPaid: true, paidAt: new Date() },
-        { new: true }
-    );
+    const bill = await updateStaffSaleBillService(billId, { isPaid: true, paidAt: new Date() });
     if (!bill) {
         throw new Error('Sale bill not found');
     }
@@ -250,13 +243,12 @@ export const markSaleBillAsPaid = async (billId) => {
 
 // Staff Attendance operations
 export const getAttendanceByDate = async (date) => {
-    const StaffAttendanceModel = getLocalStaffAttendanceModel();
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const attendance = await StaffAttendanceModel.findOne({
+    const attendance = await findOneStaffAttendanceService({
         date: { $gte: startOfDay, $lte: endOfDay }
     }).populate('attendance.staff');
 
@@ -264,7 +256,6 @@ export const getAttendanceByDate = async (date) => {
 };
 
 export const createOrUpdateAttendance = async (date, attendanceData, userId) => {
-    const StaffAttendanceModel = getLocalStaffAttendanceModel();
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -283,7 +274,7 @@ export const createOrUpdateAttendance = async (date, attendanceData, userId) => 
     const staffObjectId = new mongoose.Types.ObjectId(attendanceData.staff);
     console.log('Converted to ObjectId:', staffObjectId);
 
-    let attendance = await StaffAttendanceModel.findOne({
+    let attendance = await findOneStaffAttendanceService({
         date: { $gte: startOfDay, $lte: endOfDay }
     });
 
@@ -322,7 +313,7 @@ export const createOrUpdateAttendance = async (date, attendanceData, userId) => 
             lateHours: attendanceData.lateHours
         });
         
-        const newAttendance = new StaffAttendanceModel({
+        const newAttendance = await createStaffAttendanceService({
             date: startOfDay,
             attendance: [{
                 staff: staffObjectId,
@@ -336,14 +327,13 @@ export const createOrUpdateAttendance = async (date, attendanceData, userId) => 
         console.log('Attendance object before save:', newAttendance);
         console.log('Attendance array:', newAttendance.attendance);
         
-        attendance = await newAttendance.save();
+        attendance = newAttendance;
     }
 
     return attendance;
 };
 
 export const getAttendanceHistory = async (filters = {}) => {
-    const StaffAttendanceModel = getLocalStaffAttendanceModel();
     const { page = 1, limit = 20, startDate, endDate } = filters;
 
     const matchQuery = {};
@@ -358,13 +348,13 @@ export const getAttendanceHistory = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        StaffAttendanceModel.find(matchQuery)
+        findStaffAttendanceService(matchQuery)
             .sort({ date: -1 })
             .skip(skip)
             .limit(limit)
             .populate('attendance.staff')
             .populate('createdBy', 'fullName'),
-        StaffAttendanceModel.countDocuments(matchQuery)
+        countStaffAttendanceService(matchQuery)
     ]);
 
     return {
@@ -385,7 +375,6 @@ export const getActiveStaff = async () => {
 // Calculate salary breakdown for fixed salary staff
 export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     const StaffModel = getLocalStaffModel();
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
     
     const staff = await StaffModel.findById(staffId);
     if (!staff) {
@@ -402,7 +391,7 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     const end = new Date(endDate);
     
     // Get ALL payments for this staff (not just within date range) for FIFO allocation
-    const allPayments = await StaffSalaryPaymentModel.find({
+    const allPayments = await findStaffSalaryPaymentService({
         staffId
     }).sort({ paidAt: 1 });
     
@@ -518,7 +507,6 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
 // Calculate payment summary for staff
 export const calculatePaymentSummary = async (staffId) => {
     const StaffModel = getLocalStaffModel();
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
     const OrderModel = getLocalOrderModel();
     
     const staff = await StaffModel.findById(staffId);
@@ -544,7 +532,7 @@ export const calculatePaymentSummary = async (staffId) => {
         }, 0);
         
         // Get payments
-        const payments = await StaffSalaryPaymentModel.find({ staffId });
+        const payments = await findStaffSalaryPaymentService({ staffId });
         totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
         
     } else if (staff.salaryType === 'fixed') {
@@ -586,7 +574,7 @@ export const calculatePaymentSummary = async (staffId) => {
         }
         
         // Get payments
-        const payments = await StaffSalaryPaymentModel.find({ staffId });
+        const payments = await findStaffSalaryPaymentService({ staffId });
         totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     }
     

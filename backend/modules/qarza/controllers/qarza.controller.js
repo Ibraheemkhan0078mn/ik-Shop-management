@@ -1,5 +1,4 @@
-﻿import { getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
-import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
+﻿import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 import {
     qarzaAccountCreate as qarzaAccountCreateService,
@@ -11,9 +10,12 @@ import {
     countQarzaAccounts as countQarzaAccountsService,
     qarzaPaymentCreate as qarzaPaymentCreateService,
     getAllQarzaPayments as getAllQarzaPaymentsService,
+    getPaginatedQarzaPayments as getPaginatedQarzaPaymentsService,
+    countQarzaPayments as countQarzaPaymentsService,
     qarzaPaymentUpdate as qarzaPaymentUpdateService,
     qarzaPaymentDelete as qarzaPaymentDeleteService,
 } from "../services/qarza.service.js";
+import { getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 
 
 
@@ -145,20 +147,15 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
-
-        const QarzaPaymentModel = getLocalQarzaPaymentModel();
         
         let query = { qarzaAccountId };
         if (source && source !== 'all') {
             query.source = source;
         }
         
-        let payments = await QarzaPaymentModel.find(query)
-            .sort({ date: -1 })
-            .limit(limit)
-            .skip(skip);
+        let payments = await getPaginatedQarzaPaymentsService(query, skip, limit);
 
-        let total = await QarzaPaymentModel.countDocuments(query);
+        let total = await countQarzaPaymentsService(query);
 
         return res.json({ 
             success: true, 
@@ -357,10 +354,8 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
-
-        const QarzaPaymentModel = getLocalQarzaPaymentModel();
         
-        const payments = await QarzaPaymentModel.find({ qarzaAccountId });
+        const payments = await getAllQarzaPaymentsService({ qarzaAccountId });
         
         // Calculate manual cashin and cashout
         const manualCashIn = payments
@@ -421,7 +416,6 @@ export const getCreditsDebitsReport = async (req, res) => {
         console.log(req.query, "the query")
 
         const QarzaAccountModel = getLocalQarzaAccountModel();
-        const QarzaPaymentModel = getLocalQarzaPaymentModel();
 
         // Build payment filter based on date range
         let paymentFilter = {};
@@ -459,7 +453,7 @@ export const getCreditsDebitsReport = async (req, res) => {
         console.log(paymentFilter)
 
         // Get all payments matching filters
-        const payments = await QarzaPaymentModel.find(paymentFilter).sort({ date: -1 });
+        const payments = await getAllQarzaPaymentsService(paymentFilter);
 
         console.log(payments, "the payemnt in qarza report")
         // Get unique account IDs from payments
@@ -478,7 +472,7 @@ export const getCreditsDebitsReport = async (req, res) => {
         }
 
         // Get accounts
-        const accounts = await QarzaAccountModel.find(accountFilter);
+        const accounts = await getAllQarzaAccountsService(accountFilter);
 
         // Calculate summary for each account based on actual payments
         const accountSummaries = accounts.map(account => {
@@ -580,10 +574,7 @@ export const getAccountLedger = async (req, res) => {
         const { accountId } = req.params;
         const { startDate, endDate } = req.query;
 
-        const QarzaAccountModel = getLocalQarzaAccountModel();
-        const QarzaPaymentModel = getLocalQarzaPaymentModel();
-
-        const account = await QarzaAccountModel.findById(accountId);
+        const account = await getQarzaAccountByIdService(accountId);
         if (!account) {
             return res.json({ success: false, msg: "Account not found" });
         }
@@ -595,7 +586,7 @@ export const getAccountLedger = async (req, res) => {
             if (endDate) paymentFilter.date.$lte = new Date(endDate);
         }
 
-        const payments = await QarzaPaymentModel.find(paymentFilter).sort({ date: 1 });
+        const payments = await getAllQarzaPaymentsService(paymentFilter);
 
         // Calculate running balance
         let runningBalance = 0;
@@ -643,8 +634,6 @@ export const getPaginatedQarzaPaymentsWithoutAccount = async (req, res) => {
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
         let search = req.query.search || "";
-
-        const QarzaPaymentModel = getLocalQarzaPaymentModel();
         
         let query = { qarzaAccountId: { $exists: false } };
         
@@ -655,12 +644,9 @@ export const getPaginatedQarzaPaymentsWithoutAccount = async (req, res) => {
             ];
         }
         
-        let payments = await QarzaPaymentModel.find(query)
-            .sort({ date: -1 })
-            .limit(limit)
-            .skip(skip);
+        let payments = await getPaginatedQarzaPaymentsService(query, skip, limit);
 
-        let total = await QarzaPaymentModel.countDocuments(query);
+        let total = await countQarzaPaymentsService(query);
 
         return res.json({ 
             success: true, 

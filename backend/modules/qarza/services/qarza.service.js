@@ -1,5 +1,5 @@
 import { createQarzaAccountService, findQarzaAccountService, findOneQarzaAccountService, findByIdQarzaAccountService, updateQarzaAccountService, deleteOneQarzaAccountService, countQarzaAccountService } from "./qarzaAccount.crud.js";
-import { createQarzaPaymentService, findQarzaPaymentService, updateQarzaPaymentService, deleteOneQarzaPaymentService } from "./qarzaPayment.crud.js";
+import { createQarzaPaymentService, findQarzaPaymentService, findOneQarzaPaymentService, findByIdQarzaPaymentService, updateQarzaPaymentService, deleteOneQarzaPaymentService, countQarzaPaymentService } from "./qarzaPayment.crud.js";
 
 const qarzaAccountCreate = async (data) => {
     return await createQarzaAccountService(data);
@@ -37,6 +37,17 @@ const getAllQarzaPayments = async (query = {}) => {
     return await findQarzaPaymentService(query).sort({ date: -1 });
 };
 
+const getPaginatedQarzaPayments = async (query = {}, skip = 0, limit = 20) => {
+    return await findQarzaPaymentService(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit);
+};
+
+const countQarzaPayments = async (query = {}) => {
+    return await countQarzaPaymentService(query);
+};
+
 const qarzaPaymentUpdate = async (id, data) => {
     return await updateQarzaPaymentService(id, data);
 };
@@ -55,6 +66,8 @@ export {
     countQarzaAccounts,
     qarzaPaymentCreate,
     getAllQarzaPayments,
+    getPaginatedQarzaPayments,
+    countQarzaPayments,
     qarzaPaymentUpdate,
     qarzaPaymentDelete,
 };

@@ -1,8 +1,5 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import {
-    getLocalWastageModel,
-} from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     wastageCreate as wastageCreateService,

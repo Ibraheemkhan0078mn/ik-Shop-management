@@ -7,7 +7,7 @@ import {
     deleteOneProductService,
     countProductService,
 } from "./product.crud.js";
-import { getLocalBatchModel } from "../../../configs/connect.db.js";
+import { findBatchService, countBatchService, deleteManyBatchService } from "../../productPurchases/services/batch.crud.js";
 import { filterEmptyValues } from "../../../common/services/filterEmptyFromObject.js";
 import { deleteProductImage } from "./productImage.service.js";
 
@@ -21,7 +21,6 @@ import { deleteProductImage } from "./productImage.service.js";
  * most recently created one, and finally to the product's default sale price.
  */
 const attachBatchSellingPrice = async (products) => {
-    const BatchModel = getLocalBatchModel();
     return Promise.all(
         products.map(async (product) => {
             const base = product.toObject ? product.toObject() : product;
@@ -29,7 +28,7 @@ const attachBatchSellingPrice = async (products) => {
                 return { ...base, batchSellingPrice: base.defaultSalePrice || 0 };
             }
 
-            const activeBatches = await BatchModel.find({
+            const activeBatches = await findBatchService({
                 product: base._id,
                 quantity: { $gt: 0 },
                 isActive: true,
@@ -147,13 +146,12 @@ const getPaginationProduct = async (filters = {}) => {
         ];
     }
 
-    const products = await findProductService(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate("batches")
-        .populate("category")
-        .populate("subCategory");
+    const products = await findProductService(query, {
+        sort: { createdAt: -1 },
+        skip: skip,
+        limit: parseInt(limit),
+        populate: ["batches", "category", "subCategory"]
+    });
 
     const total = await countProductService(query);
     const data = await attachBatchSellingPrice(products);
@@ -225,13 +223,12 @@ const updateProduct = async (id, updateData) => {
  * batch count so the controller can give the caller a helpful message.
  */
 const deleteProduct = async (id) => {
-    const BatchModel = getLocalBatchModel();
     const product = await findByIdProductService(id);
     if (!product) {
         throw new Error("Product not found");
     }
 
-    const batchCount = await BatchModel.countDocuments({ product: id });
+    const batchCount = await countBatchService({ product: id });
     if (batchCount > 0) {
         const err = new Error("Product has connected batches and cannot be deleted directly.");
         err.code = "PRODUCT_HAS_BATCHES";
@@ -249,13 +246,12 @@ const deleteProduct = async (id) => {
  * confirmation flow.
  */
 const deleteProductWithBatches = async (id) => {
-    const BatchModel = getLocalBatchModel();
     const product = await findByIdProductService(id);
     if (!product) {
         throw new Error("Product not found");
     }
 
-    const batchResult = await BatchModel.deleteMany({ product: id });
+    const batchResult = await deleteManyBatchService({ product: id });
     deleteProductImage(product.image);
     await deleteOneProductService(id);
 

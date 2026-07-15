@@ -1,13 +1,16 @@
-import { getLocalSettingsModel } from "../../../configs/connect.db.js";
+import {
+    findOneSettingsService,
+    createSettingsService,
+    findOneAndUpdateSettingsService,
+} from "./settings.crud.js";
 
 // Get settings by user ID
 export const getSettingsByUserId = async (userId) => {
-    const SettingsModel = getLocalSettingsModel();
-    let settings = await SettingsModel.findOne({ userId });
+    let settings = await findOneSettingsService({ userId });
     
     // If no settings exist, create default settings for this user
     if (!settings) {
-        settings = await SettingsModel.create({ userId });
+        settings = await createSettingsService({ userId });
     }
     
     return settings;
@@ -15,11 +18,9 @@ export const getSettingsByUserId = async (userId) => {
 
 // Update settings
 export const updateSettings = async (userId, updateData) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: updateData },
-        { new: true, upsert: true }
+        { $set: updateData }
     );
     
     return settings;
@@ -27,11 +28,9 @@ export const updateSettings = async (userId, updateData) => {
 
 // Update shop settings
 export const updateShopSettings = async (userId, shopData) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { shop: shopData } },
-        { new: true, upsert: true }
+        { $set: { shop: shopData } }
     );
     
     return settings;
@@ -39,11 +38,9 @@ export const updateShopSettings = async (userId, shopData) => {
 
 // Update printer settings
 export const updatePrinterSettings = async (userId, printerData) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { printer: printerData } },
-        { new: true, upsert: true }
+        { $set: { printer: printerData } }
     );
     
     return settings;
@@ -51,11 +48,9 @@ export const updatePrinterSettings = async (userId, printerData) => {
 
 // Update camera settings
 export const updateCameraSettings = async (userId, cameraData) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { camera: cameraData } },
-        { new: true, upsert: true }
+        { $set: { camera: cameraData } }
     );
     
     return settings;
@@ -63,11 +58,9 @@ export const updateCameraSettings = async (userId, cameraData) => {
 
 // Update language settings
 export const updateLanguageSettings = async (userId, language) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { language } },
-        { new: true, upsert: true }
+        { $set: { language } }
     );
     
     return settings;
@@ -75,11 +68,9 @@ export const updateLanguageSettings = async (userId, language) => {
 
 // Update module visibility settings
 export const updateModuleSettings = async (userId, modules) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { modules } },
-        { new: true, upsert: true }
+        { $set: { modules } }
     );
     
     return settings;
@@ -87,11 +78,9 @@ export const updateModuleSettings = async (userId, modules) => {
 
 // Update permission password settings
 export const updatePermissionPasswordSettings = async (userId, permissionPassword) => {
-    const SettingsModel = getLocalSettingsModel();
-    const settings = await SettingsModel.findOneAndUpdate(
+    const settings = await findOneAndUpdateSettingsService(
         { userId },
-        { $set: { permissionPassword } },
-        { new: true, upsert: true }
+        { $set: { permissionPassword } }
     );
     
     return settings;

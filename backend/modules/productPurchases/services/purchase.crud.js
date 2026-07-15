@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalPurchaseModel } from "../../../configs/connect.db.js";
 
+const PurchaseModel = getLocalPurchaseModel();
+
 const createPurchaseService = (data) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.create(data);
+    return createDoc({ model: PurchaseModel, data });
 };
 
 const findPurchaseService = (query = {}) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.find(query);
+    return findDocs({ model: PurchaseModel, filter: query });
 };
 
 const findOnePurchaseService = (query) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.findOne(query);
+    return findOneDoc({ model: PurchaseModel, filter: query });
 };
 
 const findByIdPurchaseService = (id) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.findById(id);
+    return findOneDoc({ model: PurchaseModel, filter: { _id: id } });
 };
 
 const updatePurchaseService = (id, data) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: PurchaseModel, filter: { _id: id }, data });
 };
 
 const deleteOnePurchaseService = (id) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.findByIdAndDelete(id);
+    return deleteDocs({ model: PurchaseModel, filter: { _id: id } });
 };
 
 const countPurchaseService = (query) => {
-    const PurchaseModel = getLocalPurchaseModel();
     return PurchaseModel.countDocuments(query);
 };
 

@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalProductModel } from "../../../configs/connect.db.js";
 
+const ProductModel = getLocalProductModel();
+
 const createProductService = (data) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.create(data);
+    return createDoc({ model: ProductModel, data });
 };
 
 const findProductService = (query = {}) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.find(query);
+    return findDocs({ model: ProductModel, filter: query });
 };
 
 const findOneProductService = (query) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.findOne(query);
+    return findOneDoc({ model: ProductModel, filter: query });
 };
 
 const findByIdProductService = (id) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.findById(id);
+    return findOneDoc({ model: ProductModel, filter: { _id: id } });
 };
 
 const updateProductService = (id, data) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: ProductModel, filter: { _id: id }, data });
 };
 
 const deleteOneProductService = (id) => {
-    const ProductModel = getLocalProductModel();
-    return ProductModel.findByIdAndDelete(id);
+    return deleteDocs({ model: ProductModel, filter: { _id: id } });
 };
 
 const countProductService = (query) => {
-    const ProductModel = getLocalProductModel();
     return ProductModel.countDocuments(query);
 };
 

@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalHoldOrderModel } from "../../../configs/connect.db.js";
 
+const HoldOrderModel = getLocalHoldOrderModel();
+
 const createHoldOrderService = (data) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.create(data);
+    return createDoc({ model: HoldOrderModel, data });
 };
 
 const findHoldOrderService = (query = {}) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.find(query);
+    return findDocs({ model: HoldOrderModel, filter: query });
 };
 
 const findOneHoldOrderService = (query) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.findOne(query);
+    return findOneDoc({ model: HoldOrderModel, filter: query });
 };
 
 const findByIdHoldOrderService = (id) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.findById(id);
+    return findOneDoc({ model: HoldOrderModel, filter: { _id: id } });
 };
 
 const updateHoldOrderService = (id, data) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: HoldOrderModel, filter: { _id: id }, data });
 };
 
 const deleteOneHoldOrderService = (id) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.findByIdAndDelete(id);
+    return deleteDocs({ model: HoldOrderModel, filter: { _id: id } });
 };
 
 const countHoldOrderService = (query) => {
-    const HoldOrderModel = getLocalHoldOrderModel();
     return HoldOrderModel.countDocuments(query);
 };
 

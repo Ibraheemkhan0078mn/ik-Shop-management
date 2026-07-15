@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     orderCreate as orderCreateService,
@@ -9,11 +9,16 @@ import {
     orderDelete as orderDeleteService,
     countOrders as countOrdersService,
     getOrderById as getOrderByIdService,
+    getPaginatedOrders as getPaginatedOrdersService,
+    getOrdersByCustomer as getOrdersByCustomerService,
 } from "../services/order.service.js";
 import {
     countHoldOrderService,
 } from "../services/holdOrder.crud.js";
+import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.js";
+import { findByIdQarzaAccountService, updateQarzaAccountService } from "../../qarza/services/qarzaAccount.crud.js";
+import { createQarzaPaymentService } from "../../qarza/services/qarzaPayment.crud.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
@@ -53,25 +58,17 @@ export const getOrders = asyncHandler(async (req, res) => {
 export const getPaginatedOrders = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
 
-    const OrderModel = getLocalOrderModel();
-
-    const orders = await OrderModel.find()
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .skip(skip);
-
-    const total = await OrderModel.countDocuments();
+    const result = await getPaginatedOrdersService({ page, limit });
 
     res.status(200).json({
         success: true,
         message: "Orders fetched successfully",
-        data: orders,
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+        data: result.data,
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages
     });
 });
 
@@ -81,24 +78,8 @@ export const getPaginatedOrders = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getOrdersByCustomer = asyncHandler(async (req, res) => {
     const { customerId, startDate, endDate } = req.query;
-    const OrderModel = getLocalOrderModel();
 
-    const filter = { customerId };
-    
-    if (startDate || endDate) {
-        filter.createdAt = {};
-        if (startDate) {
-            filter.createdAt.$gte = new Date(startDate);
-        }
-        if (endDate) {
-            const endDateTime = new Date(endDate);
-            endDateTime.setHours(23, 59, 59, 999);
-            filter.createdAt.$lte = endDateTime;
-        }
-    }
-
-    const orders = await OrderModel.find(filter)
-        .sort({ createdAt: -1 });
+    const orders = await getOrdersByCustomerService({ customerId, startDate, endDate });
 
     res.status(200).json({
         success: true,
@@ -113,10 +94,7 @@ export const getOrdersByCustomer = asyncHandler(async (req, res) => {
 //  Accepts both qty/quantity and price/unitPrice field names from the frontend.
 // ─────────────────────────────────────────────────────────────────────────────
 export const addOrder = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel(); 
     const ProductModel = getLocalProductModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
 
     // Normalize items — safe coercion with ?? so 0 values are preserved (not treated as falsy)
     const normalizedItems = req.body.items.map((item) => {
@@ -150,7 +128,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             return next(new ErrorResponse(`Batch is required for product: ${item.name}`, 400));
         }
 
-        const batch = await BatchModel.findById(item.batchId);
+        const batch = await findByIdBatchService(item.batchId);
         if (!batch) {
             return next(new ErrorResponse(`Batch not found for product: ${item.name}`, 400));
         }
@@ -176,9 +154,9 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     // Create qarza payment for credit/hybrid payments
     const paymentMethod = validatedData.paymentMethod;
     if (paymentMethod === 'credit' && validatedData.qarzaAccount) {
-        const creditAccount = await QarzaAccountModel.findById(validatedData.qarzaAccount);
+        const creditAccount = await findByIdQarzaAccountService(validatedData.qarzaAccount);
         if (creditAccount) {
-            await QarzaPaymentModel.create({
+            await createQarzaPaymentService({
                 qarzaAccountId: validatedData.qarzaAccount,
                 amount: validatedData.totalAmount,
                 type: 'debit', // They owe us, so it's debit
@@ -189,13 +167,14 @@ export const addOrder = asyncHandler(async (req, res, next) => {
                 orderNumber: validatedData.orderNumber
             });
             // Update credit account balance
-            creditAccount.balance += validatedData.totalAmount;
-            await creditAccount.save();
+            await updateQarzaAccountService(creditAccount._id, {
+                balance: creditAccount.balance + validatedData.totalAmount
+            });
         }
     } else if (paymentMethod === 'hybrid' && validatedData.hybridQarzaAccount && validatedData.hybridQarza > 0) {
-        const creditAccount = await QarzaAccountModel.findById(validatedData.hybridQarzaAccount);
+        const creditAccount = await findByIdQarzaAccountService(validatedData.hybridQarzaAccount);
         if (creditAccount) {
-            await QarzaPaymentModel.create({
+            await createQarzaPaymentService({
                 qarzaAccountId: validatedData.hybridQarzaAccount,
                 amount: validatedData.hybridQarza,
                 type: 'debit', // They owe us, so it's debit
@@ -206,8 +185,9 @@ export const addOrder = asyncHandler(async (req, res, next) => {
                 orderNumber: validatedData.orderNumber
             });
             // Update credit account balance
-            creditAccount.balance += validatedData.hybridQarza;
-            await creditAccount.save();
+            await updateQarzaAccountService(creditAccount._id, {
+                balance: creditAccount.balance + validatedData.hybridQarza
+            });
         }
     }
 

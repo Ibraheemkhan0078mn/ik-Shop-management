@@ -1,37 +1,35 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
 
+const UserModel = getLocalUserModel();
+
 const createUserService = (data) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.create(data);
+    return createDoc({ model: UserModel, data });
 };
 
 const findUserService = (query = {}) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.find(query);
+    return findDocs({ model: UserModel, filter: query });
 };
 
-const findOneUserService = (query) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.findOne(query);
+const findOneUserService = (query, options = {}) => {
+    const { select } = options;
+    return findOneDoc({ model: UserModel, filter: query, options: { select } });
 };
 
-const findByIdUserService = (id) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.findById(id);
+const findByIdUserService = (id, options = {}) => {
+    const { select } = options;
+    return findOneDoc({ model: UserModel, filter: { _id: id }, options: { select } });
 };
 
 const updateUserService = (id, data) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: UserModel, filter: { _id: id }, data });
 };
 
 const deleteOneUserService = (id) => {
-    const UserModel = getLocalUserModel();
-    return UserModel.findByIdAndDelete(id);
+    return deleteDocs({ model: UserModel, filter: { _id: id } });
 };
 
 const countUserService = (query) => {
-    const UserModel = getLocalUserModel();
     return UserModel.countDocuments(query);
 };
 

@@ -22,6 +22,26 @@ const customerDelete = async (id) => await deleteOneCustomerService(id);
 
 const countCustomers = async (query = {}) => await countCustomerService(query);
 
+const getPaginatedCustomers = async (filters = {}) => {
+    const { page = 1, limit = 20 } = filters;
+    const skip = (page - 1) * limit;
+    
+    const customers = await findCustomerService({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    
+    const total = await countCustomerService({});
+    
+    return {
+        data: customers,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+    };
+};
+
 export {
     customerCreate,
     getAllCustomers,
@@ -30,4 +50,5 @@ export {
     customerUpdate,
     customerDelete,
     countCustomers,
+    getPaginatedCustomers,
 };

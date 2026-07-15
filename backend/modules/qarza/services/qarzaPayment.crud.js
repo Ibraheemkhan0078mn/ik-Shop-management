@@ -1,37 +1,33 @@
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 
+const QarzaPaymentModel = getLocalQarzaPaymentModel();
+
 const createQarzaPaymentService = (data) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.create(data);
+    return createDoc({ model: QarzaPaymentModel, data });
 };
 
 const findQarzaPaymentService = (query = {}) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.find(query);
+    return findDocs({ model: QarzaPaymentModel, filter: query });
 };
 
 const findOneQarzaPaymentService = (query) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.findOne(query);
+    return findOneDoc({ model: QarzaPaymentModel, filter: query });
 };
 
 const findByIdQarzaPaymentService = (id) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.findById(id);
+    return findOneDoc({ model: QarzaPaymentModel, filter: { _id: id } });
 };
 
 const updateQarzaPaymentService = (id, data) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    return updateDocs({ model: QarzaPaymentModel, filter: { _id: id }, data });
 };
 
 const deleteOneQarzaPaymentService = (id) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.findByIdAndDelete(id);
+    return deleteDocs({ model: QarzaPaymentModel, filter: { _id: id } });
 };
 
 const countQarzaPaymentService = (query) => {
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
     return QarzaPaymentModel.countDocuments(query);
 };
 

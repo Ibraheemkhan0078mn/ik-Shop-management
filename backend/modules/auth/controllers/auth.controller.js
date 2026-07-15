@@ -1,14 +1,13 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalUserModel } from "../../../configs/connect.db.js";
 import {
     userCreate as userCreateService,
     findUserByEmail as findUserByEmailService,
-    findUserById as findUserByIdService,
+    findUserByEmailWithPassword as findUserByEmailWithPasswordService,
+    findUserByIdWithoutPassword as findUserByIdWithoutPasswordService,
 } from "../services/auth.service.js";
 
 export const loginUser = asyncHandler(async (req, res, next) => {
-    const UserModel = getLocalUserModel();
     const { email, password } = req.body || {};
 
     const user = await findUserByEmailService(email);
@@ -16,7 +15,7 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Invalid credentials", 401));
     }
 
-    const userWithPassword = await UserModel.findOne({ email }).select("+password");
+    const userWithPassword = await findUserByEmailWithPasswordService(email);
     const isMatch = await userWithPassword.comparePassword(password);
 
     if (!isMatch) {
@@ -70,7 +69,6 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 });
 
 export const getMe = asyncHandler(async (req, res, next) => {
-    const UserModel = getLocalUserModel();
     const { userId } = req.query;
 
     if (!userId) {
@@ -81,7 +79,7 @@ export const getMe = asyncHandler(async (req, res, next) => {
         });
     }
 
-    const user = await UserModel.findById(userId).select("-password");
+    const user = await findUserByIdWithoutPasswordService(userId);
 
     if (!user) {
         return res.status(200).json({

@@ -1,25 +1,25 @@
 import {
-    getLocalOrderModel,
-    getLocalHoldOrderModel,
-    getLocalProductModel,
-    getLocalBatchModel,
-    getLocalPurchaseModel,
-    getLocalSupplierModel,
-    getLocalExpensesModel,
-    getLocalExpenseCategoryModel,
-    getLocalWastageModel,
-    getLocalPurchaseReturnModel,
-    getLocalQarzaAccountModel,
-    getLocalQarzaPaymentModel,
-    getLocalActivityLogModel,
-    getLocalCategoryModel,
-    getLocalProductReturnModel,
-    getLocalCustomerModel,
-    getLocalStaffModel,
-    getLocalStaffSalaryPaymentModel,
-    getLocalStaffSaleBillModel,
-    getLocalStaffAttendanceModel,
-} from "../../../configs/connect.db.js";
+    getOrderModel,
+    getHoldOrderModel,
+    getProductModel,
+    getBatchModel,
+    getPurchaseModel,
+    getSupplierModel,
+    getExpenseModel,
+    getExpenseCategoryModel,
+    getWastageModel,
+    getPurchaseReturnModel,
+    getQarzaAccountModel,
+    getQarzaPaymentModel,
+    getActivityLogModel,
+    getCategoryModel,
+    getProductReturnModel,
+    getCustomerModel,
+    getStaffModel,
+    getStaffSalaryPaymentModel,
+    getStaffSaleBillModel,
+    getStaffAttendanceModel,
+} from "./reports.crud.js";
 
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
@@ -73,13 +73,13 @@ const getMonthRange = () => {
 
 // Dashboard Summary
 export const getDashboardSummary = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const ExpensesModel = getLocalExpensesModel();
-    const BatchModel = getLocalBatchModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    const SupplierModel = getLocalSupplierModel();
-    const ProductModel = getLocalProductModel();
+    const OrderModel = getOrderModel();
+    const PurchaseModel = getPurchaseModel();
+    const ExpensesModel = getExpenseModel();
+    const BatchModel = getBatchModel();
+    const QarzaAccountModel = getQarzaAccountModel();
+    const SupplierModel = getSupplierModel();
+    const ProductModel = getProductModel();
 
     const { startOfDay, endOfDay } = getTodayRange();
 
@@ -163,7 +163,7 @@ export const getDashboardSummary = async (filters = {}) => {
 
 // Sales Report
 export const getSalesReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
+    const OrderModel = getOrderModel();
     const { fromDate, toDate, productId, paymentMethod, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = { status: "completed" };
@@ -229,7 +229,7 @@ export const getSalesReport = async (filters = {}) => {
 
 // Purchase Report
 export const getPurchaseReport = async (filters = {}) => {
-    const PurchaseModel = getLocalPurchaseModel();
+    const PurchaseModel = getPurchaseModel();
     const { fromDate, toDate, supplierId, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -291,10 +291,10 @@ export const getPurchaseReport = async (filters = {}) => {
 // Main Business Report
 // Sales KPI Report
 export const getSalesKPIReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const ProductModel = getLocalProductModel();
-    const StaffModel = getLocalStaffModel();
-    const ProductReturnModel = getLocalProductReturnModel();
+    const OrderModel = getOrderModel();
+    const ProductModel = getProductModel();
+    const StaffModel = getStaffModel();
+    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates
@@ -663,10 +663,10 @@ export const getSalesKPIReport = async (filters = {}) => {
 
 // Purchase KPI Report
 export const getPurchaseKPIReport = async (filters = {}) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    const SupplierModel = getLocalSupplierModel();
-    const ProductModel = getLocalProductModel();
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const PurchaseModel = getPurchaseModel();
+    const SupplierModel = getSupplierModel();
+    const ProductModel = getProductModel();
+    const PurchaseReturnModel = getPurchaseReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as sales report)
@@ -910,9 +910,9 @@ export const getPurchaseKPIReport = async (filters = {}) => {
 
 // Supplier KPI Report
 export const getSupplierKPIReport = async (filters = {}) => {
-    const PurchaseModel = getLocalPurchaseModel();
-    const SupplierModel = getLocalSupplierModel();
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const PurchaseModel = getPurchaseModel();
+    const SupplierModel = getSupplierModel();
+    const PurchaseReturnModel = getPurchaseReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as sales/purchase reports)
@@ -1160,9 +1160,9 @@ export const getSupplierKPIReport = async (filters = {}) => {
 
 // Customer KPI Report
 export const getCustomerKPIReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const CustomerModel = getLocalCustomerModel();
-    const ProductReturnModel = getLocalProductReturnModel();
+    const OrderModel = getOrderModel();
+    const CustomerModel = getCustomerModel();
+    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as other reports)
@@ -1406,7 +1406,7 @@ export const getCustomerKPIReport = async (filters = {}) => {
 
 // Expense KPI Report
 export const getExpenseKPIReport = async (filters = {}) => {
-    const ExpensesModel = getLocalExpensesModel();
+    const ExpensesModel = getExpenseModel();
     const { fromDate, toDate, period } = filters;
 
     let dateFilter = {};
@@ -1501,14 +1501,14 @@ export const getExpenseKPIReport = async (filters = {}) => {
 };
 
 export const getMainBusinessReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const ExpensesModel = getLocalExpensesModel();
-    const WastageModel = getLocalWastageModel();
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
-    const ProductReturnModel = getLocalProductReturnModel();
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    const QarzaAccountModel = getLocalQarzaAccountModel();
+    const OrderModel = getOrderModel();
+    const PurchaseModel = getPurchaseModel();
+    const ExpensesModel = getExpenseModel();
+    const WastageModel = getWastageModel();
+    const PurchaseReturnModel = getPurchaseReturnModel();
+    const ProductReturnModel = getProductReturnModel();
+    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
+    const QarzaAccountModel = getQarzaAccountModel();
     const { fromDate, toDate, period = "today" } = filters;
 
     let dateFilter = {};
@@ -1744,9 +1744,9 @@ export const getMainBusinessReport = async (filters = {}) => {
 
 // Financial Report
 export const getFinancialReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const ExpensesModel = getLocalExpensesModel();
+    const OrderModel = getOrderModel();
+    const PurchaseModel = getPurchaseModel();
+    const ExpensesModel = getExpenseModel();
     const { fromDate, toDate, page = 1, limit = 20 } = filters;
 
     const dateFilter = buildDateFilter(fromDate, toDate);
@@ -1839,8 +1839,8 @@ export const getFinancialReport = async (filters = {}) => {
 
 // Credit/Debit Report (Qarza)
 export const getCreditDebitReport = async (filters = {}) => {
-    const QarzaAccountModel = getLocalQarzaAccountModel();
-    const QarzaPaymentModel = getLocalQarzaPaymentModel();
+    const QarzaAccountModel = getQarzaAccountModel();
+    const QarzaPaymentModel = getQarzaPaymentModel();
     const { type, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -1894,8 +1894,8 @@ export const getCreditDebitReport = async (filters = {}) => {
 
 // Purchase Return Report
 export const getPurchaseReturnReport = async (filters = {}) => {
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
-    const SupplierModel = getLocalSupplierModel();
+    const PurchaseReturnModel = getPurchaseReturnModel();
+    const SupplierModel = getSupplierModel();
     const { fromDate, toDate, supplierId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -1945,8 +1945,8 @@ export const getPurchaseReturnReport = async (filters = {}) => {
 
 // Sale Return Report
 export const getSaleReturnReport = async (filters = {}) => {
-    const ProductReturnModel = getLocalProductReturnModel();
-    const CustomerModel = getLocalCustomerModel();
+    const ProductReturnModel = getProductReturnModel();
+    const CustomerModel = getCustomerModel();
     const { fromDate, toDate, customerId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -1996,13 +1996,13 @@ export const getSaleReturnReport = async (filters = {}) => {
 
 // Inventory Report
 export const getInventoryReport = async (filters = {}) => {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const WastageModel = getLocalWastageModel();
-    const ProductReturnModel = getLocalProductReturnModel();
-    const CategoryModel = getLocalCategoryModel();
+    const BatchModel = getBatchModel();
+    const ProductModel = getProductModel();
+    const OrderModel = getOrderModel();
+    const PurchaseModel = getPurchaseModel();
+    const WastageModel = getWastageModel();
+    const ProductReturnModel = getProductReturnModel();
+    const CategoryModel = getCategoryModel();
     
     const { 
         categoryId, 
@@ -2249,8 +2249,8 @@ export const getInventoryReport = async (filters = {}) => {
 
 // Product Wastage Report
 export const getProductWastageReport = async (filters = {}) => {
-    const WastageModel = getLocalWastageModel();
-    const ProductModel = getLocalProductModel();
+    const WastageModel = getWastageModel();
+    const ProductModel = getProductModel();
     const { fromDate, toDate, productId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2302,8 +2302,8 @@ export const getProductWastageReport = async (filters = {}) => {
 
 // Customer Report
 export const getCustomerReport = async (filters = {}) => {
-    const CustomerModel = getLocalCustomerModel();
-    const OrderModel = getLocalOrderModel();
+    const CustomerModel = getCustomerModel();
+    const OrderModel = getOrderModel();
     const { search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2363,9 +2363,9 @@ export const getCustomerReport = async (filters = {}) => {
 
 // Supplier Report
 export const getSupplierReport = async (filters = {}) => {
-    const SupplierModel = getLocalSupplierModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const PurchaseReturnModel = getLocalPurchaseReturnModel();
+    const SupplierModel = getSupplierModel();
+    const PurchaseModel = getPurchaseModel();
+    const PurchaseReturnModel = getPurchaseReturnModel();
     const { search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2417,11 +2417,11 @@ export const getSupplierReport = async (filters = {}) => {
 
 // Staff Report
 export const getStaffReport = async (filters = {}) => {
-    const StaffModel = getLocalStaffModel();
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    const StaffAttendanceModel = getLocalStaffAttendanceModel();
-    const OrderModel = getLocalOrderModel();
+    const StaffModel = getStaffModel();
+    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
+    const StaffSaleBillModel = getStaffSaleBillModel();
+    const StaffAttendanceModel = getStaffAttendanceModel();
+    const OrderModel = getOrderModel();
     
     const { 
         role, 
@@ -2577,12 +2577,12 @@ export const getStaffReport = async (filters = {}) => {
 
 // Profit & Loss Report
 export const getProfitLossReport = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
-    const PurchaseModel = getLocalPurchaseModel();
-    const ExpensesModel = getLocalExpensesModel();
-    const WastageModel = getLocalWastageModel();
-    const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    const ProductReturnModel = getLocalProductReturnModel();
+    const OrderModel = getOrderModel();
+    const PurchaseModel = getPurchaseModel();
+    const ExpensesModel = getExpenseModel();
+    const WastageModel = getWastageModel();
+    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
+    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period = "month" } = filters;
 
     let dateFilter = {};
@@ -2656,8 +2656,8 @@ export const getProfitLossReport = async (filters = {}) => {
 
 // Expense Report
 export const getExpenseReport = async (filters = {}) => {
-    const ExpensesModel = getLocalExpensesModel();
-    const ExpenseCategoryModel = getLocalExpenseCategoryModel();
+    const ExpensesModel = getExpenseModel();
+    const ExpenseCategoryModel = getExpenseCategoryModel();
     const { fromDate, toDate, categoryId, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2730,7 +2730,7 @@ export const getExpenseReport = async (filters = {}) => {
 
 // Wastage Report
 export const getWastageReport = async (filters = {}) => {
-    const WastageModel = getLocalWastageModel();
+    const WastageModel = getWastageModel();
     const { fromDate, toDate, productId, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2792,7 +2792,7 @@ export const getWastageReport = async (filters = {}) => {
 
 // Activity Report
 export const getActivityReport = async (filters = {}) => {
-    const ActivityLogModel = getLocalActivityLogModel();
+    const ActivityLogModel = getActivityLogModel();
     const { fromDate, toDate, userId, action, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2854,7 +2854,7 @@ export const getActivityReport = async (filters = {}) => {
 
 // Top Selling Products
 export const getTopSellingProducts = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
+    const OrderModel = getOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -2893,7 +2893,7 @@ export const getTopSellingProducts = async (filters = {}) => {
 
 // Top Customers
 export const getTopCustomers = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
+    const OrderModel = getOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -2923,8 +2923,8 @@ export const getTopCustomers = async (filters = {}) => {
 
 // Low Stock Products
 export const getLowStockProducts = async (filters = {}) => {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
+    const BatchModel = getBatchModel();
+    const ProductModel = getProductModel();
     const { limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -2941,7 +2941,7 @@ export const getLowStockProducts = async (filters = {}) => {
 
 // Near Expiry Products
 export const getNearExpiryProducts = async (filters = {}) => {
-    const BatchModel = getLocalBatchModel();
+    const BatchModel = getBatchModel();
     const { limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -2962,7 +2962,7 @@ export const getNearExpiryProducts = async (filters = {}) => {
 
 // Recent Sales
 export const getRecentSales = async (filters = {}) => {
-    const OrderModel = getLocalOrderModel();
+    const OrderModel = getOrderModel();
     const { limit = 10 } = filters;
 
     const recentSales = await OrderModel.find({ status: "completed" })
@@ -2975,7 +2975,7 @@ export const getRecentSales = async (filters = {}) => {
 
 // Recent Purchases
 export const getRecentPurchases = async (filters = {}) => {
-    const PurchaseModel = getLocalPurchaseModel();
+    const PurchaseModel = getPurchaseModel();
     const { limit = 10 } = filters;
 
     const recentPurchases = await PurchaseModel.find()
