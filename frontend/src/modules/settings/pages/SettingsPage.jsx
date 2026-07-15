@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette } from "lucide-react";
+import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
@@ -12,11 +12,12 @@ import ModuleSettings from "../components/ModuleSettings.jsx";
 import ProfileSettings from "../components/ProfileSettings.jsx";
 import PaymentMethodsSettings from "../components/PaymentMethodsSettings.jsx";
 import ThemeSettings from "../components/ThemeSettings.jsx";
+import PermissionPasswordSettings from "../components/PermissionPasswordSettings.jsx";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
     const { settings: settingsData, isLoading } = useSettings();
-    const { id: userId } = useSelector(s => s.auth) || {};
+    const { id: userId, role } = useSelector(s => s.auth) || {};
     
     const settingsLanguage = settingsData?.language || "en";
     const labels = getSettingsLabels(settingsLanguage);
@@ -36,6 +37,11 @@ export default function SettingsPage() {
         { id: "paymentMethods", icon: CreditCard, label: "Payment Methods" },
         { id: "profile", icon: User, label: labels.profile },
     ];
+
+    // Only add permission password tab for admin users
+    if (role === "admin") {
+        tabs.push({ id: "permissionPassword", icon: Shield, label: "Permission Password" });
+    }
 
     return (
         <div className="container mx-auto p-6">
@@ -70,6 +76,7 @@ export default function SettingsPage() {
                 {activeTab === "theme" && <ThemeSettings />}
                 {activeTab === "paymentMethods" && <PaymentMethodsSettings labels={labels} />}
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
+                {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />}
             </div>
         </div>
     );

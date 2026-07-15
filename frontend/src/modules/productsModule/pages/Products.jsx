@@ -135,10 +135,10 @@ export default function Products() {
                         </div>
                         <div className="col-span-1"><StatusBadge active={item.isActive} labels={labels} /></div>
                         <div className="col-span-1 flex items-center gap-1.5">
-                            <button id={`products-edit-${item._id}`} onClick={() => openEdit(item._id)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
+                            <button id={`products-edit-${item._id}`} onClick={(e) =>{e.stopPropagation(); openEdit(item._id)}} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
                                 <Edit size={15} />
                             </button>
-                            <button id={`products-delete-${item._id}`} onClick={() => openDeleteConfirm(item)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                            <button id={`products-delete-${item._id}`} onClick={(e) =>{e.stopPropagation(); openDeleteConfirm(item)}} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
                                 <Trash2 size={15} />
                             </button>
                         </div>

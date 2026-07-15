@@ -68,6 +68,11 @@ const settingsSchema = new mongoose.Schema(
             staff: { type: Boolean, default: true },
             wastage: { type: Boolean, default: true },
         },
+        // Permission Password Settings
+        permissionPassword: {
+            type: String,
+            default: "",
+        },
     },
     { timestamps: true }
 );

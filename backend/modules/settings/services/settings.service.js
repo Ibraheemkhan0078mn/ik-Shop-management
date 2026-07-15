@@ -84,3 +84,15 @@ export const updateModuleSettings = async (userId, modules) => {
     
     return settings;
 };
+
+// Update permission password settings
+export const updatePermissionPasswordSettings = async (userId, permissionPassword) => {
+    const SettingsModel = getLocalSettingsModel();
+    const settings = await SettingsModel.findOneAndUpdate(
+        { userId },
+        { $set: { permissionPassword } },
+        { new: true, upsert: true }
+    );
+    
+    return settings;
+};

@@ -8,6 +8,7 @@ import {
     updateCameraSettings,
     updateLanguageSettings,
     updateModuleSettings,
+    updatePermissionPasswordSettings,
 } from "../services/settings.service.js";
 
 // Get Settings
@@ -128,6 +129,26 @@ export const updateModuleSettingsData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Module settings updated successfully",
+        data: settings,
+    });
+});
+
+// Update Permission Password Settings
+export const updatePermissionPasswordSettingsData = asyncHandler(async (req, res, next) => {
+    const { userId, permissionPassword } = req.body;
+
+    if (!userId) {
+        return next(new ErrorResponse("User ID is required", 400));
+    }
+    if (!permissionPassword) {
+        return next(new ErrorResponse("Permission password is required", 400));
+    }
+
+    const settings = await updatePermissionPasswordSettings(userId, permissionPassword);
+
+    res.status(200).json({
+        success: true,
+        message: "Permission password updated successfully",
         data: settings,
     });
 });

@@ -27,8 +27,8 @@ export default function ProductDetail() {
     const batches = batchesData || [];
 
     const handleDeleteBatch = async (batch) => {
-        if (batch.currentStock > 0) {
-            showError("Cannot delete batch: It has stock (quantity: " + batch.currentStock + ")");
+        if (batch.quantity > 0) {
+            showError("Cannot delete batch: It has stock (quantity: " + batch.quantity + ")");
             return;
         }
         if (window.confirm("Are you sure you want to delete this batch?")) {
@@ -215,7 +215,7 @@ export default function ProductDetail() {
                                         <tr key={batch._id} className="hover:bg-[var(--surface-muted)]">
                                             <td className="px-4 py-3 text-sm font-medium text-[var(--ink)]">{batch.batchNumber}</td>
                                             <td className="px-4 py-3 text-sm text-[var(--muted)]">{batch.supplier?.name || "—"}</td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-right text-[var(--accent-2)]">{batch.currentStock || 0}</td>
+                                            <td className="px-4 py-3 text-sm font-semibold text-right text-[var(--accent-2)]">{batch.quantity || 0}</td>
                                             <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">Rs {batch.purchasePrice || 0}</td>
                                             <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">Rs {batch.sellingPrice || 0}</td>
                                             <td className="px-4 py-3 text-sm text-[var(--muted)]">{batch.mfgDate ? new Date(batch.mfgDate).toLocaleDateString() : "—"}</td>
@@ -225,9 +225,9 @@ export default function ProductDetail() {
                                             <td className="px-4 py-3 text-center">
                                                 {batch.expiryDate && new Date(batch.expiryDate) < new Date() ? (
                                                     <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Expired</span>
-                                                ) : batch.currentStock <= 0 ? (
+                                                ) : batch.quantity <= 0 ? (
                                                     <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Empty</span>
-                                                ) : batch.currentStock <= 10 ? (
+                                                ) : batch.quantity <= 10 ? (
                                                     <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Low Stock</span>
                                                 ) : (
                                                     <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">In Stock</span>
@@ -236,13 +236,13 @@ export default function ProductDetail() {
                                             <td className="px-4 py-3 text-center">
                                                 <button
                                                     onClick={() => handleDeleteBatch(batch)}
-                                                    disabled={batch.currentStock > 0}
+                                                    disabled={batch.quantity > 0}
                                                     className={`p-2 rounded-lg transition-all ${
-                                                        batch.currentStock > 0
+                                                        batch.quantity > 0
                                                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                             : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
                                                     }`}
-                                                    title={batch.currentStock > 0 ? "Cannot delete: Has stock" : "Delete batch"}
+                                                    title={batch.quantity > 0 ? "Cannot delete: Has stock" : "Delete batch"}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
