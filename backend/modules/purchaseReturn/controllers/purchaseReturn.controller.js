@@ -40,12 +40,15 @@ export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
         if (endDate) query.returnDate.$lte = new Date(endDate);
     }
 
-    const purchaseReturns = await findPurchaseReturnService(query)
-        .populate("purchase", "invoiceNumber")
-        .populate("supplier", "name")
-        .populate("items.product", "name")
-        .populate("items.batch", "batchNumber")
-        .sort({ createdAt: -1 });
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        populate: [
+            { path: "purchase", select: "invoiceNumber" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 }
+    });
 
     return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns);
 });
@@ -56,14 +59,17 @@ export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => 
     if (status) query.status = status;
     if (supplier) query.supplier = supplier;
 
-    const purchaseReturns = await findPurchaseReturnService(query)
-        .populate("purchase", "invoiceNumber")
-        .populate("supplier", "name")
-        .populate("items.product", "name")
-        .populate("items.batch", "batchNumber")
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit));
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        populate: [
+            { path: "purchase", select: "invoiceNumber" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit)
+    });
 
     const total = await countPurchaseReturnService(query);
 
@@ -79,11 +85,9 @@ export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => 
 
 export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const purchaseReturn = await findByIdPurchaseReturnService(id)
-        .populate("purchase")
-        .populate("supplier")
-        .populate("items.product")
-        .populate("items.batch");
+    const purchaseReturn = await findByIdPurchaseReturnService(id, {
+        populate: ["purchase", "supplier", "items.product", "items.batch"]
+    });
     if (!purchaseReturn) {
         throw new Error("Purchase return not found");
     }

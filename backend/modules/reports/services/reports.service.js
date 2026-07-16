@@ -191,11 +191,12 @@ export const getSalesReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        OrderModel.find(matchQuery)
-            .populate("items.product", "name")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        OrderModel.find(matchQuery, null, {
+            populate: "items.product",
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         OrderModel.countDocuments(matchQuery)
     ]);
 
@@ -253,12 +254,12 @@ export const getPurchaseReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        PurchaseModel.find(matchQuery)
-            .populate("supplier", "name phoneNo")
-            .populate("items.product", "name")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        PurchaseModel.find(matchQuery, null, {
+            populate: ["supplier", "items.product"],
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         PurchaseModel.countDocuments(matchQuery)
     ]);
 
@@ -1443,9 +1444,9 @@ export const getExpenseKPIReport = async (filters = {}) => {
             { $group: { _id: "$type", total: { $sum: "$amount" }, count: { $sum: 1 } } },
             { $sort: { total: -1 } }
         ]),
-        ExpensesModel.findOne(dateFilter).sort({ amount: -1 }),
-        ExpensesModel.findOne(dateFilter).sort({ amount: 1 }),
-        ExpensesModel.find(dateFilter).select('amount type date notes category createdAt').sort({ createdAt: -1 }).limit(100),
+        ExpensesModel.findOne(dateFilter, null, { sort: { amount: -1 } }),
+        ExpensesModel.findOne(dateFilter, null, { sort: { amount: 1 } }),
+        ExpensesModel.find(dateFilter, 'amount type date notes category createdAt', { sort: { createdAt: -1 }, limit: 100 }),
     ]);
 
     const totalAmount = totalExpenses[0]?.total || 0;
@@ -1596,13 +1597,13 @@ export const getMainBusinessReport = async (filters = {}) => {
             { $unwind: "$staff" },
             { $group: { _id: "$staff.name", total: { $sum: "$amount" }, count: { $sum: 1 } } }
         ]),
-        OrderModel.find({ ...dateFilter, status: "completed" }).select('orderNumber totalAmount paymentMethod customerName createdAt').sort({ createdAt: -1 }).limit(100),
-        PurchaseModel.find(dateFilter).select('invoiceNumber totalAmount supplierName createdAt').sort({ createdAt: -1 }).limit(100),
-        ExpensesModel.find(dateFilter).select('title amount category description createdAt').sort({ createdAt: -1 }).limit(100),
-        WastageModel.find(dateFilter).select('quantity costPrice productName createdAt').sort({ createdAt: -1 }).limit(100),
-        PurchaseReturnModel.find(dateFilter).select('returnNumber totalAmount supplierName createdAt').sort({ createdAt: -1 }).limit(100),
-        ProductReturnModel.find(dateFilter).select('returnNumber refundAmount customerName createdAt').sort({ createdAt: -1 }).limit(100),
-        StaffSalaryPaymentModel.find({ ...dateFilter, status: 'paid' }).select('amount staffId paidAt').populate('staffId', 'name').sort({ paidAt: -1 }).limit(100),
+        OrderModel.find({ ...dateFilter, status: "completed" }, 'orderNumber totalAmount paymentMethod customerName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        PurchaseModel.find(dateFilter, 'invoiceNumber totalAmount supplierName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        ExpensesModel.find(dateFilter, 'title amount category description createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        WastageModel.find(dateFilter, 'quantity costPrice productName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        PurchaseReturnModel.find(dateFilter, 'returnNumber totalAmount supplierName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        ProductReturnModel.find(dateFilter, 'returnNumber refundAmount customerName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+        StaffSalaryPaymentModel.find({ ...dateFilter, status: 'paid' }, 'amount staffId paidAt', { populate: { path: 'staffId', select: 'name' }, sort: { paidAt: -1 }, limit: 100 }),
     ]);
 
     const totalSales = sales[0]?.totalSales || 0;
@@ -1850,19 +1851,21 @@ export const getCreditDebitReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        QarzaAccountModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        QarzaAccountModel.find(matchQuery, null, {
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         QarzaAccountModel.countDocuments(matchQuery)
     ]);
 
     // Get recent payments for each account
     const accountsWithPayments = await Promise.all(
         data.map(async (account) => {
-            const payments = await QarzaPaymentModel.find({ account: account._id })
-                .sort({ createdAt: -1 })
-                .limit(5);
+            const payments = await QarzaPaymentModel.find({ account: account._id }, null, {
+                sort: { createdAt: -1 },
+                limit: 5
+            });
             return { ...account.toObject(), recentPayments: payments };
         })
     );
@@ -1908,11 +1911,12 @@ export const getPurchaseReturnReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        PurchaseReturnModel.find(matchQuery)
-            .populate("supplier", "name")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        PurchaseReturnModel.find(matchQuery, null, {
+            populate: { path: "supplier", select: "name" },
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         PurchaseReturnModel.countDocuments(matchQuery)
     ]);
 
@@ -1959,11 +1963,12 @@ export const getSaleReturnReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        ProductReturnModel.find(matchQuery)
-            .populate("customer", "name phone")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        ProductReturnModel.find(matchQuery, null, {
+            populate: { path: "customer", select: "name phone" },
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         ProductReturnModel.countDocuments(matchQuery)
     ]);
 
@@ -2046,11 +2051,12 @@ export const getInventoryReport = async (filters = {}) => {
     if (productName) productQuery.name = { $regex: productName, $options: 'i' };
     if (productCode) productQuery.code = { $regex: productCode, $options: 'i' };
 
-    const products = await ProductModel.find(productQuery)
-        .populate('category', 'name')
-        .sort({ [sortBy]: sortBy === 'expiryDate' ? 1 : -1 })
-        .skip(skip)
-        .limit(limit);
+    const products = await ProductModel.find(productQuery, null, {
+        populate: 'category',
+        sort: { [sortBy]: sortBy === 'expiryDate' ? 1 : -1 },
+        skip: skip,
+        limit: limit
+    });
 
     const totalProducts = await ProductModel.countDocuments(productQuery);
 

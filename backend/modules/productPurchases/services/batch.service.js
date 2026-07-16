@@ -6,10 +6,10 @@ const getBatches = async (productId = null) => {
     if (productId) {
         query.product = productId;
     }
-    return await findBatchService(query)
-        .populate("product")
-        .populate("supplier")
-        .sort({ createdAt: -1 });
+    return await findBatchService(query, {
+        populate: ["product", "supplier"],
+        sort: { createdAt: -1 }
+    });
 };
 
 const createBatch = async (batchData, ProductModel) => {

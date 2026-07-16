@@ -6,19 +6,19 @@ const createStaffAttendanceService = (data) => {
     return createDoc({ model: StaffAttendanceModel, data });
 };
 
-const findStaffAttendanceService = (query = {}) => {
+const findStaffAttendanceService = (query = {}, options = {}) => {
     const StaffAttendanceModel = getLocalStaffAttendanceModel();
-    return findDocs({ model: StaffAttendanceModel, filter: query });
+    return findDocs({ model: StaffAttendanceModel, filter: query, options });
 };
 
-const findOneStaffAttendanceService = (query) => {
+const findOneStaffAttendanceService = (query, options = {}) => {
     const StaffAttendanceModel = getLocalStaffAttendanceModel();
-    return findOneDoc({ model: StaffAttendanceModel, filter: query });
+    return findOneDoc({ model: StaffAttendanceModel, filter: query, options });
 };
 
-const findByIdStaffAttendanceService = (id) => {
+const findByIdStaffAttendanceService = (id, options = {}) => {
     const StaffAttendanceModel = getLocalStaffAttendanceModel();
-    return findOneDoc({ model: StaffAttendanceModel, filter: { _id: id } });
+    return findOneDoc({ model: StaffAttendanceModel, filter: { _id: id }, options });
 };
 
 const updateStaffAttendanceService = (id, data) => {

@@ -3,51 +3,49 @@ import { findOneBatchService, createBatchService, updateBatchService } from "./b
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
 const getPurchases = async () => {
-    return await findPurchaseService()
-        .populate("supplier", "name")
-        .populate({
-            path: "items.product",
-            select: "name productCode",
-        })
-        .populate({
-            path: "items.batch",
-            select: "batchNumber",
-        })
-        .sort({ createdAt: -1 });
+    return await findPurchaseService({}, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 }
+    });
 };
 
 const getPurchaseById = async (id) => {
-    return await findByIdPurchaseService(id)
-        .populate("supplier", "name")
-        .populate({
-            path: "items.product",
-            select: "name productCode",
-        })
-        .populate({
-            path: "items.batch",
-            select: "batchNumber",
-        });
+    return await findByIdPurchaseService(id, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
+    });
 };
 
 const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
-    return await findOnePurchaseService({ invoiceNumber })
-        .populate("supplier", "name")
-        .populate({ path: "items.product", select: "name productCode" })
-        .populate({ path: "items.batch", select: "batchNumber expiryDate" });
+    return await findOnePurchaseService({ invoiceNumber }, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber expiryDate" }
+        ]
+    });
 };
 
 const getPaginatedPurchases = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const query = {};
-    const purchases = await findPurchaseService(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .populate([
+    const purchases = await findPurchaseService(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        populate: [
             { path: "supplier", select: "name" },
             { path: "items.product", select: "name productCode" },
             { path: "items.batch", select: "batchNumber" },
-        ]);
+        ]
+    });
     const total = await countPurchaseService(query);
     return {
         data: purchases,

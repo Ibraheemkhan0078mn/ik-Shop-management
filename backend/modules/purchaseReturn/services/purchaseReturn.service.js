@@ -13,25 +13,22 @@ const createPurchaseReturn = async (data) => {
 };
 
 const getAllPurchaseReturns = async (query = {}) => {
-    return await findPurchaseReturnService(query)
-        .populate("purchase")
-        .populate("products.productId")
-        .populate("products.batchId")
-        .sort({ createdAt: -1 });
+    return await findPurchaseReturnService(query, {
+        populate: ["purchase", "products.productId", "products.batchId"],
+        sort: { createdAt: -1 }
+    });
 };
 
 const getPurchaseReturnById = async (id) => {
-    return await findByIdPurchaseReturnService(id)
-        .populate("purchase")
-        .populate("products.productId")
-        .populate("products.batchId");
+    return await findByIdPurchaseReturnService(id, {
+        populate: ["purchase", "products.productId", "products.batchId"]
+    });
 };
 
 const findPurchaseReturnByPurchase = async (purchaseId) => {
-    return await findOnePurchaseReturnService({ purchase: purchaseId })
-        .populate("purchase")
-        .populate("products.productId")
-        .populate("products.batchId");
+    return await findOnePurchaseReturnService({ purchase: purchaseId }, {
+        populate: ["purchase", "products.productId", "products.batchId"]
+    });
 };
 
 const updatePurchaseReturn = async (id, data) => {
@@ -60,13 +57,12 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
     
     const skip = (page - 1) * limit;
     
-    const purchaseReturns = await findPurchaseReturnService(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("purchase")
-        .populate("products.productId")
-        .populate("products.batchId");
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        sort: { createdAt: -1 },
+        skip: skip,
+        limit: limit,
+        populate: ["purchase", "products.productId", "products.batchId"]
+    });
     
     const total = await countPurchaseReturnService(query);
     

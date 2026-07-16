@@ -6,19 +6,19 @@ const createStaffSalaryPaymentService = (data) => {
     return createDoc({ model: StaffSalaryPaymentModel, data });
 };
 
-const findStaffSalaryPaymentService = (query = {}) => {
+const findStaffSalaryPaymentService = (query = {}, options = {}) => {
     const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    return findDocs({ model: StaffSalaryPaymentModel, filter: query });
+    return findDocs({ model: StaffSalaryPaymentModel, filter: query, options });
 };
 
-const findOneStaffSalaryPaymentService = (query) => {
+const findOneStaffSalaryPaymentService = (query, options = {}) => {
     const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    return findOneDoc({ model: StaffSalaryPaymentModel, filter: query });
+    return findOneDoc({ model: StaffSalaryPaymentModel, filter: query, options });
 };
 
-const findByIdStaffSalaryPaymentService = (id) => {
+const findByIdStaffSalaryPaymentService = (id, options = {}) => {
     const StaffSalaryPaymentModel = getLocalStaffSalaryPaymentModel();
-    return findOneDoc({ model: StaffSalaryPaymentModel, filter: { _id: id } });
+    return findOneDoc({ model: StaffSalaryPaymentModel, filter: { _id: id }, options });
 };
 
 const updateStaffSalaryPaymentService = (id, data) => {

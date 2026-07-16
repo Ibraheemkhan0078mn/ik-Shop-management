@@ -177,8 +177,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     // Always required
     if (!form.name?.trim()) newErrors.name = labels.productNameRequired;
 
-    // Required inside "more options"
-    if (showMore || !isCreate) {
+    // Required inside "more options" only
+    if (showMore) {
       if (!form.brandName?.trim()) newErrors.brandName = labels.brandNameRequired;
       if (!form.barcode?.trim()) newErrors.barcode = labels.barcodeRequired;
       if (!form.description?.trim()) newErrors.description = labels.descriptionRequired;

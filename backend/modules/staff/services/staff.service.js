@@ -95,10 +95,11 @@ export const getAllStaff = async (filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        findStaffService(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        findStaffService(matchQuery, {
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         countStaffService(matchQuery)
     ]);
     
@@ -165,10 +166,11 @@ export const getSalaryPaymentsByStaff = async (staffId, filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        findStaffSalaryPaymentService(matchQuery)
-            .sort({ paidAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        findStaffSalaryPaymentService(matchQuery, {
+            sort: { paidAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         countStaffSalaryPaymentService(matchQuery)
     ]);
     
@@ -216,11 +218,11 @@ export const getSaleBillsByStaff = async (staffId, filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        OrderModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .populate('items.product'),
+        OrderModel.find(matchQuery, null, {
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }).populate('items.product'),
         OrderModel.countDocuments(matchQuery)
     ]);
     
@@ -250,7 +252,9 @@ export const getAttendanceByDate = async (date) => {
 
     const attendance = await findOneStaffAttendanceService({
         date: { $gte: startOfDay, $lte: endOfDay }
-    }).populate('attendance.staff');
+    }, {
+        populate: 'attendance.staff'
+    });
 
     return attendance;
 };
@@ -348,12 +352,12 @@ export const getAttendanceHistory = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        findStaffAttendanceService(matchQuery)
-            .sort({ date: -1 })
-            .skip(skip)
-            .limit(limit)
-            .populate('attendance.staff')
-            .populate('createdBy', 'fullName'),
+        findStaffAttendanceService(matchQuery, {
+            sort: { date: -1 },
+            skip: skip,
+            limit: limit,
+            populate: ['attendance.staff', { path: 'createdBy', select: 'fullName' }]
+        }),
         countStaffAttendanceService(matchQuery)
     ]);
 
@@ -393,7 +397,9 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     // Get ALL payments for this staff (not just within date range) for FIFO allocation
     const allPayments = await findStaffSalaryPaymentService({
         staffId
-    }).sort({ paidAt: 1 });
+    }, {
+        sort: { paidAt: 1 }
+    });
     
     // Generate month-wise breakdown
     const breakdown = [];

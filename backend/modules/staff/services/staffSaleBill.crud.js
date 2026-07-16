@@ -6,19 +6,19 @@ const createStaffSaleBillService = (data) => {
     return createDoc({ model: StaffSaleBillModel, data });
 };
 
-const findStaffSaleBillService = (query = {}) => {
+const findStaffSaleBillService = (query = {}, options = {}) => {
     const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    return findDocs({ model: StaffSaleBillModel, filter: query });
+    return findDocs({ model: StaffSaleBillModel, filter: query, options });
 };
 
-const findOneStaffSaleBillService = (query) => {
+const findOneStaffSaleBillService = (query, options = {}) => {
     const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    return findOneDoc({ model: StaffSaleBillModel, filter: query });
+    return findOneDoc({ model: StaffSaleBillModel, filter: query, options });
 };
 
-const findByIdStaffSaleBillService = (id) => {
+const findByIdStaffSaleBillService = (id, options = {}) => {
     const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    return findOneDoc({ model: StaffSaleBillModel, filter: { _id: id } });
+    return findOneDoc({ model: StaffSaleBillModel, filter: { _id: id }, options });
 };
 
 const updateStaffSaleBillService = (id, data) => {
