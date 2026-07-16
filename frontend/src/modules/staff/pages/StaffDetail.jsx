@@ -8,6 +8,7 @@ import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
@@ -330,12 +331,13 @@ export default function StaffDetail() {
                                                 alt="Document"
                                                 className="w-full h-32 object-cover rounded-md border border-[var(--border)]"
                                             />
-                                            <button
-                                                onClick={() => handleRemoveImage(doc._id)}
-                                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <PermissionGuard execute={() => handleRemoveImage(doc._id)} permission="staff.documents.delete" isConfirmation={true}>
+                                                <button
+                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </PermissionGuard>
                                             <p className="text-xs text-[var(--muted)] mt-1">
                                                 {new Date(doc.uploadedAt).toLocaleDateString()}
                                             </p>
@@ -677,12 +679,13 @@ export default function StaffDetail() {
                                             }`}>
                                                 {payment.status === 'paid' ? labels.paid : labels.partial}
                                             </span>
-                                            <button
-                                                onClick={() => handleDeletePayment(payment._id)}
-                                                className="p-2 hover:bg-red-50 rounded-md"
-                                            >
-                                                <Trash2 size={16} className="text-red-500" />
-                                            </button>
+                                            <PermissionGuard execute={() => handleDeletePayment(payment._id)} permission="staff.payments.delete" isConfirmation={true}>
+                                                <button
+                                                    className="p-2 hover:bg-red-50 rounded-md"
+                                                >
+                                                    <Trash2 size={16} className="text-red-500" />
+                                                </button>
+                                            </PermissionGuard>
                                         </div>
                                     </div>
                                 ))}

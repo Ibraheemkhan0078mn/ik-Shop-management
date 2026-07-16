@@ -23,8 +23,7 @@ export default function QarzaAccounts() {
     const [deleteAccount] = useDeleteQarzaAccount();
     const [modal,  setModal]  = useState(null);
 
-    const handleDelete = async (id, e) => {
-        e?.stopPropagation();
+    const handleDelete = async (id) => {
         try {
             await deleteAccount(id).unwrap();
             showSuccess(labels.accountDeleted);
@@ -123,10 +122,9 @@ export default function QarzaAccounts() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                                                     <PermissionGuard execute={() => setModal({ mode: "update", account: acc })} permission="accounts.update" isConfirmation={true}>
                                                         <button
-                                                            onClick={(e) => e?.stopPropagation()}
                                                             className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                             style={{ color: "var(--muted)" }}
                                                             onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
@@ -137,7 +135,6 @@ export default function QarzaAccounts() {
                                                     </PermissionGuard>
                                                     <PermissionGuard execute={() => handleDelete(acc._id)} permission="accounts.delete" isConfirmation={true}>
                                                         <button
-                                                            onClick={(e) => e?.stopPropagation()}
                                                             className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                             style={{ color: "var(--muted)" }}
                                                             onMouseEnter={e => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}

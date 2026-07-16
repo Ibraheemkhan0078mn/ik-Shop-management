@@ -23,8 +23,7 @@ export default function CustomerPage() {
     const [deleteCustomer] = useDeleteCustomer();
     const [modal, setModal] = useState(null);
 
-    const handleDelete = async (id, e) => {
-        e?.stopPropagation();
+    const handleDelete = async (id) => {
         try {
             await deleteCustomer(id).unwrap();
             showSuccess(labels.customerDeleted);
@@ -77,8 +76,8 @@ export default function CustomerPage() {
                                     <CustomerRow
                                         key={customer._id}
                                         customer={customer}
-                                        onEdit={(e) => { e?.stopPropagation(); setModal({ mode: "update", id: customer._id }); }}
-                                        onDelete={(e) => handleDelete(customer._id, e)}
+                                        onEdit={() => setModal({ mode: "update", id: customer._id })}
+                                        onDelete={() => handleDelete(customer._id)}
                                         onRowClick={() => handleRowClick(customer._id)}
                                     />
                                 ))}
@@ -127,12 +126,12 @@ function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <PermissionGuard execute={() => onEdit?.()} permission="customers.update" isConfirmation={true}>
+                    <PermissionGuard execute={onEdit} permission="customers.update" isConfirmation={true}>
                         <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
                             {labels.edit}
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="customers.delete" isConfirmation={true}>
+                    <PermissionGuard execute={onDelete} permission="customers.delete" isConfirmation={true}>
                         <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
                             {labels.delete}
                         </button>

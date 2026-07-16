@@ -9,6 +9,7 @@ import OrderReturnModal from "../components/OrderReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { getPaginatedOrderReturns, deleteOrderReturn as deleteOrderReturnApi } from "../api/orderReturn.api.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 // Status → badge classes, built only from tokens already defined in index.css.
 const STATUS_STYLES = {
@@ -224,8 +225,12 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
             <td className="px-4 py-3">
                 <div className="flex gap-1 justify-center">
                     <RowAction icon={Eye} title="View Details" onClick={onView} className="text-ink-subtle" />
-                    <RowAction icon={Edit} title="Edit" onClick={onEdit} className="text-primary" />
-                    <RowAction icon={Trash2} title="Delete" onClick={onDelete} className="text-red-500" hoverBg="hover:bg-red-100" />
+                    <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
+                        <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
+                    </PermissionGuard>
+                    <PermissionGuard execute={onDelete} permission="orderReturns.delete" isConfirmation={true}>
+                        <RowAction icon={Trash2} title="Delete" onClick={() => {}} className="text-red-500" hoverBg="hover:bg-red-100" />
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

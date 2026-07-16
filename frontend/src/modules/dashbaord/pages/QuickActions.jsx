@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
+import PermissionGuard from '../../../shared/components/PermissionGuard.jsx';
 
 const STORAGE_KEY = "quickActions_visibility_v1";
 const ORDER_KEY = "quickActions_order_v1";
@@ -164,20 +165,21 @@ const QuickActions = () => {
                     />
                 </div>
 
-                <button
-                    onClick={() => setIsEditMode(!isEditMode)}
-                    className={`flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 ${
-                        isEditMode
-                            ? "bg-(--accent-2) border-(--accent-2) text-white shadow-[0_10px_20px_rgba(15,118,110,0.25)]"
-                            : "bg-(--surface) border-(--border) text-(--muted) hover:text-(--accent-2) hover:border-(--accent-2) shadow-[0_8px_16px_rgba(64,45,28,0.08)]"
-                    }`}
-                >
-                    {isEditMode ? (
-                        <Check size={18} strokeWidth={3} />
-                    ) : (
-                        <Pencil size={18} />
-                    )}
-                </button>
+                <PermissionGuard execute={() => setIsEditMode(!isEditMode)} permission="quickActions.update" isConfirmation={false}>
+                    <button
+                        className={`flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 ${
+                            isEditMode
+                                ? "bg-(--accent-2) border-(--accent-2) text-white shadow-[0_10px_20px_rgba(15,118,110,0.25)]"
+                                : "bg-(--surface) border-(--border) text-(--muted) hover:text-(--accent-2) hover:border-(--accent-2) shadow-[0_8px_16px_rgba(64,45,28,0.08)]"
+                        }`}
+                    >
+                        {isEditMode ? (
+                            <Check size={18} strokeWidth={3} />
+                        ) : (
+                            <Pencil size={18} />
+                        )}
+                    </button>
+                </PermissionGuard>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">

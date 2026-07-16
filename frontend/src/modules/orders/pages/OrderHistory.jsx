@@ -8,6 +8,7 @@ import {
     User, Clock, Package, DollarSign, CreditCard, Wallet, Smartphone, 
     Percent, FileText, ShoppingBag, TrendingUp, Filter as FilterIcon
 } from "lucide-react";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 // ── Payment Method Configuration ───────────────────────────────────────
 const PAYMENT_METHODS = {
@@ -696,13 +697,14 @@ export default function OrderHistory() {
                                                     >
                                                         <Eye size={16} />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(order._id)}
-                                                        title="Delete Order"
-                                                        className="w-9 h-9 rounded-xl transition-all flex items-center justify-center bg-red-50 border-2 border-red-200 hover:border-red-400 hover:bg-red-100 text-red-500 hover:text-red-700 group-hover:scale-105"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <PermissionGuard execute={() => handleDelete(order._id)} permission="orders.delete" isConfirmation={true}>
+                                                        <button
+                                                            title="Delete Order"
+                                                            className="w-9 h-9 rounded-xl transition-all flex items-center justify-center bg-red-50 border-2 border-red-200 hover:border-red-400 hover:bg-red-100 text-red-500 hover:text-red-700 group-hover:scale-105"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </PermissionGuard>
                                                 </div>
                                             </td>
                                         </tr>

@@ -9,6 +9,7 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function StaffList() {
     const navigate = useNavigate();
@@ -195,6 +196,10 @@ export default function StaffList() {
 }
 
 function StaffRow({ item, onView, onEdit, onDelete }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getStaffLabels(language);
+    
     return (
         <tr className="transition border-b border-edge hover:bg-surface-muted">
 
@@ -259,14 +264,18 @@ function StaffRow({ item, onView, onEdit, onDelete }) {
                         className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
                         <Eye className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={onEdit}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
-                        <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={onDelete}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <PermissionGuard execute={onEdit} permission="staff.update" isConfirmation={true}>
+                        <button
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
+                            <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={onDelete} permission="staff.delete" isConfirmation={true}>
+                        <button
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

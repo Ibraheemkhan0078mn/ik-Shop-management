@@ -28,8 +28,7 @@ export default function ProductPurchasePage() {
 
     const listRef = useRef(null);
 
-    const handleDelete = async (id, e) => {
-        e?.stopPropagation();
+    const handleDelete = async (id) => {
         try {
             await deletePurchase(id).unwrap();
             showSuccess(labels.purchaseDeleted);
@@ -38,8 +37,7 @@ export default function ProductPurchasePage() {
         }
     };
 
-    const handleStatusUpdate = async (id, status, e) => {
-        e?.stopPropagation();
+    const handleStatusUpdate = async (id, status) => {
         try {
             await updateStatus({ id, status }).unwrap();
             showSuccess(`Purchase marked as ${status}`);
@@ -107,8 +105,8 @@ export default function ProductPurchasePage() {
                                     <PurchaseRow
                                         key={p._id}
                                         purchase={p}
-                                        onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: p._id }); }}
-                                        onDelete={e => handleDelete(p._id, e)}
+                                        onEdit={() => setModal({ mode: "update", id: p._id })}
+                                        onDelete={() => handleDelete(p._id)}
                                         onStatusUpdate={handleStatusUpdate}
                                         onPayment={() => setPaymentModal(p)}
                                     />
@@ -203,17 +201,15 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) 
                 <div className="flex justify-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
                     {status === 'ordered' && (
                         <>
-                            <PermissionGuard execute={(e) => onStatusUpdate(purchaseId, 'delivered', e)} permission="purchases.update" isConfirmation={true}>
+                            <PermissionGuard execute={() => onStatusUpdate(purchaseId, 'delivered')} permission="purchases.update" isConfirmation={true}>
                                 <button 
-                                    onClick={e => e?.stopPropagation()}
                                     className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
                                     <Check className="w-3 h-3" />
                                     {labels.delivered}
                                 </button>
                             </PermissionGuard>
-                            <PermissionGuard execute={(e) => onStatusUpdate(purchaseId, 'rejected', e)} permission="purchases.update" isConfirmation={true}>
+                            <PermissionGuard execute={() => onStatusUpdate(purchaseId, 'rejected')} permission="purchases.update" isConfirmation={true}>
                                 <button 
-                                    onClick={e => e?.stopPropagation()}
                                     className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
                                     <X className="w-3 h-3" />
                                     {labels.rejected}
@@ -224,20 +220,19 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) 
                     {status === 'delivered' && paymentStatus !== 'full' && (
                         <PermissionGuard execute={() => onPayment?.()} permission="purchases.payment" isConfirmation={true}>
                             <button 
-                                onClick={e => e?.stopPropagation()}
                                 className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
                                 <DollarSign className="w-3 h-3" />
                                 {labels.pay}
                             </button>
                         </PermissionGuard>
                     )}
-                    <PermissionGuard execute={() => onEdit?.()} permission="purchases.update" isConfirmation={true}>
-                        <button onClick={e => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
+                    <PermissionGuard execute={onEdit} permission="purchases.update" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
                             {labels.edit}
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="purchases.delete" isConfirmation={true}>
-                        <button onClick={e => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
+                    <PermissionGuard execute={onDelete} permission="purchases.delete" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
                             {labels.delete}
                         </button>
                     </PermissionGuard>

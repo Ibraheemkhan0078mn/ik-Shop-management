@@ -32,8 +32,7 @@ export default function WastagePage() {
     const [modal,      setModal]      = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
 
-    const handleDelete = async (id, e) => {
-        e?.stopPropagation();
+    const handleDelete = async (id) => {
         try {
             await deleteWastage(id).unwrap();
             showSuccess(labels.wastageDeleted);
@@ -113,8 +112,8 @@ export default function WastagePage() {
                                     <WastageRow
                                         key={w._id}
                                         wastage={w}
-                                        onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: w._id }); }}
-                                        onDelete={e => handleDelete(w._id, e)}
+                                        onEdit={() => setModal({ mode: "update", id: w._id })}
+                                        onDelete={() => handleDelete(w._id)}
                                     />
                                 ))}
                             </tbody>
@@ -172,7 +171,7 @@ function WastageRow({ wastage, onEdit, onDelete }) {
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{date}</td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <PermissionGuard execute={() => onEdit?.()} permission="wastage.update" isConfirmation={true}>
+                    <PermissionGuard execute={onEdit} permission="wastage.update" isConfirmation={true}>
                         <button
                             className="px-3 py-1 text-xs rounded-lg font-medium transition"
                             style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
@@ -181,7 +180,7 @@ function WastageRow({ wastage, onEdit, onDelete }) {
                             {labels.edit}
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="wastage.delete" isConfirmation={true}>
+                    <PermissionGuard execute={onDelete} permission="wastage.delete" isConfirmation={true}>
                         <button
                             className="px-3 py-1 text-xs rounded-lg font-medium transition"
                             style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
@@ -267,22 +266,24 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                                                    <button
-                                                        onClick={() => onApprove(w._id)}
-                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                                                        style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
-                                                        onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                                                        {labels.approve}
-                                                    </button>
-                                                    <button
-                                                        onClick={e => onDelete(w._id, e)}
-                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                                                        style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
-                                                        onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                                                        {labels.delete}
-                                                    </button>
+                                                    <PermissionGuard execute={() => onApprove(w._id)} permission="wastage.approve" isConfirmation={true}>
+                                                        <button
+                                                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                                                            style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
+                                                            onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
+                                                            {labels.approve}
+                                                        </button>
+                                                    </PermissionGuard>
+                                                    <PermissionGuard execute={() => onDelete(w._id)} permission="wastage.delete" isConfirmation={true}>
+                                                        <button
+                                                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                                                            style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
+                                                            onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
+                                                            {labels.delete}
+                                                        </button>
+                                                    </PermissionGuard>
                                                 </div>
                                             </td>
                                         </tr>

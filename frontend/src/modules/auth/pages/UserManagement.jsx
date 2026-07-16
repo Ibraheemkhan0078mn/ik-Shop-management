@@ -264,21 +264,23 @@ export default function UserManagement() {
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <button
-                                onClick={() => openEditModal(user)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg"
-                                style={{ color: "var(--muted)" }}
-                            >
-                                <Edit2 className="w-4 h-4" />
-                            </button>
-                            {user.role !== "admin" && (
+                            <PermissionGuard execute={() => openEditModal(user)} permission="users.update" isConfirmation={true}>
                                 <button
-                                    onClick={() => handleDelete(user._id)}
                                     className="w-8 h-8 flex items-center justify-center rounded-lg"
                                     style={{ color: "var(--muted)" }}
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Edit2 className="w-4 h-4" />
                                 </button>
+                            </PermissionGuard>
+                            {user.role !== "admin" && (
+                                <PermissionGuard execute={() => handleDelete(user._id)} permission="users.delete" isConfirmation={true}>
+                                    <button
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg"
+                                        style={{ color: "var(--muted)" }}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </PermissionGuard>
                             )}
                         </div>
                     </div>

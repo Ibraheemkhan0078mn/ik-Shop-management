@@ -55,8 +55,7 @@ export default function PurchaseReturnPage() {
         return { data, isLoading, isFetching, refetch: fetchData };
     };
 
-    const handleDelete = async (id, e) => {
-        e?.stopPropagation();
+    const handleDelete = async (id) => {
         try {
             await deletePurchaseReturnApi(id);
             showSuccess(labels.returnDeleted);
@@ -135,11 +134,8 @@ export default function PurchaseReturnPage() {
                                         <PurchaseReturnRow
                                             key={pr._id}
                                             purchaseReturn={pr}
-                                            onEdit={(e) => {
-                                                e.stopPropagation();
-                                                setModal({ mode: "update", id: pr._id });
-                                            }}
-                                            onDelete={(e) => handleDelete(pr._id, e)}
+                                            onEdit={() => setModal({ mode: "update", id: pr._id })}
+                                            onDelete={() => handleDelete(pr._id)}
                                         />
                                     ))}
                                 </tbody>
@@ -206,17 +202,15 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <PermissionGuard execute={() => onEdit?.()} permission="purchaseReturns.update" isConfirmation={true}>
+                    <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
                         <button
-                            onClick={(e) => e?.stopPropagation()}
                             className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
                         >
                             {labels.edit}
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="purchaseReturns.delete" isConfirmation={true}>
+                    <PermissionGuard execute={onDelete} permission="purchaseReturns.delete" isConfirmation={true}>
                         <button
-                            onClick={(e) => e?.stopPropagation()}
                             className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
                         >
                             {labels.delete}
