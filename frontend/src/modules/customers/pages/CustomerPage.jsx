@@ -10,6 +10,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -23,8 +24,7 @@ export default function CustomerPage() {
     const [modal, setModal] = useState(null);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deleteCustomer(id).unwrap();
             showSuccess(labels.customerDeleted);
@@ -77,7 +77,7 @@ export default function CustomerPage() {
                                     <CustomerRow
                                         key={customer._id}
                                         customer={customer}
-                                        onEdit={(e) => { e.stopPropagation(); setModal({ mode: "update", id: customer._id }); }}
+                                        onEdit={(e) => { e?.stopPropagation(); setModal({ mode: "update", id: customer._id }); }}
                                         onDelete={(e) => handleDelete(customer._id, e)}
                                         onRowClick={() => handleRowClick(customer._id)}
                                     />
@@ -127,12 +127,16 @@ function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={onEdit} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
-                        {labels.edit}
-                    </button>
-                    <button onClick={onDelete} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
-                        {labels.delete}
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="customers.update" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
+                            {labels.edit}
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="customers.delete" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
+                            {labels.delete}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

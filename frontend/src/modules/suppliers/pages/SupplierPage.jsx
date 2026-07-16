@@ -11,6 +11,7 @@ import SupplierModal from "../components/SupplierModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function SupplierPage() {
     const { settings } = useSettings();
@@ -22,8 +23,7 @@ export default function SupplierPage() {
     const [modal,      setModal]      = useState(null);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deleteSupplier(id).unwrap();
             showSuccess(labels.supplierDeleted);
@@ -79,7 +79,7 @@ export default function SupplierPage() {
                                     <SupplierRow
                                         key={s._id}
                                         supplier={s}
-                                        onEdit={e => { e.stopPropagation(); setModal({ mode: "update", id: s._id }); }}
+                                        onEdit={e => { e?.stopPropagation(); setModal({ mode: "update", id: s._id }); }}
                                         onDelete={e => handleDelete(s._id, e)}
                                     />
                                 ))}
@@ -136,20 +136,24 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={onEdit}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                        {labels.edit}
-                    </button>
-                    <button onClick={onDelete}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                        {labels.delete}
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="suppliers.update" isConfirmation={true}>
+                        <button
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                            style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
+                            {labels.edit}
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="suppliers.delete" isConfirmation={true}>
+                        <button
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                            style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
+                            {labels.delete}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

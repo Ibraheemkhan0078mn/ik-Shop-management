@@ -12,6 +12,7 @@ import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function ProductPurchasePage() {
     const navigate = useNavigate();
@@ -28,8 +29,7 @@ export default function ProductPurchasePage() {
     const listRef = useRef(null);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deletePurchase(id).unwrap();
             showSuccess(labels.purchaseDeleted);
@@ -39,8 +39,7 @@ export default function ProductPurchasePage() {
     };
 
     const handleStatusUpdate = async (id, status, e) => {
-        e.stopPropagation();
-        if (!window.confirm(`${labels.deleteConfirm} ${status}?`)) return;
+        e?.stopPropagation();
         try {
             await updateStatus({ id, status }).unwrap();
             showSuccess(`Purchase marked as ${status}`);
@@ -204,36 +203,44 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) 
                 <div className="flex justify-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
                     {status === 'ordered' && (
                         <>
-                            <button 
-                                onClick={e => onStatusUpdate(purchaseId, 'delivered', e)}
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                {labels.delivered}
-                            </button>
-                            <button 
-                                onClick={e => onStatusUpdate(purchaseId, 'rejected', e)}
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
-                                <X className="w-3 h-3" />
-                                {labels.rejected}
-                            </button>
+                            <PermissionGuard execute={(e) => onStatusUpdate(purchaseId, 'delivered', e)} permission="purchases.update" isConfirmation={true}>
+                                <button 
+                                    onClick={e => e?.stopPropagation()}
+                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    {labels.delivered}
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard execute={(e) => onStatusUpdate(purchaseId, 'rejected', e)} permission="purchases.update" isConfirmation={true}>
+                                <button 
+                                    onClick={e => e?.stopPropagation()}
+                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
+                                    <X className="w-3 h-3" />
+                                    {labels.rejected}
+                                </button>
+                            </PermissionGuard>
                         </>
                     )}
                     {status === 'delivered' && paymentStatus !== 'full' && (
-                        <button 
-                            onClick={onPayment}
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            {labels.pay}
-                        </button>
+                        <PermissionGuard execute={() => onPayment?.()} permission="purchases.payment" isConfirmation={true}>
+                            <button 
+                                onClick={e => e?.stopPropagation()}
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" />
+                                {labels.pay}
+                            </button>
+                        </PermissionGuard>
                     )}
-                    <button onClick={onEdit}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
-                        {labels.edit}
-                    </button>
-                    <button onClick={onDelete}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
-                        {labels.delete}
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="purchases.update" isConfirmation={true}>
+                        <button onClick={e => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
+                            {labels.edit}
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="purchases.delete" isConfirmation={true}>
+                        <button onClick={e => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
+                            {labels.delete}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

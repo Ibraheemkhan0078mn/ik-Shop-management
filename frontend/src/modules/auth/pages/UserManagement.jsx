@@ -7,6 +7,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { PERMISSION_GROUPS } from "../../../shared/utilities/permissions.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function UserManagement() {
     const { settings } = useSettings();
@@ -89,7 +90,6 @@ export default function UserManagement() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm(labels.deleteConfirm)) return;
         try {
             await deleteUser(id).unwrap();
             showSuccess(labels.userDeleted);

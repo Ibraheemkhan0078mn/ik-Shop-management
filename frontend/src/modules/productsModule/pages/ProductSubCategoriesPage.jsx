@@ -1,9 +1,10 @@
 // features/productsModule/pages/ProductSubCategoriesPage.jsx
 import { useState } from "react";
-import { Plus, Edit, Trash2, Layers3, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Layers3 } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { useDeleteSubCategoryMutation, useGetSubCategoriesQuery } from "../services/subCategories.service";
 import SubCategoryCRUDModal from "../components/SubCategoryCRUDModal";
 import { getProductLabels } from "../labels/productLabels.js";
@@ -17,23 +18,16 @@ export default function ProductSubCategoriesPage() {
     
     const [mode, setMode] = useState("list");
     const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
-    const [deleteTarget, setDeleteTarget] = useState(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteSubCategory] = useDeleteSubCategoryMutation();
     const [showModal, setShowModal] = useState(false);
 
-    const handleDelete = async () => {
-        if (!deleteTarget) return;
-        setDeleteLoading(true);
+    const handleDelete = async (id) => {
         try {
-            await deleteSubCategory(deleteTarget.id).unwrap();
+            await deleteSubCategory(id).unwrap();
             showSuccess(labels.subCategoryDeleted);
-            setDeleteTarget(null);
         } catch (error) {
             showError(error?.data?.message || labels.failedToDelete);
-            setDeleteTarget(null);
         }
-        setDeleteLoading(false);
     };
 
     const handleCreate = () => {
@@ -79,12 +73,24 @@ export default function ProductSubCategoriesPage() {
                         <div className="col-span-3 text-sm text-(--muted) truncate">{item.category?.name || "—"}</div>
                         <div className="col-span-3 text-sm text-(--muted) truncate">{item.description || "—"}</div>
                         <div className="col-span-2 flex items-center gap-2">
-                            <button onClick={() => handleEdit(item._id)} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
-                                <Edit size={16} />
-                            </button>
-                            <button onClick={() => setDeleteTarget({ id: item._id, name: item.name })} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all">
-                                <Trash2 size={16} />
-                            </button>
+                            <PermissionGuard 
+                                execute={() => handleEdit(item._id)} 
+                                permission="subcategories.update" 
+                                isConfirmation={true}
+                            >
+                                <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
+                                    <Edit size={16} />
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => handleDelete(item._id)} 
+                                permission="subcategories.delete" 
+                                isConfirmation={true}
+                            >
+                                <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all">
+                                    <Trash2 size={16} />
+                                </button>
+                            </PermissionGuard>
                         </div>
                     </div>
                 ))}
@@ -103,12 +109,24 @@ export default function ProductSubCategoriesPage() {
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-(--border)">
-                            <button onClick={() => handleEdit(item._id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
-                                <Edit size={16} /> {labels.edit}
-                            </button>
-                            <button onClick={() => setDeleteTarget({ id: item._id, name: item.name })} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
-                                <Trash2 size={16} /> {labels.delete}
-                            </button>
+                            <PermissionGuard 
+                                execute={() => handleEdit(item._id)} 
+                                permission="subcategories.update" 
+                                isConfirmation={true}
+                            >
+                                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
+                                    <Edit size={16} /> {labels.edit}
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => handleDelete(item._id)} 
+                                permission="subcategories.delete" 
+                                isConfirmation={true}
+                            >
+                                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
+                                    <Trash2 size={16} /> {labels.delete}
+                                </button>
+                            </PermissionGuard>
                         </div>
                     </div>
                 ))}
@@ -125,29 +143,6 @@ export default function ProductSubCategoriesPage() {
                 open={showModal}
                 onClose={handleCloseModal}
             />
-
-            {/* Delete Modal */}
-            {deleteTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-[var(--surface)] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-                        <div className="flex flex-col items-center gap-3 px-6 pt-8 pb-2">
-                            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
-                                <AlertTriangle className="w-7 h-7 text-red-500" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.deleteConfirm}</h3>
-                            <p className="text-sm text-[var(--muted)] text-center">
-                                {labels.deleteConfirm} <strong className="text-[var(--ink)]">{deleteTarget.name}</strong>
-                            </p>
-                        </div>
-                        <div className="flex gap-3 px-6 py-5">
-                            <button onClick={() => setDeleteTarget(null)} disabled={deleteLoading} className="flex-1 py-2.5 rounded-xl bg-[var(--app-bg)] text-[var(--muted)] font-medium text-sm hover:opacity-80 transition-all">{labels.cancel}</button>
-                            <button onClick={handleDelete} disabled={deleteLoading} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-all disabled:opacity-60">
-                                {deleteLoading ? labels.loading : labels.delete}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* List mode */}
             <div className="flex-none">

@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useCurrentUser } from '../../modules/auth/hooks/useCurrentUser.js';
-import { useGetSettingsQuery } from '../../modules/settings/api/settings.api.js';
+import { usePermissionGuard } from '../hooks/usePermissionGuard.js';
 
 const PermissionGuard = ({
     children,
@@ -10,67 +9,60 @@ const PermissionGuard = ({
     isConfirmation = false,
     guardType = "password"
 }) => {
-    const { data, isLoading } = useCurrentUser();
-    const user = data; // useCurrentUser already returns data.data (the actual user object)
-    const { data: settingsDataResponse } = useGetSettingsQuery(user?._id, { skip: !user?._id });
-    const settingsData = settingsDataResponse?.data?.data; // RTK: {data: {success, message, data}} → unwrap twice
-    const [popup, setPopup] = useState(null); // null | "denied" | "password"
+    const { user, settingsData, isLoading, isAdmin, hasPermission } = usePermissionGuard();
+    const [popup, setPopup] = useState(null);
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
-
-    const busy = useRef(false); // blocks repeated fires from one click
+    const busy = useRef(false);
 
     const closePopup = () => { setPopup(null); setPassword(""); setError(""); };
 
-    const runOrConfirm = () => {
-        console.log("PermissionGuard runOrConfirm - isConfirmation:", isConfirmation);
+    const runOrConfirm = useCallback(() => {
+        if (!execute) {
+            console.warn("[PermissionGuard] execute() missing");
+            return;
+        }
         if (isConfirmation) {
-            console.log("PermissionGuard - setting confirmOpen to true");
             setConfirmOpen(true);
         } else {
-            console.log("PermissionGuard - executing directly");
             execute();
         }
-    };
+    }, [execute, isConfirmation]);
 
     const handleClick = useCallback((e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("PermissionGuard handleClick - user:", user, "busy:", busy.current);
-        
-        if (busy.current || !user) {
-            console.log("PermissionGuard - blocked: busy or no user");
-            return;
-        }
+        console.log("[PermissionGuard] click", { busy: busy.current, user, isLoading, isAdmin, permission, guardType });
+
+        if (busy.current) { console.log("[PermissionGuard] ignored: debounced"); return; }
+        if (!user) { console.warn("[PermissionGuard] ignored: no user in AppPermissionContext"); return; }
+        if (isLoading) { console.log("[PermissionGuard] ignored: context still loading"); return; }
+
         busy.current = true;
         setTimeout(() => (busy.current = false), 300);
 
-        if (user.role === "admin") {
-            console.log("PermissionGuard - admin bypass");
-            return runOrConfirm();
-        }
+        if (isAdmin) return runOrConfirm();
 
-        if (permission && !user.permissions?.includes(permission)) {
-            console.log("PermissionGuard - permission denied");
+        if (permission && !hasPermission(permission)) {
+            console.log("[PermissionGuard] denied:", permission);
             setPopup("denied");
             return;
         }
 
         if (guardType === "password") {
-            console.log("PermissionGuard - showing password popup");
             setPassword(""); setError(""); setPopup("password");
         } else {
-            console.log("PermissionGuard - executing directly");
-            execute(); // invisibility placeholder
+            execute?.();
         }
-    }, [user, permission, guardType, isConfirmation, execute]);
+    }, [user, isLoading, isAdmin, permission, hasPermission, guardType, execute, runOrConfirm]);
 
     const submitPassword = () => {
         if (password === settingsData?.permissionPassword) {
             closePopup();
             runOrConfirm();
         } else {
+            console.warn("[PermissionGuard] wrong password entered");
             setError("Incorrect password, try again");
         }
     };

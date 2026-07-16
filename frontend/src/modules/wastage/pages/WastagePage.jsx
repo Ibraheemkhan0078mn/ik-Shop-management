@@ -11,6 +11,7 @@ import WastageModal from "../components/WastageModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const STATUS_STYLE = {
     draft:    { background: "rgba(107,114,128,0.1)", color: "#6b7280"  },
@@ -32,8 +33,7 @@ export default function WastagePage() {
     const [approvalModal, setApprovalModal] = useState(false);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deleteWastage(id).unwrap();
             showSuccess(labels.wastageDeleted);
@@ -172,20 +172,24 @@ function WastageRow({ wastage, onEdit, onDelete }) {
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{date}</td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={onEdit}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                        {labels.edit}
-                    </button>
-                    <button onClick={onDelete}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                        style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                        {labels.delete}
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="wastage.update" isConfirmation={true}>
+                        <button
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                            style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
+                            {labels.edit}
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="wastage.delete" isConfirmation={true}>
+                        <button
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                            style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
+                            {labels.delete}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

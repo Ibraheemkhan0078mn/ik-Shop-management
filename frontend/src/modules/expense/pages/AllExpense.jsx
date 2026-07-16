@@ -11,6 +11,7 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function AllExpense() {
     const { settings } = useSettings();
@@ -23,8 +24,7 @@ export default function AllExpense() {
     const [catModal,   setCatModal]   = useState(false);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deleteExpense(id).unwrap();
             showSuccess(labels.expenseDeleted);
@@ -83,7 +83,7 @@ export default function AllExpense() {
                                     <ExpenseRow
                                         key={exp._id ?? i}
                                         expense={exp}
-                                        onEdit={e => { e.stopPropagation(); setModal({ expense: exp }); }}
+                                        onEdit={e => { e?.stopPropagation(); setModal({ expense: exp }); }}
                                         onDelete={e => handleDelete(exp._id, e)}
                                     />
                                 ))}
@@ -133,14 +133,18 @@ function ExpenseRow({ expense: exp, onEdit, onDelete }) {
 
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={onEdit}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
-                        <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={onDelete}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="expenses.update" isConfirmation={true}>
+                        <button
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
+                            <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="expenses.delete" isConfirmation={true}>
+                        <button
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

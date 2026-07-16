@@ -11,6 +11,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi, approvePurchaseReturnApi } from "../api/purchaseReturnApi.js";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const STATUS_CLASS = {
     draft: "bg-gray-100 text-gray-600",
@@ -55,8 +56,7 @@ export default function PurchaseReturnPage() {
     };
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm(labels.deleteConfirm)) return;
+        e?.stopPropagation();
         try {
             await deletePurchaseReturnApi(id);
             showSuccess(labels.returnDeleted);
@@ -206,18 +206,22 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                        onClick={onEdit}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
-                    >
-                        {labels.edit}
-                    </button>
-                    <button
-                        onClick={onDelete}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
-                    >
-                        {labels.delete}
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="purchaseReturns.update" isConfirmation={true}>
+                        <button
+                            onClick={(e) => e?.stopPropagation()}
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
+                        >
+                            {labels.edit}
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="purchaseReturns.delete" isConfirmation={true}>
+                        <button
+                            onClick={(e) => e?.stopPropagation()}
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
+                        >
+                            {labels.delete}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

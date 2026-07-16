@@ -6,6 +6,7 @@ import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useBatchesByProduct, useDeleteBatch } from "../../../modules/productPurchases/services/batch.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -31,14 +32,12 @@ export default function ProductDetail() {
             showError("Cannot delete batch: It has stock (quantity: " + batch.quantity + ")");
             return;
         }
-        if (window.confirm("Are you sure you want to delete this batch?")) {
-            try {
-                await deleteBatch(batch._id).unwrap();
-                showSuccess("Batch deleted successfully");
-                refetch();
-            } catch (error) {
-                showError(error?.data?.message || "Failed to delete batch");
-            }
+        try {
+            await deleteBatch(batch._id).unwrap();
+            showSuccess("Batch deleted successfully");
+            refetch();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete batch");
         }
     };
 
@@ -63,12 +62,11 @@ export default function ProductDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{product.name}</h1>
                     <p className="text-sm text-[var(--muted)]">{product.productCode || "No product code"}</p>
                 </div>
-                <button
-                    onClick={() => navigate(`/products/edit/${id}`)}
-                    className="btn-add"
-                >
-                    <Edit size={16} /> {labels.edit}
-                </button>
+                <PermissionGuard execute={() => navigate(`/products/edit/${id}`)} permission="product.update" isConfirmation={true}>
+                    <button className="btn-add">
+                        <Edit size={16} /> {labels.edit}
+                    </button>
+                </PermissionGuard>
             </div>
 
             {/* Tabs */}
@@ -234,18 +232,19 @@ export default function ProductDetail() {
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                <button
-                                                    onClick={() => handleDeleteBatch(batch)}
-                                                    disabled={batch.quantity > 0}
-                                                    className={`p-2 rounded-lg transition-all ${
-                                                        batch.quantity > 0
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                            : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                                                    }`}
-                                                    title={batch.quantity > 0 ? "Cannot delete: Has stock" : "Delete batch"}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <PermissionGuard execute={() => handleDeleteBatch(batch)} permission="product.delete" isConfirmation={true}>
+                                                    <button
+                                                        disabled={batch.quantity > 0}
+                                                        className={`p-2 rounded-lg transition-all ${
+                                                            batch.quantity > 0
+                                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
+                                                        }`}
+                                                        title={batch.quantity > 0 ? "Cannot delete: Has stock" : "Delete batch"}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </PermissionGuard>
                                             </td>
                                         </tr>
                                     ))}

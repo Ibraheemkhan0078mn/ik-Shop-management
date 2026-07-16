@@ -3,14 +3,14 @@ import { Plus } from "lucide-react";
 import { useDeletePaymentMethod, usePaymentMethods } from "../services/paymentMethod.service.js";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import PaymentMethodModal from "./PaymentMethodModal.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function PaymentMethodsSettings({ labels }) {
     const [deletePaymentMethod] = useDeletePaymentMethod();
     const [modal, setModal] = useState(null);
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this payment method?")) return;
+        e?.stopPropagation();
         try {
             await deletePaymentMethod(id).unwrap();
             showSuccess("Payment method deleted successfully");
@@ -86,12 +86,16 @@ function PaymentMethodRow({ paymentMethod, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={onEdit} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
-                        Edit
-                    </button>
-                    <button onClick={onDelete} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
-                        Delete
-                    </button>
+                    <PermissionGuard execute={() => onEdit?.()} permission="settings.view" isConfirmation={true}>
+                        <button onClick={(e) => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
+                            Edit
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={() => onDelete?.()} permission="settings.view" isConfirmation={true}>
+                        <button onClick={(e) => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
+                            Delete
+                        </button>
+                    </PermissionGuard>
                 </div>
             </td>
         </tr>

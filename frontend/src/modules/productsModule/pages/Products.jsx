@@ -55,8 +55,6 @@ export default function Products() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("create");
     const [selectedProductId, setSelectedProductId] = useState(null);
-    const [deleteTarget, setDeleteTarget] = useState(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
     const [filterPanelOpen, setFilterPanelOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
@@ -65,38 +63,18 @@ export default function Products() {
     const handleFiltersChange = useCallback((f) => { setActiveFilters(f); setCurrentPage(1); }, []);
     const openEdit = (id) => { setSelectedProductId(id); setModalMode("update"); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setModalMode("create"); setSelectedProductId(null); };
-    const openDeleteConfirm = (item) => setDeleteTarget({ id: item._id, name: item.name, step: "confirm", batchCount: 0 });
-
-    const handleConfirmDelete = async () => {
-        if (!deleteTarget) return;
-        setDeleteLoading(true);
+    
+    const handleDelete = async (id) => {
         try {
-            await deleteProduct(deleteTarget.id).unwrap();
+            await deleteProduct(id).unwrap();
             showSuccess(labels.productDeleted);
-            setDeleteTarget(null);
         } catch (err) {
-            if (err?.data?.code === "PRODUCT_HAS_BATCHES") {
-                setDeleteTarget((p) => ({ ...p, step: "withBatches", batchCount: err.data.batchCount || 0 }));
-            } else {
-                showError(err?.data?.message || labels.failedToDelete);
-                setDeleteTarget(null);
-            }
+            showError(err?.data?.message || labels.deleteFailed);
         }
-        setDeleteLoading(false);
     };
 
-    const handleConfirmHardDelete = async () => {
-        if (!deleteTarget) return;
-        setDeleteLoading(true);
-        try {
-            await deleteProductWithBatches(deleteTarget.id).unwrap();
-            showSuccess(labels.productDeleted);
-            setDeleteTarget(null);
-        } catch (err) {
-            showError(err?.data?.message || labels.failedToDelete);
-            setDeleteTarget(null);
-        }
-        setDeleteLoading(false);
+    const openDeleteConfirm = (item) => {
+        handleDelete(item._id);
     };
 
     const renderItems = (items) => {
@@ -138,7 +116,7 @@ export default function Products() {
                         <div onClick={e=> e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
                             <PermissionGuard 
                                 execute={() => openEdit(item._id)} 
-                                permission="product.update" 
+                                permission="products.update" 
                                 isConfirmation={true}
                             >
                                 <button id={`products-edit-${item._id}`} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
@@ -146,8 +124,8 @@ export default function Products() {
                                 </button>
                             </PermissionGuard>
                             <PermissionGuard 
-                                execute={() => openDeleteConfirm(item)} 
-                                permission="product.delete" 
+                                execute={() => handleDelete(item._id)} 
+                                permission="products.delete" 
                                 isConfirmation={true}
                             >
                                 <button id={`products-delete-${item._id}`} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
@@ -188,7 +166,7 @@ export default function Products() {
                             <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
                                 <PermissionGuard 
                                     execute={() => openEdit(item._id)} 
-                                    permission="product.update" 
+                                    permission="products.update" 
                                     isConfirmation={true}
                                 >
                                     <button id={`products-mobile-edit-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
@@ -198,7 +176,7 @@ export default function Products() {
                                 </PermissionGuard>
                                 <PermissionGuard 
                                     execute={() => openDeleteConfirm(item)} 
-                                    permission="product.delete" 
+                                    permission="products.delete" 
                                     isConfirmation={true}
                                 >
                                     <button id={`products-mobile-delete-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
@@ -217,62 +195,6 @@ export default function Products() {
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             {isModalOpen && <ProductCRUDModal id="products-crud-modal" mode={modalMode} productId={selectedProductId} open={isModalOpen} onClose={closeModal} />}
-
-            {/* Delete modal */}
-            {deleteTarget && (
-                <div id="products-delete-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 app-overlay app-enter">
-                    <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ background: "var(--surface)" }}>
-                        {deleteTarget.step === "confirm" ? (
-                            <>
-                                <div className="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center">
-                                    <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
-                                        <AlertTriangle className="w-7 h-7 text-red-500" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-(--ink)">{labels.deleteConfirm}</h3>
-                                    <p className="text-sm text-(--muted)">
-                                        {labels.deleteConfirm} <strong className="text-(--ink)">{deleteTarget.name}</strong>
-                                    </p>
-                                </div>
-                                <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <button id="products-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>{labels.cancel}</button>
-                                    <button id="products-delete-confirm" onClick={handleConfirmDelete} disabled={deleteLoading}
-                                        className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
-                                        {deleteLoading ? labels.loading : labels.delete}
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center">
-                                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                                        <PackageX className="w-7 h-7 text-amber-500" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-(--ink)">{labels.deleteConfirm}</h3>
-                                    <p className="text-sm text-(--muted)">
-                                        <strong className="text-(--ink)">{deleteTarget.name}</strong> has{" "}
-                                        <strong className="text-amber-500">{deleteTarget.batchCount} batch(es)</strong> linked to it.
-                                    </p>
-                                    <div className="w-full rounded-xl px-4 py-2.5 text-xs text-amber-700 text-center"
-                                        style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
-                                        {labels.deleteConfirm}
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 px-6 py-5" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <button id="products-hard-delete-cancel" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                                        style={{ background: "var(--app-bg)", color: "var(--muted)" }}>{labels.cancel}</button>
-                                    <button id="products-hard-delete-confirm" onClick={handleConfirmHardDelete} disabled={deleteLoading}
-                                        className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-60">
-                                        {deleteLoading ? labels.loading : labels.delete}
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
 
             <div className="flex-none">
                 <PageHeading
