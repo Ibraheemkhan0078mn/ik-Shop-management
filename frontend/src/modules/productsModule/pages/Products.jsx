@@ -12,6 +12,7 @@ import ProductFilterPanel from "../components/ProductFilterPanel.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -47,7 +48,7 @@ export default function Products() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getProductLabels(language);
-    
+
     const [deleteProduct] = useDeleteProduct();
     const [deleteProductWithBatches] = useDeleteProductWithBatches();
 
@@ -134,13 +135,25 @@ export default function Products() {
                             {item.category?.name}{item.subCategory?.name && <span className="text-(--muted)/50"> › {item.subCategory.name}</span>}
                         </div>
                         <div className="col-span-1"><StatusBadge active={item.isActive} labels={labels} /></div>
-                        <div className="col-span-1 flex items-center gap-1.5">
-                            <button id={`products-edit-${item._id}`} onClick={(e) =>{e.stopPropagation(); openEdit(item._id)}} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
-                                <Edit size={15} />
-                            </button>
-                            <button id={`products-delete-${item._id}`} onClick={(e) =>{e.stopPropagation(); openDeleteConfirm(item)}} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
-                                <Trash2 size={15} />
-                            </button>
+                        <div onClick={e=> e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
+                            <PermissionGuard 
+                                execute={() => openEdit(item._id)} 
+                                permission="product.update" 
+                                isConfirmation={true}
+                            >
+                                <button id={`products-edit-${item._id}`} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
+                                    <Edit size={15} />
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => openDeleteConfirm(item)} 
+                                permission="product.delete" 
+                                isConfirmation={true}
+                            >
+                                <button id={`products-delete-${item._id}`} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                    <Trash2 size={15} />
+                                </button>
+                            </PermissionGuard>
                         </div>
                     </div>
                 ))}
@@ -172,17 +185,27 @@ export default function Products() {
                                     )}
                                 </div>
                             </div>
-                            <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                                <button id={`products-mobile-edit-${item._id}`} onClick={() => openEdit(item._id)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
-                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                    <Edit size={14} /> {labels.edit}
-                                </button>
-                                <button id={`products-mobile-delete-${item._id}`} onClick={() => openDeleteConfirm(item)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
-                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                    <Trash2 size={14} /> {labels.delete}
-                                </button>
+                            <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                                <PermissionGuard 
+                                    execute={() => openEdit(item._id)} 
+                                    permission="product.update" 
+                                    isConfirmation={true}
+                                >
+                                    <button id={`products-mobile-edit-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                        <Edit size={14} /> {labels.edit}
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard 
+                                    execute={() => openDeleteConfirm(item)} 
+                                    permission="product.delete" 
+                                    isConfirmation={true}
+                                >
+                                    <button id={`products-mobile-delete-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
+                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                        <Trash2 size={14} /> {labels.delete}
+                                    </button>
+                                </PermissionGuard>
                             </div>
                         </div>
                     ))}

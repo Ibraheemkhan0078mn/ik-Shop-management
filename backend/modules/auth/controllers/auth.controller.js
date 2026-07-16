@@ -40,19 +40,19 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     const validatedData = req.body || {};
     const { email, password, confirmPassword } = validatedData;
 
-    if (password !== confirmPassword) {
+    if (password !== confirmPassword) { 
         return next(new ErrorResponse("Passwords do not match", 400));
     }
-
+ 
     const userExists = await findUserByEmailService(email);
     if (userExists) {
         return next(
             new ErrorResponse("User already exists with this email", 400),
         );
-    }
-
+    } 
+  
     const { confirmPassword: _, ...userData } = validatedData;
-    const user = await userCreateService(userData);
+    const user = await userCreateService(userData); 
 
     res.status(201).json({
         success: true,

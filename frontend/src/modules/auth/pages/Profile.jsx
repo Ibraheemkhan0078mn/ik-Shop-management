@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { useGetUserQuery } from "../api/authApi.js";
+import { useGetUserQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import { PERMISSION_GROUPS, getPermissionLabel } from "../../../shared/utilities/permissions.js";
 

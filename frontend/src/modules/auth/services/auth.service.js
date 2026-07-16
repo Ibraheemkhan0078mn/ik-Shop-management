@@ -1,10 +1,13 @@
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../slices/authSlice.js";
-import { useLoginMutation, useSignupMutation, useLogoutMutation, useGetUserQuery } from "../api/authApi.js";
+import { useLoginMutation, useSignupMutation, useLogoutMutation, useGetUserQuery } from "./authApi.js";
 import { toast } from "sonner";
 
-export const useUser = () => useGetUserQuery();
+export const useUser = () => {
+    const userId = useSelector((state) => state.auth.id);
+    return useGetUserQuery(userId, { skip: !userId });
+};
 
 export const useLogin = () => {
     const navigate = useNavigate();
