@@ -17,6 +17,7 @@ const userUpdate = async (id, data) => {
 };
 
 const userDelete = async (id) => {
+    // Soft delete the user - marks as deleted but keeps in database
     return await deleteOneUserService(id);
 };
 

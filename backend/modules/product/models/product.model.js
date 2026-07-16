@@ -37,6 +37,9 @@ const productSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
         currentStockLevel: {type: Number, default: 0},
 
+        // Soft Delete Fields
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: { type: Date, default: null },
 
         created: { type: Date, default: Date.now },
         updated: { type: Date },

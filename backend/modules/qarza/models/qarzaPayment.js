@@ -36,6 +36,9 @@ const QarzaPaymentSchema = new mongoose.Schema(
       type: String,
       default: "manual",
     },
+    // Soft Delete Fields
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

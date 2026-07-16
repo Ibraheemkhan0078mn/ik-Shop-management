@@ -35,6 +35,9 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Soft Delete Fields
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: { type: Date, default: null },
         created: { type: Date, default: Date.now },
         updated: { type: Date },
         isActive: { type: Boolean, default: true },

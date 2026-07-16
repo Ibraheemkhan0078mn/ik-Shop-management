@@ -10,16 +10,24 @@ import {
 export const loginUser = asyncHandler(async (req, res, next) => {
     const { email, password } = req.body || {};
 
+    if (!email || !password) {
+        return next(new ErrorResponse("Email and password are required", 400));
+    }
+
     const user = await findUserByEmailService(email);
     if (!user) {
-        return next(new ErrorResponse("Invalid credentials", 401));
+        return next(new ErrorResponse("No user found with this email address", 401));
     }
 
     const userWithPassword = await findUserByEmailWithPasswordService(email);
     const isMatch = await userWithPassword.comparePassword(password);
 
     if (!isMatch) {
-        return next(new ErrorResponse("Invalid credentials", 401));
+        return next(new ErrorResponse("Incorrect password", 401));
+    }
+
+    if (!user.isActive) {
+        return next(new ErrorResponse("This account has been deactivated", 403));
     }
 
     res.status(200).json({

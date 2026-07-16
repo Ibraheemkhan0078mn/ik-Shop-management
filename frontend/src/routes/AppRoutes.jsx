@@ -3,6 +3,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import AuthPage from "../modules/auth/pages/AuthPage.jsx";
 import Profile from "../modules/auth/pages/Profile.jsx";
 import UserManagement from "../modules/auth/pages/UserManagement.jsx";
+import UserDetails from "../modules/auth/pages/UserDetails.jsx";
 import ProtectedRoute from "../shared/components/ProtectedRoute.jsx";
 import Products from "../modules/productsModule/pages/Products.jsx";
 import ProductDetail from "../modules/productsModule/pages/ProductDetail.jsx";
@@ -121,6 +122,7 @@ function AppRoutes() {
             {/* Auth Routes */}
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+            <Route path="/users/:userId" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
 
             {/* Default Route */}
             {/* <Route path="/" element={<Login />} /> */}

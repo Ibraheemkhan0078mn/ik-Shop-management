@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getUserLabels } from "../labels/userLabels.js";
 import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from "../services/authApi.js";
@@ -10,9 +12,11 @@ import { PERMISSION_GROUPS } from "../../../shared/utilities/permissions.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function UserManagement() {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getUserLabels(language);
+    const currentUserId = useSelector((state) => state.auth.id);
     
     const { data: response, refetch } = useGetAllUsersQuery();
     const users = response?.data || [];
@@ -87,6 +91,10 @@ export default function UserManagement() {
         } catch (err) {
             showError(err?.data?.message || labels.operationFailed);
         }
+    };
+
+    const handleViewDetails = (userId) => {
+        navigate(`/users/${userId}`);
     };
 
     const handleDelete = async (id) => {
@@ -237,54 +245,157 @@ export default function UserManagement() {
                 </div>
             )}
 
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold">{labels.userManagement}</h1>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg"
-                    style={{ background: "var(--accent-2)", color: "white" }}
-                >
-                    <Plus className="w-4 h-4" />
-                    {labels.addStaff}
-                </button>
-            </div>
-
-            <div className="space-y-2">
-                {users.map((user) => (
-                    <div
-                        key={user._id}
-                        className="flex items-center gap-4 px-4 py-3 rounded-2xl"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                    >
-                        <div className="flex-1">
-                            <p className="font-bold">{user.name}</p>
-                            <p className="text-sm" style={{ color: "var(--muted)" }}>{user.email}</p>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>
-                                {user.role} • {user.phoneNo || labels.noPhone}
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                            <PermissionGuard execute={() => openEditModal(user)} permission="users.update" isConfirmation={true}>
-                                <button
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg"
-                                    style={{ color: "var(--muted)" }}
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                            </PermissionGuard>
-                            {user.role !== "admin" && (
-                                <PermissionGuard execute={() => handleDelete(user._id)} permission="users.delete" isConfirmation={true}>
-                                    <button
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg"
-                                        style={{ color: "var(--muted)" }}
+            <div className="flex-1 overflow-hidden">
+                {/* Desktop Table */}
+                <div className="hidden md:block h-full overflow-auto">
+                    <table className="w-full">
+                        <thead className="sticky top-0 z-10" style={{ background: "var(--surface-muted)" }}>
+                            <tr className="text-xs font-semibold uppercase tracking-wider text-(--muted)">
+                                <th className="px-4 py-3 text-left">{labels.name}</th>
+                                <th className="px-4 py-3 text-left">{labels.email}</th>
+                                <th className="px-4 py-3 text-left">{labels.phone}</th>
+                                <th className="px-4 py-3 text-left">{labels.role}</th>
+                                <th className="px-4 py-3 text-right">{labels.actions}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map((user) => {
+                                const isCurrentUser = user._id === currentUserId;
+                                return (
+                                    <tr
+                                        key={user._id}
+                                        className={`border-b transition-all ${isCurrentUser ? 'bg-(--accent-2)/5' : 'hover:bg-(--surface-muted)'}`}
+                                        style={{ borderColor: "var(--border)" }}
                                     >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </PermissionGuard>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCurrentUser ? 'bg-(--accent-2) text-white' : 'bg-(--surface-muted) text-(--muted)'}`}>
+                                                    {isCurrentUser ? <Shield size={16} /> : <UserIcon size={16} />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-(--ink)">{user.name}</p>
+                                                    {isCurrentUser && (
+                                                        <p className="text-xs text-(--accent-2) font-medium">{labels.you}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-(--muted)">{user.email}</td>
+                                        <td className="px-4 py-3 text-sm text-(--muted)">{user.phoneNo || labels.noPhone}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                                user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
+                                                user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
+                                                'bg-gray-500/10 text-gray-600'
+                                            }`}>
+                                                {labels[user.role] || user.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <PermissionGuard 
+                                                    execute={() => handleViewDetails(user._id)} 
+                                                    permission="users.view" 
+                                                    isConfirmation={false}
+                                                >
+                                                    <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                </PermissionGuard>
+                                                <PermissionGuard 
+                                                    execute={() => openEditModal(user)} 
+                                                    permission="users.update" 
+                                                    isConfirmation={true}
+                                                >
+                                                    <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                </PermissionGuard>
+                                                <PermissionGuard 
+                                                    execute={() => handleDelete(user._id)} 
+                                                    permission="users.delete" 
+                                                    isConfirmation={true}
+                                                >
+                                                    <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </PermissionGuard>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                    {users.map((user) => {
+                        const isCurrentUser = user._id === currentUserId;
+                        return (
+                            <div
+                                key={user._id}
+                                className={`p-4 rounded-2xl border ${isCurrentUser ? 'bg-(--accent-2)/5 border-(--accent-2)' : 'bg-(--surface)'}`}
+                                style={{ borderColor: isCurrentUser ? 'var(--accent-2)' : 'var(--border)' }}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isCurrentUser ? 'bg-(--accent-2) text-white' : 'bg-(--surface-muted) text-(--muted)'}`}>
+                                        {isCurrentUser ? <Shield size={20} /> : <UserIcon size={20} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-semibold text-(--ink) truncate">{user.name}</p>
+                                            {isCurrentUser && (
+                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-2) text-white">
+                                                    {labels.you}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-(--muted) truncate">{user.email}</p>
+                                        <p className="text-xs text-(--muted)">{user.phoneNo || labels.noPhone}</p>
+                                        <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${
+                                            user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
+                                            user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
+                                            'bg-gray-500/10 text-gray-600'
+                                        }`}>
+                                            {labels[user.role] || user.role}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                                    <PermissionGuard 
+                                        execute={() => handleViewDetails(user._id)} 
+                                        permission="users.view" 
+                                        isConfirmation={false}
+                                    >
+                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
+                                            <Eye size={16} /> {labels.view}
+                                        </button>
+                                    </PermissionGuard>
+                                    <PermissionGuard 
+                                        execute={() => openEditModal(user)} 
+                                        permission="users.update" 
+                                        isConfirmation={true}
+                                    >
+                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
+                                            <Edit2 size={16} /> {labels.edit}
+                                        </button>
+                                    </PermissionGuard>
+                                    <PermissionGuard 
+                                        execute={() => handleDelete(user._id)} 
+                                        permission="users.delete" 
+                                        isConfirmation={true}
+                                    >
+                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
+                                            <Trash2 size={16} /> {labels.delete}
+                                        </button>
+                                    </PermissionGuard>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

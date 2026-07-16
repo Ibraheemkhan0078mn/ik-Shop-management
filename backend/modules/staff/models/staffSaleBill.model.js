@@ -51,7 +51,10 @@ const staffSaleBillSchema = new mongoose.Schema({
     notes: {
         type: String,
         trim: true
-    }
+    },
+    // Soft Delete Fields
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null }
 }, {
     timestamps: true
 });

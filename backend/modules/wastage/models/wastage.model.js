@@ -39,6 +39,10 @@ const wastageSchema = new mongoose.Schema({
     // Audit
     // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     // updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    
+    // Soft Delete Fields
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 export default wastageSchema;

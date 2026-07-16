@@ -14,6 +14,9 @@ const purchaseReturnSchema = new mongoose.Schema(
     ],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+    // Soft Delete Fields
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

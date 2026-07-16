@@ -34,15 +34,23 @@ export const getUserByIdController = asyncHandler(async (req, res, next) => {
 });
 
 export const createUserByAdminController = asyncHandler(async (req, res, next) => {
-    const { email, password, confirmPassword } = req.body;
+    const { email, password, confirmPassword, name } = req.body;
+
+    if (!name || !email || !password) {
+        return next(new ErrorResponse("Name, email, and password are required", 400));
+    }
 
     if (password !== confirmPassword) {
         return next(new ErrorResponse("Passwords do not match", 400));
     }
 
+    if (password.length < 6) {
+        return next(new ErrorResponse("Password must be at least 6 characters long", 400));
+    }
+
     const userExists = await findOneUserService({ email });
     if (userExists) {
-        return next(new ErrorResponse("User already exists with this email", 400));
+        return next(new ErrorResponse("A user with this email already exists", 400));
     }
 
     const { confirmPassword: _, ...userData } = req.body;
@@ -63,7 +71,7 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
 });
 
 export const updateUserByAdminController = asyncHandler(async (req, res, next) => {
-    const { _id } = req.body;
+    const { _id, email } = req.body;
 
     if (!_id) {
         return next(new ErrorResponse("User ID is required", 400));
@@ -74,10 +82,18 @@ export const updateUserByAdminController = asyncHandler(async (req, res, next) =
         return next(new ErrorResponse("User not found", 404));
     }
 
+    // Check if email is being changed and if it already exists
+    if (email && email !== existingUser.email) {
+        const emailExists = await findOneUserService({ email });
+        if (emailExists) {
+            return next(new ErrorResponse("A user with this email already exists", 400));
+        }
+    }
+
     const updated = await userUpdate(_id, req.body);
 
     if (!updated) {
-        return next(new ErrorResponse("User not found", 404));
+        return next(new ErrorResponse("Failed to update user", 500));
     }
 
     const users = await getAllUsers();
@@ -96,10 +112,19 @@ export const deleteUserByAdminController = asyncHandler(async (req, res, next) =
         return next(new ErrorResponse("User ID is required", 400));
     }
 
+    const existingUser = await findUserById(_id);
+    if (!existingUser) {
+        return next(new ErrorResponse("User not found", 404));
+    }
+
+    if (existingUser.role === "admin") {
+        return next(new ErrorResponse("Cannot delete admin user", 403));
+    }
+
     const deleted = await userDelete(_id);
 
     if (!deleted) {
-        return next(new ErrorResponse("User not found", 404));
+        return next(new ErrorResponse("Failed to delete user", 500));
     }
 
     const users = await getAllUsers();

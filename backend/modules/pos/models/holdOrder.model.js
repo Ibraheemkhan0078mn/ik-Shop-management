@@ -29,6 +29,9 @@ const holdOrderSchema = new mongoose.Schema(
         customerName: { type: String, default: "" },
         waiter: { type: String, default: "" },
         note: { type: String, default: "" },
+        // Soft Delete Fields
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: { type: Date, default: null },
     },
     { timestamps: true },
 );

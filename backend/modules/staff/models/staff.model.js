@@ -74,7 +74,10 @@ const staffSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'inactive'],
         default: 'active'
-    }
+    },
+    // Soft Delete Fields
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null }
 }, {
     timestamps: true
 });

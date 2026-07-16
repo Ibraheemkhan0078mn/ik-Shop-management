@@ -46,10 +46,9 @@ const supplierSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
-        // Internal notes about the supplier's reliability or terms
-        notes: {
-            type: String,
-        },
+        // Soft Delete Fields
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: { type: Date, default: null },
         created: {
             type: Date,
             default: Date.now,
