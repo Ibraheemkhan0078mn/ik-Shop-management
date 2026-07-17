@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -120,7 +120,14 @@ export default function UserManagement() {
             />
             {modal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.5)" }}>
-                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl relative" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <button
+                            onClick={() => setModal(null)}
+                            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-(--surface-muted) transition-colors"
+                            style={{ color: "var(--muted)" }}
+                        >
+                            <X size={20} />
+                        </button>
                         <h2 className="text-xl font-bold mb-4">
                             {modal.mode === "create" ? labels.addStaff : labels.edit}
                         </h2>
@@ -131,6 +138,7 @@ export default function UserManagement() {
                                     <input
                                         type="text"
                                         required
+                                        placeholder={labels.enterName || "Enter name"}
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full px-4 py-2 rounded-lg border"
@@ -142,6 +150,7 @@ export default function UserManagement() {
                                     <input
                                         type="email"
                                         required
+                                        placeholder={labels.enterEmail || "Enter email"}
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         className="w-full px-4 py-2 rounded-lg border"
@@ -152,6 +161,7 @@ export default function UserManagement() {
                                     <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.phone}</label>
                                     <input
                                         type="tel"
+                                        placeholder={labels.enterPhone || "Enter phone number"}
                                         value={formData.phoneNo}
                                         onChange={(e) => setFormData({ ...formData, phoneNo: e.target.value })}
                                         className="w-full px-4 py-2 rounded-lg border"
@@ -177,6 +187,7 @@ export default function UserManagement() {
                                             <input
                                                 type="password"
                                                 required
+                                                placeholder={labels.enterPassword || "Enter password"}
                                                 value={formData.password}
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                                 className="w-full px-4 py-2 rounded-lg border"
@@ -188,6 +199,7 @@ export default function UserManagement() {
                                             <input
                                                 type="password"
                                                 required
+                                                placeholder={labels.confirmPasswordPlaceholder || "Confirm password"}
                                                 value={formData.confirmPassword}
                                                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                                                 className="w-full px-4 py-2 rounded-lg border"

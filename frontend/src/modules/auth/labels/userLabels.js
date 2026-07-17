@@ -30,6 +30,11 @@ export const userLabels = {
     confirmPassword: "Confirm Password",
     permissions: "Permissions",
     activeAccount: "Active Account",
+    enterName: "Enter name",
+    enterEmail: "Enter email",
+    enterPhone: "Enter phone number",
+    enterPassword: "Enter password",
+    confirmPasswordPlaceholder: "Confirm password",
     
     // Roles
     staff: "Staff",
@@ -156,6 +161,11 @@ export const userLabels = {
     confirmPassword: "پاسورڈ کی تصدیق کریں",
     permissions: "اجازتیں",
     activeAccount: "فعال اکاؤنٹ",
+    enterName: "نام درج کریں",
+    enterEmail: "ای میل درج کریں",
+    enterPhone: "فون نمبر درج کریں",
+    enterPassword: "پاسورڈ درج کریں",
+    confirmPasswordPlaceholder: "پاسورڈ کی تصدیق کریں",
     
     // Roles
     staff: "سٹاف",
@@ -282,6 +292,11 @@ export const userLabels = {
     confirmPassword: "پاسورڈ کی تصدیق کریں / Confirm Password",
     permissions: "اجازتیں / Permissions",
     activeAccount: "فعال اکاؤنٹ / Active Account",
+    enterName: "نام درج کریں / Enter name",
+    enterEmail: "ای میل درج کریں / Enter email",
+    enterPhone: "فون نمبر درج کریں / Enter phone number",
+    enterPassword: "پاسورڈ درج کریں / Enter password",
+    confirmPasswordPlaceholder: "پاسورڈ کی تصدیق کریں / Confirm password",
     
     // Roles
     staff: "سٹاف / Staff",

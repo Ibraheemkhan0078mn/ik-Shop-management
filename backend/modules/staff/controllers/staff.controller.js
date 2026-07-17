@@ -97,13 +97,13 @@ export const addImagesToStaffData = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("No images uploaded", 400));
     }
 
-    const imageData = req.files.map(file => ({
-        imageType: "document",
-        imageName: file.filename,
+    const documentData = req.files.map(file => ({
+        documentType: "document",
+        filePath: file.filename,
         uploadedAt: new Date()
     }));
 
-    const staff = await addDocumentToStaff(id, imageData);
+    const staff = await addDocumentToStaff(id, documentData);
 
     res.status(200).json({
         success: true,

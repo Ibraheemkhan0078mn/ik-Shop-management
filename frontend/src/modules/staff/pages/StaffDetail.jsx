@@ -128,8 +128,14 @@ export default function StaffDetail() {
     };
 
     const handleImageUpload = async (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
+        e.preventDefault();
+        const fileInput = document.getElementById('imageInput');
+        const files = Array.from(fileInput.files);
+        
+        if (files.length === 0) {
+            toast.error("Please select images first");
+            return;
+        }
 
         const formData = new FormData();
         files.forEach(file => {
@@ -140,6 +146,7 @@ export default function StaffDetail() {
             await addImages({ id, formData }).unwrap();
             toast.success(labels.imagesUploaded);
             setSelectedImages([]);
+            fileInput.value = ''; // Clear the file input
             refetch();
         } catch (error) {
             toast.error(labels.failedToUploadImages);
@@ -310,12 +317,41 @@ export default function StaffDetail() {
                         <div className="space-y-4">
                             <input
                                 type="file"
+                                id="imageInput"
                                 multiple
                                 accept="image/*"
-                                onChange={handleImageUpload}
+                                onChange={(e) => {
+                                    const files = Array.from(e.target.files);
+                                    const previews = files.map(file => URL.createObjectURL(file));
+                                    setSelectedImages(previews);
+                                }}
                                 className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
                             />
                             <p className="text-sm text-[var(--muted)]">{labels.selectMultipleImages}</p>
+                            
+                            {/* Local Preview */}
+                            {selectedImages.length > 0 && (
+                                <div className="mt-4">
+                                    <p className="text-sm font-medium text-[var(--ink)] mb-2">{labels.preview}:</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                        {selectedImages.map((preview, index) => (
+                                            <div key={index} className="relative">
+                                                <img
+                                                    src={preview}
+                                                    alt={`Preview ${index + 1}`}
+                                                    className="w-full h-32 object-cover rounded-md border border-[var(--border)]"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={handleImageUpload}
+                                        className="btn-add"
+                                    >
+                                        <Upload size={16} /> {labels.upload}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -324,12 +360,16 @@ export default function StaffDetail() {
                         {staff.documents?.length ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 {staff.documents.map((doc) => (
-                                    doc.imageName && (
+                                    doc.filePath && (
                                         <div key={doc._id} className="relative group">
                                             <img
-                                                src={`http://localhost:5001/uploads/${doc.imageName}`}
+                                                src={`http://localhost:5001/uploads/${doc.filePath}`}
                                                 alt="Document"
                                                 className="w-full h-32 object-cover rounded-md border border-[var(--border)]"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-[var(--surface-muted)] text-[var(--muted)] text-sm">Image not found</div>';
+                                                }}
                                             />
                                             <PermissionGuard execute={() => handleRemoveImage(doc._id)} permission="staff.documents.delete" isConfirmation={true}>
                                                 <button

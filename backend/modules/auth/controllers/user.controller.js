@@ -40,7 +40,8 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
         return next(new ErrorResponse("Name, email, and password are required", 400));
     }
 
-    if (password !== confirmPassword) {
+    // Only check password match if confirmPassword is provided
+    if (confirmPassword && password !== confirmPassword) {
         return next(new ErrorResponse("Passwords do not match", 400));
     }
 
@@ -115,10 +116,6 @@ export const deleteUserByAdminController = asyncHandler(async (req, res, next) =
     const existingUser = await findUserById(_id);
     if (!existingUser) {
         return next(new ErrorResponse("User not found", 404));
-    }
-
-    if (existingUser.role === "admin") {
-        return next(new ErrorResponse("Cannot delete admin user", 403));
     }
 
     const deleted = await userDelete(_id);
