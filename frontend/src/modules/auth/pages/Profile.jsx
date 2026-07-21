@@ -1,7 +1,7 @@
 import { useSelector } from "react-redux";
 import { useGetUserQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
-import { PERMISSION_GROUPS, getPermissionLabel } from "../../../shared/utilities/permissions.js";
+import { categorizePermissions, getPermissionLabel } from "../../../shared/utilities/permissionUtils.js";
 
 export default function Profile() {
     const userId = useSelector(s => s.auth?.id);
@@ -24,6 +24,7 @@ export default function Profile() {
     }
 
     const permissions = user?.permissions || [];
+    const permissionGroups = categorizePermissions(permissions);
 
     return (
         <div style={{ color: "var(--ink)" }}>
@@ -52,17 +53,19 @@ export default function Profile() {
                     </div>
                 </div>
 
-                <div className="p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                    <h2 className="text-lg font-bold mb-4">Permissions</h2>
-                    <div className="grid grid-cols-2 gap-2">
-                        {PERMISSION_GROUPS.flatMap((group) => group.actions.map(({ key }) => ({ permission: `${group.module}.${key}`, label: getPermissionLabel(`${group.module}.${key}`) }))).map(({ permission, label }) => (
-                            <div key={permission} className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${permissions.includes(permission) ? "bg-green-500" : "bg-gray-300"}`} />
-                                <span className="text-sm">{label}</span>
-                            </div>
-                        ))}
+                {user.role !== "admin" && (
+                    <div className="p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <h2 className="text-lg font-bold mb-4">Permissions</h2>
+                        <div className="grid grid-cols-2 gap-2">
+                            {permissionGroups.flatMap((group) => group.actions.map(({ key }) => ({ permission: `${group.module}.${key}`, label: getPermissionLabel(`${group.module}.${key}`) }))).map(({ permission, label }) => (
+                                <div key={permission} className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${permissions.includes(permission) ? "bg-green-500" : "bg-gray-300"}`} />
+                                    <span className="text-sm">{label}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="p-6 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                     <h2 className="text-lg font-bold mb-4">Account Details</h2>

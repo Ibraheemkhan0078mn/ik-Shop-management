@@ -8,18 +8,22 @@ import { useSettings } from "../../modules/settings/hooks/useSettings.js";
 import logo from "../assets/logo.png";
 import { sidebarData } from "../data/sidebar.js";
 import { useGetSettingsQuery } from "../../modules/settings/api/settings.api.js";
-import { hasPermission } from "../utilities/permissions.js";
+import { hasPermission } from "../utilities/permissionUtils.js";
 
 const PERMISSION_MAP = {
-  Sale:            p => hasPermission(p, "pos.view"),
-  "Menu Manager":  p => hasPermission(p, "products.view"),
-  "Stock & Expenses": p => hasPermission(p, "expenses.view"),
-  Staff:           p => hasPermission(p, "staff.view"),
-  "Sales History": p => hasPermission(p, "reports.view"),
-  "Business Qarza":p => hasPermission(p, "accounts.view"),
-  "Personal Qarza":p => hasPermission(p, "accounts.view"),
-  "Hostel Orders": p => hasPermission(p, "accounts.view"),
-  Dashboard:       p => hasPermission(p, "dashboard.view"),
+  quickList:       p => hasPermission(p, "dashboard.view") || hasPermission(p, "pos.view"),
+  dashboard:       p => hasPermission(p, "dashboard.view"),
+  products:        p => hasPermission(p, "products.view"),
+  productWastage:  p => hasPermission(p, "wastage.view"),
+  purchases:       p => hasPermission(p, "purchases.view"),
+  purchaseReturn:  p => hasPermission(p, "purchaseReturns.view"),
+  customers:       p => hasPermission(p, "customers.view"),
+  suppliers:       p => hasPermission(p, "suppliers.view"),
+  creditDebits:    p => hasPermission(p, "creditsDebits.view") || hasPermission(p, "accounts.view"),
+  expenses:        p => hasPermission(p, "expenses.view"),
+  staff:           p => hasPermission(p, "staff.view"),
+  reports:         p => hasPermission(p, "reports.view"),
+  users:           p => hasPermission(p, "users.view") || hasPermission(p, "users.manage"),
 };
 
 export default function Sidebar() {
@@ -39,9 +43,12 @@ export default function Sidebar() {
   const navItems = useMemo(() => sidebarData(language).navMain, [language]);
 
   const canAccess = item => {
-    const check = PERMISSION_MAP[item.permissions];
+    // Admin has access to everything
+    if (role === "admin") return true;
+    
+    const check = PERMISSION_MAP[item.id];
     if (check) return check(permissions);
-    if (item.id === "users") return hasPermission(permissions, "users.manage") || role === "admin";
+    if (item.id === "users") return hasPermission(permissions, "users.manage");
     return true;
   };
 

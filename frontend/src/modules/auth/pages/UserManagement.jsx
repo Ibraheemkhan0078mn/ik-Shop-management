@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useMemo } from "react";
 import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -8,7 +8,7 @@ import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useD
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import { PERMISSION_GROUPS } from "../../../shared/utilities/permissions.js";
+import { categorizePermissions } from "../../../shared/utilities/permissionUtils.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { AppPermissionContext } from "../../../shared/context/Permission.context.jsx";
 // import { DEFAULT_PERMISSIONS } from "../../../../backend/common/constants/permissions.constant.js";
@@ -26,6 +26,11 @@ export default function UserManagement() {
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
     const [deleteUser] = useDeleteUserMutation();
+
+    // Categorize permissions from backend
+    const permissionGroups = useMemo(() => {
+        return categorizePermissions(appPermissions || []);
+    }, [appPermissions]);
 
     const [modal, setModal] = useState(null);
     const [formData, setFormData] = useState({
@@ -307,7 +312,7 @@ export default function UserManagement() {
                                     </button>
                                 </div>
                                 <div className="grid gap-3">
-                                    {PERMISSION_GROUPS.map((group) => (
+                                    {permissionGroups.map((group) => (
                                         <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="font-semibold">{group.label}</p>

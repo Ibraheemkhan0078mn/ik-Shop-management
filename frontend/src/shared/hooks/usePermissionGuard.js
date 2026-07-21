@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useUser } from '../../modules/auth/services/auth.service.js';
 import { useSettings } from '../../modules/settings/hooks/useSettings.js';
-import { hasPermission as checkPermission } from '../utilities/permissions.js';
+import { hasPermission as checkPermission } from '../utilities/permissionUtils.js';
 
 /**
  * Local hook for permission guard functionality
@@ -22,6 +22,7 @@ export const usePermissionGuard = () => {
     const hasPermission = useMemo(() => {
         return (permission) => {
             if (!user || !permission) return false;
+            // Admin has all permissions
             if (isAdmin) return true;
             return checkPermission(user.permissions, permission);
         };

@@ -1,4 +1,4 @@
-import { normalizeUserPermissions } from "./permissions.js";
+import { normalizeUserPermissions } from "./permissionUtils.js";
 
 export const ROUTE_PERMISSIONS = {
     "/dashboard/analytics": "dashboard.view",
