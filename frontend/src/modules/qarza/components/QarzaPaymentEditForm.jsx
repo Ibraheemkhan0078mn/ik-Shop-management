@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 export default function QarzaPaymentEditForm({ getAccountPaymentAndSummary, currentToUpdateData, setQarzaPaymentData, setVisibility, qarzaAccountId }) {

@@ -62,7 +62,8 @@ let OnlineAppThemeModel = null;
 
 
 export const connectOnlineDb = async () => {
-    console.log("Online connection is running");
+   try {
+     console.log("Online connection is running");
     dns.setServers(['8.8.8.8', '8.8.4.4']);
     
     // Dummy URL - replace with actual online MongoDB connection string
@@ -110,6 +111,9 @@ export const connectOnlineDb = async () => {
 
     // Change stream tracking disabled - using local database tracking instead
     // startChangeStreamTracking(OnlineConnection)
+   } catch (error) {
+    
+   }
 };
 
 

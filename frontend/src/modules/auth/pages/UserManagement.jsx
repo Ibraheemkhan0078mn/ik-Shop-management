@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -10,8 +10,11 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { PERMISSION_GROUPS } from "../../../shared/utilities/permissions.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { AppPermissionContext } from "../../../shared/context/Permission.context.jsx";
+// import { DEFAULT_PERMISSIONS } from "../../../../backend/common/constants/permissions.constant.js";
 
 export default function UserManagement() {
+    let {appPermissions}= useContext(AppPermissionContext)
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -68,6 +71,71 @@ export default function UserManagement() {
                 : [...permissions, permission];
 
             return { ...prev, permissions: nextPermissions };
+        });
+    };
+
+    const handleRoleSelect = (role) => {
+        let rolePermissions = [];
+        
+        if(appPermissions){
+            if (role === "admin") {
+                console.log("The role is admin. ")
+            rolePermissions = appPermissions;
+        } else if (role === "manager") {
+            // Manager permissions - most permissions except user management
+            rolePermissions = appPermissions.filter(perm => 
+                !perm.startsWith("users.") || perm === "users.view"
+            );
+        } else {
+            // Staff permissions - limited permissions
+            rolePermissions = [
+                "dashboard.view",
+                "pos.view",
+                "pos.orders.create",
+                "pos.orders.view",
+                "products.view",
+                "categories.view",
+                "subcategories.view",
+                "customers.view",
+                "customers.create",
+                "customers.update",
+                "customers.details",
+                "customers.payment",
+                "suppliers.view",
+                "suppliers.details",
+            ];
+        }
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            role,
+            permissions: rolePermissions
+        }));
+    };
+
+    const isGroupAllChecked = (group) => {
+        const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
+        return groupPermissions.every(perm => (formData.permissions || []).includes(perm));
+    };
+
+    const handleGroupToggle = (group) => {
+        const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
+        const allChecked = isGroupAllChecked(group);
+        
+        setFormData(prev => {
+            const currentPermissions = prev.permissions || [];
+            let newPermissions;
+            
+            if (allChecked) {
+                // Uncheck all in group
+                newPermissions = currentPermissions.filter(perm => !groupPermissions.includes(perm));
+            } else {
+                // Check all in group (add missing ones)
+                newPermissions = [...new Set([...currentPermissions, ...groupPermissions])];
+            }
+            
+            return { ...prev, permissions: newPermissions };
         });
     };
 
@@ -168,18 +236,6 @@ export default function UserManagement() {
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.role}</label>
-                                    <select
-                                        value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-lg border"
-                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                    >
-                                        <option value="staff">{labels.staff}</option>
-                                        <option value="manager">{labels.manager}</option>
-                                    </select>
-                                </div>
                                 {modal.mode === "create" && (
                                     <>
                                         <div>
@@ -209,12 +265,62 @@ export default function UserManagement() {
                                     </>
                                 )}
                             </div>
+                            {/* <div>
+                                <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.role}</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRoleSelect("admin")}
+                                        className={`px-4 py-2 rounded-lg ${formData.role === "admin" ? "bg-purple-500 text-white" : ""}`}
+                                        style={formData.role !== "admin" ? { background: "var(--surface-muted)", color: "var(--ink)" } : {}}
+                                    >
+                                        Admin
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRoleSelect("manager")}
+                                        className={`px-4 py-2 rounded-lg ${formData.role === "manager" ? "bg-blue-500 text-white" : ""}`}
+                                        style={formData.role !== "manager" ? { background: "var(--surface-muted)", color: "var(--ink)" } : {}}
+                                    >
+                                        Manager
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRoleSelect("staff")}
+                                        className={`px-4 py-2 rounded-lg ${formData.role === "staff" ? "bg-gray-500 text-white" : ""}`}
+                                        style={formData.role !== "staff" ? { background: "var(--surface-muted)", color: "var(--ink)" } : {}}
+                                    >
+                                        Staff
+                                    </button>
+                                </div>
+                            </div> */}
                             <div>
-                                <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, permissions: [] })}
+                                        className="px-3 py-1 text-sm rounded-lg"
+                                        style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+                                    >
+                                        {labels.clearAll}
+                                    </button>
+                                </div>
                                 <div className="grid gap-3">
                                     {PERMISSION_GROUPS.map((group) => (
                                         <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                            <p className="font-semibold mb-2">{group.label}</p>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="font-semibold">{group.label}</p>
+                                                <label className="flex items-center gap-2">
+                                                    <span className="text-sm">{labels.all}</span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isGroupAllChecked(group)}
+                                                        onChange={() => handleGroupToggle(group)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                </label>
+                                            </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {group.actions.map(({ key, label }) => {
                                                     const permission = `${group.module}.${key}`;

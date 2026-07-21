@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { setAllExpenseCatags } from '../slices/expense.slice';
 import axios from 'axios';
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 
 const ExpenseCatags = ({ setVisibility, setExpenseCatagCreationVisibility }) => {
 

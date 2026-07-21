@@ -1,4 +1,4 @@
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 
 export async function getExpenses({ skip = 0, limit = 20, date = "none" } = {}) {

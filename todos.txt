@@ -5,3 +5,4 @@
 3: integrate the pdf fro each data in system.
 4: make it perfect and better the sync and also when online then live update the data
 5: make the permission password on each operation which are not allowed by admin. 
+6: the user permissin are handled from frontend and backend both. only make it handled from backend only. 

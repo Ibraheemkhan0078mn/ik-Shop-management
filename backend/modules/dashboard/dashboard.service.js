@@ -925,9 +925,9 @@ export const getStockLevelByCategory = async () => {
 // Inventory Value by Category
 export const getInventoryValueByCategory = async () => {
     try {
-        const BatchModel = getLocalBatchModel();
-        const ProductModel = getLocalProductModel();
-        const CategoryModel = getLocalCategoryModel();
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
+        const CategoryModel = getCategoryModel();
 
         const data = await ProductModel.aggregate([
             { $match: { isActive: true } },

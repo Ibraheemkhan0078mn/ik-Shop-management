@@ -35,6 +35,8 @@ export const userLabels = {
     enterPhone: "Enter phone number",
     enterPassword: "Enter password",
     confirmPasswordPlaceholder: "Confirm password",
+    clearAll: "Clear All",
+    all: "All",
     
     // Roles
     staff: "Staff",
@@ -166,6 +168,8 @@ export const userLabels = {
     enterPhone: "فون نمبر درج کریں",
     enterPassword: "پاسورڈ درج کریں",
     confirmPasswordPlaceholder: "پاسورڈ کی تصدیق کریں",
+    clearAll: "سب صاف کریں",
+    all: "سب",
     
     // Roles
     staff: "سٹاف",
@@ -297,6 +301,8 @@ export const userLabels = {
     enterPhone: "فون نمبر درج کریں / Enter phone number",
     enterPassword: "پاسورڈ درج کریں / Enter password",
     confirmPasswordPlaceholder: "پاسورڈ کی تصدیق کریں / Confirm password",
+    clearAll: "سب صاف کریں / Clear All",
+    all: "سب / All",
     
     // Roles
     staff: "سٹاف / Staff",

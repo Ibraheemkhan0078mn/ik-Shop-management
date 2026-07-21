@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux'
 import { useSettings } from "../../settings/hooks/useSettings.js"
 import { getQarzaLabels } from "../labels/qarzaLabels.js"
 import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
-import api from "../../../shared/services/axiosInstance.js"
+import api from "../../../shared/services/api.js"
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js"
 
 const QarzaWithoutAccount = () => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 import { toInputDateFormat } from "../../../shared/utilities/date.utility.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 

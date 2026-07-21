@@ -1,7 +1,7 @@
 import React from "react";
 import { Calendar, Edit2, Trash2 } from "lucide-react";
 import axios from "axios";
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 import { PermissionGuard } from "../../../shared/components/PermissionGuard.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 

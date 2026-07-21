@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
-import api from "../../../shared/services/axiosInstance.js";
+import api from "../../../shared/services/api.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expenseData }) => {

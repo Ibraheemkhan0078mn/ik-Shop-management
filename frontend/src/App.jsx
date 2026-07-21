@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="flex w-screen">
-      <Toaster position="top-center" />
+      <Toaster position="top-right" />
       {showChrome && <Sidebar />}
 
       <div className={`flex-1 w-[70%] ${showChrome ? "p-5" : "p-0"}`}>

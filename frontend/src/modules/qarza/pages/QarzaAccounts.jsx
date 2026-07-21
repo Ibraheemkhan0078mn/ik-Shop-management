@@ -15,13 +15,13 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function QarzaAccounts() {
-    const navigate   = useNavigate();
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getQarzaLabels(language);
 
     const [deleteAccount] = useDeleteQarzaAccount();
-    const [modal,  setModal]  = useState(null);
+    const [modal, setModal] = useState(null);
 
     const handleDelete = async (id) => {
         try {
@@ -80,8 +80,9 @@ export default function QarzaAccounts() {
                             <tbody>
                                 {accounts.map(acc => {
                                     const net = netBalance(acc);
+                                    // console.log(`${backendBaseUrl}/uploads/${acc.qarzaProfileImage}`, "The url")
                                     return (
-                                        <tr 
+                                        <tr
                                             key={acc._id}
                                             onClick={() => navigate(`/EachQarzaAccountRecord/${acc._id}`)}
                                             className="border-t cursor-pointer hover:bg-opacity-50 transition-colors"

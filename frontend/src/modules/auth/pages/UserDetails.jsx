@@ -80,15 +80,7 @@ export default function UserDetails() {
                             <ScreenTabButton lucideIcon={ArrowLeft} text={labels.back || "Back"} />
                         </div>
                     }
-                    rightActions={
-                        <PermissionGuard
-                            execute={handleEdit}
-                            permission="users.update"
-                            isConfirmation={false}
-                        >
-                            <ScreenTabButton lucideIcon={Edit2} text={labels.edit} />
-                        </PermissionGuard>
-                    }
+
                 />
             </div>
 
