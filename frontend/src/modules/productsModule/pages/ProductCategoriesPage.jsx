@@ -147,9 +147,15 @@ export default function ProductCategoriesPage() {
                     heading={labels.productCategories}
                     subheading={labels.manageProducts}
                     leftActions={
-                        <div onClick={handleCreate}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.add} />
-                        </div>
+                        <PermissionGuard 
+                            execute={handleCreate} 
+                            permission="categories.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.add} />
+                            </div>
+                        </PermissionGuard>
                     }
                 />
             </div>

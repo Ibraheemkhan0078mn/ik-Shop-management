@@ -1,58 +1,80 @@
 // ─── api/productReturn.api.js ─────────────────────────────────────────
-import api from "../../../shared/services/api.js";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
-// Generate return number
-export const generateReturnNumber = async () => {
-    const response = await api.get("/product-returns/generate-number");
-    return response.data;
-};
+export const orderReturnApi = baseApi.injectEndpoints({
+    endpoints: (build) => ({
+        // Generate return number
+        generateReturnNumber: build.query({
+            query: () => "/product-returns/generate-number",
+        }),
+        // Get order for return
+        getOrderForReturn: build.query({
+            query: (orderNumber) => `/product-returns/order/${orderNumber}`,
+        }),
+        // Get all order returns
+        getAllOrderReturns: build.query({
+            query: (params) => ({ url: "/product-returns", params }),
+            providesTags: ["OrderReturn"],
+        }),
+        // Get paginated order returns
+        getPaginatedOrderReturns: build.query({
+            query: ({ page = 1, limit = 20, ...filters } = {}) => ({
+                url: "/product-returns/pagination",
+                params: { page, limit, ...filters }
+            }),
+            providesTags: ["OrderReturn"],
+        }),
+        // Get order return by ID
+        getOrderReturnById: build.query({
+            query: (id) => `/product-returns/${id}`,
+            providesTags: (result, error, id) => [{ type: "OrderReturn", id }],
+        }),
+        // Create order return
+        createOrderReturn: build.mutation({
+            query: (data) => ({
+                url: "/product-returns",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["OrderReturn", "Product"],
+        }),
+        // Update order return
+        updateOrderReturn: build.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/product-returns/${id}`,
+                method: "PUT",
+                body: data,
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn"],
+        }),
+        // Delete order return
+        deleteOrderReturn: build.mutation({
+            query: (id) => ({
+                url: `/product-returns/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["OrderReturn"],
+        }),
+        // Update return status
+        updateReturnStatus: build.mutation({
+            query: ({ id, status }) => ({
+                url: `/product-returns/${id}/status`,
+                method: "PATCH",
+                body: { status },
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn"],
+        }),
+    }),
+});
 
-// Get order for return
-export const getOrderForReturn = async (orderNumber) => {
-    const response = await api.get(`/product-returns/order/${orderNumber}`);
-    return response.data;
-};
-
-// Create order return
-export const createOrderReturn = async (data) => {
-    const response = await api.post("/product-returns", data);
-    return response.data;
-};
-
-// Get all order returns
-export const getAllOrderReturns = async (params) => {
-    const response = await api.get("/product-returns", { params });
-    return response.data;
-};
-
-// Get paginated order returns
-export const getPaginatedOrderReturns = async ({ page = 1, limit = 20, ...filters } = {}) => {
-    const response = await api.get("/product-returns/pagination", {
-        params: { page, limit, ...filters }
-    });
-    return response.data;
-};
-
-// Get order return by ID
-export const getOrderReturnById = async (id) => {
-    const response = await api.get(`/product-returns/${id}`);
-    return response.data;
-};
-
-// Update order return
-export const updateOrderReturn = async (id, data) => {
-    const response = await api.put(`/product-returns/${id}`, data);
-    return response.data;
-};
-
-// Delete order return
-export const deleteOrderReturn = async (id) => {
-    const response = await api.delete(`/product-returns/${id}`);
-    return response.data;
-};
-
-// Update return status
-export const updateReturnStatus = async (id, status) => {
-    const response = await api.patch(`/product-returns/${id}/status`, { status });
-    return response.data;
-};
+export const {
+    useGenerateReturnNumberQuery,
+    useGetOrderForReturnQuery,
+    useGetAllOrderReturnsQuery,
+    useGetPaginatedOrderReturnsQuery,
+    useGetOrderReturnByIdQuery,
+    useCreateOrderReturnMutation,
+    useUpdateOrderReturnMutation,
+    useDeleteOrderReturnMutation,
+    useUpdateReturnStatusMutation,
+} = orderReturnApi;

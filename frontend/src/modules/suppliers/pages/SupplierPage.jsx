@@ -46,9 +46,15 @@ export default function SupplierPage() {
                     heading={labels.supplierManagement}
                     subheading={labels.manageSuppliers}
                     leftActions={
-                        <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.addSupplier} />
-                        </div>
+                        <PermissionGuard 
+                            execute={() => setModal({ mode: "create" })} 
+                            permission="suppliers.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addSupplier} />
+                            </div>
+                        </PermissionGuard>
                     }
                 />
             </div>

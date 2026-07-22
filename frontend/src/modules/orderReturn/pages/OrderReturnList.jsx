@@ -8,7 +8,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
-import { getPaginatedOrderReturns, deleteOrderReturn as deleteOrderReturnApi } from "../api/orderReturn.api.js";
+import { useGetPaginatedOrderReturnsQuery, useDeleteOrderReturnMutation } from "../api/orderReturn.api.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 // Status → badge classes, built only from tokens already defined in index.css.
@@ -29,7 +29,7 @@ const OrderReturnList = () => {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getOrderReturnLabels(language);
-    
+
     const TABLE_COLUMNS = [
         { key: "returnNumber", label: labels.returnNumber },
         { key: "referenceOrderNumber", label: labels.orderNumber, hideBelow: "sm" },
@@ -40,45 +40,31 @@ const OrderReturnList = () => {
         { key: "date", label: labels.date, hideBelow: "md" },
         { key: "actions", label: labels.actions, align: "center" },
     ];
-    
+
     const [showModal, setShowModal] = useState(false);
     const [selectedReturn, setSelectedReturn] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [isViewMode, setIsViewMode] = useState(false);
-    const [returns, setReturns] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+    const [currentPage, setCurrentPage] = useState(1);
 
-    const fetchReturns = async (page = 1) => {
-        setLoading(true);
-        try {
-            const response = await getPaginatedOrderReturns({ page, limit: 10 });
-            setReturns(response.data || []);
-            setPagination({
-                page: response.page || 1,
-                limit: response.limit || 10,
-                total: response.total || 0,
-                totalPages: response.totalPages || 0,
-            });
-        } catch (error) {
-            showError(error?.response?.data?.message || "Failed to fetch returns");
-        } finally {
-            setLoading(false);
-        }
+    const { data: returnsData, isLoading, refetch } = useGetPaginatedOrderReturnsQuery({ page: currentPage, limit: 10 });
+    const [deleteOrderReturn] = useDeleteOrderReturnMutation();
+
+    const returns = returnsData?.data || [];
+    const pagination = {
+        page: returnsData?.page || 1,
+        limit: returnsData?.limit || 10,
+        total: returnsData?.total || 0,
+        totalPages: returnsData?.totalPages || 0,
     };
-
-    useEffect(() => {
-        fetchReturns(1);
-    }, []);
 
     const handleDelete = async (id) => {
         if (window.confirm(labels.deleteConfirm)) {
             try {
-                await deleteOrderReturnApi(id);
+                await deleteOrderReturn(id).unwrap();
                 showSuccess(labels.returnDeleted);
-                fetchReturns(pagination.page);
             } catch (error) {
-                showError(error?.response?.data?.message || labels.failedToDelete);
+                showError(error?.data?.message || labels.failedToDelete);
             }
         }
     };
@@ -102,11 +88,11 @@ const OrderReturnList = () => {
         setSelectedReturn(null);
         setIsEditMode(false);
         setIsViewMode(false);
-        fetchReturns(pagination.page);
+        refetch();
     };
 
     const handlePageChange = (newPage) => {
-        fetchReturns(newPage);
+        setCurrentPage(newPage);
     };
 
     return (
@@ -135,9 +121,15 @@ const OrderReturnList = () => {
                             >
                                 <ArrowLeft className="w-4 h-4" />
                             </button>
-                            <div onClick={() => setShowModal(true)}>
-                                <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
-                            </div>
+                            <PermissionGuard 
+                                execute={() => setShowModal(true)} 
+                                permission="orderReturns.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
+                                </div>
+                            </PermissionGuard>
                         </div>
                     }
                     rightActions={

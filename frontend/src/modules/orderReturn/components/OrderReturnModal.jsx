@@ -3,10 +3,10 @@ import React, { useState, useEffect } from "react";
 import { X, Search, Check, Trash2 } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import {
-    generateReturnNumber,
-    getOrderForReturn,
-    createOrderReturn,
-    updateOrderReturn,
+    useGenerateReturnNumberQuery,
+    useGetOrderForReturnQuery,
+    useCreateOrderReturnMutation,
+    useUpdateOrderReturnMutation,
 } from "../api/orderReturn.api.js";
 
 // ─── Constants ────────────────────────────────────────────────
@@ -149,13 +149,17 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode })
     const [orderFetching, setOrderFetching] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // RTK Query hooks
+    const { data: returnNumberData } = useGenerateReturnNumberQuery(undefined, { skip: isEditMode || isViewMode || !isOpen });
+    const [fetchOrder, { isLoading: orderFetchingQuery }] = useGetOrderForReturnQuery();
+    const [createOrderReturn] = useCreateOrderReturnMutation();
+    const [updateOrderReturn] = useUpdateOrderReturnMutation();
+
     useEffect(() => {
-        if (!isEditMode && !isViewMode && isOpen) {
-            generateReturnNumber()
-                .then((res) => setGeneratedReturnNumber(res.data))
-                .catch(console.error);
+        if (returnNumberData?.data) {
+            setGeneratedReturnNumber(returnNumberData.data);
         }
-    }, [isEditMode, isViewMode, isOpen]);
+    }, [returnNumberData]);
 
     useEffect(() => {
         if ((isEditMode || isViewMode) && editData) {
@@ -221,8 +225,8 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode })
         setOrderFetchError(null);
         setFetchedOrder(null);
         try {
-            const res = await getOrderForReturn(orderNumber);
-            setFetchedOrder(res.data);
+            const res = await fetchOrder(orderNumber).unwrap();
+            setFetchedOrder(res);
         } catch (err) {
             setOrderFetchError(err);
         } finally {
@@ -240,7 +244,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode })
         try {
             const itemsPayload = returnItems.map(toSubmittableItem);
             if (isEditMode && editData) {
-                await updateOrderReturn(editData._id, { items: itemsPayload, notes });
+                await updateOrderReturn({ id: editData._id, items: itemsPayload, notes }).unwrap();
                 showSuccess("Order return updated successfully");
             } else {
                 await createOrderReturn({
@@ -250,13 +254,13 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode })
                     customerName: fetchedOrder.customerName,
                     items: itemsPayload,
                     notes,
-                });
+                }).unwrap();
                 showSuccess("Order return created successfully");
             }
             resetForm();
             onClose();
         } catch (err) {
-            showError(err?.response?.data?.message || err?.message || "Failed to save order return");
+            showError(err?.data?.message || err?.message || "Failed to save order return");
         } finally {
             setSubmitting(false);
         }

@@ -99,12 +99,24 @@ export default function PurchaseReturnPage() {
                 subheading={labels.manageReturns}
                 leftActions={
                     <>
-                        <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
-                        </div>
-                        <div onClick={() => setApprovalModal(true)}>
-                            <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveReturn} />
-                        </div>
+                        <PermissionGuard 
+                            execute={() => setModal({ mode: "create" })} 
+                            permission="purchaseReturns.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addReturn} />
+                            </div>
+                        </PermissionGuard>
+                        <PermissionGuard 
+                            execute={() => setApprovalModal(true)} 
+                            permission="purchaseReturns.approve" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveReturn} />
+                            </div>
+                        </PermissionGuard>
                     </>
                 }
             />

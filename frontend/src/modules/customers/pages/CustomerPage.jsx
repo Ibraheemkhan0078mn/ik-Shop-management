@@ -45,9 +45,15 @@ export default function CustomerPage() {
                     heading={labels.customerManagement}
                     subheading={labels.manageCustomers}
                     leftActions={
-                        <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.addCustomer} />
-                        </div>
+                        <PermissionGuard 
+                            execute={() => setModal({ mode: "create" })} 
+                            permission="customers.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addCustomer} />
+                            </div>
+                        </PermissionGuard>
                     }
                 />
             </div>

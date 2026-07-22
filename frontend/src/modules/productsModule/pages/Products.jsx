@@ -206,9 +206,15 @@ export default function Products() {
                             <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
                                 <ScreenTabButton lucideIcon={Filter} text="Filter" />
                             </div>
-                            <div id="products-add-button" onClick={() => { setModalMode("create"); setIsModalOpen(true); }}>
-                                <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
-                            </div>
+                            <PermissionGuard 
+                                execute={() => { setModalMode("create"); setIsModalOpen(true); }} 
+                                permission="products.create" 
+                                isConfirmation={false}
+                            >
+                                <div id="products-add-button">
+                                    <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
+                                </div>
+                            </PermissionGuard>
                         </>
                     }
                 />

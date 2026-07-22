@@ -1,6 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Check, X, DollarSign } from "lucide-react";
+import { Plus, Check, X, DollarSign, Eye } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
@@ -72,9 +72,15 @@ export default function ProductPurchasePage() {
                     heading={labels.purchaseManagement}
                     subheading={labels.managePurchases}
                     leftActions={
-                        <div onClick={() => setModal({ mode: "create" })}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.addPurchase} />
-                        </div>
+                        <PermissionGuard 
+                            execute={() => setModal({ mode: "create" })} 
+                            permission="purchases.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addPurchase} />
+                            </div>
+                        </PermissionGuard>
                     }
                 />
             </div>
@@ -109,6 +115,7 @@ export default function ProductPurchasePage() {
                                         onDelete={() => handleDelete(p._id)}
                                         onStatusUpdate={handleStatusUpdate}
                                         onPayment={() => setPaymentModal(p)}
+                                        onView={(purchase) => navigate(`/purchases/${purchase._id}`)}
                                     />
                                 ))}
                             </tbody>
@@ -125,7 +132,7 @@ export default function ProductPurchasePage() {
     );
 }
 
-function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) {
+function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, onView }) {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -174,14 +181,21 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) 
     };
 
     return (
-        <tr className="cursor-pointer transition border-b border-edge hover:bg-surface-muted"
-            onClick={() => navigate(`/purchases/${purchase._id}`)}>
+        <tr className="transition border-b border-edge hover:bg-surface-muted">
 
             <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                 {purchase?.invoiceNumber ?? "—"}
             </td>
             <td className="px-4 py-3 text-center text-ink">
-                {purchase?.items?.length ?? 0}
+                <div className="text-sm font-medium">{purchase?.items?.length ?? 0}</div>
+                {purchase?.items?.length > 0 && (
+                    <div className="text-xs text-[var(--muted)] max-w-[150px] truncate" title={purchase.items.map(i => i.productName || i.product?.name).join(', ')}>
+                        {purchase.items.slice(0, 2).map((item, idx) => (
+                            <span key={idx}>{item.productName || item.product?.name}</span>
+                        )).join(', ')}
+                        {purchase.items.length > 2 && '...'}
+                    </div>
+                )}
             </td>
             <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
                 Rs {(purchase?.totalAmount ?? 0).toLocaleString()}
@@ -199,6 +213,13 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment }) 
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                    <button 
+                        onClick={() => onView?.(purchase)}
+                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                        title="View Details"
+                    >
+                        <Eye className="w-3 h-3" />
+                    </button>
                     {status === 'ordered' && (
                         <>
                             <PermissionGuard execute={() => onStatusUpdate(purchaseId, 'delivered')} permission="purchases.update" isConfirmation={true}>

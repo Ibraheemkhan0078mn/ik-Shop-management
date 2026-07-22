@@ -130,6 +130,20 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
           />
         </div>
 
+        {/* Product Code Filter */}
+        <div>
+          <label className="text-xs font-semibold text-[var(--muted)] mb-2 block">
+            Product Code
+          </label>
+          <input
+            type="text"
+            placeholder="Enter product code"
+            value={filters.productCode || ""}
+            onChange={(e) => updateFilter("productCode", e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+          />
+        </div>
+
         {/* Category Filter */}
         <div>
           <button

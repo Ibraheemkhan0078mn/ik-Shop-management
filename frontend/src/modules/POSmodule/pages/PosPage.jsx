@@ -76,6 +76,9 @@ const ProductTableRow = ({ product, onAddToCart }) => {
       </td>
       <td className="p-2">
         <p className="text-sm font-semibold text-[var(--ink)] leading-tight">{product.name}</p>
+        {product.productCode && (
+          <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">{product.productCode}</p>
+        )}
         {product.category?.name && (
           <p className="text-xs text-[var(--muted)] mt-0.5">{product.category.name}</p>
         )}

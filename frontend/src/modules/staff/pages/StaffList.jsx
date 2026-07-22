@@ -63,12 +63,24 @@ export default function StaffList() {
                     subheading={labels.manageStaff}
                     leftActions={
                         <>
-                            <div onClick={() => navigate("/staff/create")}>
-                                <ScreenTabButton lucideIcon={Plus} text={labels.addStaff} />
-                            </div>
-                            <div onClick={() => navigate("/staff/attendance")}>
-                                <ScreenTabButton lucideIcon={Calendar} text={labels.markAttendance} />
-                            </div>
+                            <PermissionGuard 
+                                execute={() => navigate("/staff/create")} 
+                                permission="staff.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Plus} text={labels.addStaff} />
+                                </div>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => navigate("/staff/attendance")} 
+                                permission="staff.attendance" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Calendar} text={labels.markAttendance} />
+                                </div>
+                            </PermissionGuard>
                         </>
                     }
                 />

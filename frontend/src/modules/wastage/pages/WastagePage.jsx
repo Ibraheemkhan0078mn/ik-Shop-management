@@ -74,12 +74,24 @@ export default function WastagePage() {
                     subheading={labels.manageWastage}
                     leftActions={
                         <>
-                            <div onClick={() => setModal({ mode: "create" })}>
-                                <ScreenTabButton lucideIcon={Plus} text={labels.addWastage} />
-                            </div>
-                            <div onClick={() => setApprovalModal(true)}>
-                                <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveWastage} />
-                            </div>
+                            <PermissionGuard 
+                                execute={() => setModal({ mode: "create" })} 
+                                permission="wastage.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Plus} text={labels.addWastage} />
+                                </div>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => setApprovalModal(true)} 
+                                permission="wastage.approve" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={CheckCircle} text={labels.approveWastage} />
+                                </div>
+                            </PermissionGuard>
                         </>
                     }
                 />

@@ -11,6 +11,7 @@ import {
 import QarzaPaymentModal from "../components/QarzaPaymentModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import { hasPermission } from "../../../shared/utilities/permissionUtils.js";
 
 const STATUS_COLOR = {
     cashin: { bg: "rgba(16,185,129,0.1)", text: "#10b981", Icon: ArrowDownLeft },
@@ -22,6 +23,7 @@ export default function EachQarzaAccountRecords() {
     console.log("the account id", id)
     const navigate = useNavigate();
     const language = useSelector(s => s.auth?.user?.language ?? "en");
+    const { permissions = [], role } = useSelector(s => s.auth) ?? {};
 
     const { data: summary } = useAccountPaymentsSummary(id);
     const [deletePayment] = useDeleteQarzaPayment();
@@ -77,10 +79,12 @@ export default function EachQarzaAccountRecords() {
 
             {/* toolbar */}
             <div className="flex flex-wrap items-center gap-3 mb-5">
-                <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                    <Plus className="w-4 h-4" />
-                    {language === "en" ? "Add Payment" : "ادائیگی شامل کریں"}
-                </button>
+                {(role === "admin" || hasPermission(permissions, "accounts.payment.create")) && (
+                    <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
+                        <Plus className="w-4 h-4" />
+                        {language === "en" ? "Add Payment" : "ادائیگی شامل کریں"}
+                    </button>
+                )}
                 {/* <select
                     value={sourceFilter}
                     onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
@@ -218,20 +222,24 @@ export default function EachQarzaAccountRecords() {
                                             {/* actions */}
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <button onClick={() => setModal({ mode: "update", payment: p })}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-lg transition"
-                                                        style={{ color: "var(--muted)" }}
-                                                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(p._id)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-lg transition"
-                                                        style={{ color: "var(--muted)" }}
-                                                        onMouseEnter={e => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    {(role === "admin" || hasPermission(permissions, "accounts.payment.update")) && (
+                                                        <button onClick={() => setModal({ mode: "update", payment: p })}
+                                                            className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                                                            style={{ color: "var(--muted)" }}
+                                                            onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                    {(role === "admin" || hasPermission(permissions, "accounts.payment.delete")) && (
+                                                        <button onClick={() => handleDelete(p._id)}
+                                                            className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                                                            style={{ color: "var(--muted)" }}
+                                                            onMouseEnter={e => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

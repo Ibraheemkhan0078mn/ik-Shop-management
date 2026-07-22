@@ -32,7 +32,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["PurchaseReturn"],
+            invalidatesTags: ["PurchaseReturn", "Product"],
         }),
         updatePurchaseReturn: build.mutation({
             query: ({ id, ...data }) => ({

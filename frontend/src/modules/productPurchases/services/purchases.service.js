@@ -36,7 +36,7 @@ export const purchaseApi = baseApi.injectEndpoints({
         // Create
         createPurchase: build.mutation({
             query: (body) => ({ url: "/purchases", method: "POST", body }),
-            invalidatesTags: ["Purchase"],
+            invalidatesTags: ["Purchase", "Product"],
         }),
 
         // Update

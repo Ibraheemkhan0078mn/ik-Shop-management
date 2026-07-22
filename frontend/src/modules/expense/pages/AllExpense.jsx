@@ -50,12 +50,24 @@ export default function AllExpense() {
                     subheading={labels.manageExpenses}
                     leftActions={
                         <>
-                            <div onClick={() => setModal("create")}>
-                                <ScreenTabButton lucideIcon={Plus} text={labels.addExpense} />
-                            </div>
-                            <div onClick={() => setCatModal(true)}>
-                                <ScreenTabButton lucideIcon={Tag} text={labels.category} />
-                            </div>
+                            <PermissionGuard 
+                                execute={() => setModal("create")} 
+                                permission="expenses.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Plus} text={labels.addExpense} />
+                                </div>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => setCatModal(true)} 
+                                permission="expenses.category.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Tag} text={labels.category} />
+                                </div>
+                            </PermissionGuard>
                         </>
                     }
                 />

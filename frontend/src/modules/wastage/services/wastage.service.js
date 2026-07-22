@@ -26,7 +26,7 @@ export const wastageApi = baseApi.injectEndpoints({
 
         createWastage: build.mutation({
             query: (body) => ({ url: "/wastages", method: "POST", body }),
-            invalidatesTags: ["Wastage"],
+            invalidatesTags: ["Wastage", "Product"],
         }),
 
         updateWastage: build.mutation({
