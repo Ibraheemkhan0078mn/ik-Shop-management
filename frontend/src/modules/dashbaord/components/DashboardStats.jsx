@@ -273,36 +273,35 @@ export default function DashboardStats({
             <div
                 className="
         relative p-4 rounded-2xl
-        bg-(--surface) dark:bg-(--surface)
-        shadow-sm hover:shadow-md
+        bg-[var(--surface)] shadow-sm hover:shadow-md
         transition-all duration-300
-        w-full max-w-md border border-(--border)
+        w-full max-w-md border border-[var(--border)]
       "
                 // style={{ border: `1px solid gray`,  }}
             >
                 {/* Header */}
-                <div className="flex flex-col  pb-0  dark:border-(--border)">
+                <div className="flex flex-col  pb-0">
                     <div className="flex justify-between">
                         <span
-                            className={`2xl:text-lg font-semibold text-(--muted) dark:text-(--muted) `}
+                            className={`2xl:text-lg font-semibold text-[var(--muted)] `}
                             style={{ color: card.color }}
                         >
                             {card?.title}
                         </span>
                         <div className=" flex items-center justify-center rounded-full w-8 h-8 z-10">
-                            <Icon className="w-4 h-4 text-(--muted)" />
+                            <Icon className="w-4 h-4 text-[var(--muted)]" />
                         </div>
                     </div>
 
                     {/* Value + Link */}
                     <div className="flex items-center justify-between pt-4 border-t mt-5">
-                        <span className="text-xl font-bold text-(--muted) dark:text-white">
+                        <span className="text-xl font-bold text-[var(--ink)]">
                             {card.value}
                         </span>
 
                         {card.url && (
                             <Link
-                                className="text-xs text-(--muted) underline transition-all duration-300 hover:scale-105"
+                                className="text-xs text-[var(--muted)] underline transition-all duration-300 hover:scale-105"
                                 // style={{ color: theme.base }}
                                 to={card.url}
                             >
@@ -323,9 +322,9 @@ export default function DashboardStats({
             <div className="relative w-44 ml-auto">
                 <button
                     onClick={() => setOpen(!open)}
-                    className="w-full flex justify-between items-center px-4 py-2 bg-(--surface) dark:bg-(--surface) border border-(--border) dark:border-(--border) rounded-full shadow-sm hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-(--accent-2)/20 dark:focus:ring-(--accent-2)/20"
+                    className="w-full flex justify-between items-center px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-full shadow-sm hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                 >
-                    <span className="text-sm font-medium text-(--ink) dark:text-(--ink)">
+                    <span className="text-sm font-medium text-[var(--ink)]">
                         {filterOptions.find(opt => opt.key === selected)?.label || selected}
                     </span>
                     <ChevronDown
@@ -334,15 +333,15 @@ export default function DashboardStats({
                 </button>
 
                 {open && (
-                    <ul className="absolute right-0 mt-2 w-full bg-(--surface) dark:bg-(--surface) rounded-xl shadow-lg border border-(--border) dark:border-(--border) z-20 overflow-hidden">
+                    <ul className="absolute right-0 mt-2 w-full bg-[var(--surface)] rounded-xl shadow-lg border border-[var(--border)] z-20 overflow-hidden">
                         {filterOptions.map((opt) => (
                             <li
                                 key={opt.key}
                                 onClick={() => handleFilterSelect(opt.key)}
                                 className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
                                     opt.key === selected
-                                        ? "bg-(--surface-muted) dark:bg-(--surface) font-semibold text-(--ink) dark:text-white"
-                                        : "hover:bg-(--surface-muted) dark:hover:bg-(--surface-muted) text-(--ink) dark:text-(--muted)"
+                                        ? "bg-[var(--surface-muted)] font-semibold text-[var(--ink)]"
+                                        : "hover:bg-[var(--surface-muted)] text-[var(--ink)]"
                                 }`}
                             >
                                 {opt.label}
@@ -353,10 +352,10 @@ export default function DashboardStats({
 
                 {/* Custom Date Range Picker */}
                 {showDatePicker && (
-                    <div className="absolute right-0 mt-2 p-4 w-64 bg-(--surface) dark:bg-(--surface) rounded-xl shadow-lg border border-(--border) dark:border-(--border) z-20">
+                    <div className="absolute right-0 mt-2 p-4 w-64 bg-[var(--surface)] rounded-xl shadow-lg border border-[var(--border)] z-20">
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-sm font-medium text-(--ink) dark:text-(--muted) mb-1">
+                                <label className="block text-sm font-medium text-[var(--ink)] mb-1">
                                     From
                                 </label>
                                 <input
@@ -368,11 +367,11 @@ export default function DashboardStats({
                                             from: e.target.value,
                                         }))
                                     }
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-(--accent-2)"
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-(--ink) dark:text-(--muted) mb-1">
+                                <label className="block text-sm font-medium text-[var(--ink)] mb-1">
                                     To
                                 </label>
                                 <input
@@ -384,19 +383,19 @@ export default function DashboardStats({
                                             to: e.target.value,
                                         }))
                                     }
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-(--accent-2)"
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                                 />
                             </div>
                             <div className="flex justify-end gap-2 mt-2">
                                 <button
                                     onClick={() => setShowDatePicker(false)}
-                                    className="px-3 py-1 text-sm border rounded-lg hover:bg-(--surface-muted)"
+                                    className="px-3 py-1 text-sm border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)]"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleCustomDateSubmit}
-                                    className="px-3 py-1 text-sm bg-(--accent-2) text-white rounded-lg hover:bg-[#0b5f59]"
+                                    className="px-3 py-1 text-sm rounded-lg text-white transition-colors" style={{ background: 'var(--accent-2)' }}
                                 >
                                     Apply
                                 </button>

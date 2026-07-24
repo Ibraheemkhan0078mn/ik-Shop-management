@@ -5,7 +5,7 @@ import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import { useNavigate } from "react-router-dom";
 
-export default function PurchasesReports() {
+export default function PurchaseReport() {
     const navigate = useNavigate();
 
     // ---- UI state ----
@@ -102,8 +102,8 @@ export default function PurchasesReports() {
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="today">Today</option>
-                            <option value="week">This Week</option>
                             <option value="month">This Month</option>
+                            <option value="3month">Last 3 Months</option>
                             <option value="year">This Year</option>
                             <option value="custom">Custom Range</option>
                         </select>
@@ -468,7 +468,7 @@ Your job:
 
 // const SECTION_KEYS = ['suppliers', 'categories'];
 
-// export default function PurchasesReports() {
+// export default function PurchaseReport() {
 //     const targetRef = useRef(null);
 //     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 //     const [period, setPeriod] = useState("today");

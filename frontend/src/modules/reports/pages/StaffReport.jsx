@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Download, RefreshCw, Users, DollarSign, TrendingUp, Clock, Calendar } from "lucide-react";
+import React, { useState, useRef, useMemo } from "react";
+import { Download, RefreshCw, Users, DollarSign, TrendingUp, Clock, Calendar, Filter } from "lucide-react";
 import { useGetStaffReportQuery } from "../services/reports.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
@@ -14,14 +14,55 @@ import {
 export default function StaffReport() {
     const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [staffId, setStaffId] = useState("");
     const [expandedSections, setExpandedSections] = useState({});
 
+    // Calculate date range based on period
+    const getDatesFromPeriod = (periodValue) => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        switch (periodValue) {
+            case "today":
+                return {
+                    from: today.toISOString().split('T')[0],
+                    to: today.toISOString().split('T')[0]
+                };
+            case "month":
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                return {
+                    from: monthStart.toISOString().split('T')[0],
+                    to: monthEnd.toISOString().split('T')[0]
+                };
+            case "3month":
+                const threeMonthStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                const threeMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                return {
+                    from: threeMonthStart.toISOString().split('T')[0],
+                    to: threeMonthEnd.toISOString().split('T')[0]
+                };
+            case "year":
+                const yearStart = new Date(now.getFullYear(), 0, 1);
+                const yearEnd = new Date(now.getFullYear(), 11, 31);
+                return {
+                    from: yearStart.toISOString().split('T')[0],
+                    to: yearEnd.toISOString().split('T')[0]
+                };
+            case "custom":
+            default:
+                return { from: fromDate, to: toDate };
+        }
+    };
+
+    const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
+    
     const { data: reportData, isLoading, error, refetch } = useGetStaffReportQuery({
-        fromDate,
-        toDate,
+        fromDate: period === "custom" ? fromDate : dates.from,
+        toDate: period === "custom" ? toDate : dates.to,
         staffId,
     });
     const { data: staffList } = useGetStaffListQuery({ status: 'active' });
@@ -31,6 +72,7 @@ export default function StaffReport() {
     }
 
     const handleRefresh = () => refetch();
+    const showLoader = isLoading;
 
     const toggleSection = (key) => {
         setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -41,63 +83,80 @@ export default function StaffReport() {
     const staffMetrics = reportData?.data?.staffMetrics || [];
 
     return (
-        <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
+        <div className="p-6 min-h-screen bg-[var(--app-bg)]">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Staff Report</h1>
-                    <p className="text-sm" style={{ color: 'var(--muted)' }}>Comprehensive staff performance, attendance, and salary report</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Staff Report</h1>
+                    <p className="text-sm text-[var(--muted)]">Comprehensive staff performance, attendance, and salary report</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
                         onClick={handleRefresh}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border transition"
-                        style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--ink)' }}
+                        className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
                         Refresh
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
+                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        <Download size={16} />
                         Export PDF
                     </button>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="rounded-xl border shadow-sm mb-6 p-4 no-print" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="card p-4 mb-6 no-print">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter size={16} className="text-[var(--accent-2)]" />
+                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>FROM DATE</label>
-                        <input
-                            type="date"
-                            value={fromDate}
-                            onChange={(e) => setFromDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border text-sm"
-                            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
-                        />
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <select
+                            value={period}
+                            onChange={(e) => setPeriod(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                        >
+                            <option value="today">Today</option>
+                            <option value="month">This Month</option>
+                            <option value="3month">Last 3 Months</option>
+                            <option value="year">This Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
                     </div>
+                    {period === "custom" && (
+                        <>
+                            <div>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                />
+                            </div>
+                        </>
+                    )}
                     <div>
-                        <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>TO DATE</label>
-                        <input
-                            type="date"
-                            value={toDate}
-                            onChange={(e) => setToDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border text-sm"
-                            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>STAFF MEMBER</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Staff Member</label>
                         <select
                             value={staffId}
                             onChange={(e) => setStaffId(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border text-sm"
-                            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
+                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="">All Staff</option>
                             {staffList?.data?.map(staff => (
@@ -105,21 +164,14 @@ export default function StaffReport() {
                             ))}
                         </select>
                     </div>
-                    <div className="flex items-end">
-                        <button
-                            onClick={handleRefresh}
-                            className="w-full px-4 py-2 rounded-lg transition"
-                            style={{ background: 'var(--accent-2)', color: 'white' }}
-                        >
-                            Apply Filters
-                        </button>
-                    </div>
                 </div>
             </div>
 
             {/* Content */}
-            {isLoading ? (
-                <LoadingSpinner />
+            {showLoader ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
+                </div>
             ) : (
                 <div ref={targetRef}>
                     {/* KPI Grid Row 1 */}

@@ -1,14 +1,14 @@
 import React, { useState, useRef } from "react";
-import { Calendar, Download, RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet } from "lucide-react";
+import { Calendar, RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter } from "lucide-react";
 import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
 
 const PERIOD_OPTIONS = [
     { value: "today", label: "Today" },
-    { value: "yesterday", label: "Yesterday" },
-    { value: "week", label: "This Week" },
     { value: "month", label: "This Month" },
+    { value: "3month", label: "Last 3 Months" },
+    { value: "year", label: "This Year" },
     { value: "custom", label: "Custom Range" },
 ];
 
@@ -234,13 +234,14 @@ export default function MainBusinessReport() {
         filters.toDate = toDate;
     }
 
-    const { data, isLoading, error, refetch } = useGetMainBusinessReportQuery(filters);
+    const { data, isLoading, isFetching, error, refetch } = useGetMainBusinessReportQuery(filters);
 
     if (error) {
         showError(error?.data?.message || "Failed to load report");
     }
 
     const handleRefresh = () => refetch();
+    const showLoader = isLoading || isFetching;
 
     const toggleSection = (key) => {
         setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -264,93 +265,91 @@ export default function MainBusinessReport() {
     const qarzaNet = (summary.totalReceivable || 0) - (summary.totalPayable || 0);
 
     return (
-        <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
-            <div className="flex items-center justify-between mb-6">
+        <div className="p-6 min-h-screen bg-[var(--app-bg)]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Main Business Report</h1>
-                    <p className="text-sm" style={{ color: 'var(--muted)' }}>Complete business overview with detailed breakdowns</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Main Business Report</h1>
+                    <p className="text-sm text-[var(--muted)]">Complete business overview with detailed breakdowns</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
                         onClick={handleRefresh}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border transition"
-                        style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--ink)' }}
+                        className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
                         Refresh
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition"
+                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        <Download size={16} />
                         Export PDF
                     </button>
                 </div>
             </div>
 
-            {/* Date filter - applies to entire report */}
-            <div className="rounded-xl border shadow-sm mb-6 no-print" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="flex items-center justify-between p-4 flex-wrap gap-3">
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <Calendar size={20} style={{ color: 'var(--muted)' }} />
-                        <div className="flex gap-2 flex-wrap">
-                            {PERIOD_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => setPeriod(opt.value)}
-                                    className="px-4 py-2 rounded-lg transition"
-                                    style={{
-                                        background: period === opt.value ? 'var(--accent-2)' : 'var(--surface-muted)',
-                                        color: period === opt.value ? 'white' : 'var(--ink)'
-                                    }}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
+            {/* Date filter */}
+            <div className="card p-4 mb-6 no-print">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter size={16} className="text-[var(--accent-2)]" />
+                    <span className="text-sm font-semibold text-[var(--ink)]">Period Filter</span>
+                </div>
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex gap-2 flex-wrap">
+                        {PERIOD_OPTIONS.map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setPeriod(opt.value)}
+                                className="px-4 py-2 rounded-lg transition-colors"
+                                style={{
+                                    background: period === opt.value ? 'var(--accent-2)' : 'var(--surface-muted)',
+                                    color: period === opt.value ? 'white' : 'var(--ink)'
+                                }}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
                     </div>
                     <div className="flex gap-2">
                         <button
                             onClick={handleExpandAll}
-                            className="px-3 py-1 text-sm rounded border transition"
-                            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                            className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
+                            style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
                             Expand All
                         </button>
                         <button
                             onClick={handleCollapseAll}
-                            className="px-3 py-1 text-sm rounded border transition"
-                            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                            className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
+                            style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
                             Collapse All
                         </button>
                     </div>
                 </div>
                 {period === "custom" && (
-                    <div className="flex gap-2 px-4 pb-4">
+                    <div className="flex gap-2 mt-4">
                         <input
                             type="date"
                             value={fromDate}
                             onChange={(e) => setFromDate(e.target.value)}
-                            className="px-3 py-2 rounded-lg border"
-                            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
+                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         />
                         <input
                             type="date"
                             value={toDate}
                             onChange={(e) => setToDate(e.target.value)}
-                            className="px-3 py-2 rounded-lg border"
-                            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
+                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         />
                     </div>
                 )}
             </div>
 
-            {isLoading ? (
-                <div className="rounded-xl border shadow-sm flex items-center justify-center p-12" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    <RefreshCw className="animate-spin" size={40} style={{ color: 'var(--accent-2)' }} />
+            {showLoader ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
                 <div ref={targetRef}>
@@ -561,80 +560,6 @@ export default function MainBusinessReport() {
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
-
-                    {/* Transaction Summary counts (kept, informational) */}
-                    <div className="rounded-xl border shadow-sm p-6 mt-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>Transaction Summary</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Sales Count</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.salesCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Purchase Count</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.purchaseCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Expense Count</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.expenseCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Wastage Count</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.wastageCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Purchase Returns</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.purchaseReturnCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Sale Returns</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.productReturnCount || 0}</p>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Salary Payments</p>
-                                <p className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{details.salaryPaymentCount || 0}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Profit/Loss Calculation breakdown, kept as-is */}
-                    <div className="rounded-xl border shadow-sm p-4 mt-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                        <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>Profit/Loss Calculation</h3>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>+ Sales:</span>
-                                <span>Rs {summary.totalSales?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>- Purchases:</span>
-                                <span>Rs {summary.totalPurchases?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>- Expenses:</span>
-                                <span>Rs {summary.totalExpenses?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>- Wastage:</span>
-                                <span>Rs {summary.totalWastage?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>- Salaries:</span>
-                                <span>Rs {summary.totalSalaries?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>- Sale Returns:</span>
-                                <span>Rs {summary.totalProductReturns?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm" style={{ color: 'var(--ink)' }}>
-                                <span>+ Purchase Returns:</span>
-                                <span>Rs {summary.totalPurchaseReturns?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between text-sm font-bold pt-2 border-t" style={{ borderColor: 'var(--border)', color: summary.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                                <span>= Net:</span>
-                                <span>Rs {summary.netProfit?.toLocaleString() || 0}</span>
-                            </div>
                         </div>
                     </div>
                 </div>

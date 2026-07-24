@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Truck, DollarSign, RefreshCw, Filter, Eye, Star, AlertCircle, X } from "lucide-react";
 import { useGetSupplierReportQuery } from "../services/reports.service.js";
 import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 
-export default function SupplierKPIReport() {
+export default function SupplierReport() {
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -53,12 +53,12 @@ export default function SupplierKPIReport() {
         }
     };
 
-    const dates = getDatesFromPeriod(period);
-    const filters = { 
+    const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
+    const filters = useMemo(() => ({ 
         fromDate: period === "custom" ? fromDate : dates.from, 
         toDate: period === "custom" ? toDate : dates.to, 
         supplierId, sortBy, sortOrder, paymentStatus, search 
-    };
+    }), [period, fromDate, toDate, dates.from, dates.to, supplierId, sortBy, sortOrder, paymentStatus, search]);
     
     const { data, isLoading, isFetching, error, refetch } = useGetSupplierReportQuery(filters);
     const { data: suppliersData } = useSuppliers();

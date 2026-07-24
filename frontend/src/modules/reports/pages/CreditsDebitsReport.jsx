@@ -258,7 +258,7 @@ export default function CreditsDebitsReport() {
                             <option value="month">This Month</option>
                             <option value="3month">Last 3 Months</option>
                             <option value="year">This Year</option>
-                            <option value="custom">Custom</option>
+                            <option value="custom">Custom Range</option>
                         </select>
                     </div>
                     {period === "custom" && (

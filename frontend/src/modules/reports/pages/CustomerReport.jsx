@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Users, DollarSign, RefreshCw, Filter, Eye, Star, AlertCircle, Calendar, ArrowUp, ArrowDown, X } from "lucide-react";
 import { useGetCustomerReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 
-export default function CustomerKPIReport() {
+export default function CustomerReport() {
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -51,12 +51,12 @@ export default function CustomerKPIReport() {
         }
     };
 
-    const dates = getDatesFromPeriod(period);
-    const filters = { 
+    const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
+    const filters = useMemo(() => ({ 
         fromDate: period === "custom" ? fromDate : dates.from, 
         toDate: period === "custom" ? toDate : dates.to, 
         customerType, sortBy, sortOrder, search 
-    };
+    }), [period, fromDate, toDate, dates.from, dates.to, customerType, sortBy, sortOrder, search]);
     
     const { data, isLoading, isFetching, error, refetch } = useGetCustomerReportQuery(filters);
 
