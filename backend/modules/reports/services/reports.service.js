@@ -231,17 +231,54 @@ export const getSalesReport = async (filters = {}) => {
 // Purchase Report
 export const getPurchaseReport = async (filters = {}) => {
     const PurchaseModel = getPurchaseModel();
-    const { fromDate, toDate, supplierId, search, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, supplierId, paymentStatus, deliveryStatus, isRejected, search, period, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
 
-    if (fromDate || toDate) {
+    // Handle period-based date filtering
+    if (period) {
+        let dateRange;
+        switch (period) {
+            case "today":
+                dateRange = getTodayRange();
+                matchQuery.createdAt = { $gte: dateRange.startOfDay, $lte: dateRange.endOfDay };
+                break;
+            case "week":
+                dateRange = getWeekRange();
+                matchQuery.createdAt = { $gte: dateRange.startOfWeek, $lte: dateRange.endOfWeek };
+                break;
+            case "month":
+                dateRange = getMonthRange();
+                matchQuery.createdAt = { $gte: dateRange.startOfMonth, $lte: dateRange.endOfMonth };
+                break;
+            case "year":
+                const now = new Date();
+                const startOfYear = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+                const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                matchQuery.createdAt = { $gte: startOfYear, $lte: endOfYear };
+                break;
+        }
+    } else if (fromDate || toDate) {
         const dateFilter = buildDateFilter(fromDate, toDate);
         matchQuery.createdAt = dateFilter.createdAt;
     }
 
     if (supplierId) {
         matchQuery.supplier = supplierId;
+    }
+
+    if (paymentStatus && paymentStatus !== "all") {
+        matchQuery.paymentStatus = paymentStatus;
+    }
+
+    if (deliveryStatus && deliveryStatus !== "all") {
+        matchQuery.status = deliveryStatus === "received" ? "delivered" : deliveryStatus;
+    }
+
+    if (isRejected === "yes") {
+        matchQuery.status = "rejected";
+    } else if (isRejected === "no") {
+        matchQuery.status = { $ne: "rejected" };
     }
 
     if (search) {
@@ -255,7 +292,7 @@ export const getPurchaseReport = async (filters = {}) => {
 
     const [data, total] = await Promise.all([
         PurchaseModel.find(matchQuery, null, {
-            populate: ["supplier", "items.product"],
+            populate: ["supplier"],
             sort: { createdAt: -1 },
             skip: skip,
             limit: limit
@@ -263,16 +300,48 @@ export const getPurchaseReport = async (filters = {}) => {
         PurchaseModel.countDocuments(matchQuery)
     ]);
 
-    // Calculate totals
+    // Calculate totals and KPIs
     const totals = await PurchaseModel.aggregate([
         { $match: matchQuery },
         {
             $group: {
                 _id: null,
                 totalPurchases: { $sum: "$totalAmount" },
-                totalItems: { $sum: { $size: "$items" } }
+                totalPaid: { $sum: { $cond: [{ $eq: ["$paymentStatus", "full"] }, "$totalAmount", 0] } },
+                totalDue: { $sum: { $cond: [{ $ne: ["$paymentStatus", "full"] }, { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }, 0] } },
+                totalDeliveredCount: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
+                totalRejectedCount: { $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] } },
+                uniqueSuppliers: { $addToSet: "$supplier" }
             }
         }
+    ]);
+
+    const summary = totals[0] || {};
+    const totalSuppliers = summary.uniqueSuppliers ? summary.uniqueSuppliers.length : 0;
+
+    // Get supplier-wise breakdown
+    const supplierBreakdown = await PurchaseModel.aggregate([
+        { $match: matchQuery },
+        {
+            $lookup: {
+                from: "suppliers",
+                localField: "supplier",
+                foreignField: "_id",
+                as: "supplier"
+            }
+        },
+        { $unwind: "$supplier" },
+        {
+            $group: {
+                _id: "$supplier.name",
+                supplierId: { $first: "$supplier._id" },
+                totalAmount: { $sum: "$totalAmount" },
+                paidAmount: { $sum: { $cond: [{ $eq: ["$paymentStatus", "full"] }, "$totalAmount", { $ifNull: ["$paidAmount", 0] }] } },
+                dueAmount: { $sum: { $cond: [{ $ne: ["$paymentStatus", "full"] }, { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }, 0] } },
+                billsCount: { $sum: 1 }
+            }
+        },
+        { $sort: { totalAmount: -1 } }
     ]);
 
     return {
@@ -282,10 +351,15 @@ export const getPurchaseReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalPurchases: totals[0]?.totalPurchases || 0,
-            totalItems: totals[0]?.totalItems || 0,
-            totalPurchaseOrders: total
-        }
+            totalPurchases: summary.totalPurchases || 0,
+            totalPaid: summary.totalPaid || 0,
+            totalDue: summary.totalDue || 0,
+            totalDeliveredCount: summary.totalDeliveredCount || 0,
+            totalRejectedCount: summary.totalRejectedCount || 0,
+            totalSuppliers: totalSuppliers,
+            totalBills: total
+        },
+        supplierBreakdown
     };
 };
 
