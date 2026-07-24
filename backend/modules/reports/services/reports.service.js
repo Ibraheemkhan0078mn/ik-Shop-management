@@ -164,19 +164,39 @@ export const getDashboardSummary = async (filters = {}) => {
 // Sales Report
 export const getSalesReport = async (filters = {}) => {
     const OrderModel = getOrderModel();
-    const { fromDate, toDate, productId, paymentMethod, search, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, customerType, customerId, paymentStatus, sortBy, sortOrder, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = { status: "completed" };
     
+    // Date filter
     if (fromDate || toDate) {
         const dateFilter = buildDateFilter(fromDate, toDate);
         matchQuery.createdAt = dateFilter.createdAt;
     }
 
-    if (paymentMethod) {
-        matchQuery.paymentMethod = paymentMethod;
+    // Customer type filter
+    if (customerType && customerType !== "all") {
+        matchQuery.customerType = customerType;
     }
 
+    // Specific customer filter
+    if (customerId) {
+        matchQuery.customerId = customerId;
+    }
+
+    // Payment status filter
+    if (paymentStatus && paymentStatus !== "all") {
+        if (paymentStatus === "paid") {
+            matchQuery.paymentStatus = "full";
+        } else if (paymentStatus === "unpaid") {
+            matchQuery.paymentStatus = { $in: ["partial", "unpaid"] };
+            matchQuery.paidAmount = { $eq: 0 };
+        } else if (paymentStatus === "partial") {
+            matchQuery.paymentStatus = "partial";
+        }
+    }
+
+    // Search filter
     if (search) {
         matchQuery.$or = [
             { orderNumber: { $regex: search, $options: "i" } },
@@ -184,46 +204,82 @@ export const getSalesReport = async (filters = {}) => {
         ];
     }
 
-    if (productId) {
-        matchQuery["items.product"] = productId;
-    }
-
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        OrderModel.find(matchQuery, null, {
-            populate: "items.product",
-            sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
-        }),
-        OrderModel.countDocuments(matchQuery)
+    // Sort configuration
+    const sortField = sortBy === "amount" ? "totalAmount" : 
+                      sortBy === "date" ? "createdAt" : 
+                      sortBy === "items" ? "itemsCount" : "createdAt";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+    // Get orders with item count
+    const ordersWithStats = await OrderModel.aggregate([
+        { $match: matchQuery },
+        {
+            $addFields: {
+                itemsCount: { $size: "$items" },
+                paidAmount: { $ifNull: ["$paidAmount", 0] },
+                dueAmount: { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }
+            }
+        },
+        {
+            $sort: { [sortField]: sortDirection }
+        },
+        { $skip: skip },
+        { $limit: limit }
     ]);
 
-    // Calculate totals
-    const totals = await OrderModel.aggregate([
+    // Populate products for each order
+    const populatedOrders = await Promise.all(
+        ordersWithStats.map(async (order) => {
+            const populatedOrder = await OrderModel.findById(order._id).populate('items.product');
+            return {
+                ...order,
+                items: populatedOrder.items
+            };
+        })
+    );
+
+    // Get total count
+    const total = await OrderModel.countDocuments(matchQuery);
+
+    // Calculate KPIs
+    const kpiData = await OrderModel.aggregate([
         { $match: matchQuery },
         {
             $group: {
                 _id: null,
                 totalSales: { $sum: "$totalAmount" },
-                totalDiscount: { $sum: "$discountAmount" },
-                totalItems: { $sum: { $size: "$items" } }
+                totalPaid: { $sum: { $ifNull: ["$paidAmount", 0] } },
+                totalDue: { $sum: { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] } },
+                totalItems: { $sum: { $size: "$items" } },
+                totalOrders: { $sum: 1 }
             }
         }
     ]);
 
+    const kpi = kpiData[0] || { totalSales: 0, totalPaid: 0, totalDue: 0, totalItems: 0, totalOrders: 0 };
+    const averageOrderValue = kpi.totalOrders > 0 ? kpi.totalSales / kpi.totalOrders : 0;
+
+    // Add rank to each order
+    const rankedData = populatedOrders.map((order, index) => ({
+        ...order,
+        rank: skip + index + 1
+    }));
+
     return {
-        data,
+        data: rankedData,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalSales: totals[0]?.totalSales || 0,
-            totalDiscount: totals[0]?.totalDiscount || 0,
-            totalItems: totals[0]?.totalItems || 0,
-            totalOrders: total
+            totalSales: kpi.totalSales,
+            totalOrders: kpi.totalOrders,
+            totalPaid: kpi.totalPaid,
+            totalDue: kpi.totalDue,
+            averageOrderValue,
+            totalItems: kpi.totalItems
         }
     };
 };
@@ -2384,9 +2440,22 @@ export const getProductWastageReport = async (filters = {}) => {
 export const getCustomerReport = async (filters = {}) => {
     const CustomerModel = getCustomerModel();
     const OrderModel = getOrderModel();
-    const { search, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, customerType, sortBy, sortOrder, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
+
+    // Date filter
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        matchQuery.createdAt = dateFilter.createdAt;
+    }
+
+    // Customer type filter
+    if (customerType && customerType !== "all") {
+        matchQuery.type = customerType;
+    }
+
+    // Search filter
     if (search) {
         matchQuery.$or = [
             { name: { $regex: search, $options: "i" } },
@@ -2396,48 +2465,99 @@ export const getCustomerReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        CustomerModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        CustomerModel.countDocuments(matchQuery)
+    // Get customers with their order statistics
+    const customersWithStats = await CustomerModel.aggregate([
+        { $match: matchQuery },
+        {
+            $lookup: {
+                from: "orders",
+                let: { customerName: "$name" },
+                pipeline: [
+                    { $match: { 
+                        $expr: { $eq: ["$customerName", "$$customerName"] },
+                        status: "completed"
+                    }},
+                    { $sort: { createdAt: -1 } }
+                ],
+                as: "orders"
+            }
+        },
+        {
+            $addFields: {
+                totalOrders: { $size: "$orders" },
+                totalSpent: { $sum: "$orders.totalAmount" },
+                lastPurchase: { $arrayElemAt: ["$orders.createdAt", 0] },
+                dueAmount: { 
+                    $sum: { 
+                        $filter: {
+                            input: "$orders",
+                            as: "order",
+                            cond: { $eq: ["$$order.paymentMethod", "credit"] }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields: {
+                customerType: { $ifNull: ["$type", "walk-in"] }
+            }
+        }
     ]);
 
-    const customersWithStats = await Promise.all(
-        data.map(async (customer) => {
-            const orders = await OrderModel.find({ customerName: customer.name, status: "completed" });
-            const totalPurchases = orders.reduce((sum, order) => sum + order.totalAmount, 0);
-            const pendingCredit = await OrderModel.aggregate([
-                { $match: { customerName: customer.name, paymentMethod: "credit", status: "completed" } },
-                { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-            ]);
-            return {
-                ...customer.toObject(),
-                totalOrders: orders.length,
-                totalPurchases,
-                pendingCredit: pendingCredit[0]?.total || 0,
-            };
-        })
-    );
+    // Sort based on sortBy parameter
+    const sortField = sortBy === "totalSpent" ? "totalSpent" : 
+                      sortBy === "totalOrders" ? "totalOrders" : 
+                      sortBy === "lastPurchase" ? "lastPurchase" : "totalSpent";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    
+    customersWithStats.sort((a, b) => {
+        if (sortField === "lastPurchase") {
+            const aDate = a.lastPurchase ? new Date(a.lastPurchase).getTime() : 0;
+            const bDate = b.lastPurchase ? new Date(b.lastPurchase).getTime() : 0;
+            return (aDate - bDate) * sortDirection;
+        }
+        return (a[sortField] - b[sortField]) * sortDirection;
+    });
 
-    const topCustomers = await OrderModel.aggregate([
-        { $match: { status: "completed" } },
-        { $group: { _id: "$customerName", totalPurchases: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-        { $sort: { totalPurchases: -1 } },
-        { $limit: 10 }
-    ]);
+    // Pagination
+    const total = customersWithStats.length;
+    const paginatedData = customersWithStats.slice(skip, skip + limit);
+
+    // Calculate KPIs
+    const totalCustomers = customersWithStats.length;
+    const walkInCustomers = customersWithStats.filter(c => c.customerType === "walk-in");
+    const registeredCustomers = customersWithStats.filter(c => c.customerType === "registered");
+    
+    const totalSalesWalkIn = walkInCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+    const totalSalesRegistered = registeredCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+    const totalDue = customersWithStats.reduce((sum, c) => sum + (c.dueAmount || 0), 0);
+    
+    const topCustomer = customersWithStats.length > 0 ? 
+        customersWithStats.reduce((max, c) => c.totalSpent > max.totalSpent ? c : max, customersWithStats[0]) : null;
+
+    // Add rank to each customer
+    const rankedData = paginatedData.map((customer, index) => ({
+        ...customer,
+        rank: skip + index + 1
+    }));
 
     return {
-        data: customersWithStats,
+        data: rankedData,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalCustomers: total,
-            topCustomers,
-        },
+            totalCustomers,
+            totalSalesWalkIn,
+            totalSalesRegistered,
+            totalDue,
+            topCustomer: topCustomer ? {
+                name: topCustomer.name,
+                amount: topCustomer.totalSpent
+            } : null
+        }
     };
 };
 
@@ -2445,10 +2565,22 @@ export const getCustomerReport = async (filters = {}) => {
 export const getSupplierReport = async (filters = {}) => {
     const SupplierModel = getSupplierModel();
     const PurchaseModel = getPurchaseModel();
-    const PurchaseReturnModel = getPurchaseReturnModel();
-    const { search, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, supplierId, sortBy, sortOrder, paymentStatus, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
+
+    // Date filter
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        matchQuery.createdAt = dateFilter.createdAt;
+    }
+
+    // Supplier filter
+    if (supplierId) {
+        matchQuery._id = supplierId;
+    }
+
+    // Search filter
     if (search) {
         matchQuery.$or = [
             { name: { $regex: search, $options: "i" } },
@@ -2458,40 +2590,95 @@ export const getSupplierReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        SupplierModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        SupplierModel.countDocuments(matchQuery)
+    // Get suppliers with their purchase statistics
+    const suppliersWithStats = await SupplierModel.aggregate([
+        { $match: matchQuery },
+        {
+            $lookup: {
+                from: "purchases",
+                let: { supplierId: "$_id" },
+                pipeline: [
+                    { $match: { 
+                        $expr: { $eq: ["$supplier", "$$supplierId"] }
+                    }},
+                    { $sort: { createdAt: -1 } }
+                ],
+                as: "purchases"
+            }
+        },
+        {
+            $addFields: {
+                totalPurchases: { $sum: "$purchases.totalAmount" },
+                totalPaid: { $sum: { $cond: [{ $eq: ["$purchases.paymentStatus", "full"] }, "$purchases.totalAmount", { $ifNull: ["$purchases.paidAmount", 0] }] } },
+                totalDue: { $sum: { $cond: [{ $ne: ["$purchases.paymentStatus", "full"] }, { $subtract: ["$purchases.totalAmount", { $ifNull: ["$purchases.paidAmount", 0] }] }, 0] } },
+                totalBills: { $size: "$purchases" },
+                lastPurchase: { $arrayElemAt: ["$purchases.createdAt", 0] }
+            }
+        }
     ]);
 
-    const suppliersWithStats = await Promise.all(
-        data.map(async (supplier) => {
-            const purchases = await PurchaseModel.find({ supplier: supplier._id });
-            const totalPurchases = purchases.reduce((sum, purchase) => sum + purchase.totalAmount, 0);
-            const pendingPayments = purchases.filter(p => p.paymentStatus !== "paid").reduce((sum, p) => sum + p.totalAmount, 0);
-            const returns = await PurchaseReturnModel.find({ supplier: supplier._id });
-            const totalReturns = returns.reduce((sum, ret) => sum + ret.totalAmount, 0);
-            return {
-                ...supplier.toObject(),
-                totalPurchases,
-                pendingPayments,
-                totalReturns,
-                returnCount: returns.length,
-            };
-        })
-    );
+    // Apply payment status filter if specified
+    let filteredSuppliers = suppliersWithStats;
+    if (paymentStatus && paymentStatus !== "all") {
+        if (paymentStatus === "paid") {
+            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue === 0);
+        } else if (paymentStatus === "unpaid") {
+            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue > 0 && s.totalPaid === 0);
+        } else if (paymentStatus === "partial") {
+            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue > 0 && s.totalPaid > 0);
+        }
+    }
+
+    // Sort based on sortBy parameter
+    const sortField = sortBy === "totalPurchases" ? "totalPurchases" : 
+                      sortBy === "dueAmount" ? "totalDue" : 
+                      sortBy === "lastPurchase" ? "lastPurchase" : "totalPurchases";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    
+    filteredSuppliers.sort((a, b) => {
+        if (sortField === "lastPurchase") {
+            const aDate = a.lastPurchase ? new Date(a.lastPurchase).getTime() : 0;
+            const bDate = b.lastPurchase ? new Date(b.lastPurchase).getTime() : 0;
+            return (aDate - bDate) * sortDirection;
+        }
+        return (a[sortField] - b[sortField]) * sortDirection;
+    });
+
+    // Pagination
+    const total = filteredSuppliers.length;
+    const paginatedData = filteredSuppliers.slice(skip, skip + limit);
+
+    // Calculate KPIs
+    const totalSuppliers = filteredSuppliers.length;
+    const totalPurchases = filteredSuppliers.reduce((sum, s) => sum + (s.totalPurchases || 0), 0);
+    const totalPaid = filteredSuppliers.reduce((sum, s) => sum + (s.totalPaid || 0), 0);
+    const totalDue = filteredSuppliers.reduce((sum, s) => sum + (s.totalDue || 0), 0);
+    
+    const topSupplier = filteredSuppliers.length > 0 ? 
+        filteredSuppliers.reduce((max, s) => s.totalPurchases > max.totalPurchases ? s : max, filteredSuppliers[0]) : null;
+
+    // Add rank to each supplier
+    const rankedData = paginatedData.map((supplier, index) => ({
+        ...supplier,
+        rank: skip + index + 1
+    }));
 
     return {
-        data: suppliersWithStats,
+        data: rankedData,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalSuppliers: total,
-        },
+            totalSuppliers,
+            totalPurchases,
+            totalPaid,
+            totalDue,
+            topSupplier: topSupplier ? {
+                name: topSupplier.name,
+                amount: topSupplier.totalPurchases
+            } : null
+        }
     };
 };
 
