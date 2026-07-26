@@ -92,6 +92,7 @@ export const updateBackupSettings = async (userId, backupData) => {
         { userId },
         { $set: { backup: backupData } }
     );
+    console.log(backupData, "The backup data being saved");
     
     return settings;
 };

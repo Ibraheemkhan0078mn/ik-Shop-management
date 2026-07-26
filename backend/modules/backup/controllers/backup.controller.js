@@ -1,6 +1,6 @@
-import { getOnlineDbConnection } from "../../../configs/onlineConnect.db.js";
-import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "../../../common/ikSync/uploadSync.js";
-import { docsSyncOrganizer } from "../../../common/ikSync/syncOrganizedRunner.js";
+import { connectOnlineDb } from "../../../configs/onlineConnect.db.js";
+import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "../services/uploadSync.js";
+import { docsSyncOrganizer } from "../services/syncOrganizedRunner.js";
 
 // Global sync cancellation flag
 let syncInProgress = false;
@@ -8,15 +8,28 @@ let syncAbortController = null;
 
 export const getStorageInfo = async (req, res) => {
     try {
-        const onlineDb = getOnlineDbConnection();
+        await connectOnlineDb();
+        const mongoose = await import('mongoose');
+        const ONLINE_MONGODB_URI = "mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0";
+        const onlineDb = await mongoose.createConnection(ONLINE_MONGODB_URI, { dbName: "IMS-ONLINE" }).asPromise();
         
         // Get database stats from MongoDB Atlas
         const stats = await onlineDb.db.stats();
         
-        const totalStorage = stats.dataSize + stats.indexSize + stats.storageSize;
-        const usedStorage = stats.dataSize;
-        const remainingStorage = stats.storageSize - stats.dataSize;
-        const percentageUsed = ((usedStorage / totalStorage) * 100).toFixed(2);
+        // MongoDB Atlas storage metrics
+        // storageSize: actual disk space used (compressed) - this is what matters for billing
+        // dataSize: uncompressed data size
+        // indexSize: uncompressed index size
+        const storageSize = stats.storageSize || 0;
+        const dataSize = stats.dataSize || 0;
+        const indexSize = stats.indexSize || 0;
+        
+        // MongoDB Atlas free tier has 512MB quota
+        const atlasQuota = 512 * 1024 * 1024; // 512MB in bytes
+        const usedStorage = storageSize; // Actual compressed storage used
+        const totalStorage = atlasQuota; // Atlas free tier quota
+        const remainingStorage = Math.max(0, totalStorage - usedStorage);
+        const percentageUsed = totalStorage > 0 ? ((usedStorage / totalStorage) * 100).toFixed(2) : 0;
 
         res.json({
             success: true,
@@ -51,8 +64,9 @@ export const syncAll = async (req, res) => {
         syncInProgress = true;
         syncAbortController = new AbortController();
 
-        // Run sync with type "all"
-        await docsSyncOrganizer("all", req.user);
+        // Run sync with type "all" - provide default user if req.user is undefined
+        const userData = req.user || { role: "admin", permissions: [] };
+        await docsSyncOrganizer("all", userData);
 
         syncInProgress = false;
         syncAbortController = null;
@@ -84,8 +98,9 @@ export const syncRequired = async (req, res) => {
         syncInProgress = true;
         syncAbortController = new AbortController();
 
-        // Run sync with type "required"
-        await docsSyncOrganizer("required", req.user);
+        // Run sync with type "required" - provide default user if req.user is undefined
+        const userData = req.user || { role: "admin", permissions: [] };
+        await docsSyncOrganizer("required", userData);
 
         syncInProgress = false;
         syncAbortController = null;

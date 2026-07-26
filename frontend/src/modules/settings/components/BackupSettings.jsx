@@ -2,13 +2,19 @@ import React, { useState, useEffect } from "react";
 import { Cloud, Database, RefreshCw, Clock, AlertCircle, CheckCircle, HardDrive, X } from "lucide-react";
 import { useGetStorageInfoQuery, useSyncAllMutation, useSyncRequiredMutation, useStopSyncMutation, useGetSyncStatusQuery } from "../../backup/api/backup.api.js";
 import { useUpdateBackupSettingsMutation } from "../../settings/api/settings.api.js";
+import { convertToMilliseconds } from "../../../shared/utilities/time.utility.js";
 
 export default function BackupSettings({ settingsData, userId, labels }) {
-    const [syncInterval, setSyncInterval] = useState(settingsData?.syncInterval || 4); // Default 4 hours
+    const [syncIntervalValue, setSyncIntervalValue] = useState(settingsData?.backup?.syncIntervalValue || settingsData?.backup?.syncInterval || 4);
+    const [syncIntervalUnit, setSyncIntervalUnit] = useState(settingsData?.backup?.syncIntervalUnit || 'hours');
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
     const { data: storageInfo, isLoading: storageLoading, refetch: refetchStorage } = useGetStorageInfoQuery();
+    
+    // Debug logging
+    console.log("Storage Info:", storageInfo);
+    console.log("Storage Loading:", storageLoading);
     const [syncAll] = useSyncAllMutation();
     const [syncRequired] = useSyncRequiredMutation();
     const [stopSync] = useStopSyncMutation();
@@ -16,11 +22,16 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     const { data: syncStatus } = useGetSyncStatusQuery();
 
     // Update sync interval in settings when changed
-    const handleIntervalChange = async (newInterval) => {
-        setSyncInterval(newInterval);
+    const handleIntervalChange = async (value, unit) => {
+        setSyncIntervalValue(value);
+        setSyncIntervalUnit(unit);
         try {
-            await updateBackupSettings({ syncInterval: newInterval }).unwrap();
-            console.log("Sync interval updated to:", newInterval);
+            console.log("Sending backup settings:", { userId: userId || "global", backup: { syncIntervalValue: value, syncIntervalUnit: unit } });
+            await updateBackupSettings({ 
+                userId: userId || "global",
+                backup: { syncIntervalValue: value, syncIntervalUnit: unit }
+            }).unwrap();
+            console.log("Sync interval updated to:", value, unit);
         } catch (error) {
             console.error("Failed to update sync interval:", error);
         }
@@ -63,29 +74,42 @@ export default function BackupSettings({ settingsData, userId, labels }) {
 
     // Interval-based sync activation
     useEffect(() => {
-        if (!syncInterval || syncInterval === 0) return;
+        if (!syncIntervalValue || syncIntervalValue === 0) return;
 
-        const intervalMs = syncInterval * 60 * 60 * 1000; // Convert hours to milliseconds
+        const intervalMs = convertToMilliseconds(syncIntervalValue, syncIntervalUnit);
+        console.log(`Auto-sync will run every ${syncIntervalValue} ${syncIntervalUnit} (${intervalMs}ms)`);
+
         const intervalId = setInterval(async () => {
             console.log("Running scheduled sync (required)...");
             await handleSyncRequired();
         }, intervalMs);
 
         return () => clearInterval(intervalId);
-    }, [syncInterval]);
+    }, [syncIntervalValue, syncIntervalUnit]);
 
-    const intervalOptions = [
-        { value: 1, label: "1 Hour" },
-        { value: 2, label: "2 Hours" },
-        { value: 4, label: "4 Hours" },
-        { value: 8, label: "8 Hours" },
-        { value: 12, label: "12 Hours" },
-        { value: 24, label: "24 Hours" },
-        { value: 0, label: "Disabled" },
+    const timeUnitOptions = [
+        // { value: 'seconds', label: 'Seconds' },
+        { value: 'minutes', label: 'Minutes' },
+        { value: 'hours', label: 'Hours' },
+        { value: 'days', label: 'Days' },
     ];
 
-    const storagePercentage = storageInfo ? ((storageInfo.used / storageInfo.total) * 100).toFixed(1) : 0;
+    const storagePercentage = storageInfo ? storageInfo.percentage : 0;
     const storageColor = storagePercentage > 80 ? "text-red-600" : storagePercentage > 60 ? "text-yellow-600" : "text-green-600";
+
+    // Debug logging
+    console.log("Storage Percentage:", storagePercentage);
+    console.log("Storage Info Data:", storageInfo?.data);
+    console.log("Storage Info:", storageInfo);
+
+    // Format bytes to human readable format
+    const formatBytes = (bytes) => {
+        if (!bytes || bytes === 0) return '0 MB';
+        const mb = bytes / (1024 * 1024);
+        if (mb < 1024) return `${mb.toFixed(2)} MB`;
+        const gb = mb / 1024;
+        return `${gb.toFixed(2)} GB`;
+    };
 
     return (
         <div className="space-y-6">
@@ -132,9 +156,9 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 />
                             </div>
                             <div className="flex items-center justify-between mt-2 text-xs text-[var(--muted)]">
-                                <span>Used: {storageInfo ? (storageInfo.used / (1024 * 1024)).toFixed(2) : 0} MB</span>
-                                <span>Total: {storageInfo ? (storageInfo.total / (1024 * 1024)).toFixed(2) : 0} MB</span>
-                                <span>Remaining: {storageInfo ? ((storageInfo.total - storageInfo.used) / (1024 * 1024)).toFixed(2) : 0} MB</span>
+                                <span>Used: {formatBytes(storageInfo?.used)}</span>
+                                <span>Total: {formatBytes(storageInfo?.total)}</span>
+                                <span>Remaining: {formatBytes(storageInfo?.remaining)}</span>
                             </div>
                         </div>
 
@@ -195,33 +219,45 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium text-[var(--ink)] mb-3 block">Sync Frequency</label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {intervalOptions.map((option) => (
-                                <button
-                                    key={option.value}
-                                    onClick={() => handleIntervalChange(option.value)}
-                                    className={`px-4 py-3 rounded-lg border transition-colors ${
-                                        syncInterval === option.value
-                                            ? 'bg-[var(--accent-2)] text-white border-[var(--accent-2)]'
-                                            : 'bg-[var(--surface)] text-[var(--ink)] border-[var(--border)] hover:bg-[var(--surface-muted)]'
-                                    }`}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
+                        <div className="flex gap-3">
+                            <input
+                                type="number"
+                                min="0"
+                                value={syncIntervalValue}
+                                onChange={(e) => setSyncIntervalValue(parseInt(e.target.value) || 0)}
+                                className="flex-1 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                placeholder="Enter value"
+                            />
+                            <select
+                                value={syncIntervalUnit}
+                                onChange={(e) => setSyncIntervalUnit(e.target.value)}
+                                className="px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                            >
+                                {timeUnitOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={() => handleIntervalChange(syncIntervalValue, syncIntervalUnit)}
+                                className="px-6 py-3 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/90 transition-colors"
+                            >
+                                Set
+                            </button>
                         </div>
                     </div>
 
-                    {syncInterval > 0 && (
+                    {syncIntervalValue > 0 && (
                         <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
                             <CheckCircle size={16} className="text-green-600" />
                             <span className="text-sm text-[var(--muted)]">
-                                Auto-sync is active. Data will sync every {syncInterval} hour{syncInterval > 1 ? 's' : ''}.
+                                Auto-sync is active. Data will sync every {syncIntervalValue} {syncIntervalUnit === 'seconds' ? 'second' : syncIntervalUnit === 'minutes' ? 'minute' : syncIntervalUnit === 'hours' ? 'hour' : 'day'}{syncIntervalValue > 1 ? 's' : ''}.
                             </span>
                         </div>
                     )}
 
-                    {syncInterval === 0 && (
+                    {syncIntervalValue === 0 && (
                         <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
                             <AlertCircle size={16} className="text-yellow-600" />
                             <span className="text-sm text-[var(--muted)]">

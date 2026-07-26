@@ -75,9 +75,14 @@ const settingsSchema = new mongoose.Schema(
         },
         // Backup Settings
         backup: {
-            syncInterval: {
+            syncIntervalValue: {
                 type: Number,
-                default: 4, // hours
+                default: 4, // default value
+            },
+            syncIntervalUnit: {
+                type: String,
+                enum: ['seconds', 'minutes', 'hours', 'days'],
+                default: 'hours',
             },
         },
         // Soft Delete Fields

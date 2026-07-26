@@ -4,8 +4,8 @@ import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
-import { getReportsLabels } from "../labels/reportsLabels.js";
-
+import { getReportsLabels } from "../labels/reportsLabels.js"; 
+ 
 // ---------- Layer 1: plain KPI card, NEVER has a dropdown ----------
 function KpiCard({ label, value, icon: Icon, color, description, isCurrency = true }) {
     return (

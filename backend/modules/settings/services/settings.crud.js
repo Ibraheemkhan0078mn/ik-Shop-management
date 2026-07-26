@@ -28,7 +28,7 @@ const updateSettingsService = (filter, data) => {
 
 const findOneAndUpdateSettingsService = (filter, data, options = {}) => {
     const SettingsModel = getLocalSettingsModel();
-    return SettingsModel.findOneAndUpdate(filter, data, { new: true, upsert: true, ...options });
+    return SettingsModel.findOneAndUpdate(filter, data, { returnDocument: 'after', upsert: true, ...options });
 };
 
 const deleteOneSettingsService = (id) => {

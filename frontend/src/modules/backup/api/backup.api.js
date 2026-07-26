@@ -7,6 +7,7 @@ export const backupApi = baseApi.injectEndpoints({
             query: () => ({
                 url: "/backup/storage-info",
             }),
+            transformResponse: (response) => response.data,
             providesTags: ["Backup"],
         }),
         // Sync All Data

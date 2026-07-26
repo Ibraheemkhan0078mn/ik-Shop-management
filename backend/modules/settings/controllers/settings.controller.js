@@ -157,6 +157,9 @@ export const updatePermissionPasswordSettingsData = asyncHandler(async (req, res
 // Update Backup Settings
 export const updateBackupSettingsData = asyncHandler(async (req, res, next) => {
     const { userId, backup } = req.body;
+    console.log(userId, backup, "The backup")
+
+    console.log("Received backup settings update:", { userId, backup });
 
     if (!userId) {
         return next(new ErrorResponse("User ID is required", 400));
@@ -166,6 +169,7 @@ export const updateBackupSettingsData = asyncHandler(async (req, res, next) => {
     }
 
     const settings = await updateBackupSettings(userId, backup);
+    console.log("Updated settings:", settings);
 
     res.status(200).json({
         success: true,

@@ -58,9 +58,9 @@ let OnlineStaffAttendanceModel = null;
 let OnlineSettingsModel = null;
 let OnlinePaymentMethodModel = null;
 let OnlineAppThemeModel = null;
+ 
 
-
-
+ 
 export const connectOnlineDb = async () => {
    try {
      console.log("Online connection is running");
@@ -144,3 +144,4 @@ export const getOnlineStaffSalaryPaymentModel = () => OnlineStaffSalaryPaymentMo
 export const getOnlineStaffSaleBillModel = () => OnlineStaffSaleBillModel || null;
 export const getOnlineStaffAttendanceModel = () => OnlineStaffAttendanceModel || null;
 export const getOnlineSettingsModel = () => OnlineSettingsModel || null;
+export const getOnlinePaymentMethodModel = () => OnlinePaymentMethodModel || null;
