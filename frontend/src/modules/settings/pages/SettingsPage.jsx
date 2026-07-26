@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield, Cloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
 import { getSettingsLabels } from "../../../labels/settingsLabels.js";
+import { getItem, setItem } from "../../../shared/utilities/localStorage.js";
 import ShopSettings from "../components/ShopSettings.jsx";
 import PrinterSettings from "../components/PrinterSettings.jsx";
 import CameraSettings from "../components/CameraSettings.jsx";
@@ -22,7 +23,15 @@ export default function SettingsPage() {
     
     const settingsLanguage = settingsData?.language || "en";
     const labels = getSettingsLabels(settingsLanguage);
-    const [activeTab, setActiveTab] = useState("shop");
+    
+    // Get saved active tab from localStorage or default to "shop"
+    const savedActiveTab = getItem("settingsActiveTab") || "shop";
+    const [activeTab, setActiveTab] = useState(savedActiveTab);
+
+    // Save active tab to localStorage when it changes
+    useEffect(() => {
+        setItem("settingsActiveTab", activeTab);
+    }, [activeTab]);
 
     if (isLoading) {
         return <div className="flex items-center justify-center h-screen"><p className="text-(--muted)">Loading...</p></div>;
@@ -34,15 +43,15 @@ export default function SettingsPage() {
         { id: "camera", icon: Camera, label: labels.camera },
         { id: "language", icon: Globe, label: labels.language },
         { id: "modules", icon: Lock, label: labels.modules },
-        { id: "theme", icon: Palette, label: "Theme" },
-        { id: "paymentMethods", icon: CreditCard, label: "Payment Methods" },
+        { id: "theme", icon: Palette, label: labels.theme },
+        { id: "paymentMethods", icon: CreditCard, label: labels.paymentMethods },
         { id: "profile", icon: User, label: labels.profile },
-        { id: "backup", icon: Cloud, label: "Backup" },
+        { id: "backup", icon: Cloud, label: labels.backup },
     ];
 
     // Only add permission password tab for admin users
     if (role === "admin") {
-        tabs.push({ id: "permissionPassword", icon: Shield, label: "Permission Password" });
+        tabs.push({ id: "permissionPassword", icon: Shield, label: labels.permissionPassword });
     }
 
     return (
@@ -54,7 +63,7 @@ export default function SettingsPage() {
                 </button>
             </div>
 
-            <div className="flex gap-2 p-4 border-b border-(--border) mb-6 overflow-x-auto">
+            <div className="flex flex-wrap gap-2 p-4 border-b border-(--border) mb-6">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
@@ -75,7 +84,7 @@ export default function SettingsPage() {
                 {activeTab === "camera" && <CameraSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "language" && <LanguageSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "modules" && <ModuleSettings settingsData={settingsData} userId={userId} labels={labels} />}
-                {activeTab === "theme" && <ThemeSettings />}
+                {activeTab === "theme" && <ThemeSettings labels={labels} />}
                 {activeTab === "paymentMethods" && <PaymentMethodsSettings labels={labels} />}
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
                 {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}

@@ -88,10 +88,9 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     }, [syncIntervalValue, syncIntervalUnit]);
 
     const timeUnitOptions = [
-        // { value: 'seconds', label: 'Seconds' },
-        { value: 'minutes', label: 'Minutes' },
-        { value: 'hours', label: 'Hours' },
-        { value: 'days', label: 'Days' },
+        { value: 'minutes', label: labels.minutes || 'Minutes' },
+        { value: 'hours', label: labels.hours || 'Hours' },
+        { value: 'days', label: labels.days || 'Days' },
     ];
 
     const storagePercentage = storageInfo ? storageInfo.percentage : 0;
@@ -115,8 +114,8 @@ export default function BackupSettings({ settingsData, userId, labels }) {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold text-[var(--ink)] mb-2">Backup & Sync Settings</h2>
-                <p className="text-sm text-[var(--muted)]">Manage online database backup and synchronization</p>
+                <h2 className="text-xl font-semibold text-[var(--ink)] mb-2">{labels.backupAndSync}</h2>
+                <p className="text-sm text-[var(--muted)]">{labels.backupAndSyncDescription}</p>
             </div>
 
             {/* Online Sync Section */}
@@ -124,8 +123,8 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                 <div className="flex items-center gap-3 mb-6">
                     <Cloud size={24} className="text-[var(--accent-2)]" />
                     <div>
-                        <h3 className="text-lg font-semibold text-[var(--ink)]">Online Sync</h3>
-                        <p className="text-sm text-[var(--muted)]">Cloud storage and synchronization status</p>
+                        <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.onlineSync}</h3>
+                        <p className="text-sm text-[var(--muted)]">{labels.onlineSyncDescription}</p>
                     </div>
                 </div>
 
@@ -140,7 +139,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
                                     <HardDrive size={20} className="text-[var(--muted)]" />
-                                    <span className="text-sm font-medium text-[var(--ink)]">Storage Usage</span>
+                                    <span className="text-sm font-medium text-[var(--ink)]">{labels.storageUsage}</span>
                                 </div>
                                 <span className={`text-lg font-bold ${storageColor}`}>
                                     {storagePercentage}%
@@ -156,9 +155,9 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 />
                             </div>
                             <div className="flex items-center justify-between mt-2 text-xs text-[var(--muted)]">
-                                <span>Used: {formatBytes(storageInfo?.used)}</span>
-                                <span>Total: {formatBytes(storageInfo?.total)}</span>
-                                <span>Remaining: {formatBytes(storageInfo?.remaining)}</span>
+                                <span>{labels.used}: {formatBytes(storageInfo?.used)}</span>
+                                <span>{labels.total}: {formatBytes(storageInfo?.total)}</span>
+                                <span>{labels.remaining}: {formatBytes(storageInfo?.remaining)}</span>
                             </div>
                         </div>
 
@@ -170,7 +169,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Database size={20} />
-                                <span>Sync All Data</span>
+                                <span>{labels.syncAllData}</span>
                                 {isSyncing && <RefreshCw size={16} className="animate-spin" />}
                             </button>
                             <button
@@ -179,7 +178,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RefreshCw size={20} />
-                                <span>Sync Required Only</span>
+                                <span>{labels.syncRequiredOnly}</span>
                                 {isSyncing && <RefreshCw size={16} className="animate-spin" />}
                             </button>
                             {isSyncing && (
@@ -188,7 +187,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-500 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                 >
                                     <X size={20} />
-                                    <span>Stop Sync</span>
+                                    <span>{labels.stopSync}</span>
                                 </button>
                             )}
                         </div>
@@ -198,7 +197,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                             <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
                                 <CheckCircle size={16} className="text-green-600" />
                                 <span className="text-sm text-[var(--muted)]">
-                                    Last synced: {lastSyncTime.toLocaleString()}
+                                    {labels.lastSynced}: {lastSyncTime.toLocaleString()}
                                 </span>
                             </div>
                         )}
@@ -211,14 +210,14 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                 <div className="flex items-center gap-3 mb-6">
                     <Clock size={24} className="text-[var(--accent-2)]" />
                     <div>
-                        <h3 className="text-lg font-semibold text-[var(--ink)]">Auto Sync Interval</h3>
-                        <p className="text-sm text-[var(--muted)]">Configure automatic backup synchronization</p>
+                        <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.autoSyncInterval}</h3>
+                        <p className="text-sm text-[var(--muted)]">{labels.autoSyncIntervalDescription}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-[var(--ink)] mb-3 block">Sync Frequency</label>
+                        <label className="text-sm font-medium text-[var(--ink)] mb-3 block">{labels.syncFrequency}</label>
                         <div className="flex gap-3">
                             <input
                                 type="number"
@@ -226,7 +225,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 value={syncIntervalValue}
                                 onChange={(e) => setSyncIntervalValue(parseInt(e.target.value) || 0)}
                                 className="flex-1 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                placeholder="Enter value"
+                                placeholder={labels.enterValue}
                             />
                             <select
                                 value={syncIntervalUnit}
@@ -243,7 +242,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                                 onClick={() => handleIntervalChange(syncIntervalValue, syncIntervalUnit)}
                                 className="px-6 py-3 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/90 transition-colors"
                             >
-                                Set
+                                {labels.set}
                             </button>
                         </div>
                     </div>
@@ -252,7 +251,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                         <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
                             <CheckCircle size={16} className="text-green-600" />
                             <span className="text-sm text-[var(--muted)]">
-                                Auto-sync is active. Data will sync every {syncIntervalValue} {syncIntervalUnit === 'seconds' ? 'second' : syncIntervalUnit === 'minutes' ? 'minute' : syncIntervalUnit === 'hours' ? 'hour' : 'day'}{syncIntervalValue > 1 ? 's' : ''}.
+                                {labels.autoSyncActive} {syncIntervalValue} {syncIntervalUnit === 'seconds' ? labels.second : syncIntervalUnit === 'minutes' ? labels.minute : syncIntervalUnit === 'hours' ? labels.hour : labels.day}{syncIntervalValue > 1 ? 's' : ''}.
                             </span>
                         </div>
                     )}
@@ -261,7 +260,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                         <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
                             <AlertCircle size={16} className="text-yellow-600" />
                             <span className="text-sm text-[var(--muted)]">
-                                Auto-sync is disabled. Manual sync only.
+                                {labels.autoSyncDisabled}
                             </span>
                         </div>
                     )}
@@ -273,12 +272,12 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                 <div className="flex items-start gap-3">
                     <AlertCircle size={20} className="text-[var(--accent-2)] mt-0.5" />
                     <div className="text-sm text-[var(--muted)]">
-                        <p className="font-medium text-[var(--ink)] mb-1">About Backup & Sync</p>
+                        <p className="font-medium text-[var(--ink)] mb-1">{labels.aboutBackupSync}</p>
                         <ul className="list-disc list-inside space-y-1">
-                            <li>Sync All: Uploads complete database to cloud storage</li>
-                            <li>Sync Required: Only uploads changed/modified data</li>
-                            <li>Auto-sync: Automatically syncs at configured intervals</li>
-                            <li>Storage usage shows cloud database space utilization</li>
+                            <li>{labels.syncAllDescription}</li>
+                            <li>{labels.syncRequiredDescription}</li>
+                            <li>{labels.autoSyncDescription}</li>
+                            <li>{labels.storageUsageDescription}</li>
                         </ul>
                     </div>
                 </div>

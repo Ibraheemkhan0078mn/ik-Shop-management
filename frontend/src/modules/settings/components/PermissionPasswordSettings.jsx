@@ -27,13 +27,13 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
             }
         } catch (error) {
             console.error("Failed to fetch permission password:", error);
-            toast.error("Failed to fetch current password");
+            toast.error(labels.failedToFetchPassword);
         }
     };
 
     const handleSave = async () => {
         if (!permissionPassword.trim()) {
-            toast.error("Permission password is required");
+            toast.error(labels.passwordRequired);
             return;
         }
 
@@ -45,11 +45,11 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                 permissionPassword
             });
             console.log("Save response:", response.data);
-            toast.success("Permission password saved successfully");
+            toast.success(labels.passwordSaved);
             setIsEditing(false);
         } catch (error) {
             console.error("Failed to save permission password:", error.response?.data || error.message);
-            toast.error(error.response?.data?.message || "Failed to save permission password");
+            toast.error(error.response?.data?.message || labels.failedToSavePassword);
         } finally {
             setLoading(false);
         }
@@ -67,7 +67,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
     return (
         <div className="space-y-6">
             <div>
-                <label className="block text-sm font-medium text-[var(--ink)] mb-2">Permission Password</label>
+                <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.permissionPassword}</label>
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <input
@@ -78,7 +78,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                             className={`w-full px-4 py-2 pr-10 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] ${
                                 !isEditing ? "bg-[var(--surface-muted)] cursor-not-allowed" : ""
                             }`}
-                            placeholder="Enter permission password"
+                            placeholder={labels.enterPermissionPassword}
                         />
                         <button
                             type="button"
@@ -95,7 +95,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                                 handleFetchPermissionPassword();
                             }}
                             className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all"
-                            title="Edit"
+                            title={labels.edit}
                         >
                             <Edit size={18} />
                         </button>
@@ -105,14 +105,14 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                                 onClick={handleSave}
                                 disabled={loading}
                                 className="p-2 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/80 transition-all disabled:opacity-50"
-                                title="Save"
+                                title={labels.save}
                             >
                                 <Save size={18} />
                             </button>
                             <button
                                 onClick={handleCancel}
                                 className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                                title="Cancel"
+                                title={labels.cancel}
                             >
                                 <X size={18} />
                             </button>
@@ -120,7 +120,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                     )}
                 </div>
                 <p className="text-xs text-[var(--muted)] mt-2">
-                    This password is used to authorize sensitive operations. Only visible to admin users.
+                    {labels.passwordDescription}
                 </p>
             </div>
         </div>

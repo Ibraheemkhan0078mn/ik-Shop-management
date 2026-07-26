@@ -9,7 +9,6 @@ import Products from "../modules/productsModule/pages/Products.jsx";
 import ProductDetail from "../modules/productsModule/pages/ProductDetail.jsx";
 import Analytics from "../modules/dashbaord/pages/Analytics.jsx";
 import Dashboard from "../modules/dashbaord/pages/Dashboard.jsx";
-import Generals from "../modules/setting/pages/Generals.jsx";
 import WastagePage from "../modules/wastage/pages/WastagePage.jsx";
 import WastageDetail from "../modules/wastage/pages/WastageDetail.jsx";
 import ProductPurchase from "../modules/productPurchases/pages/ProductPurchase.jsx";
@@ -82,7 +81,6 @@ function AppRoutes() {
             <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
             <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
-            <Route path="/settings/generals" element={<ProtectedRoute><Generals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
             {/* Reports Routes */}

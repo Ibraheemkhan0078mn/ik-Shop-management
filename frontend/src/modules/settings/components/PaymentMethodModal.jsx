@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { usePaymentMethod, useCreatePaymentMethod, useUpdatePaymentMethod } from "../services/paymentMethod.service.js";
 
-export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
+export default function PaymentMethodModal({ mode, paymentMethodId, onClose, labels }) {
     const [formData, setFormData] = useState({
         name: "",
         isActive: true,
@@ -28,7 +28,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
     const validateForm = () => {
         const newErrors = {};
         if (!formData.name.trim()) {
-            newErrors.name = "Payment method name is required";
+            newErrors.name = labels.paymentMethodNameRequired || "Payment method name is required";
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -54,7 +54,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
                 onClose();
             }
         } catch (error) {
-            setErrors({ submit: error?.data?.message || "Failed to save payment method" });
+            setErrors({ submit: error?.data?.message || labels.paymentMethodFailed || "Failed to save payment method" });
         }
     };
 
@@ -63,7 +63,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
             <div className="w-full max-w-md rounded-2xl shadow-2xl bg-[var(--surface)] border border-[var(--border)]">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
                     <h2 className="text-lg font-bold text-[var(--ink)]">
-                        {mode === "create" ? "Add Payment Method" : "Edit Payment Method"}
+                        {mode === "create" ? labels.addPaymentMethod : labels.editPaymentMethod}
                     </h2>
                     <button onClick={onClose} className="p-1 hover:bg-[var(--hover)] rounded-lg">
                         <X size={20} className="text-[var(--muted)]" />
@@ -79,7 +79,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                            Payment Method Name *
+                            {labels.paymentMethodName} *
                         </label>
                         <input
                             type="text"
@@ -88,7 +88,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
                             className={`w-full px-4 py-2.5 rounded-lg border ${
                                 errors.name ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--app-bg)]'
                             } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
-                            placeholder="e.g., Cash, Bank Transfer, JazzCash"
+                            placeholder={labels.paymentMethodPlaceholder || "e.g., Cash, Bank Transfer, JazzCash"}
                         />
                         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
                     </div>
@@ -102,7 +102,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
                             className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent-2)] focus:ring-[var(--accent-2)]"
                         />
                         <label htmlFor="isActive" className="text-sm text-[var(--ink)]">
-                            Active
+                            {labels.active || "Active"}
                         </label>
                     </div>
 
@@ -112,14 +112,14 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose }) {
                             onClick={onClose}
                             className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--ink)] hover:bg-[var(--hover)] transition-all"
                         >
-                            Cancel
+                            {labels.cancel || "Cancel"}
                         </button>
                         <button
                             type="submit"
                             disabled={isCreating || isUpdating || isLoading}
                             className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isCreating || isUpdating || isLoading ? "Saving..." : mode === "create" ? "Add" : "Update"}
+                            {isCreating || isUpdating || isLoading ? (labels.saving || "Saving...") : mode === "create" ? (labels.add || "Add") : (labels.update || "Update")}
                         </button>
                     </div>
                 </form>

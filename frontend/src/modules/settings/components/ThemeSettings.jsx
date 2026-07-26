@@ -192,7 +192,7 @@ const EMPTY_THEME = {
     },
 };
 
-export default function ThemeSettings() {
+export default function ThemeSettings({ labels }) {
     const [theme, setTheme] = useState(EMPTY_THEME);
     const [selectedPreset, setSelectedPreset] = useState("classic-warm");
     const [loading, setLoading] = useState(true);
@@ -275,13 +275,13 @@ export default function ThemeSettings() {
         setSelectedPreset(preset.id);
         setTheme({ name: preset.title, colors: preset.colors });
         applyTheme(preset.colors);
-        setMessage(`${preset.title} selected. Saving active theme...`);
+        setMessage(`${preset.title} ${labels.themeSelected}`);
 
         const persisted = await persistTheme({ name: preset.title, colors: preset.colors });
         if (persisted) {
-            setMessage(`${preset.title} selected and saved as active theme.`);
+            setMessage(`${preset.title} ${labels.themeSelectedSaved}`);
         } else {
-            setMessage(`${preset.title} selected. Unable to save active theme. Please save manually.`);
+            setMessage(`${preset.title} ${labels.themeSelectedFailed}`);
         }
     };
 
@@ -300,10 +300,10 @@ export default function ThemeSettings() {
         if (password === "ikmunibshop") {
             setCustomUnlocked(true);
             setPasswordError("");
-            setMessage("Custom theme editor unlocked.");
+            setMessage(labels.customThemeUnlocked);
             return;
         }
-        setPasswordError("Incorrect password. Try again.");
+        setPasswordError(labels.incorrectPassword);
     };
 
     const handleSave = async () => {
@@ -331,10 +331,10 @@ export default function ThemeSettings() {
             };
             applyTheme(updatedColors);
             setTheme((prev) => ({ ...prev, colors: updatedColors }));
-            setMessage("Theme saved and applied successfully.");
+            setMessage(labels.themeSaved);
         } catch (error) {
             console.error("Theme save failed", error);
-            setMessage(error.message || "Theme update failed.");
+            setMessage(labels.themeUpdateFailed);
         } finally {
             setSaving(false);
         }
@@ -345,40 +345,42 @@ export default function ThemeSettings() {
         const preset = THEME_PRESETS[0];
         setTheme({ name: preset.title, colors: preset.colors });
         applyTheme(preset.colors);
-        setMessage("Reset to the default theme preview. Save to persist.");
+        setMessage(labels.resetToDefault);
     };
 
     return (
-        <div className="space-y-6">
-            <div className="rounded-2xl border border-(--border) bg-(--surface) p-5">
-                <div className="flex items-center justify-between gap-4">
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div className="rounded-2xl border border-(--border) bg-(--surface) p-6">
+                <div className="flex items-center gap-3">
+                    <Palette size={24} className="text-(--accent-2)" />
                     <div>
-                        <h2 className="flex items-center gap-2 text-lg font-semibold text-(--ink)">
-                            <Palette size={18} /> Theme Builder
-                        </h2>
+                        <h2 className="text-xl font-semibold text-(--ink)">{labels.themeBuilder}</h2>
                         <p className="text-sm text-(--muted)">
-                            Choose a preset, customize colors, and save your active application theme.
+                            {labels.themeBuilderDescription}
                         </p>
                     </div>
                 </div>
                 {message ? (
-                    <div className="mt-4 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--ink)">
+                    <div className="mt-4 rounded-lg border border-(--border) bg-(--surface-muted) px-4 py-3 text-sm text-(--ink)">
                         {message}
                     </div>
                 ) : null}
             </div>
 
-            <div className="grid gap-4">
-                <div className="grid gap-3 md:grid-cols-3">
+            {/* Preset Themes Section */}
+            <div className="rounded-2xl border border-(--border) bg-(--surface) p-6">
+                <h3 className="text-lg font-semibold text-(--ink) mb-4">{labels.presetThemes}</h3>
+                <div className="grid gap-4 md:grid-cols-3">
                     {THEME_PRESETS.map((preset) => (
                         <button
                             key={preset.id}
                             type="button"
                             onClick={() => setPresetTheme(preset.id)}
-                            className={`rounded-3xl border p-4 text-left transition-all ${
+                            className={`rounded-2xl border p-4 text-left transition-all ${
                                 preset.id === selectedPreset
-                                    ? "border-(--accent-2) bg-(--surface-muted) shadow-lg"
-                                    : "border-(--border) bg-(--surface) hover:border-(--accent-2)"
+                                    ? "border-(--accent-2) bg-(--surface-muted) shadow-lg ring-2 ring-(--accent-2)/20"
+                                    : "border-(--border) bg-(--surface) hover:border-(--accent-2) hover:shadow-md"
                             }`}
                         >
                             <div className="mb-3 flex items-center justify-between">
@@ -387,7 +389,7 @@ export default function ThemeSettings() {
                                     <p className="text-xs text-(--muted)">{preset.description}</p>
                                 </div>
                                 <span className="rounded-full bg-(--accent) px-2 py-1 text-[10px] font-semibold text-white">
-                                    Preset
+                                    {labels.preset}
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 gap-2">
@@ -395,45 +397,47 @@ export default function ThemeSettings() {
                                     <span
                                         key={color}
                                         style={{ backgroundColor: color }}
-                                        className="h-8 rounded-xl border border-[rgba(0,0,0,0.08)]"
+                                        className="h-8 rounded-lg border border-[rgba(0,0,0,0.08)]"
                                     />
                                 ))}
                             </div>
                         </button>
                     ))}
                 </div>
+            </div>
 
-                <div className="rounded-3xl border border-(--border) bg-(--surface) p-5">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <h3 className="text-base font-semibold text-(--ink)">Custom Theme Editor</h3>
-                            <p className="text-sm text-(--muted)">
-                                This section is password protected. Enter the password to unlock custom theme editing.
-                            </p>
-                        </div>
-                    </div>
+            {/* Custom Theme Editor Section */}
+            <div className="rounded-2xl border border-(--border) bg-(--surface) p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="h-8 w-1 bg-(--accent-2) rounded-full"></div>
+                    <h3 className="text-lg font-semibold text-(--ink)">{labels.customThemeEditor}</h3>
+                </div>
+                <p className="text-sm text-(--muted) mb-6">
+                    {labels.customThemeEditorDescription}
+                </p>
 
-                    {!customUnlocked ? (
-                        <div className="mt-6 grid gap-4 md:grid-cols-2 items-end">
+                {!customUnlocked ? (
+                    <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-6">
+                        <div className="grid gap-4 md:grid-cols-2 items-end">
                             <div>
                                 <label className="block text-sm font-medium text-(--ink) mb-2">
-                                    Unlock password
+                                    {labels.unlockPassword}
                                 </label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
-                                    placeholder="Enter password"
-                                    className="w-full rounded-2xl border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--ink) outline-none"
+                                    placeholder={labels.enterPassword}
+                                    className="w-full rounded-xl border border-(--border) bg-white px-4 py-3 text-sm text-(--ink) outline-none focus:ring-2 focus:ring-(--accent-2)"
                                 />
                             </div>
                             <div className="flex gap-3">
                                 <button
                                     type="button"
                                     onClick={handleUnlockCustom}
-                                    className="rounded-xl bg-(--accent-2) px-4 py-2 text-sm font-semibold text-white"
+                                    className="rounded-xl bg-(--accent-2) px-6 py-3 text-sm font-semibold text-white hover:bg-(--accent-2)/90 transition-colors"
                                 >
-                                    Unlock
+                                    {labels.unlock}
                                 </button>
                                 <button
                                     type="button"
@@ -441,86 +445,90 @@ export default function ThemeSettings() {
                                         setPassword("");
                                         setPasswordError("");
                                     }}
-                                    className="rounded-xl border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium text-(--ink)"
+                                    className="rounded-xl border border-(--border) bg-(--surface) px-6 py-3 text-sm font-medium text-(--ink) hover:bg-(--surface-muted) transition-colors"
                                 >
-                                    Clear
+                                    {labels.clear}
                                 </button>
                             </div>
                             {passwordError ? (
-                                <div className="col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                                <div className="col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                                     {passwordError}
                                 </div>
                             ) : null}
                         </div>
-                    ) : (
-                        <>
-                            <div className="mt-6 grid gap-3 md:grid-cols-2 md:items-center md:justify-between">
-                                <div>
-                                    <p className="text-sm text-(--muted)">You have unlocked custom editing. Change colors below and save the theme to persist.</p>
-                                </div>
-                                <div className="max-w-xs">
-                                    <label className="block text-sm font-medium text-(--ink) mb-2">
-                                        Theme name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={theme.name}
-                                        onChange={(event) => {
-                                            setSelectedPreset("custom");
-                                            setTheme((prev) => ({ ...prev, name: event.target.value }));
-                                        }}
-                                        placeholder="Custom Theme"
-                                        className="w-full rounded-2xl border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--ink) outline-none"
-                                    />
-                                </div>
+                    </div>
+                ) : (
+                    <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-6">
+                        <div className="mb-6 grid gap-4 md:grid-cols-2 md:items-center md:justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                                <p className="text-sm text-(--muted)">{labels.customEditingUnlocked}</p>
                             </div>
+                            <div className="max-w-xs">
+                                <label className="block text-sm font-medium text-(--ink) mb-2">
+                                    {labels.themeName}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={theme.name}
+                                    onChange={(event) => {
+                                        setSelectedPreset("custom");
+                                        setTheme((prev) => ({ ...prev, name: event.target.value }));
+                                    }}
+                                    placeholder={labels.customTheme}
+                                    className="w-full rounded-xl border border-(--border) bg-white px-4 py-3 text-sm text-(--ink) outline-none focus:ring-2 focus:ring-(--accent-2)"
+                                />
+                            </div>
+                        </div>
 
-                            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                                {FIELD_MAP.map((field) => (
-                                    <div key={field.key} className="rounded-2xl border border-(--border) bg-(--surface-muted) p-4">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
-                                            <div>
-                                                <p className="font-medium text-(--ink)">{field.label}</p>
-                                                <p className="text-sm text-(--muted)">{field.description}</p>
-                                            </div>
-                                            <input
-                                                type="color"
-                                                value={theme.colors[field.key] || "#ffffff"}
-                                                onChange={(event) => updateColor(field.key, event.target.value)}
-                                                className="h-10 w-10 cursor-pointer rounded-xl border border-(--border) bg-transparent p-0"
-                                            />
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            {FIELD_MAP.map((field) => (
+                                <div key={field.key} className="rounded-xl border border-(--border) bg-white p-4 hover:shadow-sm transition-shadow">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div>
+                                            <p className="font-medium text-(--ink)">{field.label}</p>
+                                            <p className="text-xs text-(--muted)">{field.description}</p>
                                         </div>
                                         <input
-                                            type="text"
-                                            value={theme.colors[field.key] || ""}
+                                            type="color"
+                                            value={theme.colors[field.key] || "#ffffff"}
                                             onChange={(event) => updateColor(field.key, event.target.value)}
-                                            placeholder="#ffffff"
-                                            className="w-full rounded-2xl border border-(--border) bg-white px-3 py-2 text-sm text-(--ink) outline-none"
+                                            className="h-10 w-10 cursor-pointer rounded-lg border border-(--border) bg-transparent p-0"
                                         />
                                     </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </div>
+                                    <input
+                                        type="text"
+                                        value={theme.colors[field.key] || ""}
+                                        onChange={(event) => updateColor(field.key, event.target.value)}
+                                        placeholder="#ffffff"
+                                        className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--ink) outline-none focus:ring-2 focus:ring-(--accent-2)"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={resetTheme}
-                    className="flex items-center gap-2 rounded-xl border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium text-(--ink)"
-                >
-                    <RotateCcw size={16} /> Reset preset
-                </button>
-                <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 rounded-xl bg-(--accent-2) px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                    <Save size={16} /> {saving ? "Saving..." : "Save Theme"}
-                </button>
+            {/* Action Buttons Section */}
+            <div className="rounded-2xl border border-(--border) bg-(--surface) p-6">
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={resetTheme}
+                        className="flex items-center gap-2 rounded-xl border border-(--border) bg-(--surface-muted) px-6 py-3 text-sm font-medium text-(--ink) hover:bg-(--border) transition-colors"
+                    >
+                        <RotateCcw size={16} /> {labels.resetPreset}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 rounded-xl bg-(--accent-2) px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70 hover:bg-(--accent-2)/90 transition-colors"
+                    >
+                        <Save size={16} /> {saving ? labels.saving : labels.saveTheme}
+                    </button>
+                </div>
             </div>
         </div>
     );
