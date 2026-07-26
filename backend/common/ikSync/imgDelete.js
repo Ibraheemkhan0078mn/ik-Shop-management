@@ -1,5 +1,5 @@
-import cloudinary from "../../config/cloudinary.js"
-import { getLocalImageChangeTrackModel } from "../../db/localDbConnection.js"
+import cloudinary from "../../configs/cloudinary.js"
+import { getLocalImageChangeTrackModel } from "../../configs/connect.db.js"
 import path from 'path'
 
 export async function imgDelete(modelArray) {

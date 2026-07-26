@@ -73,6 +73,13 @@ const settingsSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        // Backup Settings
+        backup: {
+            syncInterval: {
+                type: Number,
+                default: 4, // hours
+            },
+        },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null },

@@ -1,6 +1,6 @@
-import cloudinary from '../../config/cloudinary.js';
+import cloudinary from '../../configs/cloudinary.js';
 import path from 'path'
-import { getLocalImageChangeTrackModel } from "../../db/localDbConnection.js";
+import { getLocalImageChangeTrackModel } from "../../configs/connect.db.js";
 import os from 'os'
 let homeDir = os.homedir()
 

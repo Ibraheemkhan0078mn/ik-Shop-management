@@ -2,8 +2,13 @@ import React, { useState, useMemo } from "react";
 import { Users, DollarSign, RefreshCw, Filter, Eye, Star, AlertCircle, Calendar, ArrowUp, ArrowDown, X } from "lucide-react";
 import { useGetCustomerReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 export default function CustomerReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -85,14 +90,14 @@ export default function CustomerReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Customer Report</h1>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.customerReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        Customer analytics and ranking
+                        {labels.customerAnalytics}
                     </p>
                 </div>
                 <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
                     <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    Refresh
+                    {labels.refresh}
                 </button>
             </div>
 
@@ -100,27 +105,27 @@ export default function CustomerReport() {
             <div className="card p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -129,7 +134,7 @@ export default function CustomerReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -140,42 +145,42 @@ export default function CustomerReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Customer Type</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.customerType}</label>
                         <select
                             value={customerType}
                             onChange={(e) => setCustomerType(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All</option>
-                            <option value="walk-in">Walk-in</option>
-                            <option value="registered">Registered</option>
+                            <option value="all">{labels.allTypes}</option>
+                            <option value="walk-in">{labels.walkIn}</option>
+                            <option value="registered">{labels.registered}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Sort By</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortBy}</label>
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="totalSpent">Total Spent</option>
-                            <option value="totalOrders">Total Orders</option>
-                            <option value="lastPurchase">Last Purchase</option>
+                            <option value="totalSpent">{labels.totalSpent}</option>
+                            <option value="totalOrders">{labels.totalOrders}</option>
+                            <option value="lastPurchase">{labels.lastPurchase}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Order</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortOrder}</label>
                         <select
                             value={sortOrder}
                             onChange={(e) => setSortOrder(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="desc">Descending</option>
-                            <option value="asc">Ascending</option>
+                            <option value="desc">{labels.descending}</option>
+                            <option value="asc">{labels.ascending}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Search</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.search}</label>
                         <input
                             type="text"
                             placeholder="Customer name..."
@@ -201,7 +206,7 @@ export default function CustomerReport() {
                                     <Users size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Customers</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalCustomers}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalCustomers || 0}
                                     </p>
@@ -215,7 +220,7 @@ export default function CustomerReport() {
                                     <DollarSign size={20} className="text-gray-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Sales - Walk-in</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.walkIn}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalSalesWalkIn || 0).toLocaleString()}
                                     </p>
@@ -229,7 +234,7 @@ export default function CustomerReport() {
                                     <DollarSign size={20} className="text-blue-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Sales - Registered</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.registered}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalSalesRegistered || 0).toLocaleString()}
                                     </p>
@@ -243,7 +248,7 @@ export default function CustomerReport() {
                                     <AlertCircle size={20} className="text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Due</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDue}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalDue || 0).toLocaleString()}
                                     </p>
@@ -257,7 +262,7 @@ export default function CustomerReport() {
                                     <Star size={20} className="text-yellow-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Top Customer</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.topCustomer}</p>
                                     <p className="font-semibold text-[var(--ink)] text-sm truncate max-w-[150px]">
                                         {summary.topCustomer?.name || "—"}
                                     </p>
@@ -272,27 +277,27 @@ export default function CustomerReport() {
                     {/* Customer Table */}
                     <div className="card">
                         <div className="p-4 border-b border-[var(--border)]">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">Customer Rankings</h2>
+                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.customerReport}</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-[var(--surface-muted)]">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Customer Name</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Orders</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Spent</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due Amount</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Last Purchase</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customer}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customerType}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalOrders}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalSpent}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.lastPurchase}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
                                     {customers.length === 0 ? (
                                         <tr>
                                             <td colSpan="8" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                No customers found for the selected filters
+                                                {labels.noDataFound}
                                             </td>
                                         </tr>
                                     ) : (

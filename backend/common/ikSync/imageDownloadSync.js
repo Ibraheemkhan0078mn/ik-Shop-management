@@ -1,10 +1,10 @@
 import path from "path";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../configs/cloudinary.js";
 // import { getLocalProductModel } from "../../db/localDbConnection.js";
 import os from "os";
 let homeDir = os.homedir()
 import fs from "fs";
-import { changeTrackDocsCreationFunc } from '../onlineSync/changeTrackModelCreation.js'
+import { changeTrackDocsCreationFunc } from './changeTrackModelCreation.js'
 import mongoose from "mongoose";
 // import axios from "axios";
 

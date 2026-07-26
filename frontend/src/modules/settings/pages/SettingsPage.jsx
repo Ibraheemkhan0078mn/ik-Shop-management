@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield } from "lucide-react";
+import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield, Cloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
@@ -13,6 +13,7 @@ import ProfileSettings from "../components/ProfileSettings.jsx";
 import PaymentMethodsSettings from "../components/PaymentMethodsSettings.jsx";
 import ThemeSettings from "../components/ThemeSettings.jsx";
 import PermissionPasswordSettings from "../components/PermissionPasswordSettings.jsx";
+import BackupSettings from "../components/BackupSettings.jsx";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
@@ -36,6 +37,7 @@ export default function SettingsPage() {
         { id: "theme", icon: Palette, label: "Theme" },
         { id: "paymentMethods", icon: CreditCard, label: "Payment Methods" },
         { id: "profile", icon: User, label: labels.profile },
+        { id: "backup", icon: Cloud, label: "Backup" },
     ];
 
     // Only add permission password tab for admin users
@@ -76,6 +78,7 @@ export default function SettingsPage() {
                 {activeTab === "theme" && <ThemeSettings />}
                 {activeTab === "paymentMethods" && <PaymentMethodsSettings labels={labels} />}
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
+                {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />}
             </div>
         </div>

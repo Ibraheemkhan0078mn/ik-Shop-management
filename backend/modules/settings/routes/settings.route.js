@@ -9,6 +9,7 @@ import {
     updateLanguageSettingsData,
     updateModuleSettingsData,
     updatePermissionPasswordSettingsData,
+    updateBackupSettingsData,
 } from "../controllers/settings.controller.js";
 
 const router = express.Router();
@@ -28,5 +29,6 @@ router.put("/camera", updateCameraSettingsData);
 router.put("/language", updateLanguageSettingsData);
 router.put("/modules", updateModuleSettingsData);
 router.put("/permission-password", updatePermissionPasswordSettingsData);
+router.put("/backup", updateBackupSettingsData);
 
 export default router;

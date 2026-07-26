@@ -4,9 +4,14 @@ import { useGetPurchaseReportQuery } from "../services/reports.service.js";
 import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import { useNavigate } from "react-router-dom";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 export default function PurchaseReport() {
     const navigate = useNavigate();
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
 
     // ---- UI state ----
     const [period, setPeriod] = useState("today");
@@ -76,14 +81,14 @@ export default function PurchaseReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Purchases Report</h1>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.purchaseReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        Purchase data for <span className="font-medium text-[var(--ink)]">{period === "custom" ? `${fromDate || "?"} → ${toDate || "?"}` : period}</span>
+                        {labels.purchaseDataFor} <span className="font-medium text-[var(--ink)]">{period === "custom" ? `${fromDate || "?"} → ${toDate || "?"}` : period}</span>
                     </p>
                 </div>
                 <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
                     <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    Refresh
+                    {labels.refresh}
                 </button>
             </div>
 
@@ -91,27 +96,27 @@ export default function PurchaseReport() {
             <div className="card p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom Range</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -120,7 +125,7 @@ export default function PurchaseReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -131,13 +136,13 @@ export default function PurchaseReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Supplier</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.supplier}</label>
                         <select
                             value={supplierId}
                             onChange={(e) => setSupplierId(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="">All Suppliers</option>
+                            <option value="">{labels.allSuppliers}</option>
                             {suppliers.map((supplier) => (
                                 <option key={supplier._id} value={supplier._id}>
                                     {supplier.name}
@@ -146,40 +151,40 @@ export default function PurchaseReport() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Payment Status</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.paymentStatus}</label>
                         <select
                             value={paymentStatus}
                             onChange={(e) => setPaymentStatus(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All</option>
-                            <option value="full">Paid</option>
-                            <option value="partial">Partial</option>
-                            <option value="pending">Unpaid</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="full">{labels.paid}</option>
+                            <option value="partial">{labels.partial}</option>
+                            <option value="pending">{labels.unpaid}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Delivery Status</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.deliveryStatus}</label>
                         <select
                             value={deliveryStatus}
                             onChange={(e) => setDeliveryStatus(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All</option>
-                            <option value="received">Received</option>
-                            <option value="pending">Pending</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="received">{labels.delivered}</option>
+                            <option value="pending">{labels.ordered}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Rejected/Return</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.isRejected}</label>
                         <select
                             value={isRejected}
                             onChange={(e) => setIsRejected(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="yes">{labels.rejected}</option>
+                            <option value="no">{labels.delivered}</option>
                         </select>
                     </div>
                 </div>
@@ -199,7 +204,7 @@ export default function PurchaseReport() {
                                     <Package size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Purchases</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPurchases}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalPurchases || 0).toLocaleString()}
                                     </p>
@@ -213,7 +218,7 @@ export default function PurchaseReport() {
                                     <CheckCircle size={20} className="text-green-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Paid</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPaid}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalPaid || 0).toLocaleString()}
                                     </p>
@@ -227,7 +232,7 @@ export default function PurchaseReport() {
                                     <AlertCircle size={20} className="text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Due</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDue}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalDue || 0).toLocaleString()}
                                     </p>
@@ -241,7 +246,7 @@ export default function PurchaseReport() {
                                     <CheckCircle2 size={20} className="text-green-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Delivered</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.delivered}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalDeliveredCount || 0}
                                     </p>
@@ -255,7 +260,7 @@ export default function PurchaseReport() {
                                     <XCircle size={20} className="text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Rejected</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.rejected}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalRejectedCount || 0}
                                     </p>
@@ -269,7 +274,7 @@ export default function PurchaseReport() {
                                     <Truck size={20} className="text-[var(--accent)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Suppliers</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalSuppliers}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalSuppliers || 0}
                                     </p>
@@ -281,16 +286,16 @@ export default function PurchaseReport() {
                     {/* Supplier-wise Breakdown */}
                     {supplierBreakdown.length > 0 && (
                         <div className="card p-4 mb-6">
-                            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Supplier-wise Breakdown</h3>
+                            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">{labels.topSupplier}</h3>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-[var(--surface-muted)]">
                                         <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Amount</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Paid</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Bills</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.total}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalBills}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border)]">
@@ -312,27 +317,27 @@ export default function PurchaseReport() {
                     {/* Purchases Table */}
                     <div className="card">
                         <div className="p-4 border-b border-[var(--border)]">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">Purchase Transactions</h2>
+                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.purchaseDetails}</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-[var(--surface-muted)]">
                                     <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Bill No</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Paid</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Delivery Status</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.invoiceNo}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.date}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.amount}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.deliveryStatus}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
                                     {purchases.length === 0 ? (
                                         <tr>
                                             <td colSpan="8" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                No purchases found for the selected filters
+                                                {labels.noDataFound}
                                             </td>
                                         </tr>
                                     ) : (

@@ -85,3 +85,13 @@ export const updatePermissionPasswordSettings = async (userId, permissionPasswor
     
     return settings;
 };
+
+// Update backup settings
+export const updateBackupSettings = async (userId, backupData) => {
+    const settings = await findOneAndUpdateSettingsService(
+        { userId },
+        { $set: { backup: backupData } }
+    );
+    
+    return settings;
+};

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { getLocalChangeTrackModel } from "../../db/localDbConnection.js";
+import { getLocalChangeTrackModel } from "../../configs/connect.db.js";
 
-import { getOnlineChangeTrackModel } from "../../db/onlineDbConnection.js";
+import { getOnlineChangeTrackModel } from "../../configs/onlineConnect.db.js";
 import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
 
 

@@ -1,16 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Percent, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useGetExpenseReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
-
-const PERIOD_OPTIONS = [
-    { value: "today", label: "Today" },
-    { value: "month", label: "This Month" },
-    { value: "3month", label: "Last 3 Months" },
-    { value: "year", label: "This Year" },
-    { value: "custom", label: "Custom Range" },
-];
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 const SECTION_KEYS = ['categories', 'types'];
 
@@ -156,6 +150,18 @@ function SourceSection({ title, icon: Icon, color, kpiValue, kpiDescription, cou
 }
 
 export default function ExpenseReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
+
+    const PERIOD_OPTIONS = useMemo(() => [
+        { value: "today", label: labels.today },
+        { value: "month", label: labels.thisMonth },
+        { value: "3month", label: labels.last3Months },
+        { value: "year", label: labels.thisYear },
+        { value: "custom", label: labels.customRange },
+    ], [labels]);
+
     const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
@@ -202,8 +208,8 @@ export default function ExpenseReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Expenses Report</h1>
-                    <p className="text-sm text-[var(--muted)]">Track and analyze all business expenses by category and type</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.expenseReport}</h1>
+                    <p className="text-sm text-[var(--muted)]">{labels.expenseAnalysis}</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
@@ -211,14 +217,14 @@ export default function ExpenseReport() {
                         className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
                         <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                        Refresh
+                        {labels.refresh}
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
                         className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        Export PDF
+                        {labels.exportPdf}
                     </button>
                 </div>
             </div>
@@ -227,7 +233,7 @@ export default function ExpenseReport() {
             <div className="card p-4 mb-6 no-print">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Period Filter</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.periodFilter}</span>
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex gap-2 flex-wrap">
@@ -251,14 +257,14 @@ export default function ExpenseReport() {
                             className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
                             style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
-                            Expand All
+                            {labels.expandAll}
                         </button>
                         <button
                             onClick={handleCollapseAll}
                             className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
                             style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
-                            Collapse All
+                            {labels.collapseAll}
                         </button>
                     </div>
                 </div>
@@ -290,32 +296,32 @@ export default function ExpenseReport() {
                     {/* KPI Grid Row 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <KpiCard 
-                            label="Total Expenses" 
+                            label={labels.totalExpenses} 
                             value={summary.totalExpenses} 
                             icon={DollarSign} 
                             color="#ef4444" 
-                            description={`${details.expenseCount || 0} transactions`} 
+                            description={`${details.expenseCount || 0} ${labels.transactions}`} 
                         />
                         <KpiCard 
-                            label="Average Expense" 
+                            label={labels.averageExpense} 
                             value={summary.averageExpense} 
                             icon={BarChart3} 
                             color="#3b82f6" 
-                            description="Per transaction"
+                            description={labels.perTransaction}
                         />
                         <KpiCard 
-                            label="Highest Expense" 
+                            label={labels.highestExpense} 
                             value={summary.highestExpense} 
                             icon={TrendingUp} 
                             color="#f59e0b" 
-                            description="Largest transaction"
+                            description={labels.largestTransaction}
                         />
                         <KpiCard 
-                            label="Categories" 
+                            label={labels.categories} 
                             value={details.categoryCount || 0} 
                             icon={Receipt} 
                             color="#8b5cf6" 
-                            description="Types of expenses" 
+                            description={labels.typesOfExpenses} 
                             isCurrency={false}
                         />
                     </div>
@@ -323,32 +329,32 @@ export default function ExpenseReport() {
                     {/* KPI Grid Row 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <KpiCard 
-                            label="Daily Average" 
+                            label={labels.dailyAverage} 
                             value={summary.dailyAverage} 
                             icon={DollarSign} 
                             color="#10b981" 
-                            description="Average per day"
+                            description={labels.averagePerDay}
                         />
                         <KpiCard 
-                            label="Lowest Expense" 
+                            label={labels.lowestExpense} 
                             value={summary.lowestExpense} 
                             icon={DollarSign} 
                             color="#06b6d4" 
-                            description="Smallest transaction"
+                            description={labels.smallestTransaction}
                         />
                         <KpiCard 
-                            label="Weekly Average" 
+                            label={labels.weeklyAverage} 
                             value={summary.weeklyAverage || 0} 
                             icon={DollarSign} 
                             color="#059669" 
-                            description="Average per week"
+                            description={labels.averagePerWeek}
                         />
                         <KpiCard 
-                            label="Monthly Projection" 
+                            label={labels.monthlyProjection} 
                             value={summary.monthlyProjection || 0} 
                             icon={TrendingUp} 
                             color="#7c3aed" 
-                            description="Estimated monthly"
+                            description={labels.estimatedMonthly}
                         />
                     </div>
 
@@ -358,19 +364,19 @@ export default function ExpenseReport() {
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <Receipt size={22} style={{ color: '#ef4444' }} />
-                                    <span className="text-sm font-semibold text-[var(--muted)]">EXPENSE SUMMARY</span>
+                                    <span className="text-sm font-semibold text-[var(--muted)]">{labels.expenseSummary}</span>
                                 </div>
                                 <p className="text-3xl font-bold" style={{ color: '#ef4444' }}>
                                     Rs {(summary.totalExpenses || 0).toLocaleString()}
                                 </p>
                                 <p className="text-xs mt-1 text-[var(--muted)]">
-                                    Total operating expenses for selected period
+                                    {labels.totalOperatingExpenses}
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm text-[var(--muted)]">Expense Count</p>
+                                <p className="text-sm text-[var(--muted)]">{labels.expenseCount}</p>
                                 <p className="text-2xl font-bold text-[var(--ink)]">{details.expenseCount || 0}</p>
-                                <p className="text-sm mt-2 text-[var(--muted)]">Avg Per Transaction</p>
+                                <p className="text-sm mt-2 text-[var(--muted)]">{labels.avgPerTransaction}</p>
                                 <p className="text-lg font-bold text-[var(--ink)]">Rs {(summary.averageExpense || 0).toLocaleString()}</p>
                             </div>
                         </div>
@@ -378,15 +384,15 @@ export default function ExpenseReport() {
 
                     {/* Detailed Sections */}
                     <div className="space-y-4 mb-6">
-                        <h2 className="text-lg font-semibold text-[var(--ink)]">Expense Breakdown</h2>
+                        <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.expenseBreakdown}</h2>
 
                         {/* Categories Section */}
                         <SourceSection
-                            title="Expenses by Category"
+                            title={labels.expensesByCategory}
                             icon={Receipt}
                             color="#ef4444"
                             kpiValue={summary.totalExpenses}
-                            kpiDescription="Total expenses"
+                            kpiDescription={labels.totalExpenses}
                             count={details.categoryCount || 0}
                             breakdown={breakdowns.expensesByCategory}
                             breakdownLabelKey="category"
@@ -398,11 +404,11 @@ export default function ExpenseReport() {
                         {/* Types Section */}
                         {breakdowns.expensesByType && breakdowns.expensesByType.length > 0 && (
                             <SourceSection
-                                title="Expenses by Type"
+                                title={labels.expensesByType}
                                 icon={BarChart3}
                                 color="#3b82f6"
                                 kpiValue={summary.totalExpenses}
-                                kpiDescription="Total expenses by type"
+                                kpiDescription={labels.totalExpenses}
                                 count={details.typeCount || 0}
                                 breakdown={breakdowns.expensesByType}
                                 breakdownLabelKey="type"
@@ -420,11 +426,11 @@ export default function ExpenseReport() {
                                     <Percent size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Highest Category %</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.highestCategory}</p>
                                     <p className="font-semibold text-[var(--ink)]">{summary.topCategoryPercentage || 0}%</p>
                                 </div>
                             </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">Percentage of top category</p>
+                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.percentageOfTopCategory}</p>
                         </div>
                         <div className="card p-4">
                             <div className="flex items-center gap-3">
@@ -432,11 +438,11 @@ export default function ExpenseReport() {
                                     <Receipt size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Top Category</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.topCategory}</p>
                                     <p className="font-semibold text-[var(--ink)]">{summary.topCategory || 'N/A'}</p>
                                 </div>
                             </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">Highest spending category</p>
+                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.highestSpendingCategory}</p>
                         </div>
                         <div className="card p-4">
                             <div className="flex items-center gap-3">
@@ -444,13 +450,13 @@ export default function ExpenseReport() {
                                     <TrendingUp size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Trend</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.trend}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.trend > 0 ? 'Increasing' : (summary.trend < 0 ? 'Decreasing' : 'Stable')}
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">Compared to previous period</p>
+                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.comparedToPreviousPeriod}</p>
                         </div>
                     </div>
                 </div>
@@ -459,7 +465,7 @@ export default function ExpenseReport() {
             {/* PDF Modal */}
             {isPdfModalOpen && (
                 <PdfPreviewModal
-                    title="Expenses Report"
+                    title={labels.expenseReport}
                     contentRef={targetRef}
                     onClose={() => setIsPdfModalOpen(false)}
                 />

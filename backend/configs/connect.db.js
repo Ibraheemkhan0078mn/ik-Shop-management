@@ -189,3 +189,4 @@ export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
 export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;
 export const getLocalSettingsModel = () => SettingsModel || null;
 export const getLocalPaymentMethodModel = () => PaymentMethodModel || null;
+export const getLocalDeviceIdentityModel = () => null;

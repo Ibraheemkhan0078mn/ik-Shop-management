@@ -3,8 +3,13 @@ import { Truck, DollarSign, RefreshCw, Filter, Eye, Star, AlertCircle, X } from 
 import { useGetSupplierReportQuery } from "../services/reports.service.js";
 import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 export default function SupplierReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -95,14 +100,14 @@ export default function SupplierReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Supplier Report</h1>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.supplierReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        Supplier analytics and payment tracking
+                        {labels.supplierAnalytics}
                     </p>
                 </div>
                 <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
                     <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    Refresh
+                    {labels.refresh}
                 </button>
             </div>
 
@@ -110,27 +115,27 @@ export default function SupplierReport() {
             <div className="card p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -139,7 +144,7 @@ export default function SupplierReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -150,13 +155,13 @@ export default function SupplierReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Supplier</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.supplier}</label>
                         <select
                             value={supplierId}
                             onChange={(e) => setSupplierId(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="">All Suppliers</option>
+                            <option value="">{labels.allSuppliers}</option>
                             {suppliersList.map((supplier) => (
                                 <option key={supplier._id} value={supplier._id}>
                                     {supplier.name}
@@ -165,44 +170,44 @@ export default function SupplierReport() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Sort By</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortBy}</label>
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="totalPurchases">Total Purchases</option>
-                            <option value="dueAmount">Due Amount</option>
-                            <option value="lastPurchase">Last Purchase</option>
+                            <option value="totalPurchases">{labels.totalPurchases}</option>
+                            <option value="dueAmount">{labels.dueAmount}</option>
+                            <option value="lastPurchase">{labels.lastPurchase}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Order</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortOrder}</label>
                         <select
                             value={sortOrder}
                             onChange={(e) => setSortOrder(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="desc">Descending</option>
-                            <option value="asc">Ascending</option>
+                            <option value="desc">{labels.descending}</option>
+                            <option value="asc">{labels.ascending}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Status</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.status}</label>
                         <select
                             value={paymentStatus}
                             onChange={(e) => setPaymentStatus(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All</option>
-                            <option value="paid">Paid</option>
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partial">Partial</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="paid">{labels.paid}</option>
+                            <option value="unpaid">{labels.unpaid}</option>
+                            <option value="partial">{labels.partial}</option>
                         </select>
                     </div>
                 </div>
                 <div className="mt-4">
-                    <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Search</label>
+                    <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.search}</label>
                     <input
                         type="text"
                         placeholder="Supplier name..."
@@ -227,7 +232,7 @@ export default function SupplierReport() {
                                     <Truck size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Suppliers</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalSuppliers}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalSuppliers || 0}
                                     </p>
@@ -241,7 +246,7 @@ export default function SupplierReport() {
                                     <DollarSign size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Purchases</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPurchases}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalPurchases || 0).toLocaleString()}
                                     </p>
@@ -255,7 +260,7 @@ export default function SupplierReport() {
                                     <DollarSign size={20} className="text-green-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Paid</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPaid}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalPaid || 0).toLocaleString()}
                                     </p>
@@ -269,7 +274,7 @@ export default function SupplierReport() {
                                     <AlertCircle size={20} className="text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Due</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDue}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalDue || 0).toLocaleString()}
                                     </p>
@@ -283,7 +288,7 @@ export default function SupplierReport() {
                                     <Star size={20} className="text-yellow-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Top Supplier</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.topSupplier}</p>
                                     <p className="font-semibold text-[var(--ink)] text-sm truncate max-w-[150px]">
                                         {summary.topSupplier?.name || "—"}
                                     </p>
@@ -298,26 +303,26 @@ export default function SupplierReport() {
                     {/* Supplier Table */}
                     <div className="card">
                         <div className="p-4 border-b border-[var(--border)]">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">Supplier Rankings</h2>
+                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.supplierReport}</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-[var(--surface-muted)]">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier Name</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Purchases</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Paid</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due Amount</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Last Purchase</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPurchases}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.lastPurchase}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
                                     {suppliers.length === 0 ? (
                                         <tr>
                                             <td colSpan="7" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                No suppliers found for the selected filters
+                                                {labels.noDataFound}
                                             </td>
                                         </tr>
                                     ) : (
@@ -333,7 +338,7 @@ export default function SupplierReport() {
                                                     <button
                                                         onClick={() => setSelectedSupplier(supplier)}
                                                         className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
-                                                        title="View Details"
+                                                        title={labels.viewDetails}
                                                     >
                                                         <Eye size={16} className="text-[var(--accent-2)]" />
                                                     </button>
@@ -353,7 +358,7 @@ export default function SupplierReport() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedSupplier(null)}>
                     <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">Supplier Details</h2>
+                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.supplierDetails}</h2>
                             <button onClick={() => setSelectedSupplier(null)} className="p-2 hover:bg-[var(--app-bg)] rounded-lg">
                                 <X size={20} className="text-[var(--muted)]" />
                             </button>

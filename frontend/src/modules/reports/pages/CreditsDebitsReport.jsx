@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Wallet, RefreshCw, Filter, Eye, ArrowRight, TrendingUp, TrendingDown, X, Calendar } from "lucide-react";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 export default function CreditsDebitsReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -145,7 +150,7 @@ export default function CreditsDebitsReport() {
                         <ArrowRight size={20} className="rotate-180" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Account Ledger</h1>
+                        <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.accountLedger}</h1>
                         <p className="text-sm text-[var(--muted)]">{selectedAccount.account.name} - {selectedAccount.account.type}</p>
                     </div>
                 </div>
@@ -153,19 +158,19 @@ export default function CreditsDebitsReport() {
                 <div className="card p-4 mb-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-xs text-[var(--muted)]">Account Name</p>
+                            <p className="text-xs text-[var(--muted)]">{labels.accountName}</p>
                             <p className="font-semibold text-[var(--ink)]">{selectedAccount.account.name}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)]">Account Type</p>
+                            <p className="text-xs text-[var(--muted)]">{labels.accountType}</p>
                             <p className="font-semibold capitalize text-[var(--ink)]">{selectedAccount.account.type}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)]">Phone</p>
+                            <p className="text-xs text-[var(--muted)]">{labels.phone}</p>
                             <p className="font-semibold text-[var(--ink)]">{selectedAccount.account.phoneNo || "—"}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)]">Current Balance</p>
+                            <p className="text-xs text-[var(--muted)]">{labels.currentBalance}</p>
                             <p className={`font-bold ${selectedAccount.account.currentBalance >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 Rs {Math.abs(selectedAccount.account.currentBalance).toLocaleString()}
                             </p>
@@ -175,18 +180,18 @@ export default function CreditsDebitsReport() {
 
                 <div className="card">
                     <div className="p-4 border-b border-[var(--border)]">
-                        <h2 className="text-lg font-semibold text-[var(--ink)]">Transaction History</h2>
+                        <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.transactionHistory}</h2>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-[var(--surface-muted)]">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Description</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Source</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Debit</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Credit</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Balance</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.date}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.description}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.source}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.debit}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.credit}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.balance}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--border)]">
@@ -213,7 +218,7 @@ export default function CreditsDebitsReport() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-[var(--muted)]">No transactions found</td>
+                                        <td colSpan="6" className="px-4 py-8 text-center text-[var(--muted)]">{labels.noDataFound}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -229,14 +234,14 @@ export default function CreditsDebitsReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Credits & Debits Report</h1>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.creditsDebitsReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        Track credit account transactions and balances
+                        {labels.creditsDebitsAnalysis}
                     </p>
                 </div>
                 <button onClick={fetchReport} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
                     <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                    Refresh
+                    {labels.refresh}
                 </button>
             </div>
 
@@ -244,27 +249,27 @@ export default function CreditsDebitsReport() {
             <div className="card p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom Range</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -273,7 +278,7 @@ export default function CreditsDebitsReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -284,33 +289,33 @@ export default function CreditsDebitsReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Account Type</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.accountType}</label>
                         <select
                             value={accountType}
                             onChange={(e) => setAccountType(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All Types</option>
-                            <option value="personal">Personal</option>
-                            <option value="business">Business</option>
-                            <option value="others">Others</option>
+                            <option value="all">{labels.allTypes}</option>
+                            <option value="personal">{labels.personal}</option>
+                            <option value="business">{labels.business}</option>
+                            <option value="others">{labels.others}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Status</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.status}</label>
                         <select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All Status</option>
-                            <option value="to_pay">To Pay</option>
-                            <option value="to_receive">To Receive</option>
-                            <option value="cleared">Cleared</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="to_pay">{labels.toPay}</option>
+                            <option value="to_receive">{labels.toReceive}</option>
+                            <option value="cleared">{labels.cleared}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Search</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.search}</label>
                         <input
                             type="text"
                             placeholder="Account name..."
@@ -337,7 +342,7 @@ export default function CreditsDebitsReport() {
                                         <Wallet size={20} className="text-[var(--accent-2)]" />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Accounts</p>
+                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalAccounts}</p>
                                         <p className="font-semibold text-[var(--ink)]">
                                             {reportData.kpi?.totalAccounts || 0}
                                         </p>
@@ -351,7 +356,7 @@ export default function CreditsDebitsReport() {
                                         <TrendingUp size={20} className="text-red-600" />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">I Owe (Debit)</p>
+                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.iOwe}</p>
                                         <p className="font-semibold text-red-600">
                                             Rs {(reportData.kpi?.totalDebitOnOthers || 0).toLocaleString()}
                                         </p>
@@ -365,7 +370,7 @@ export default function CreditsDebitsReport() {
                                         <TrendingDown size={20} className="text-green-600" />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">Owed to Me</p>
+                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.owedToMe}</p>
                                         <p className="font-semibold text-green-600">
                                             Rs {(reportData.kpi?.totalDebitOnMe || 0).toLocaleString()}
                                         </p>
@@ -379,7 +384,7 @@ export default function CreditsDebitsReport() {
                                         <Wallet size={20} className="text-yellow-600" />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">Net Balance</p>
+                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.netBalance}</p>
                                         <p className={`font-semibold ${(reportData.kpi?.finalAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                             {(reportData.kpi?.finalAmount || 0) >= 0 ? '+' : ''}Rs {(reportData.kpi?.finalAmount || 0).toLocaleString()}
                                         </p>
@@ -393,19 +398,19 @@ export default function CreditsDebitsReport() {
                     {reportData && reportData.accounts && reportData.accounts.length > 0 ? (
                         <div className="card">
                             <div className="p-4 border-b border-[var(--border)]">
-                                <h2 className="text-lg font-semibold text-[var(--ink)]">Credit Accounts</h2>
+                                <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.creditAccounts}</h2>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-[var(--surface-muted)]">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Account Name</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total To Pay</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Paid</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Remaining</th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Status</th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.account}</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.type}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalToPay}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.remaining}</th>
+                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.status}</th>
+                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border)]">
@@ -430,7 +435,7 @@ export default function CreditsDebitsReport() {
                                                     <button
                                                         onClick={() => fetchLedger(accountData.account._id)}
                                                         className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
-                                                        title="View Ledger"
+                                                        title={labels.viewLedger}
                                                     >
                                                         <Eye size={16} className="text-[var(--accent-2)]" />
                                                     </button>
@@ -444,8 +449,8 @@ export default function CreditsDebitsReport() {
                     ) : (
                         <div className="card p-12 text-center">
                             <Wallet size={48} className="mx-auto mb-4 text-[var(--muted)]" />
-                            <h3 className="text-lg font-medium text-[var(--ink)] mb-2">No Accounts Found</h3>
-                            <p className="text-[var(--muted)]">Try adjusting your filters or date range</p>
+                            <h3 className="text-lg font-medium text-[var(--ink)] mb-2">{labels.noAccountsFound}</h3>
+                            <p className="text-[var(--muted)]">{labels.tryAdjustingFilters}</p>
                         </div>
                     )}
                 </div>

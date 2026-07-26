@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useEffect } from "react";
 import { applyTheme, getApiUrl } from "./shared/utilities/themeApplier.js";
+import { useSelector } from "react-redux";
+import { useSyncRequiredMutation } from "./modules/backup/api/backup.api.js";
 
 const NO_CHROME_ROUTES = ["/", "/login", "/signup", "/pos"];
 
@@ -12,6 +14,8 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const showChrome = !NO_CHROME_ROUTES.includes(location.pathname);
+  const { id: userId } = useSelector(s => s.auth) || {};
+  const [syncRequired] = useSyncRequiredMutation();
 
   useEffect(() => {
     fetch(getApiUrl("/theme/active"))
@@ -19,6 +23,25 @@ function App() {
       .then((theme) => applyTheme(theme?.colors))
       .catch(() => {});
   }, []);
+
+  // Auto-sync on app start when user is logged in
+  useEffect(() => {
+    if (userId) {
+      const performInitialSync = async () => {
+        try {
+          console.log("Performing initial sync on app start...");
+          await syncRequired().unwrap();
+          console.log("Initial sync completed successfully");
+        } catch (error) {
+          console.error("Initial sync failed:", error);
+        }
+      };
+      
+      // Delay sync slightly to ensure app is fully loaded
+      const timer = setTimeout(performInitialSync, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [userId, syncRequired]);
 
 
 

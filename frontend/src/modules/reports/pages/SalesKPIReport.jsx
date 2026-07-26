@@ -3,8 +3,13 @@ import { DollarSign, ShoppingCart, RefreshCw, Filter, Eye, Package, CreditCard, 
 import { useGetSalesReportQuery } from "../services/reports.service.js";
 import { useCustomers } from "../../customers/services/customers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 export default function SalesKPIReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -92,9 +97,9 @@ export default function SalesKPIReport() {
 
     const getPaymentStatusLabel = (status) => {
         switch (status) {
-            case 'full': return 'Paid';
-            case 'partial': return 'Partial';
-            case 'unpaid': return 'Unpaid';
+            case 'full': return labels.paid;
+            case 'partial': return labels.partial;
+            case 'unpaid': return labels.unpaid;
             default: return status;
         }
     };
@@ -106,14 +111,14 @@ export default function SalesKPIReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Sales Report</h1>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.salesReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        Sales analytics and payment tracking
+                        {labels.salesDataFor} <span className="font-medium text-[var(--ink)]">{period === "custom" ? `${fromDate || "?"} → ${toDate || "?"}` : period}</span>
                     </p>
                 </div>
                 <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
                     <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    Refresh
+                    {labels.refresh}
                 </button>
             </div>
 
@@ -121,27 +126,27 @@ export default function SalesKPIReport() {
             <div className="card p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -150,7 +155,7 @@ export default function SalesKPIReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -161,25 +166,25 @@ export default function SalesKPIReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Customer Type</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.customerType}</label>
                         <select
                             value={customerType}
                             onChange={(e) => setCustomerType(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All Types</option>
-                            <option value="walk-in">Walk-in</option>
-                            <option value="registered">Registered</option>
+                            <option value="all">{labels.allTypes}</option>
+                            <option value="walk-in">{labels.walkIn}</option>
+                            <option value="registered">{labels.registered}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Customer</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.customer}</label>
                         <select
                             value={customerId}
                             onChange={(e) => setCustomerId(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="">All Customers</option>
+                            <option value="">{labels.allCustomers}</option>
                             {customersList.map((customer) => (
                                 <option key={customer._id} value={customer._id}>
                                     {customer.name}
@@ -188,44 +193,44 @@ export default function SalesKPIReport() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Payment Status</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.paymentStatus}</label>
                         <select
                             value={paymentStatus}
                             onChange={(e) => setPaymentStatus(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="all">All Status</option>
-                            <option value="paid">Paid</option>
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partial">Partial</option>
+                            <option value="all">{labels.allStatuses}</option>
+                            <option value="paid">{labels.paid}</option>
+                            <option value="unpaid">{labels.unpaid}</option>
+                            <option value="partial">{labels.partial}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Sort By</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortBy}</label>
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="amount">Amount</option>
-                            <option value="date">Date</option>
-                            <option value="items">Items</option>
+                            <option value="amount">{labels.amount}</option>
+                            <option value="date">{labels.date}</option>
+                            <option value="items">{labels.items}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Order</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortOrder}</label>
                         <select
                             value={sortOrder}
                             onChange={(e) => setSortOrder(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="desc">Descending</option>
-                            <option value="asc">Ascending</option>
+                            <option value="desc">{labels.descending}</option>
+                            <option value="asc">{labels.ascending}</option>
                         </select>
                     </div>
                 </div>
                 <div className="mt-4">
-                    <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Search</label>
+                    <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.search}</label>
                     <input
                         type="text"
                         placeholder="Invoice number or customer name..."
@@ -250,7 +255,7 @@ export default function SalesKPIReport() {
                                     <DollarSign size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Sales</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalSales}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.totalSales || 0).toLocaleString()}
                                     </p>
@@ -264,7 +269,7 @@ export default function SalesKPIReport() {
                                     <ShoppingCart size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Orders</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalOrders}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalOrders || 0}
                                     </p>
@@ -278,7 +283,7 @@ export default function SalesKPIReport() {
                                     <CreditCard size={20} className="text-green-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Paid</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPaid}</p>
                                     <p className="font-semibold text-green-600">
                                         Rs {(summary.totalPaid || 0).toLocaleString()}
                                     </p>
@@ -292,7 +297,7 @@ export default function SalesKPIReport() {
                                     <AlertCircle size={20} className="text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Due</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDue}</p>
                                     <p className="font-semibold text-red-600">
                                         Rs {(summary.totalDue || 0).toLocaleString()}
                                     </p>
@@ -306,7 +311,7 @@ export default function SalesKPIReport() {
                                     <TrendingUp size={20} className="text-yellow-600" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Avg Order Value</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.averageOrderValue}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         Rs {(summary.averageOrderValue || 0).toFixed(0).toLocaleString()}
                                     </p>
@@ -320,7 +325,7 @@ export default function SalesKPIReport() {
                                     <Package size={20} className="text-[var(--accent-2)]" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Total Items Sold</p>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalItemsSold}</p>
                                     <p className="font-semibold text-[var(--ink)]">
                                         {summary.totalItems || 0}
                                     </p>
@@ -332,29 +337,29 @@ export default function SalesKPIReport() {
                     {/* Sales Table */}
                     <div className="card">
                         <div className="p-4 border-b border-[var(--border)]">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">Sales Rankings</h2>
+                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.salesReport}</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-[var(--surface-muted)]">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Invoice No</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Customer</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Items</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Amount</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Paid</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Payment Status</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.invoiceNo}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.date}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customer}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.items}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.total}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.paymentStatus}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
                                     {sales.length === 0 ? (
                                         <tr>
                                             <td colSpan="10" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                No sales found for the selected filters
+                                                {labels.noDataFound}
                                             </td>
                                         </tr>
                                     ) : (
@@ -377,7 +382,7 @@ export default function SalesKPIReport() {
                                                     <button
                                                         onClick={() => setSelectedSale(sale)}
                                                         className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
-                                                        title="View Details"
+                                                        title={labels.viewDetails}
                                                     >
                                                         <Eye size={16} className="text-[var(--accent-2)]" />
                                                     </button>

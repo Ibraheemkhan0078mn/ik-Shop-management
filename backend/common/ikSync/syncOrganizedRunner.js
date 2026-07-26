@@ -1,5 +1,5 @@
-import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel } from "../../db/localDbConnection.js"
-import { getOnlineActivityLogModel, getOnlineExpenseCatagModel, getOnlineExpenseModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineReminderModel, getOnlineStudentCounterModel, getOnlineStudentFeeTrasactionModel, getOnlineStudentInvoiceModel, getOnlineStudentMarksModel, getOnlineStudentModel, getOnlineSubjectModel, getOnlineTeacherAttendenceModel, getOnlineTeacherInvoiceModel, getOnlineTeacherModel, getOnlineTeacherSalaryPaymentModel, getOnlineUserModel } from '../../db/onlineDbConnection.js'
+import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel } from "../../configs/connect.db.js"
+import { getOnlineActivityLogModel, getOnlineExpenseCategoryModel, getOnlineExpenseModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineUserModel } from '../../configs/onlineConnect.db.js'
 import { deleteOnlineSync } from "./deleteOnlineSync.js";
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
 import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";

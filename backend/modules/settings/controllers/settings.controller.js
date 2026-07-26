@@ -9,6 +9,7 @@ import {
     updateLanguageSettings,
     updateModuleSettings,
     updatePermissionPasswordSettings,
+    updateBackupSettings,
 } from "../services/settings.service.js";
 
 // Get Settings
@@ -149,6 +150,26 @@ export const updatePermissionPasswordSettingsData = asyncHandler(async (req, res
     res.status(200).json({
         success: true,
         message: "Permission password updated successfully",
+        data: settings,
+    });
+});
+
+// Update Backup Settings
+export const updateBackupSettingsData = asyncHandler(async (req, res, next) => {
+    const { userId, backup } = req.body;
+
+    if (!userId) {
+        return next(new ErrorResponse("User ID is required", 400));
+    }
+    if (!backup) {
+        return next(new ErrorResponse("Backup settings data is required", 400));
+    }
+
+    const settings = await updateBackupSettings(userId, backup);
+
+    res.status(200).json({
+        success: true,
+        message: "Backup settings updated successfully",
         data: settings,
     });
 });

@@ -1,16 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { Calendar, RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter } from "lucide-react";
 import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
-
-const PERIOD_OPTIONS = [
-    { value: "today", label: "Today" },
-    { value: "month", label: "This Month" },
-    { value: "3month", label: "Last 3 Months" },
-    { value: "year", label: "This Year" },
-    { value: "custom", label: "Custom Range" },
-];
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 
 // ---------- Layer 1: plain KPI card, NEVER has a dropdown ----------
 function KpiCard({ label, value, icon: Icon, color, description, isCurrency = true }) {
@@ -119,22 +113,22 @@ function renderTransactionRow(transaction, type) {
     }
 }
 
-function getTableHeaders(type) {
+function getTableHeaders(type, labels) {
     switch (type) {
-        case 'sales': return ['Order #', 'Customer', 'Payment Method', 'Amount', 'Date'];
-        case 'purchases': return ['Invoice #', 'Supplier', 'Amount', 'Date'];
-        case 'expenses': return ['Title', 'Category', 'Description', 'Amount', 'Date'];
-        case 'wastages': return ['Product', 'Quantity', 'Cost Price', 'Total Loss', 'Date'];
-        case 'purchaseReturns': return ['Return #', 'Supplier', 'Amount', 'Date'];
-        case 'productReturns': return ['Return #', 'Customer', 'Amount', 'Date'];
-        case 'salaryPayments': return ['Staff Name', 'Amount', 'Date'];
+        case 'sales': return [labels.orderNumber, labels.customer, labels.paymentMethod, labels.amount, labels.date];
+        case 'purchases': return [labels.invoiceNumber, labels.supplier, labels.amount, labels.date];
+        case 'expenses': return [labels.title, labels.category, labels.description, labels.amount, labels.date];
+        case 'wastages': return [labels.product, labels.quantity, labels.costPrice, labels.totalLoss, labels.date];
+        case 'purchaseReturns': return [labels.returnNumber, labels.supplier, labels.amount, labels.date];
+        case 'productReturns': return [labels.returnNumber, labels.customer, labels.amount, labels.date];
+        case 'salaryPayments': return [labels.staffName, labels.amount, labels.date];
         default: return [];
     }
 }
 
-function TransactionTable({ transactions, type }) {
+function TransactionTable({ transactions, type, labels }) {
     if (!transactions || transactions.length === 0) {
-        return <p className="text-sm py-4 text-center" style={{ color: 'var(--muted)' }}>No transactions in this period.</p>;
+        return <p className="text-sm py-4 text-center" style={{ color: 'var(--muted)' }}>{labels.noTransactionsInPeriod}</p>;
     }
     return (
         <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -142,7 +136,7 @@ function TransactionTable({ transactions, type }) {
                 <table className="w-full">
                     <thead style={{ background: 'var(--surface-muted)' }}>
                         <tr>
-                            {getTableHeaders(type).map((header, idx) => (
+                            {getTableHeaders(type, labels).map((header, idx) => (
                                 <th key={idx} className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>
                                     {header}
                                 </th>
@@ -160,7 +154,7 @@ function TransactionTable({ transactions, type }) {
             </div>
             {transactions.length > 50 && (
                 <div className="px-4 py-2 text-xs text-center" style={{ color: 'var(--muted)' }}>
-                    Showing first 50 of {transactions.length} transactions
+                    {labels.showingFirst50} {transactions.length} {labels.transactions}
                 </div>
             )}
         </div>
@@ -168,7 +162,7 @@ function TransactionTable({ transactions, type }) {
 }
 
 // ---------- Layer 2: full-width source section, own KPI + expand/collapse ----------
-function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription, count, breakdown, breakdownLabelKey, transactions, transactionType, isExpanded, onToggle, extraBreakdown }) {
+function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription, count, breakdown, breakdownLabelKey, transactions, transactionType, isExpanded, onToggle, extraBreakdown, labels }) {
     return (
         <div className="rounded-xl border shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <button
@@ -179,7 +173,7 @@ function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription,
                     <Icon size={22} style={{ color }} />
                     <div>
                         <h3 className="text-md font-semibold" style={{ color: 'var(--ink)' }}>{title}</h3>
-                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{kpiDescription} • {count} transactions</p>
+                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{kpiDescription} • {count} {labels.transactions}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -192,7 +186,7 @@ function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription,
                 <div className="px-5 pb-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
                     {breakdown && breakdown.length > 0 && (
                         <div className="mb-4">
-                            <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>Breakdown</p>
+                            <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{labels.breakdown}</p>
                             <div className="space-y-1">
                                 {breakdown.map((item, idx) => (
                                     <BreakdownItem
@@ -208,10 +202,12 @@ function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription,
                         </div>
                     )}
                     {extraBreakdown}
-                    <div>
-                        <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>Transactions</p>
-                        <TransactionTable transactions={transactions} type={transactionType} />
-                    </div>
+                    {transactions && transactions.length > 0 && (
+                        <div>
+                            <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{labels.transactions}</p>
+                            <TransactionTable transactions={transactions} type={transactionType} labels={labels} />
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -221,6 +217,18 @@ function SourceSection({ id, title, icon: Icon, color, kpiValue, kpiDescription,
 const SECTION_KEYS = ['sales', 'purchases', 'expenses', 'salaries', 'purchaseReturns', 'productReturns', 'wastages', 'qarza'];
 
 export default function MainBusinessReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
+
+    const PERIOD_OPTIONS = useMemo(() => [
+        { value: "today", label: labels.today },
+        { value: "month", label: labels.thisMonth },
+        { value: "3month", label: labels.last3Months },
+        { value: "year", label: labels.thisYear },
+        { value: "custom", label: labels.customRange },
+    ], [labels]);
+
     const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
@@ -269,8 +277,8 @@ export default function MainBusinessReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Main Business Report</h1>
-                    <p className="text-sm text-[var(--muted)]">Complete business overview with detailed breakdowns</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.mainBusinessReport}</h1>
+                    <p className="text-sm text-[var(--muted)]">{labels.businessOverview}</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
@@ -278,14 +286,14 @@ export default function MainBusinessReport() {
                         className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
                         <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                        Refresh
+                        {labels.refresh}
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
                         className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        Export PDF
+                        {labels.exportPdf}
                     </button>
                 </div>
             </div>
@@ -294,7 +302,7 @@ export default function MainBusinessReport() {
             <div className="card p-4 mb-6 no-print">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Period Filter</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.periodFilter}</span>
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex gap-2 flex-wrap">
@@ -318,14 +326,14 @@ export default function MainBusinessReport() {
                             className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
                             style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
-                            Expand All
+                            {labels.expandAll}
                         </button>
                         <button
                             onClick={handleCollapseAll}
                             className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
                             style={{ background: 'var(--surface)', color: 'var(--ink)' }}
                         >
-                            Collapse All
+                            {labels.collapseAll}
                         </button>
                     </div>
                 </div>
@@ -356,24 +364,24 @@ export default function MainBusinessReport() {
 
                     {/* ===================== LAYER 1: TOP KPI GRID (no dropdowns) ===================== */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <KpiCard label="Total Sales" value={summary.totalSales} icon={ShoppingCart} color="#10b981" description={`${details.salesCount || 0} orders`} />
-                        <KpiCard label="Total Purchases" value={summary.totalPurchases} icon={Package} color="#3b82f6" description={`${details.purchaseCount || 0} purchases`} />
-                        <KpiCard label="Total Expenses" value={summary.totalExpenses} icon={Receipt} color="#ef4444" description={`${details.expenseCount || 0} expenses`} />
-                        <KpiCard label="Total Salaries" value={summary.totalSalaries} icon={Users} color="#8b5cf6" description={`${details.salaryPaymentCount || 0} payments`} />
+                        <KpiCard label={labels.totalSales} value={summary.totalSales} icon={ShoppingCart} color="#10b981" description={`${details.salesCount || 0} ${labels.orders}`} />
+                        <KpiCard label={labels.totalPurchases} value={summary.totalPurchases} icon={Package} color="#3b82f6" description={`${details.purchaseCount || 0} ${labels.purchases}`} />
+                        <KpiCard label={labels.totalExpenses} value={summary.totalExpenses} icon={Receipt} color="#ef4444" description={`${details.expenseCount || 0} ${labels.expenses}`} />
+                        <KpiCard label={labels.totalSalaries} value={summary.totalSalaries} icon={Users} color="#8b5cf6" description={`${details.salaryPaymentCount || 0} ${labels.payments}`} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <KpiCard label="Purchase Returns" value={summary.totalPurchaseReturns} icon={TrendingUp} color="#06b6d4" description={`${details.purchaseReturnCount || 0} returns`} />
-                        <KpiCard label="Sale Returns" value={summary.totalProductReturns} icon={TrendingDown} color="#f59e0b" description={`${details.productReturnCount || 0} returns`} />
-                        <KpiCard label="Wastage Loss" value={summary.totalWastage} icon={AlertCircle} color="#dc2626" description={`${details.wastageCount || 0} records`} />
-                        <KpiCard label="Sale Count" value={details.salesCount} icon={ShoppingCart} color="#2563eb" description="Completed orders" isCurrency={false} />
+                        <KpiCard label={labels.purchaseReturns} value={summary.totalPurchaseReturns} icon={TrendingUp} color="#06b6d4" description={`${details.purchaseReturnCount || 0} ${labels.returns}`} />
+                        <KpiCard label={labels.saleReturns} value={summary.totalProductReturns} icon={TrendingDown} color="#f59e0b" description={`${details.productReturnCount || 0} ${labels.returns}`} />
+                        <KpiCard label={labels.wastageLoss} value={summary.totalWastage} icon={AlertCircle} color="#dc2626" description={`${details.wastageCount || 0} ${labels.records}`} />
+                        <KpiCard label={labels.saleCount} value={details.salesCount} icon={ShoppingCart} color="#2563eb" description={labels.completedOrders} isCurrency={false} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <KpiCard label="Qarza Receivable" value={summary.totalReceivable} icon={DollarSign} color="#0f766e" description="Owed to you by customers" />
-                        <KpiCard label="Qarza Payable" value={summary.totalPayable} icon={AlertCircle} color="#7c3aed" description="Owed by you to suppliers" />
-                        <KpiCard label="Gross Profit" value={summary.grossProfit} icon={TrendingUp} color="#16a34a" description={`Gross margin ${summary.grossMarginPercentage || 0}%`} />
-                        <KpiCard label="Net Profit/Loss" value={summary.netProfit} icon={summary.netProfit >= 0 ? DollarSign : AlertCircle} color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"} description={`Net margin ${summary.netMarginPercentage || 0}%`} />
+                        <KpiCard label={labels.qarzaReceivable} value={summary.totalReceivable} icon={DollarSign} color="#0f766e" description={labels.owedToYouByCustomers} />
+                        <KpiCard label={labels.qarzaPayable} value={summary.totalPayable} icon={AlertCircle} color="#7c3aed" description={labels.owedByYouToSuppliers} />
+                        <KpiCard label={labels.grossProfit} value={summary.grossProfit} icon={TrendingUp} color="#16a34a" description={`${labels.grossMargin} ${summary.grossMarginPercentage || 0}%`} />
+                        <KpiCard label={labels.netProfitLoss} value={summary.netProfit} icon={summary.netProfit >= 0 ? DollarSign : AlertCircle} color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"} description={`${labels.netMargin} ${summary.netMarginPercentage || 0}%`} />
                     </div>
 
                     {/* Final combined card: entire business result */}
@@ -383,20 +391,20 @@ export default function MainBusinessReport() {
                                 <div className="flex items-center gap-2 mb-1">
  <Wallet size={22} style={{ color: summary.netProfit >= 0 ? '#10b981' : '#dc2626' }} />
                                     <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>
-                                        FINAL BUSINESS RESULT ({summary.netProfit >= 0 ? 'Profit' : 'Loss'})
+                                        {labels.finalBusinessResult} ({summary.netProfit >= 0 ? labels.profit : labels.loss})
                                     </span>
                                 </div>
                                 <p className="text-3xl font-bold" style={{ color: summary.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
                                     Rs {Math.abs(summary.netProfit || 0).toLocaleString()}
                                 </p>
                                 <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                                    Sales − Purchases − Expenses − Salaries − Wastage − Sale Returns + Purchase Returns
+                                    {labels.businessFormula}
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm" style={{ color: 'var(--muted)' }}>Net Margin</p>
+                                <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.netMargin}</p>
                                 <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{summary.netMarginPercentage || 0}%</p>
-                                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>Net Qarza (Receivable − Payable)</p>
+                                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{labels.netQarza}</p>
                                 <p className="text-lg font-bold" style={{ color: qarzaNet >= 0 ? '#0f766e' : '#7c3aed' }}>Rs {qarzaNet.toLocaleString()}</p>
                             </div>
                         </div>
@@ -405,15 +413,15 @@ export default function MainBusinessReport() {
                     {/* ===================== LAYER 2: PER-SOURCE FULL WIDTH SECTIONS ===================== */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Payment Source Sections</h2>
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{labels.paymentSourceSections}</h2>
                         </div>
 
                         <SourceSection
-                            title="Sales"
+                            title={labels.sales}
                             icon={ShoppingCart}
                             color="#10b981"
                             kpiValue={summary.totalSales}
-                            kpiDescription="Revenue from completed POS orders"
+                            kpiDescription={labels.revenueFromCompletedOrders}
                             count={details.salesCount || 0}
                             breakdown={breakdowns.salesByPaymentMethod}
                             breakdownLabelKey="method"
@@ -421,27 +429,29 @@ export default function MainBusinessReport() {
                             transactionType="sales"
                             isExpanded={!!expandedSections.sales}
                             onToggle={() => toggleSection('sales')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Purchases"
+                            title={labels.purchases}
                             icon={Package}
                             color="#3b82f6"
                             kpiValue={summary.totalPurchases}
-                            kpiDescription="Cost of inventory purchases"
+                            kpiDescription={labels.costOfInventoryPurchases}
                             count={details.purchaseCount || 0}
                             transactions={transactions.purchases}
                             transactionType="purchases"
                             isExpanded={!!expandedSections.purchases}
                             onToggle={() => toggleSection('purchases')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Expenses"
+                            title={labels.expenses}
                             icon={Receipt}
                             color="#ef4444"
                             kpiValue={summary.totalExpenses}
-                            kpiDescription="Operating expenses"
+                            kpiDescription={labels.operatingExpenses}
                             count={details.expenseCount || 0}
                             breakdown={breakdowns.expensesByCategory}
                             breakdownLabelKey="category"
@@ -449,14 +459,15 @@ export default function MainBusinessReport() {
                             transactionType="expenses"
                             isExpanded={!!expandedSections.expenses}
                             onToggle={() => toggleSection('expenses')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Salaries"
+                            title={labels.salaries}
                             icon={Users}
                             color="#8b5cf6"
                             kpiValue={summary.totalSalaries}
-                            kpiDescription="Staff salary payments"
+                            kpiDescription={labels.staffSalaryPayments}
                             count={details.salaryPaymentCount || 0}
                             breakdown={breakdowns.salariesByStaff}
                             breakdownLabelKey="staffName"
@@ -464,14 +475,15 @@ export default function MainBusinessReport() {
                             transactionType="salaryPayments"
                             isExpanded={!!expandedSections.salaries}
                             onToggle={() => toggleSection('salaries')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Purchase Returns"
+                            title={labels.purchaseReturns}
                             icon={TrendingUp}
                             color="#06b6d4"
                             kpiValue={summary.totalPurchaseReturns}
-                            kpiDescription="Returns sent back to suppliers"
+                            kpiDescription={labels.returnsSentToSuppliers}
                             count={details.purchaseReturnCount || 0}
                             breakdown={breakdowns.purchaseReturnsBySupplier}
                             breakdownLabelKey="supplierName"
@@ -479,14 +491,15 @@ export default function MainBusinessReport() {
                             transactionType="purchaseReturns"
                             isExpanded={!!expandedSections.purchaseReturns}
                             onToggle={() => toggleSection('purchaseReturns')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Sale Returns"
+                            title={labels.saleReturns}
                             icon={TrendingDown}
                             color="#f59e0b"
                             kpiValue={summary.totalProductReturns}
-                            kpiDescription="Customer product returns"
+                            kpiDescription={labels.customerProductReturns}
                             count={details.productReturnCount || 0}
                             breakdown={breakdowns.productReturnsByReason}
                             breakdownLabelKey="reason"
@@ -494,28 +507,30 @@ export default function MainBusinessReport() {
                             transactionType="productReturns"
                             isExpanded={!!expandedSections.productReturns}
                             onToggle={() => toggleSection('productReturns')}
+                            labels={labels}
                         />
 
                         <SourceSection
-                            title="Wastage"
+                            title={labels.wastage}
                             icon={AlertCircle}
                             color="#dc2626"
                             kpiValue={summary.totalWastage}
-                            kpiDescription="Inventory wastage cost"
+                            kpiDescription={labels.inventoryWastageCost}
                             count={details.wastageCount || 0}
                             transactions={transactions.wastages}
                             transactionType="wastages"
                             isExpanded={!!expandedSections.wastages}
                             onToggle={() => toggleSection('wastages')}
+                            labels={labels}
                             extraBreakdown={breakdowns.wastagesByProduct && breakdowns.wastagesByProduct.length > 0 && (
                                 <div className="mb-4">
-                                    <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>By Product</p>
+                                    <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{labels.byProduct}</p>
                                     <div className="space-y-1">
                                         {breakdowns.wastagesByProduct.map((item, idx) => (
                                             <div key={idx} className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{item.productName}</p>
-                                                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.count} records • {item.totalQuantity} units</p>
+                                                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.count} {labels.records} • {item.totalQuantity} {labels.units}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm font-bold" style={{ color: '#dc2626' }}>Rs {item.total?.toLocaleString() || 0}</p>
@@ -537,8 +552,8 @@ export default function MainBusinessReport() {
                                 <div className="flex items-center gap-3">
                                     <DollarSign size={22} style={{ color: '#0f766e' }} />
                                     <div>
-                                        <h3 className="text-md font-semibold" style={{ color: 'var(--ink)' }}>Qarza (Receivable &amp; Payable)</h3>
-                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Outstanding customer and supplier credit</p>
+                                        <h3 className="text-md font-semibold" style={{ color: 'var(--ink)' }}>{labels.qarzaReceivablePayable}</h3>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{labels.outstandingCredit}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -550,11 +565,11 @@ export default function MainBusinessReport() {
                                 <div className="px-5 pb-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Receivable (customers owe you)</p>
+                                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>{labels.receivable}</p>
                                             <p className="text-xl font-bold" style={{ color: '#0f766e' }}>Rs {summary.totalReceivable?.toLocaleString() || 0}</p>
                                         </div>
                                         <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>Payable (you owe suppliers)</p>
+                                            <p className="text-sm mb-1" style={{ color: 'var(--muted)' }}>{labels.payable}</p>
                                             <p className="text-xl font-bold" style={{ color: '#7c3aed' }}>Rs {summary.totalPayable?.toLocaleString() || 0}</p>
                                         </div>
                                     </div>
@@ -568,30 +583,30 @@ export default function MainBusinessReport() {
             <PdfPreviewModal
                 isOpen={isPdfModalOpen}
                 onClose={() => setIsPdfModalOpen(false)}
-                fileName="main-business-report.pdf"
+                fileName={`${labels.mainBusinessReport}.pdf`}
                 onBeforeExport={handleExpandAll}
                 onAfterExport={handleCollapseAll}
             >
                 {/* PDF export reuses the same on-screen ref content; keeping simple summary for print */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <KpiCard label="Total Sales" value={summary.totalSales} icon={ShoppingCart} color="#10b981" description="Revenue from completed orders" />
-                    <KpiCard label="Total Purchases" value={summary.totalPurchases} icon={Package} color="#3b82f6" description="Cost of inventory purchases" />
-                    <KpiCard label="Total Expenses" value={summary.totalExpenses} icon={Receipt} color="#ef4444" description="Operating expenses" />
-                    <KpiCard label="Total Salaries" value={summary.totalSalaries} icon={Users} color="#8b5cf6" description="Staff salary payments" />
-                    <KpiCard label="Purchase Returns" value={summary.totalPurchaseReturns} icon={TrendingUp} color="#06b6d4" description="Returns to suppliers" />
-                    <KpiCard label="Sale Returns" value={summary.totalProductReturns} icon={TrendingDown} color="#f59e0b" description="Customer product returns" />
-                    <KpiCard label="Wastage Loss" value={summary.totalWastage} icon={AlertCircle} color="#dc2626" description="Inventory wastage cost" />
-                    <KpiCard label="Net Profit/Loss" value={summary.netProfit} icon={summary.netProfit >= 0 ? DollarSign : AlertCircle} color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"} description={summary.netProfit >= 0 ? "Net profit for period" : "Net loss for period"} />
+                    <KpiCard label={labels.totalSales} value={summary.totalSales} icon={ShoppingCart} color="#10b981" description={labels.revenueFromCompletedOrders} />
+                    <KpiCard label={labels.totalPurchases} value={summary.totalPurchases} icon={Package} color="#3b82f6" description={labels.costOfInventoryPurchases} />
+                    <KpiCard label={labels.totalExpenses} value={summary.totalExpenses} icon={Receipt} color="#ef4444" description={labels.operatingExpenses} />
+                    <KpiCard label={labels.totalSalaries} value={summary.totalSalaries} icon={Users} color="#8b5cf6" description={labels.staffSalaryPayments} />
+                    <KpiCard label={labels.purchaseReturns} value={summary.totalPurchaseReturns} icon={TrendingUp} color="#06b6d4" description={labels.returnsToSuppliers} />
+                    <KpiCard label={labels.saleReturns} value={summary.totalProductReturns} icon={TrendingDown} color="#f59e0b" description={labels.customerProductReturns} />
+                    <KpiCard label={labels.wastageLoss} value={summary.totalWastage} icon={AlertCircle} color="#dc2626" description={labels.inventoryWastageCost} />
+                    <KpiCard label={labels.netProfitLoss} value={summary.netProfit} icon={summary.netProfit >= 0 ? DollarSign : AlertCircle} color={summary.netProfit >= 0 ? "#10b981" : "#dc2626"} description={summary.netProfit >= 0 ? labels.netProfitForPeriod : labels.netLossForPeriod} />
                 </div>
 
                 <div className="space-y-4">
-                    <SourceSection title="Sales" icon={ShoppingCart} color="#10b981" kpiValue={summary.totalSales} kpiDescription="Revenue from completed POS orders" count={details.salesCount || 0} breakdown={breakdowns.salesByPaymentMethod} breakdownLabelKey="method" transactions={transactions.sales} transactionType="sales" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Purchases" icon={Package} color="#3b82f6" kpiValue={summary.totalPurchases} kpiDescription="Cost of inventory purchases" count={details.purchaseCount || 0} transactions={transactions.purchases} transactionType="purchases" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Expenses" icon={Receipt} color="#ef4444" kpiValue={summary.totalExpenses} kpiDescription="Operating expenses" count={details.expenseCount || 0} breakdown={breakdowns.expensesByCategory} breakdownLabelKey="category" transactions={transactions.expenses} transactionType="expenses" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Salaries" icon={Users} color="#8b5cf6" kpiValue={summary.totalSalaries} kpiDescription="Staff salary payments" count={details.salaryPaymentCount || 0} breakdown={breakdowns.salariesByStaff} breakdownLabelKey="staffName" transactions={transactions.salaryPayments} transactionType="salaryPayments" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Purchase Returns" icon={TrendingUp} color="#06b6d4" kpiValue={summary.totalPurchaseReturns} kpiDescription="Returns sent back to suppliers" count={details.purchaseReturnCount || 0} breakdown={breakdowns.purchaseReturnsBySupplier} breakdownLabelKey="supplierName" transactions={transactions.purchaseReturns} transactionType="purchaseReturns" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Sale Returns" icon={TrendingDown} color="#f59e0b" kpiValue={summary.totalProductReturns} kpiDescription="Customer product returns" count={details.productReturnCount || 0} breakdown={breakdowns.productReturnsByReason} breakdownLabelKey="reason" transactions={transactions.productReturns} transactionType="productReturns" isExpanded={true} onToggle={() => {}} />
-                    <SourceSection title="Wastage" icon={AlertCircle} color="#dc2626" kpiValue={summary.totalWastage} kpiDescription="Inventory wastage cost" count={details.wastageCount || 0} transactions={transactions.wastages} transactionType="wastages" isExpanded={true} onToggle={() => {}} />
+                    <SourceSection title={labels.sales} icon={ShoppingCart} color="#10b981" kpiValue={summary.totalSales} kpiDescription={labels.revenueFromCompletedOrders} count={details.salesCount || 0} breakdown={breakdowns.salesByPaymentMethod} breakdownLabelKey="method" transactions={transactions.sales} transactionType="sales" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.purchases} icon={Package} color="#3b82f6" kpiValue={summary.totalPurchases} kpiDescription={labels.costOfInventoryPurchases} count={details.purchaseCount || 0} transactions={transactions.purchases} transactionType="purchases" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.expenses} icon={Receipt} color="#ef4444" kpiValue={summary.totalExpenses} kpiDescription={labels.operatingExpenses} count={details.expenseCount || 0} breakdown={breakdowns.expensesByCategory} breakdownLabelKey="category" transactions={transactions.expenses} transactionType="expenses" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.salaries} icon={Users} color="#8b5cf6" kpiValue={summary.totalSalaries} kpiDescription={labels.staffSalaryPayments} count={details.salaryPaymentCount || 0} breakdown={breakdowns.salariesByStaff} breakdownLabelKey="staffName" transactions={transactions.salaryPayments} transactionType="salaryPayments" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.purchaseReturns} icon={TrendingUp} color="#06b6d4" kpiValue={summary.totalPurchaseReturns} kpiDescription={labels.returnsSentToSuppliers} count={details.purchaseReturnCount || 0} breakdown={breakdowns.purchaseReturnsBySupplier} breakdownLabelKey="supplierName" transactions={transactions.purchaseReturns} transactionType="purchaseReturns" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.saleReturns} icon={TrendingDown} color="#f59e0b" kpiValue={summary.totalProductReturns} kpiDescription={labels.customerProductReturns} count={details.productReturnCount || 0} breakdown={breakdowns.productReturnsByReason} breakdownLabelKey="reason" transactions={transactions.productReturns} transactionType="productReturns" isExpanded={true} onToggle={() => {}} labels={labels} />
+                    <SourceSection title={labels.wastage} icon={AlertCircle} color="#dc2626" kpiValue={summary.totalWastage} kpiDescription={labels.inventoryWastageCost} count={details.wastageCount || 0} transactions={transactions.wastages} transactionType="wastages" isExpanded={true} onToggle={() => {}} labels={labels} />
                 </div>
             </PdfPreviewModal>
         </div>

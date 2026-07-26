@@ -64,6 +64,15 @@ export const settingsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["Settings"],
         }),
+        // Update Backup Settings
+        updateBackupSettings: builder.mutation({
+            query: (data) => ({
+                url: "/settings/backup",
+                method: "PUT",
+                body: data,
+            }),
+            invalidatesTags: ["Settings"],
+        }),
     }),
 });
 
@@ -75,4 +84,5 @@ export const {
     useUpdateCameraSettingsMutation,
     useUpdateLanguageSettingsMutation,
     useUpdateModuleSettingsMutation,
+    useUpdateBackupSettingsMutation,
 } = settingsApi;

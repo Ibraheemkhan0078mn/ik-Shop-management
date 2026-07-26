@@ -1,5 +1,5 @@
-import { getLocalChangeTrackModel, getLocalDeviceIdentityModel } from "../../db/localDbConnection.js";
-import { getOnlineChangeTrackModel } from "../../db/onlineDbConnection.js";
+import { getLocalChangeTrackModel, getLocalDeviceIdentityModel } from "../../configs/connect.db.js";
+import { getOnlineChangeTrackModel } from "../../configs/onlineConnect.db.js";
 import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
 
 

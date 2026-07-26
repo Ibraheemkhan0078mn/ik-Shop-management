@@ -4,6 +4,8 @@ import { useGetStaffReportQuery } from "../services/reports.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import { getReportsLabels } from "../labels/reportsLabels.js";
 import { 
     KpiCard, 
     LoadingSpinner,
@@ -12,6 +14,9 @@ import {
 } from "../components/ReportComponents.jsx";
 
 export default function StaffReport() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getReportsLabels(language);
     const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
@@ -87,8 +92,8 @@ export default function StaffReport() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">Staff Report</h1>
-                    <p className="text-sm text-[var(--muted)]">Comprehensive staff performance, attendance, and salary report</p>
+                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.staffReport}</h1>
+                    <p className="text-sm text-[var(--muted)]">{labels.staffAnalysis}</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
@@ -96,14 +101,14 @@ export default function StaffReport() {
                         className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
                         <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                        Refresh
+                        {labels.refresh}
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
                         className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
-                        Export PDF
+                        {labels.exportPdf}
                     </button>
                 </div>
             </div>
@@ -112,27 +117,27 @@ export default function StaffReport() {
             <div className="card p-4 mb-6 no-print">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">Filters</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Period</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="today">Today</option>
-                            <option value="month">This Month</option>
-                            <option value="3month">Last 3 Months</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom Range</option>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">From Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -141,7 +146,7 @@ export default function StaffReport() {
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">To Date</label>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -152,13 +157,13 @@ export default function StaffReport() {
                         </>
                     )}
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Staff Member</label>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.staffMember}</label>
                         <select
                             value={staffId}
                             onChange={(e) => setStaffId(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            <option value="">All Staff</option>
+                            <option value="">{labels.allStaff}</option>
                             {staffList?.data?.map(staff => (
                                 <option key={staff._id} value={staff._id}>{staff.name || staff.fullName}</option>
                             ))}
@@ -177,68 +182,68 @@ export default function StaffReport() {
                     {/* KPI Grid Row 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <KpiCard 
-                            label="Total Staff" 
+                            label={labels.totalStaff} 
                             value={details.totalStaff || 0} 
                             icon={Users} 
                             color="#8b5cf6" 
-                            description="Active staff members" 
+                            description={labels.activeStaffMembers} 
                             isCurrency={false}
                         />
                         <KpiCard 
-                            label="Total Salaries Paid" 
+                            label={labels.totalSalariesPaid} 
                             value={summary.totalSalariesPaid} 
                             icon={DollarSign} 
                             color="#10b981" 
-                            description="Salary expenses"
+                            description={labels.salaryExpenses}
                         />
                         <KpiCard 
-                            label="Average Salary" 
+                            label={labels.averageSalary} 
                             value={summary.averageSalary} 
                             icon={DollarSign} 
                             color="#2563eb" 
-                            description="Per employee"
+                            description={labels.perEmployee}
                         />
                         <KpiCard 
-                            label="Total Advances" 
+                            label={labels.totalAdvances} 
                             value={summary.totalAdvances} 
                             icon={DollarSign} 
                             color="#f59e0b" 
-                            description="Salary advances given"
+                            description={labels.salaryAdvancesGiven}
                         />
                     </div>
 
                     {/* KPI Grid Row 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <KpiCard 
-                            label="Total Working Hours" 
+                            label={labels.totalWorkingHours} 
                             value={summary.totalWorkingHours || 0} 
                             icon={Clock} 
                             color="#06b6d4" 
-                            description="Cumulative hours worked" 
+                            description={labels.cumulativeHoursWorked} 
                             isCurrency={false}
                         />
                         <KpiCard 
-                            label="Average Attendance %" 
+                            label={labels.averageAttendance} 
                             value={summary.avgAttendancePercent || 0} 
                             icon={Calendar} 
                             color="#16a34a" 
-                            description="Present days percentage" 
+                            description={labels.presentDaysPercentage} 
                             isCurrency={false}
                         />
                         <KpiCard 
-                            label="Total Present Days" 
+                            label={labels.totalPresentDays} 
                             value={summary.totalPresentDays || 0} 
                             icon={Users} 
                             color="#059669" 
-                            description="Sum of present days" 
+                            description={labels.sumOfPresentDays} 
                             isCurrency={false}
                         />
                         <KpiCard 
-                            label="Total Absent Days" 
+                            label={labels.totalAbsentDays} 
                             value={summary.totalAbsentDays || 0} 
                             icon={Users} 
                             color="#dc2626" 
-                            description="Sum of absent days" 
+                            description={labels.sumOfAbsentDays} 
                             isCurrency={false}
                         />
                     </div>
@@ -249,19 +254,19 @@ export default function StaffReport() {
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <Users size={22} style={{ color: '#8b5cf6' }} />
-                                    <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>PAYROLL SUMMARY</span>
+                                    <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>{labels.payrollSummary}</span>
                                 </div>
                                 <p className="text-3xl font-bold" style={{ color: '#8b5cf6' }}>
                                     Rs {(summary.totalSalariesPaid || 0).toLocaleString()}
                                 </p>
                                 <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                                    Total salary expenses
+                                    {labels.totalSalaryExpenses}
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm" style={{ color: 'var(--muted)' }}>Staff Count</p>
+                                <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.staffCount}</p>
                                 <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{details.totalStaff || 0}</p>
-                                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>Avg Salary</p>
+                                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{labels.avgSalary}</p>
                                 <p className="text-lg font-bold" style={{ color: 'var(--ink)' }}>Rs {(summary.averageSalary || 0).toLocaleString()}</p>
                             </div>
                         </div>
@@ -270,20 +275,20 @@ export default function StaffReport() {
                     {/* Staff Performance Section */}
                     {staffMetrics && staffMetrics.length > 0 && (
                         <div className="space-y-4 mb-6">
-                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Staff Performance</h2>
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{labels.staffPerformance}</h2>
 
                             <div className="rounded-xl border shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead style={{ background: 'var(--surface-muted)' }}>
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Staff Name</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Orders</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Sales</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Present Days</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Absent Days</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Working Hours</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Salary Paid</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.staffName}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.orders}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.sales}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.presentDays}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.absentDays}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.workingHours}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.salaryPaid}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -309,25 +314,25 @@ export default function StaffReport() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <SummaryCard 
                             icon={TrendingUp}
-                            label="Top Performer"
+                            label={labels.topPerformer}
                             value={summary.topPerformer || 'N/A'}
-                            description="Highest sales staff"
+                            description={labels.highestSalesStaff}
                             isCurrency={false}
                             color="var(--ink)"
                         />
                         <SummaryCard 
                             icon={Users}
-                            label="Avg Working Hours"
+                            label={labels.avgWorkingHours}
                             value={summary.avgWorkingHours || 0}
-                            description="Per staff member"
+                            description={labels.perStaffMember}
                             isCurrency={false}
                             color="var(--ink)"
                         />
                         <SummaryCard 
                             icon={Calendar}
-                            label="Highest Attendance"
+                            label={labels.highestAttendance}
                             value={summary.highestAttendance || 0}
-                            description="Percentage"
+                            description={labels.percentage}
                             isCurrency={false}
                             color="var(--ink)"
                         />
@@ -338,7 +343,7 @@ export default function StaffReport() {
             {/* PDF Modal */}
             {isPdfModalOpen && (
                 <PdfPreviewModal
-                    title="Staff Report"
+                    title={labels.staffReport}
                     contentRef={targetRef}
                     onClose={() => setIsPdfModalOpen(false)}
                 />

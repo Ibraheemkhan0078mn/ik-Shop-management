@@ -1,4 +1,4 @@
-import { getLocalDeviceIdentityModel } from "../../db/localDbConnection.js";
+import { getLocalDeviceIdentityModel } from "../../configs/connect.db.js";
 // import { ApiError } from "./response.js";
 
 
