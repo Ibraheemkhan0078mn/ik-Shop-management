@@ -6,6 +6,9 @@ import {
     createProduct, updateProduct, deleteProduct, deleteProductWithBatches,
 } from "../services/product.service.js";
 import {
+    recalculateProductStock, recalculateAllStock,
+} from "../services/stockRecalculation.service.js";
+import {
     getSubCategories, getPaginationSubCategories, createSubCategory,
     updateSubCategory, deleteSubCategory, getSubCategoriesById, getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
@@ -89,6 +92,29 @@ export const deleteProductWithBatchesData = asyncHandler(async (req, res, next) 
 export const uploadProductImage = asyncHandler(async (req, res, next) => {
     if (!req.file) return next(new ErrorResponse("No image file provided", 400));
     res.status(200).json({ success: true, message: "Image uploaded successfully", filename: req.file.filename });
+});
+
+export const recalculateProductStockData = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await recalculateProductStock(id);
+        res.status(200).json({ 
+            success: true, 
+            message: "Stock recalculated successfully", 
+            data: result 
+        });
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
+});
+
+export const recalculateAllStockData = asyncHandler(async (req, res, next) => {
+    try {
+        const result = await recalculateAllStock();
+        res.status(200).json(result);
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
 });
 
 // ─── SubCategory Controllers ───────────────────────────────────────────────────

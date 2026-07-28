@@ -67,6 +67,18 @@ export const productApi = baseApi.injectEndpoints({
                 formData: true,
             }),
         }),
+
+        // Recalculate stock for a single product
+        recalculateProductStock: build.mutation({
+            query: (id) => ({ url: `/products/${id}/recalculate-stock`, method: "POST" }),
+            invalidatesTags: (result, error, id) => [{ type: "Product", id }, "Product"],
+        }),
+
+        // Recalculate stock for all products
+        recalculateAllStock: build.mutation({
+            query: () => ({ url: "/products/recalculate-all-stock", method: "POST" }),
+            invalidatesTags: ["Product", "Batch"],
+        }),
     }),
 });
 
@@ -78,4 +90,6 @@ export const {
     useDeleteProductMutation: useDeleteProduct,
     useDeleteProductWithBatchesMutation: useDeleteProductWithBatches,
     useUploadProductImageMutation: useUploadProductImage,
+    useRecalculateProductStockMutation: useRecalculateProductStock,
+    useRecalculateAllStockMutation: useRecalculateAllStock,
 } = productApi;

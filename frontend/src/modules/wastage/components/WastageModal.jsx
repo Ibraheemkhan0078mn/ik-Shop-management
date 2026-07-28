@@ -139,18 +139,24 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
 
   // ── Memoized Options ──────────────────────────────────────────────────
   const productOptions = useMemo(() =>
-    products.map(p => ({ label: p.name, value: p._id })), [products]
+    products.map(p => ({
+      label: p.name,
+      value: p._id,
+      batches: p.batches || [],
+      productName: p.name
+    })), [products]
   );
 
   const batchOptions = useMemo(() => {
-    const prod = products.find(p => p._id === currentItem.product);
-    const batches = prod?.batches || [];
+    const selectedProduct = productOptions.find(p => p.value === currentItem.product);
+    const batches = selectedProduct?.batches || [];
     return batches.map(b => ({
-      label: `${b.batchNumber} — Exp: ${b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : "N/A"}`,
+      label: b.batchNumber,
       value: b.batchNumber,
       expiryDate: b.expiryDate ?? "",
+      quantity: b.quantity
     }));
-  }, [currentItem.product, products]);
+  }, [currentItem.product, productOptions]);
 
   const reasonOptions = useMemo(() => [
     { label: labels.expired, value: "expired" },
@@ -193,11 +199,33 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
 
     console.log("Adding row:", row);
 
+    // Check for duplicate item (same product, batch, and expiry)
+    const duplicateIndex = items.findIndex(it => 
+      it.product === row.product && 
+      it.batchNumber === row.batchNumber && 
+      it.expiryDate === row.expiryDate
+    );
+
     if (editingIndex >= 0) {
+      // Update existing item
       const updatedItems = items.map((it, i) => i === editingIndex ? row : it);
       setItems(updatedItems);
       setEditingIndex(-1);
+    } else if (duplicateIndex >= 0) {
+      // Merge with existing item by increasing quantity
+      const updatedItems = items.map((it, i) => {
+        if (i === duplicateIndex) {
+          return {
+            ...it,
+            quantity: String(Number(it.quantity) + Number(row.quantity))
+          };
+        }
+        return it;
+      });
+      setItems(updatedItems);
+      showSuccess("Merged with existing item");
     } else {
+      // Add new item
       setItems(prev => [...prev, row]);
     }
     setCurrentItem(blankItem());
@@ -241,7 +269,8 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
       onClose();
     } catch (e) {
       console.error("Submit error:", e);
-      showError(e?.data?.message ?? labels.operationFailed);
+      const errorMessage = e?.data?.error || e?.data?.reason || e?.data?.msg || e?.data?.message || labels.operationFailed;
+      showError(errorMessage);
     }
   };
 
@@ -256,7 +285,7 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
   // layout: [add-item-form | items-added]  →  [wastage details]  →  [summary]  →  [submit]
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto" onClick={onClose}>
-      <div className="relative w-full max-w-6xl sm:my-4 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-[70%] max-w-6xl sm:my-4 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
 
         {/* header */}
         <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-10" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
@@ -278,8 +307,9 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
           {/* row 1: add item form | items added */}
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 xl:gap-6 xl:min-h-[560px]">
             <Card title={editingIndex >= 0 ? `${labels.updateItem} #${editingIndex + 1}` : labels.addItem} icon={Plus} className="h-full">
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-4">
+                {/* Row 1: Product and Batch */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field>
                     <Label>{labels.product} *</Label>
                     <Sel
@@ -296,21 +326,6 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                     >
                       <option value="">{labels.selectProductPlaceholder}</option>
                       {productOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </Sel>
-                  </Field>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field>
-                    <Label>{labels.reason} *</Label>
-                    <Sel
-                      value={currentItem.reason}
-                      onChange={e => updateCurrent("reason", e.target.value)}
-                    >
-                      <option value="">{labels.selectReasonPlaceholder}</option>
-                      {reasonOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </Sel>
@@ -337,7 +352,20 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                   </Field>
                 </div>
 
+                {/* Row 2: Reason and Quantity */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field>
+                    <Label>{labels.reason} *</Label>
+                    <Sel
+                      value={currentItem.reason}
+                      onChange={e => updateCurrent("reason", e.target.value)}
+                    >
+                      <option value="">{labels.selectReasonPlaceholder}</option>
+                      {reasonOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </Sel>
+                  </Field>
                   <Field>
                     <Label>{labels.quantity} *</Label>
                     <Inp
@@ -350,33 +378,9 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                       disabled={!currentItem.product}
                     />
                   </Field>
-                  <Field>
-                    <Label>{labels.expiryDate}</Label>
-                    <Inp
-                      type="date"
-                      value={currentItem.expiryDate}
-                      onChange={e => updateCurrent("expiryDate", e.target.value)}
-                      disabled={!currentItem.product}
-                    />
-                  </Field>
                 </div>
 
-                {/* Cost Price field disabled per business requirement
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field>
-                      <Label>Cost Price</Label>
-                      <Inp
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={currentItem.costPrice}
-                        onChange={e => updateCurrent("costPrice", e.target.value)}
-                      />
-                    </Field>
-                </div>
-                */}
-
+                {/* Row 3: Notes */}
                 <Field>
                   <Label>{labels.notes} {currentItem.reason === "other" ? "*" : ""}</Label>
                   <Txt
@@ -413,24 +417,29 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                   <table className="w-full text-sm min-w-[520px]">
                     <thead>
                       <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                        {[labels.item, labels.batch, labels.qty, labels.reason, labels.notes, labels.actions].map(h => (
-                          <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty ? "text-right" : "text-left"}`}>{h}</th>
+                        {[labels.product, labels.batch, labels.stock, labels.qty, labels.reason, labels.notes, labels.actions].map(h => (
+                          <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === labels.stock ? "text-right" : "text-left"}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((it, idx) => (
-                        <tr key={idx} className="transition" style={{ borderBottom: "1px solid var(--border)", background: editingIndex === idx ? "rgba(15,118,110,0.05)" : "transparent" }}
-                          onMouseEnter={e => { if (editingIndex !== idx) e.currentTarget.style.background = "var(--surface-muted)"; }}
-                          onMouseLeave={e => { if (editingIndex !== idx) e.currentTarget.style.background = "transparent"; }}>
-                          <td className="px-2 sm:px-3 py-3 font-medium" style={{ color: "var(--ink)" }}>{it.productName || it.product}</td>
-                          <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber || "—"}</td>
-                          <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity}</td>
-                          <td className="px-2 sm:px-3 py-3" style={{ color: "var(--muted)" }}>{reasonOptions.find(r => r.value === it.reason)?.label ?? it.reason}</td>
-                          <td className="px-2 sm:px-3 py-3 max-w-[160px] truncate" style={{ color: "var(--muted)" }}>{it.notes || "—"}</td>
-                          <td className="px-2 sm:px-3 py-3"><div className="flex justify-center gap-1"><Btn variant="ghost" size="sm" onClick={() => handleEditItem(idx)}>{labels.edit}</Btn><Btn variant="danger" size="sm" onClick={() => removeItem(idx)}>{labels.remove}</Btn></div></td>
-                        </tr>
-                      ))}
+                      {items.map((it, idx) => {
+                        const batch = batchOptions.find(b => b.value === it.batchNumber);
+                        const stock = batch?.quantity || 0;
+                        return (
+                          <tr key={idx} className="transition" style={{ borderBottom: "1px solid var(--border)", background: editingIndex === idx ? "rgba(15,118,110,0.05)" : "transparent" }}
+                            onMouseEnter={e => { if (editingIndex !== idx) e.currentTarget.style.background = "var(--surface-muted)"; }}
+                            onMouseLeave={e => { if (editingIndex !== idx) e.currentTarget.style.background = "transparent"; }}>
+                            <td className="px-2 sm:px-3 py-3 font-medium" style={{ color: "var(--ink)" }}>{it.productName || it.product}</td>
+                            <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber || "—"}</td>
+                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{stock}</td>
+                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity}</td>
+                            <td className="px-2 sm:px-3 py-3" style={{ color: "var(--muted)" }}>{reasonOptions.find(r => r.value === it.reason)?.label ?? it.reason}</td>
+                            <td className="px-2 sm:px-3 py-3 max-w-[160px] truncate" style={{ color: "var(--muted)" }}>{it.notes || "—"}</td>
+                            <td className="px-2 sm:px-3 py-3"><div className="flex justify-center gap-1"><Btn variant="ghost" size="sm" onClick={() => handleEditItem(idx)}>{labels.edit}</Btn><Btn variant="danger" size="sm" onClick={() => removeItem(idx)}><Trash className="w-3 h-3" /></Btn></div></td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

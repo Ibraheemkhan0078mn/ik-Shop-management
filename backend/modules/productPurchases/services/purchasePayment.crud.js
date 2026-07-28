@@ -6,9 +6,9 @@ const createPurchasePaymentService = (data) => {
     return createDoc({ model: PurchasePaymentModel, data });
 };
 
-const findPurchasePaymentService = (query = {}) => {
+const findPurchasePaymentService = (query = {}, options = {}) => {
     const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    return findDocs({ model: PurchasePaymentModel, filter: query });
+    return findDocs({ model: PurchasePaymentModel, filter: query, options });
 };
 
 const findOnePurchasePaymentService = (query) => {
@@ -16,9 +16,9 @@ const findOnePurchasePaymentService = (query) => {
     return findOneDoc({ model: PurchasePaymentModel, filter: query });
 };
 
-const findByIdPurchasePaymentService = (id) => {
+const findByIdPurchasePaymentService = (id, options = {}) => {
     const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    return findOneDoc({ model: PurchasePaymentModel, filter: { _id: id } });
+    return findOneDoc({ model: PurchasePaymentModel, filter: { _id: id }, options });
 };
 
 const updatePurchasePaymentService = (id, data) => {

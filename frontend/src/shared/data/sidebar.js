@@ -46,7 +46,7 @@ const NAV_ITEMS = [
     allowedUrls: ["/products", "/products/categories", "/products/sub-categories"],
     items: [
       { id: "categories", icon: FileText, url: "/products/categories" },
-      { id: "subCategories", icon: FileText, url: "/products/sub-categories" },
+      // { id: "subCategories", icon: FileText, url: "/products/sub-categories" },
     ],
   },
   { id: "productWastage", icon: Trash2, url: "/wastage", allowedUrls: ["/wastage"] },

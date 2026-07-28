@@ -1,9 +1,14 @@
 import { connectOnlineDb } from "../../../configs/onlineConnect.db.js";
+import { connectDb } from "../../../configs/connect.db.js";
 import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "../services/uploadSync.js";
 import { docsSyncOrganizer } from "../services/syncOrganizedRunner.js";
 import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+import { 
+    getLocalProductModel, 
+    getLocalCategoryModel 
+} from "../../../configs/connect.db.js";
 
 // Global sync cancellation flag
 let syncInProgress = false;
@@ -64,6 +69,26 @@ export const syncAll = async (req, res) => {
             });
         }
 
+        // Check database connections before starting sync
+        const localProductModel = getLocalProductModel();
+        const localCategoryModel = getLocalCategoryModel();
+        
+        if (!localProductModel || !localCategoryModel) {
+            return res.status(400).json({
+                success: false,
+                message: "Local database not connected. Please ensure database connection is established.",
+            });
+        }
+
+        try {
+            await connectOnlineDb();
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Online database not connected. Please check your internet connection and try again.",
+            });
+        }
+
         syncInProgress = true;
         syncAbortController = new AbortController();
 
@@ -95,6 +120,26 @@ export const syncRequired = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Sync is already in progress",
+            });
+        }
+
+        // Check database connections before starting sync
+        const localProductModel = getLocalProductModel();
+        const localCategoryModel = getLocalCategoryModel();
+        
+        if (!localProductModel || !localCategoryModel) {
+            return res.status(400).json({
+                success: false,
+                message: "Local database not connected. Please ensure database connection is established.",
+            });
+        }
+
+        try {
+            await connectOnlineDb();
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Online database not connected. Please check your internet connection and try again.",
             });
         }
 

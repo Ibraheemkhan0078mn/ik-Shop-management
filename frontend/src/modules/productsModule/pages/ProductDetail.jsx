@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Package, Calendar, DollarSign, AlertTriangle, Trash2 } from "lucide-react";
-import { useProduct } from "../services/product.service";
+import { ArrowLeft, Edit, Package, Calendar, DollarSign, AlertTriangle, Trash2, RefreshCw } from "lucide-react";
+import { useProduct, useRecalculateProductStock } from "../services/product.service";
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useBatchesByProduct, useDeleteBatch } from "../../../modules/productPurchases/services/batch.service.js";
@@ -23,9 +23,20 @@ export default function ProductDetail() {
     const { data: productData, isLoading, refetch } = useProduct(id, { skip: !id });
     const { data: batchesData } = useBatchesByProduct(id, { skip: !id });
     const [deleteBatch] = useDeleteBatch();
+    const [recalculateStock, { isLoading: isRecalculating }] = useRecalculateProductStock();
 
     const product = productData;
     const batches = batchesData || [];
+
+    const handleRecalculateStock = async () => {
+        try {
+            await recalculateStock(id).unwrap();
+            showSuccess("Stock recalculated successfully");
+            refetch();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to recalculate stock");
+        }
+    };
 
     const handleDeleteBatch = async (batch) => {
         if (batch.quantity > 0) {
@@ -62,9 +73,17 @@ export default function ProductDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{product.name}</h1>
                     <p className="text-sm text-[var(--muted)]">{product.productCode || "No product code"}</p>
                 </div>
-                <PermissionGuard execute={() => navigate(`/products/edit/${id}`)} permission="product.update" isConfirmation={true}>
-                    <button className="btn-add">
-                        <Edit size={16} /> {labels.edit}
+                <PermissionGuard 
+                    execute={handleRecalculateStock} 
+                    permission="products.update" 
+                    isConfirmation={false}
+                >
+                    <button
+                        disabled={isRecalculating}
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <RefreshCw size={16} className={isRecalculating ? "animate-spin" : ""} />
+                        {isRecalculating ? "Recalculating..." : "Recalculate Stock"}
                     </button>
                 </PermissionGuard>
             </div>
@@ -88,99 +107,125 @@ export default function ProductDetail() {
 
             {/* Details Tab */}
             {activeTab === "details" && (
-                <div className="card p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2 flex items-start gap-4">
+                <div className="card p-4 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row items-start gap-4 pb-4 border-b border-[var(--border)]">
                             {product.image
-                                ? <img src={`${IMAGE_BASE}/${product.image}`} alt={product.name} className="w-24 h-24 rounded-xl object-cover ring-1 ring-[var(--border)]" />
-                                : <div className="w-24 h-24 rounded-xl bg-[var(--surface-muted)] flex items-center justify-center text-3xl font-bold text-[var(--muted)]">
+                                ? <img src={`${IMAGE_BASE}/${product.image}`} alt={product.name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover ring-1 ring-[var(--border)] shrink-0" />
+                                : <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-[var(--surface-muted)] flex items-center justify-center text-3xl font-bold text-[var(--muted)] shrink-0">
                                     {product.name?.charAt(0).toUpperCase()}
                                 </div>
                             }
-                            <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-[var(--ink)]">{product.name}</h3>
-                                <p className="text-sm text-[var(--muted)] mt-1">{product.description || "No description"}</p>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-semibold text-[var(--ink)] break-words">{product.name}</h3>
+                                {product.description && <p className="text-sm text-[var(--muted)] mt-1 break-words">{product.description}</p>}
                             </div>
                         </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Product Code</label>
-                            <p className="font-medium text-[var(--ink)]">{product.productCode || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Barcode</label>
-                            <p className="font-medium text-[var(--ink)]">{product.barcode || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Brand</label>
-                            <p className="font-medium text-[var(--ink)]">{product.brandName || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Category</label>
-                            <p className="font-medium text-[var(--ink)]">{product.category?.name || "—"} {product.subCategory?.name && `› ${product.subCategory.name}`}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Unit</label>
-                            <p className="font-medium text-[var(--ink)] capitalize">{product.unit || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Cost Price</label>
-                            <p className="font-medium text-[var(--ink)]">Rs {product.defaultCostPrice || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Sale Price</label>
-                            <p className="font-medium text-[var(--accent-2)]">Rs {product.defaultSalePrice || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Tax %</label>
-                            <p className="font-medium text-[var(--ink)]">{product.taxPercent || 0}%</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Tax Type</label>
-                            <p className="font-medium text-[var(--ink)] capitalize">{product.taxType || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Min Stock Level</label>
-                            <p className="font-medium text-[var(--ink)]">{product.minStockLevel || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Max Stock Level</label>
-                            <p className="font-medium text-[var(--ink)]">{product.maxStockLevel || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Current Stock</label>
-                            <p className="font-medium text-[var(--ink)]">{product.currentStockLevel || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Rack Location</label>
-                            <p className="font-medium text-[var(--ink)]">{product.rackLocation || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Allow Negative Stock</label>
-                            <span className={`px-2 py-1 text-xs rounded-full ${product.allowNegativeStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {product.productCode && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Product Code</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.productCode}</p>
+                            </div>
+                        )}
+                        {product.barcode && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Barcode</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.barcode}</p>
+                            </div>
+                        )}
+                        {product.brandName && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Brand</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.brandName}</p>
+                            </div>
+                        )}
+                        {(product.category?.name ) && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Category</label>
+                                <p className="font-medium text-[var(--ink)] break-words">{product.category?.name || "—"}</p>
+                            </div>
+                        )}
+                        {product.unit && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Unit</label>
+                                <p className="font-medium text-[var(--ink)] capitalize truncate">{product.unit}</p>
+                            </div>
+                        )}
+                        {product.defaultCostPrice !== undefined && product.defaultCostPrice !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Cost Price</label>
+                                <p className="font-medium text-[var(--ink)] truncate">Rs {product.defaultCostPrice}</p>
+                            </div>
+                        )}
+                        {product.defaultSalePrice !== undefined && product.defaultSalePrice !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Sale Price</label>
+                                <p className="font-medium text-[var(--accent-2)] truncate">Rs {product.defaultSalePrice}</p>
+                            </div>
+                        )}
+                        {product.taxPercent !== undefined && product.taxPercent !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Tax %</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.taxPercent}%</p>
+                            </div>
+                        )}
+                        {product.taxType && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Tax Type</label>
+                                <p className="font-medium text-[var(--ink)] capitalize truncate">{product.taxType}</p>
+                            </div>
+                        )}
+                        {product.minStockLevel !== undefined && product.minStockLevel !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Min Stock Level</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.minStockLevel}</p>
+                            </div>
+                        )}
+                        {product.maxStockLevel !== undefined && product.maxStockLevel !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Max Stock Level</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.maxStockLevel}</p>
+                            </div>
+                        )}
+                        {product.currentStockLevel !== undefined && product.currentStockLevel !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Current Stock</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.currentStockLevel}</p>
+                            </div>
+                        )}
+                        {product.rackLocation && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Rack Location</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.rackLocation}</p>
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <label className="text-sm text-[var(--muted)] block mb-1">Allow Negative Stock</label>
+                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${product.allowNegativeStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                 {product.allowNegativeStock ? "Yes" : "No"}
                             </span>
                         </div>
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Discount Allowed</label>
-                            <span className={`px-2 py-1 text-xs rounded-full ${product.isDiscountAllowed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <div className="min-w-0">
+                            <label className="text-sm text-[var(--muted)] block mb-1">Discount Allowed</label>
+                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${product.isDiscountAllowed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                 {product.isDiscountAllowed ? "Yes" : "No"}
                             </span>
                         </div>
-                        {product.isDiscountAllowed && (
-                            <>
-                                <div>
-                                    <label className="text-sm text-[var(--muted)]">Max Discount %</label>
-                                    <p className="font-medium text-[var(--ink)]">{product.maxDiscountPercent || 0}%</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-[var(--muted)]">Discount Limit</label>
-                                    <p className="font-medium text-[var(--ink)]">Rs {product.discountLimit || 0}</p>
-                                </div>
-                            </>
+                        {product.isDiscountAllowed && product.maxDiscountPercent !== undefined && product.maxDiscountPercent !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Max Discount %</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.maxDiscountPercent}%</p>
+                            </div>
                         )}
-                        <div>
-                            <label className="text-sm text-[var(--muted)]">Status</label>
-                            <span className={`px-2 py-1 text-xs rounded-full ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {product.isDiscountAllowed && product.discountLimit !== undefined && product.discountLimit !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Discount Limit</label>
+                                <p className="font-medium text-[var(--ink)] truncate">Rs {product.discountLimit}</p>
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <label className="text-sm text-[var(--muted)] block mb-1">Status</label>
+                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                 {product.isActive ? "Active" : "Inactive"}
                             </span>
                         </div>

@@ -5,6 +5,7 @@ import { useGetCategoriesQuery } from "../services/category.service";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = null, categoryId = null, open, onClose, onSubCategoryCreated }) {
     const { settings } = useSettings();
@@ -174,15 +175,20 @@ export default function SubCategoryCRUDModal({ mode = "create", subCategoryId = 
 
                     {/* Submit Button */}
                     <div className="mt-6">
-                        <button
-                            onClick={onSubmit}
-                            disabled={isCreating || isUpdating}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium
-                                       rounded-lg bg-[var(--accent-2)] text-[var(--surface)] hover:bg-[var(--accent-2)]/80
-                                       active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        <PermissionGuard 
+                            execute={onSubmit}
+                            permission={isCreate ? "subcategories.create" : "subcategories.update"}
+                            isConfirmation={false}
                         >
-                            {isCreating || isUpdating ? labels.saving : (isCreate ? labels.saveSubCategory : labels.updateSubCategory)} →
-                        </button>
+                            <button
+                                disabled={isCreating || isUpdating}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium
+                                           rounded-lg bg-[var(--accent-2)] text-[var(--surface)] hover:bg-[var(--accent-2)]/80
+                                           active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isCreating || isUpdating ? labels.saving : (isCreate ? labels.saveSubCategory : labels.updateSubCategory)} →
+                            </button>
+                        </PermissionGuard>
                     </div>
                 </div>
             </div>

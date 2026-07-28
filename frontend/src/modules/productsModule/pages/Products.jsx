@@ -1,7 +1,7 @@
 // features/products/pages/Products.jsx
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Eye } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import { getProductLabels } from "../labels/productLabels.js";
@@ -77,52 +77,61 @@ export default function Products() {
         handleDelete(item._id);
     };
 
-    const renderItems = (items) => {
+   const renderItems = (items) => {
         if (!items?.length) return null;
         return (
             <div className="flex flex-col gap-0">
                 {/* Desktop header */}
-                <div className="hidden md:grid md:grid-cols-11 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
+                <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                    <div className="col-span-1">{labels.image}</div>
-                    <div className="col-span-2">{labels.name}</div>
-                    <div className="col-span-2">Product Code</div>
-                    <div className="col-span-2">{labels.barcode}</div>
+                    <div className="col-span-4">{labels.name}</div>
+                    <div className="col-span-2 truncate">Product Code</div>
+                    <div className="col-span-2 truncate">{labels.barcode}</div>
                     <div className="col-span-1">{labels.stock}</div>
-                    <div className="col-span-1">{labels.category}</div>
-                    <div className="col-span-1">{labels.status}</div>
-                    <div className="col-span-1">{labels.actions}</div>
+                    <div className="col-span-3">{labels.actions}</div>
                 </div>
 
                 {/* Desktop rows */}
                 {items.map((item, i) => (
                     <div key={item._id}
-                        onClick={() => navigate(`/products/${item._id}`)}
-                        className="hidden md:grid md:grid-cols-11 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group cursor-pointer"
+                        className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
                         style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
-                        <div className="col-span-1">
-                            {item.image
-                                ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" />
-                                : <PlaceholderImg size={11} name={item.name} />}
+                        <div className="col-span-4 flex items-center gap-3 min-w-0">
+                            <div className="relative shrink-0">
+                                {item.image
+                                    ? (
+                                        <div className="relative">
+                                            <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" />
+                                            {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                        </div>
+                                    )
+                                    : (
+                                        <div className="relative">
+                                            <PlaceholderImg size={11} name={item.name} />
+                                            {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                        </div>
+                                    )}
+                            </div>
+                            <div className="font-semibold text-(--ink) truncate text-sm min-w-0">{item.name}</div>
                         </div>
-                        <div className="col-span-2 font-semibold text-(--ink) truncate text-sm">{item.name}</div>
-                        <div className="col-span-2 text-sm text-(--muted) font-mono">{item.productCode || "—"}</div>
-                        <div className="col-span-2 text-sm text-(--muted) font-mono">{item.barcode || "—"}</div>
+                        <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{item.productCode || "—"}</div>
+                        <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{item.barcode || "—"}</div>
                         <div className="col-span-1"><StockBadge qty={item.currentStockLevel} /></div>
-                        <div className="col-span-1 text-xs text-(--muted) truncate">
-                            {item.category?.name}{item.subCategory?.name && <span className="text-(--muted)/50"> › {item.subCategory.name}</span>}
-                        </div>
-                        <div className="col-span-1"><StatusBadge active={item.isActive} labels={labels} /></div>
-                        <div onClick={e=> e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
-                            <PermissionGuard 
-                                execute={() => openEdit(item._id)} 
-                                permission="products.update" 
-                                isConfirmation={true}
+                        <div onClick={e=> e.stopPropagation()} className="col-span-3 flex items-center gap-1.5 flex-wrap">
+                            <button 
+                                onClick={() => navigate(`/products/${item._id}`)}
+                                id={`products-view-${item._id}`} 
+                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
                             >
-                                <button id={`products-edit-${item._id}`} className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
-                                    <Edit size={15} />
-                                </button>
-                            </PermissionGuard>
+                                <Eye size={15} />
+                            </button>
+                            <button 
+                                onClick={() => openEdit(item._id)}
+                                id={`products-edit-${item._id}`} 
+                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                            >
+                                <Edit size={15} />
+                            </button>
                             <PermissionGuard 
                                 execute={() => handleDelete(item._id)} 
                                 permission="products.delete" 
@@ -136,27 +145,27 @@ export default function Products() {
                     </div>
                 ))}
 
-                {/* Mobile cards */}
-                <div className="md:hidden flex flex-col gap-3 pt-1">
+                {/* Mobile / Tablet cards (shown below lg breakpoint) */}
+                <div className="lg:hidden flex flex-col gap-3 pt-1">
                     {items.map((item) => (
                         <div key={`m-${item._id}`} className="rounded-2xl p-4 border transition-all duration-150 hover:shadow-md"
                             style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 2px 12px rgba(64,45,28,0.07)" }}>
                             <div className="flex items-start gap-3">
-                                {item.image
-                                    ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-(--border)" />
-                                    : <PlaceholderImg size={16} name={item.name} />}
+                                <div className="relative shrink-0">
+                                    {item.image
+                                        ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-16 h-16 rounded-xl object-cover ring-1 ring-(--border)" />
+                                        : <PlaceholderImg size={16} name={item.name} />}
+                                    {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                        <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.name}</h3>
-                                        <StatusBadge active={item.isActive} labels={labels} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
-                                        {item.productCode && <span>Product Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
-                                        {item.barcode && <span>{labels.barcode}: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
+                                    <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.name}</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
+                                        {item.productCode && <span className="truncate">Product Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
+                                        {item.barcode && <span className="truncate">{labels.barcode}: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
                                         <span>{labels.stock}: <StockBadge qty={item.currentStockLevel} /></span>
                                     </div>
                                     {(item.category?.name) && (
-                                        <div className="text-xs mt-1.5 px-2 py-0.5 rounded-md inline-block"
+                                        <div className="text-xs mt-1.5 px-2 py-0.5 rounded-md inline-block truncate max-w-full"
                                             style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
                                             {item.category.name}{item.subCategory?.name && ` › ${item.subCategory.name}`}
                                         </div>
@@ -164,16 +173,22 @@ export default function Products() {
                                 </div>
                             </div>
                             <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                                <PermissionGuard 
-                                    execute={() => openEdit(item._id)} 
-                                    permission="products.update" 
-                                    isConfirmation={true}
+                                <button 
+                                    onClick={() => navigate(`/products/${item._id}`)}
+                                    id={`products-mobile-view-${item._id}`} 
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
                                 >
-                                    <button id={`products-mobile-edit-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
-                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                        <Edit size={14} /> {labels.edit}
-                                    </button>
-                                </PermissionGuard>
+                                    <Eye size={14} />
+                                </button>
+                                <button 
+                                    onClick={() => openEdit(item._id)}
+                                    id={`products-mobile-edit-${item._id}`} 
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
+                                >
+                                    <Edit size={14} />
+                                </button>
                                 <PermissionGuard 
                                     execute={() => openDeleteConfirm(item)} 
                                     permission="products.delete" 
@@ -181,7 +196,7 @@ export default function Products() {
                                 >
                                     <button id={`products-mobile-delete-${item._id}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                        <Trash2 size={14} /> {labels.delete}
+                                        <Trash2 size={14} />
                                     </button>
                                 </PermissionGuard>
                             </div>

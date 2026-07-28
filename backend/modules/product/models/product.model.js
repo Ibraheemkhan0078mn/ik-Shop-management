@@ -6,7 +6,7 @@ const productSchema = new mongoose.Schema(
         name: { type: String, trim: true },
         brandName: { type: String, trim: true },
         productCode: { type: String, trim: true },
-        barcode: { type: String, unique: true, sparse: true, trim: true },
+        barcode: { type: String, unique: true, sparse: true, trim: true, set: (v) => v === "" ? undefined : v },
         description: { type: String, trim: true },
         image: { type: String },
 

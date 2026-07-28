@@ -9,10 +9,14 @@ import { getLocalDeviceIdentityModel } from "../../../configs/connect.db.js";
 
 export async function deviceIdentityCheckFunction() {
     try {
-
-
-
         let deviceIdentityModel = getLocalDeviceIdentityModel()
+        
+        // Check if model is available
+        if (!deviceIdentityModel) {
+            console.warn("Device identity model not initialized, using default device ID");
+            return { deviceId: "DEFAULT-DEVICE-ID", appVersion: null };
+        }
+
         let deviceId;
         let appVersion = null;
         let existingDeviceIdentity = await deviceIdentityModel.find()
@@ -43,10 +47,10 @@ export async function deviceIdentityCheckFunction() {
         }
 
 
-        return { deviceId: deviceId || null, appVersion: appVersion }
+        return { deviceId: deviceId || "DEFAULT-DEVICE-ID", appVersion: appVersion }
 
     } catch (error) {
         console.error("Get Categories Error:", error);
-        return { success: false, msg: error?.message }
+        return { deviceId: "DEFAULT-DEVICE-ID", appVersion: null, success: false, msg: error?.message }
     }
 }

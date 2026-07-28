@@ -16,9 +16,9 @@ const findOnePurchaseService = (query) => {
     return findOneDoc({ model: PurchaseModel, filter: query });
 };
 
-const findByIdPurchaseService = (id) => {
+const findByIdPurchaseService = (id, options = {}) => {
     const PurchaseModel = getLocalPurchaseModel();
-    return findOneDoc({ model: PurchaseModel, filter: { _id: id } });
+    return findOneDoc({ model: PurchaseModel, filter: { _id: id }, options });
 };
 
 const updatePurchaseService = (id, data) => {

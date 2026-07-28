@@ -16,7 +16,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 const toInputDate = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
 const sanitize = (v) => String(v || "").trim().replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-_]/g, "").toUpperCase();
 const makeBatch = (stamp) => `BAT-${stamp}-GEN`;
-const makeInvoice = (name, stamp) => `INV-${sanitize(name || "SUPPLIER")}-${stamp}`;
+const makeInvoice = (name, stamp) => `PI-${stamp.slice(-6)}`;
 const getBatchStamp = (bn) => { const m = /^BAT-([^-]+)-/.exec(bn || ""); return m?.[1] || Date.now().toString(); };
 
 const emptyItem = () => ({
@@ -257,6 +257,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setBill(p => p.invoiceNumber === inv ? p : { ...p, invoiceNumber: inv });
     }, [bill.supplier, selectedSupplierName, isUpdate]);
 
+    // check for duplicate invoice and regenerate if needed
+    useEffect(() => {
+        if (isUpdate || !bill.invoiceNumber) return;
+        const isDuplicate = previousBills.some(b => b.invoiceNumber === bill.invoiceNumber);
+        if (isDuplicate) {
+            const newInv = makeInvoice(selectedSupplierName, Date.now().toString());
+            setBill(p => ({ ...p, invoiceNumber: newInv }));
+        }
+    }, [bill.invoiceNumber, previousBills, isUpdate, selectedSupplierName]);
+
     // batch number (new mode)
     useEffect(() => {
         if (itemForm.batchMode !== "new") return;
@@ -350,7 +360,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
     const handleBatchSelect = (val) => {
         const b = availableBatches.find(b => b._id === val);
-        if (!b) return;
+        if (!b) {
+            showError("Batch not found");
+            return;
+        }
         setItemForm(p => ({
             ...p, batchMode: "existing", batchSelection: val,
             batchNumber: b.batchNumber ?? p.batchNumber,
@@ -456,7 +469,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     // item form no longer depends on supplier selection; supplier/date/items are validated on final submit.
     return (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto" onClick={onClose}>
-            <div className="relative w-full max-w-6xl sm:my-4 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
+            <div className="relative w-[70%] max-w-6xl sm:my-4 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
 
                 {/* header */}
                 <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-10" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
@@ -486,7 +499,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             <SSelect className="flex-1" options={productsList.map(p => ({ label: p.name, value: p._id }))} value={itemForm.item}
                                                 onChange={val => { const prod = productsList.find(p => p._id === val); if (prod) { setBatchStamp(Date.now().toString()); setItemForm(() => ({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", discountType: prod.discountType ?? "percentage", taxType: prod.taxType ?? "percentage" })); } }}
                                                 placeholder={labels.product + "…"} />
-                                            <button type="button" onClick={() => setShowProductModal(true)} className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 shrink-0" title="Create new product"><Plus size={16} /></button>
+                                            <button type="button" onClick={() => setShowProductModal(true)} className="px-3 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-1 shrink-0" style={{ background: "var(--accent-2)", color: "#fff" }} title="Create new product"><Plus size={16} /></button>
                                         </div>
                                     </Field>
                                 </div>
@@ -605,7 +618,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 <Label>{labels.supplier} *</Label>
                                 <div className="flex gap-2">
                                     <div className="relative z-50 flex-1"><SearchableSelect options={supplierOptions} value={bill.supplier} onChange={val => setBill(p => ({ ...p, supplier: val }))} placeholder={labels.selectSupplier + "…"} /></div>
-                                    <button type="button" onClick={() => setShowSupplierModal(true)} className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 shrink-0" title="Create new supplier"><Plus size={16} /></button>
+                                    <button type="button" onClick={() => setShowSupplierModal(true)} className="px-3 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-1 shrink-0" style={{ background: "var(--accent-2)", color: "#fff" }} title="Create new supplier"><Plus size={16} /></button>
                                 </div>
                             </Field>
                             <Field><Label>{labels.invoiceNo}</Label><Inp value={bill.invoiceNumber} readOnly style={{ background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" }} /></Field>

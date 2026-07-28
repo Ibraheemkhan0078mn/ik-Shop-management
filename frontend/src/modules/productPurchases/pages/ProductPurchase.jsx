@@ -188,14 +188,14 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, on
             </td>
             <td className="px-4 py-3 text-center text-ink">
                 <div className="text-sm font-medium">{purchase?.items?.length ?? 0}</div>
-                {purchase?.items?.length > 0 && (
-                    <div className="text-xs text-[var(--muted)] max-w-[150px] truncate" title={purchase.items.map(i => i.productName || i.product?.name).join(', ')}>
+                {/* {purchase?.items?.length > 0 && (
+                    <div className="text-xs text-[var(--muted)] max-w-[150px] truncate" title={purchase.items.map(i => i.name || i.product?.name || i.productName || String(i.product)).join(', ')}>
                         {purchase.items.slice(0, 2).map((item, idx) => (
-                            <span key={idx}>{item.productName || item.product?.name}</span>
+                            <span key={idx}>{item.name || item.product?.name || item.productName || String(item.product)}</span>
                         )).join(', ')}
                         {purchase.items.length > 2 && '...'}
                     </div>
-                )}
+                )} */}
             </td>
             <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
                 Rs {(purchase?.totalAmount ?? 0).toLocaleString()}

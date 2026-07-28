@@ -36,25 +36,25 @@ export const purchaseApi = baseApi.injectEndpoints({
         // Create
         createPurchase: build.mutation({
             query: (body) => ({ url: "/purchases", method: "POST", body }),
-            invalidatesTags: ["Purchase", "Product"],
+            invalidatesTags: ["Purchase", "Product", "Batch"],
         }),
 
         // Update
         updatePurchase: build.mutation({
             query: ({ id, ...body }) => ({ url: `/purchases/updatePurchase/${id}`, method: "PUT", body }),
-            invalidatesTags: (result, error, { id }) => [{ type: "Purchase", id }, "Purchase"],
+            invalidatesTags: (result, error, { id }) => [{ type: "Purchase", id }, "Purchase", "Product", "Batch"],
         }),
 
         // Delete
         deletePurchase: build.mutation({
             query: (id) => ({ url: `/purchases/${id}`, method: "DELETE" }),
-            invalidatesTags: ["Purchase"],
+            invalidatesTags: ["Purchase", "Product", "Batch"],
         }),
 
         // Update Status
         updatePurchaseStatus: build.mutation({
             query: ({ id, status }) => ({ url: `/purchases/${id}/status`, method: "PUT", body: { status } }),
-            invalidatesTags: ["Purchase"],
+            invalidatesTags: ["Purchase", "Product", "Batch"],
         }),
 
         // Create Payment

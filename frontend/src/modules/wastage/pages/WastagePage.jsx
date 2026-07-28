@@ -1,7 +1,7 @@
 // src/modules/wastage/pages/WastagePage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, CheckCircle, X, FileText, Calendar, Package, AlertTriangle, DollarSign } from "lucide-react";
+import { Plus, CheckCircle, X, FileText, Calendar, Package, AlertTriangle, DollarSign, Edit, Trash2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useDeleteWastage, useWastages, useApproveWastage } from "../services/wastage.service.js";
 import { getWastageLabels } from "../labels/wastageLabels.js";
@@ -151,6 +151,7 @@ function WastageRow({ wastage, onEdit, onDelete }) {
     const date   = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
     const status = wastage?.status ?? "draft";
     const style  = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
+    const isApproved = status === "approved";
 
     return (
         <tr 
@@ -183,22 +184,24 @@ function WastageRow({ wastage, onEdit, onDelete }) {
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{date}</td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <PermissionGuard execute={onEdit} permission="wastage.update" isConfirmation={true}>
-                        <button
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition"
-                            style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
-                            {labels.edit}
-                        </button>
-                    </PermissionGuard>
+                    {!isApproved && (
+                        <PermissionGuard execute={onEdit} permission="wastage.update" isConfirmation={true}>
+                            <button
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition"
+                                style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.15)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "rgba(15,118,110,0.08)"}>
+                                <Edit className="w-3 h-3" />
+                            </button>
+                        </PermissionGuard>
+                    )}
                     <PermissionGuard execute={onDelete} permission="wastage.delete" isConfirmation={true}>
                         <button
                             className="px-3 py-1 text-xs rounded-lg font-medium transition"
                             style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
                             onMouseEnter={e => e.currentTarget.style.background = "rgba(220,38,38,0.12)"}
                             onMouseLeave={e => e.currentTarget.style.background = "rgba(220,38,38,0.06)"}>
-                            {labels.delete}
+                            <Trash2 className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                 </div>
@@ -217,18 +220,18 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h2 className="text-lg font-semibold">
+            <div className="bg-[var(--surface)] rounded-2xl shadow-xl w-full max-w-6xl max-h-[85vh] overflow-hidden border border-[var(--border)]" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface-muted)]">
+                    <h2 className="text-lg font-semibold text-[var(--ink)]">
                         {labels.approveWastageRequests}
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+                    <button onClick={onClose} className="text-[var(--muted)] hover:text-[var(--ink)]">✕</button>
                 </div>
                 <div className="overflow-y-auto max-h-[65vh]">
                     {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">{labels.loading}</div>
+                        <div className="p-8 text-center text-[var(--muted)]">{labels.loading}</div>
                     ) : wastages.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
+                        <div className="p-8 text-center text-[var(--muted)]">
                             {labels.noPendingRequests}
                         </div>
                     ) : (
@@ -306,7 +309,7 @@ function WastageApprovalModal({ onClose, onApprove, onDelete }) {
                     )}
                 </div>
                 {data?.totalPages > 1 && (
-                    <div className="p-4 border-t text-center text-xs" style={{ color: "var(--muted)" }}>
+                    <div className="p-4 border-t border-[var(--border)] text-center text-xs" style={{ color: "var(--muted)" }}>
                         {labels.showingPendingRequests.replace('{count}', wastages.length).replace('{total}', data.total)}
                     </div>
                 )}

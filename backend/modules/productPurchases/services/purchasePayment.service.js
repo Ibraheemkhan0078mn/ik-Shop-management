@@ -114,15 +114,19 @@ export const createPurchasePayment = async (paymentData) => {
 };
 
 export const getPurchasePayments = async (purchaseId) => {
-    return await findPurchasePaymentService({ purchase: purchaseId })
-        .populate('creditAccount', 'name accountType')
-        .sort({ paymentDate: -1 });
+    return await findPurchasePaymentService(
+        { purchase: purchaseId },
+        { 
+            populate: 'creditAccount', 
+            sort: { paymentDate: -1 } 
+        }
+    );
 };
 
 export const getPurchasePaymentById = async (id) => {
-    return await findByIdPurchasePaymentService(id)
-        .populate('purchase')
-        .populate('creditAccount', 'name accountType');
+    return await findByIdPurchasePaymentService(id, {
+        populate: ['purchase', 'creditAccount']
+    });
 };
 
 export const deletePurchasePayment = async (paymentId) => {
@@ -153,7 +157,7 @@ export const deletePurchasePayment = async (paymentId) => {
 
     // Recalculate purchase paid amount and payment status
     const allPayments = await findPurchasePaymentService({ purchase: purchase._id });
-    const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const remainingAmount = purchase.totalAmount - totalPaid;
 
     let paymentStatus = 'pending';

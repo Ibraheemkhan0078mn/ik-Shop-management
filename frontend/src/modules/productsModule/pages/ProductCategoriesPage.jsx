@@ -55,9 +55,8 @@ export default function ProductCategoriesPage() {
                 {/* Desktop Header */}
                 <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface-muted) rounded-t-xl border-b border-(--border) text-xs font-semibold text-(--muted)">
                     <div className="col-span-1">{labels.image}</div>
-                    <div className="col-span-4">{labels.name}</div>
-                    <div className="col-span-5">{labels.description}</div>
-                    <div className="col-span-2">{labels.actions}</div>
+                    <div className="col-span-5">{labels.name}</div>
+                    <div className="col-span-6">{labels.actions}</div>
                 </div>
 
                 {/* Desktop Rows */}
@@ -68,18 +67,14 @@ export default function ProductCategoriesPage() {
                                 <FolderTree size={18} />
                             </div>
                         </div>
-                        <div className="col-span-4 font-medium text-(--ink) truncate">{item.name}</div>
-                        <div className="col-span-5 text-sm text-(--muted) truncate">{item.description || "—"}</div>
-                        <div className="col-span-2 flex items-center gap-2">
-                            <PermissionGuard 
-                                execute={() => handleEdit(item._id)} 
-                                permission="categories.update" 
-                                isConfirmation={true}
+                        <div className="col-span-5 font-medium text-(--ink) truncate">{item.name}</div>
+                        <div className="col-span-6 flex items-center gap-2">
+                            <button 
+                                onClick={() => handleEdit(item._id)}
+                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all"
                             >
-                                <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
-                                    <Edit size={16} />
-                                </button>
-                            </PermissionGuard>
+                                <Edit size={16} />
+                            </button>
                             <PermissionGuard 
                                 execute={() => handleDelete(item._id)} 
                                 permission="categories.delete" 
@@ -102,19 +97,15 @@ export default function ProductCategoriesPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-(--ink) truncate">{item.name}</h3>
-                                <p className="text-sm text-(--muted) truncate">{item.description || "—"}</p>
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-(--border)">
-                            <PermissionGuard 
-                                execute={() => handleEdit(item._id)} 
-                                permission="categories.update" 
-                                isConfirmation={true}
+                            <button 
+                                onClick={() => handleEdit(item._id)}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm"
                             >
-                                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
-                                    <Edit size={16} /> {labels.edit}
-                                </button>
-                            </PermissionGuard>
+                                <Edit size={16} /> {labels.edit}
+                            </button>
                             <PermissionGuard 
                                 execute={() => handleDelete(item._id)} 
                                 permission="categories.delete" 

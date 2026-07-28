@@ -11,6 +11,7 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal.jsx";
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -70,10 +71,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     skip: !productId || isCreate,
   });
   const { data: categoriesRaw, error: catError } = useGetCategoriesQuery();
-  const { data: subCategoriesRaw, error: subError } = useGetSubCategoriesQuery();
-
-  const categories = useMemo(() => safeArray(categoriesRaw), [categoriesRaw]);
-  const subCategories = useMemo(() => safeArray(subCategoriesRaw), [subCategoriesRaw]);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -84,6 +81,13 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
   const fileInputRef = useRef(null);
+
+  const { data: subCategoriesRaw, error: subError } = useGetSubCategoriesQuery(undefined, {
+    skip: !form.category,
+  });
+
+  const categories = useMemo(() => safeArray(categoriesRaw), [categoriesRaw]);
+  const subCategories = useMemo(() => safeArray(subCategoriesRaw), [subCategoriesRaw]);
 
   useEffect(() => {
     if (!isCreate && productData) {
@@ -125,6 +129,11 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const updateField = useCallback((name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
+    
+    // Reset subcategory when category changes
+    if (name === 'category') {
+      setForm((prev) => ({ ...prev, subCategory: '' }));
+    }
   }, []);
 
   // Handle category creation callback
@@ -217,6 +226,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     Object.entries(form).forEach(([key, value]) => {
       if (key === "image" || exclude.includes(key)) return;
       if (value === undefined || value === null) return;
+      // Don't send empty strings for category/subCategory/barcode to avoid ObjectId cast and duplicate key errors
+      if ((key === "category" || key === "subCategory" || key === "barcode") && value === "") return;
       payload.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
     });
     if (form.image instanceof File) payload.append("image", form.image);
@@ -311,7 +322,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                     <p className="text-sm font-medium text-[var(--ink)]">
                       {imagePreview ? labels.changeImage : labels.clickOrDrag}
                     </p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{labels.pngJpgWebp}</p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">{labels.pngJpgWebp} (optional)</p>
                   </div>
                   <input
                     ref={fileInputRef}
@@ -359,7 +370,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               />
 
               {/* Sub Category */}
-              <SelectField
+              {/* <SelectField
                 label={labels.subCategory}
                 name="subCategory"
                 value={form.subCategory}
@@ -370,7 +381,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 placeholder={labels.selectSubCategory}
                 disabled={!form.category}
                 action={{ label: labels.new, icon: Plus, onClick: () => setShowSubCategoryDialog(true) }}
-              />
+              /> */}
 
               {/* Active Status */}
               <div className="sm:col-span-2">
@@ -558,15 +569,20 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
             >
               {labels.cancel}
             </button>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm bg-[var(--accent-2)] text-white hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+            <PermissionGuard 
+              execute={onSubmit}
+              permission={isCreate ? "products.create" : "products.update"}
+              isConfirmation={false}
             >
-              <Check className="h-4 w-4" />
-              {isSaving ? labels.saving : isCreate ? labels.saveProduct : labels.updateProduct}
-            </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm bg-[var(--accent-2)] text-white hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+              >
+                <Check className="h-4 w-4" />
+                {isSaving ? labels.saving : isCreate ? labels.saveProduct : labels.updateProduct}
+              </button>
+            </PermissionGuard>
           </div>
         </div>
       </div>
