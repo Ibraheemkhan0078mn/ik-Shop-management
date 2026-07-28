@@ -154,7 +154,8 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
       label: b.batchNumber,
       value: b.batchNumber,
       expiryDate: b.expiryDate ?? "",
-      quantity: b.quantity
+      quantity: b.quantity,
+      purchasePrice: b.purchasePrice
     }));
   }, [currentItem.product, productOptions]);
 
@@ -320,7 +321,8 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                         setCurrentItem({
                           ...blankItem(),
                           product: val,
-                          productName: prod?.name ?? ""
+                          productName: prod?.name ?? "",
+                          costPrice: prod?.purchasePrice ?? prod?.costPrice ?? ""
                         });
                       }}
                     >
@@ -340,6 +342,10 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                         updateCurrent("batchNumber", val);
                         if (b?.expiryDate) {
                           updateCurrent("expiryDate", new Date(b.expiryDate).toISOString().split("T")[0]);
+                        }
+                        // Use batch's purchasePrice for cost price
+                        if (b?.purchasePrice !== undefined) {
+                          updateCurrent("costPrice", String(b.purchasePrice));
                         }
                       }}
                       disabled={!currentItem.product}
