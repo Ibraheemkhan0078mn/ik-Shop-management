@@ -140,6 +140,14 @@ export const settingsLabels = {
     minute: "minute",
     hour: "hour",
     day: "day",
+    excelBackup: "Excel Backup",
+    excelBackupDescription: "Export all database data to Excel file",
+    excelBackupPath: "Excel Backup Path",
+    enterExcelBackupPath: "Enter Excel backup path",
+    exportExcel: "Export Excel",
+    exporting: "Exporting...",
+    excelExportSuccess: "Excel export completed successfully",
+    excelExportFailed: "Excel export failed",
     
     // Permission Password Settings
     permissionPasswordSettings: "Permission Password Settings",
@@ -328,6 +336,14 @@ export const settingsLabels = {
     minute: "منٹ",
     hour: "گھنٹا",
     day: "دن",
+    excelBackup: "ایکسل بیک اپ",
+    excelBackupDescription: "تمام ڈیٹا بیس ڈیٹا کو ایکسل فائل میں ایکسپورٹ کریں",
+    excelBackupPath: "ایکسل بیک اپ پاتھ",
+    enterExcelBackupPath: "ایکسل بیک اپ پاتھ درج کریں",
+    exportExcel: "ایکسل ایکسپورٹ",
+    exporting: "ایکسپورٹ ہو رہا ہے...",
+    excelExportSuccess: "ایکسل ایکسپورت کامیابی سے مکمل ہوا",
+    excelExportFailed: "ایکسل ایکسپورت ناکام ہوا",
     
     // Permission Password Settings
     permissionPasswordSettings: "اجازت پاس ورڈ سیٹنگز",
@@ -516,6 +532,14 @@ export const settingsLabels = {
     minute: "منٹ / minute",
     hour: "گھنٹا / hour",
     day: "دن / day",
+    excelBackup: "ایکسل بیک اپ / Excel Backup",
+    excelBackupDescription: "تمام ڈیٹا بیس ڈیٹا کو ایکسل فائل میں ایکسپورٹ کریں / Export all database data to Excel file",
+    excelBackupPath: "ایکسل بیک اپ پاتھ / Excel Backup Path",
+    enterExcelBackupPath: "ایکسل بیک اپ پاتھ درج کریں / Enter Excel backup path",
+    exportExcel: "ایکسل ایکسپورٹ / Export Excel",
+    exporting: "ایکسپورٹ ہو رہا ہے... / Exporting...",
+    excelExportSuccess: "ایکسل ایکسپورت کامیابی سے مکمل ہوا / Excel export completed successfully",
+    excelExportFailed: "ایکسل ایکسپورت ناکام ہوا / Excel export failed",
     
     // Permission Password Settings
     permissionPasswordSettings: "اجازت پاس ورڈ سیٹنگز / Permission Password Settings",

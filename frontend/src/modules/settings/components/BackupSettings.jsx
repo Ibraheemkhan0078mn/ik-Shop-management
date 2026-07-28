@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Cloud, Database, RefreshCw, Clock, AlertCircle, CheckCircle, HardDrive, X } from "lucide-react";
-import { useGetStorageInfoQuery, useSyncAllMutation, useSyncRequiredMutation, useStopSyncMutation, useGetSyncStatusQuery } from "../../backup/api/backup.api.js";
+import { Cloud, Database, RefreshCw, Clock, AlertCircle, CheckCircle, HardDrive, X, FileSpreadsheet } from "lucide-react";
+import { useGetStorageInfoQuery, useSyncAllMutation, useSyncRequiredMutation, useStopSyncMutation, useGetSyncStatusQuery, useExportExcelMutation } from "../../backup/api/backup.api.js";
 import { useUpdateBackupSettingsMutation } from "../../settings/api/settings.api.js";
 import { convertToMilliseconds } from "../../../shared/utilities/time.utility.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { toast } from "sonner";
 
 export default function BackupSettings({ settingsData, userId, labels }) {
     const [syncIntervalValue, setSyncIntervalValue] = useState(settingsData?.backup?.syncIntervalValue || settingsData?.backup?.syncInterval || 4);
     const [syncIntervalUnit, setSyncIntervalUnit] = useState(settingsData?.backup?.syncIntervalUnit || 'hours');
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [excelBackupPath, setExcelBackupPath] = useState(settingsData?.backup?.excelBackupPath || "./backups/excel");
+    const [isExporting, setIsExporting] = useState(false);
 
     const { data: storageInfo, isLoading: storageLoading, refetch: refetchStorage } = useGetStorageInfoQuery();
     
@@ -19,6 +23,7 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     const [syncRequired] = useSyncRequiredMutation();
     const [stopSync] = useStopSyncMutation();
     const [updateBackupSettings] = useUpdateBackupSettingsMutation();
+    const [exportExcel] = useExportExcelMutation();
     const { data: syncStatus } = useGetSyncStatusQuery();
 
     // Update sync interval in settings when changed
@@ -34,6 +39,35 @@ export default function BackupSettings({ settingsData, userId, labels }) {
             console.log("Sync interval updated to:", value, unit);
         } catch (error) {
             console.error("Failed to update sync interval:", error);
+        }
+    };
+
+    // Update Excel backup path in settings when changed
+    const handleExcelPathChange = async (path) => {
+        setExcelBackupPath(path);
+        try {
+            await updateBackupSettings({ 
+                userId: userId || "global",
+                backup: { syncIntervalValue, syncIntervalUnit, excelBackupPath: path }
+            }).unwrap();
+            console.log("Excel backup path updated to:", path);
+        } catch (error) {
+            console.error("Failed to update xl backup path:", error);
+        }
+    };
+
+    // Handle Excel export
+    const handleExportExcel = async () => {
+        setIsExporting(true);
+        try {
+            const result = await exportExcel(userId || "global").unwrap();
+            toast.success(labels.excelExportSuccess || "Excel export completed successfully");
+            console.log("Excel export result:", result);
+        } catch (error) {
+            console.error("Excel export failed:", error);
+            toast.error(labels.excelExportFailed || "Excel export failed");
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -279,6 +313,50 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                             <li>{labels.autoSyncDescription}</li>
                             <li>{labels.storageUsageDescription}</li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            {/* Excel Backup Section */}
+            <div className="card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <FileSpreadsheet size={24} className="text-[var(--accent-2)]" />
+                    <div>
+                        <h3 className="text-lg font-semibold text-[var(--ink)]">{labels.excelBackup}</h3>
+                        <p className="text-sm text-[var(--muted)]">{labels.excelBackupDescription}</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium text-[var(--ink)] mb-3 block">{labels.excelBackupPath}</label>
+                        <div className="flex gap-3">
+                            <input
+                                type="text"
+                                value={excelBackupPath}
+                                onChange={(e) => setExcelBackupPath(e.target.value)}
+                                className="flex-1 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                placeholder={labels.enterExcelBackupPath}
+                            />
+                            <button
+                                onClick={() => handleExcelPathChange(excelBackupPath)}
+                                className="px-6 py-3 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/90 transition-colors"
+                            >
+                                {labels.set}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <PermissionGuard execute={() => handleExportExcel()} permission="settings.view" isConfirmation={true}>
+                            <button
+                                disabled={isExporting}
+                                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <FileSpreadsheet size={18} />
+                                {isExporting ? labels.exporting : labels.exportExcel}
+                            </button>
+                        </PermissionGuard>
                     </div>
                 </div>
             </div>

@@ -41,6 +41,15 @@ export const backupApi = baseApi.injectEndpoints({
             }),
             providesTags: ["Backup"],
         }),
+        // Export Excel
+        exportExcel: builder.mutation({
+            query: (userId) => ({
+                url: "/backup/export-excel",
+                method: "POST",
+                body: { userId },
+            }),
+            invalidatesTags: ["Backup"],
+        }),
     }),
 });
 
@@ -50,4 +59,5 @@ export const {
     useSyncRequiredMutation,
     useStopSyncMutation,
     useGetSyncStatusQuery,
+    useExportExcelMutation,
 } = backupApi;

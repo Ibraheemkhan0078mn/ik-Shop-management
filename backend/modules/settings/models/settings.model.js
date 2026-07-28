@@ -84,6 +84,10 @@ const settingsSchema = new mongoose.Schema(
                 enum: ['seconds', 'minutes', 'hours', 'days'],
                 default: 'hours',
             },
+            excelBackupPath: {
+                type: String,
+                default: "./backups/excel",
+            },
         },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },

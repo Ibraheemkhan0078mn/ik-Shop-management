@@ -1,6 +1,9 @@
 import { connectOnlineDb } from "../../../configs/onlineConnect.db.js";
 import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "../services/uploadSync.js";
 import { docsSyncOrganizer } from "../services/syncOrganizedRunner.js";
+import XLSX from 'xlsx';
+import fs from 'fs';
+import path from 'path';
 
 // Global sync cancellation flag
 let syncInProgress = false;
@@ -159,6 +162,107 @@ export const getSyncStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || "Failed to fetch sync status",
+        });
+    }
+};
+
+export const exportExcel = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        // Get settings to find Excel backup path using the centralized service
+        const { findOneSettingsService } = (await import('../../settings/services/settings.crud.js'));
+        const settings = await findOneSettingsService({ userId: userId || "global" });
+        
+        if (!settings) {
+            return res.status(404).json({
+                success: false,
+                message: "Settings not found",
+            });
+        }
+
+        const excelBackupPath = settings.backup?.excelBackupPath || "./backups/excel";
+        
+        // Ensure directory exists
+        if (!fs.existsSync(excelBackupPath)) {
+            fs.mkdirSync(excelBackupPath, { recursive: true });
+        }
+
+        // Create new workbook
+        const workbook = XLSX.utils.book_new();
+
+        // Import all models and fetch their data
+        const models = [
+            { name: 'Users', path: '../../auth/models/auth.model.js' },
+            { name: 'Customers', path: '../../customer/models/customer.model.js' },
+            { name: 'Expenses', path: '../../expenses/models/expense.model.js' },
+            { name: 'ExpenseCategories', path: '../../expenses/models/expenseCatag.model.js' },
+            { name: 'HoldOrders', path: '../../pos/models/holdOrder.model.js' },
+            { name: 'Orders', path: '../../pos/models/order.model.js' },
+            { name: 'Categories', path: '../../product/models/category.model.js' },
+            { name: 'Products', path: '../../product/models/product.model.js' },
+            { name: 'SubCategories', path: '../../product/models/subCategory.model.js' },
+            { name: 'Batches', path: '../../productPurchases/models/batch.model.js' },
+            { name: 'Purchases', path: '../../productPurchases/models/purchase.model.js' },
+            { name: 'PurchasePayments', path: '../../productPurchases/models/purchasePayment.model.js' },
+            { name: 'PurchaseReturns', path: '../../productPurchases/models/purchaseReturn.model.js' },
+            { name: 'ProductReturns', path: '../../productReturn/models/productReturn.model.js' },
+            { name: 'PurchaseReturns2', path: '../../purchaseReturn/models/purchaseReturn.model.js' },
+            { name: 'QarzaAccounts', path: '../../qarza/models/qarzaAccount.model.js' },
+            { name: 'AppThemes', path: '../../settings/models/appTheme.model.js' },
+            { name: 'PaymentMethods', path: '../../settings/models/paymentMethod.model.js' },
+            { name: 'Staff', path: '../../staff/models/staff.model.js' },
+            { name: 'StaffAttendance', path: '../../staff/models/staffAttendance.model.js' },
+            { name: 'StaffSalaryPayments', path: '../../staff/models/staffSalaryPayment.model.js' },
+            { name: 'StaffSaleBills', path: '../../staff/models/staffSaleBill.model.js' },
+            { name: 'Suppliers', path: '../../suppliers/models/supplier.model.js' },
+            { name: 'Wastage', path: '../../wastage/models/wastage.model.js' },
+        ];
+
+        // Fetch data from each model and create sheets
+        for (const model of models) {
+            try {
+                const Model = (await import(model.path)).default;
+                const data = await Model.find({}).lean();
+                
+                if (data.length > 0) {
+                    // Convert Mongoose documents to plain objects and remove _id, __v
+                    const cleanData = data.map(doc => {
+                        const { _id, __v, ...rest } = doc;
+                        return rest;
+                    });
+                    
+                    // Create worksheet
+                    const worksheet = XLSX.utils.json_to_sheet(cleanData);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, model.name);
+                }
+            } catch (error) {
+                console.error(`Error fetching data for ${model.name}:`, error);
+                // Continue with other models even if one fails
+            }
+        }
+
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const filename = `backup_${timestamp}.xlsx`;
+        const filepath = path.join(excelBackupPath, filename);
+
+        // Write workbook to file
+        XLSX.writeFile(workbook, filepath);
+
+        res.json({
+            success: true,
+            message: "Excel export completed successfully",
+            data: {
+                filepath,
+                filename,
+            },
+        });
+    } catch (error) {
+        console.error("Error during Excel export:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Excel export failed",
         });
     }
 };

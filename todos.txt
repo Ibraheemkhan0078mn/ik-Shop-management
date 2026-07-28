@@ -1,8 +1,31 @@
 
 
-1: when delete something then its data from related wastage, purchase, return etc are also deleted. so please also store its data as it is and when deleted then show the deleted tag there also. 
-2: centralzied the db operation of entire backend from one file.
-3: integrate the pdf fro each data in system.
-4: make it perfect and better the sync and also when online then live update the data
-5: make the permission password on each operation which are not allowed by admin. 
-6: the user permissin are handled from frontend and backend both. only make it handled from backend only. 
+
+1: remove the sub catag description from table preview 
+2: remove the permission manager from update icon in table and place it on submit when update or create the sub catag. also chek that on delete icon in table is placed or not. now make sure htat on submit of create and update and delete icon only will have this permission guard.
+3: remove description from catag table. also on update icon remove the permission gurad. only place on dleete icon and create and update of catag. 
+4: also do the work of permission guard on update and create in crud of product and also on delete only. not on others like update icon in table. 
+5: show the green dot on product image when active and remove the column of status from it. 
+6: also place the image and name of product like in such a way that it comes in one column. also when product name is too much large then place the dots after its limit.
+7: remove the detials data page navigation from click on proudct row and make the eye icon in action button and place hte navigation on it. 
+8: in product detials page, only show the feilds which is presnt and when not present then does not show it.
+9: also make the image input of product crud optional not required.
+10: when i change the catag in product crud then fetch via rtk the sub catag of this catag and show in dropdonw, and with evry chang ein catag, reset the sub catag and fill with related sub catags only. 
+11: alos pleae check the detials of product in product details and place the better detiasl there. there are fields which is not present in product or not taken via product crud or prepared from everywhere else but its feilds is present so fix it. also there is present but not rendered so also fix it. 
+12: there is edit button in product section so please remove it when i click on product eye icon and goes nto detials page. from there remove the edit button. 
+13: also make the product batch little bit short and meaningfull. max its is 8 numbers which from date and letter of pb means product batch.
+14: when batches retrieved then also populate its supplier and also take its _id and name and render in batch data. 
+15: when click then show the product batch details page.
+16: comment out the sub catag from its usage place. means from sidebar and product crud. but comment not removal.
+17: make the one service function which take the wastage, purchases, returns, order , order return on the absis of each batch of product and calculate the batch stock and then calculate the all batch stock and detect the product stock. but do it on the basis of batch then product and then fit in batch and product its related vlaues in stock. and for this make the one api for stock recalculation and make it in product detaisl batch bottom section. no permission guard for it. 
+
+18: in product wastage crud form, in add items, make the product selection dropdown show the product name and batch number, quantity in dropdown option. and when selected then show the product name and batch number in the selected item and also reason and notes and that it and make it in better easy way. also show the uneditatble expired date which is not changeable. 
+19: also in wastage crud form, in items section, give it name to colomn of name of product, stock and also make the delete icon better becuase its not showing. 
+20: when same product with batch and expiry is added the only increase its stock not add new item. 
+21: in approval button click on product wastage page, it need the producct wastage approval permission guard.
+22: the product wastage approval component is not connected with index.css theme so connect it. 
+23: when wastage is updated then show the message of not operation failed but the message which is comming from api. {"success":false,"error":"Cannot edit a wastage that is already approved"} means error, reason, msg, message
+24: when approved then hide the edit button via conditional rendering. 
+25: when wastage is approved,updated of deleted then invalidate the rtk query of product but liek that it only invalidates but does not fetch now, it only fetch when i goes to product page again. 
+
+
