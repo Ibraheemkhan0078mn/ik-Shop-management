@@ -50,6 +50,15 @@ export const backupApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["Backup"],
         }),
+        // Export Filtered Data
+        exportFilteredData: builder.mutation({
+            query: (data) => ({
+                url: "/backup/export-filtered",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Backup"],
+        }),
     }),
 });
 
@@ -60,4 +69,5 @@ export const {
     useStopSyncMutation,
     useGetSyncStatusQuery,
     useExportExcelMutation,
+    useExportFilteredDataMutation,
 } = backupApi;

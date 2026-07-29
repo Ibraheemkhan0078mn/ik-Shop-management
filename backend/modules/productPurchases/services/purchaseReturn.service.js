@@ -34,6 +34,10 @@ export async function createPurchaseReturn(data) {
   return purchaseReturn;
 }
 
+export async function getAllPurchaseReturns() {
+  return await findPurchaseReturnService({}, { sort: { createdAt: -1 } });
+}
+
 export async function getPurchaseReturnById(id) {
   return await findByIdPurchaseReturnService(id, { populate: ["purchase", "products.productId", "products.batchId"] });
 }

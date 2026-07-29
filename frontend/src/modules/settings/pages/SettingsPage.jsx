@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield, Cloud } from "lucide-react";
+import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Shield, Cloud, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
@@ -15,6 +15,7 @@ import PaymentMethodsSettings from "../components/PaymentMethodsSettings.jsx";
 import ThemeSettings from "../components/ThemeSettings.jsx";
 import PermissionPasswordSettings from "../components/PermissionPasswordSettings.jsx";
 import BackupSettings from "../components/BackupSettings.jsx";
+import FileBackup from "../components/FileBackup.jsx";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
@@ -47,6 +48,7 @@ export default function SettingsPage() {
         { id: "paymentMethods", icon: CreditCard, label: labels.paymentMethods },
         { id: "profile", icon: User, label: labels.profile },
         { id: "backup", icon: Cloud, label: labels.backup },
+        { id: "fileBackup", icon: FileSpreadsheet, label: "File Backup" },
     ];
 
     // Only add permission password tab for admin users
@@ -88,6 +90,7 @@ export default function SettingsPage() {
                 {activeTab === "paymentMethods" && <PaymentMethodsSettings labels={labels} />}
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
                 {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}
+                {activeTab === "fileBackup" && <FileBackup labels={labels} />}
                 {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />}
             </div>
         </div>

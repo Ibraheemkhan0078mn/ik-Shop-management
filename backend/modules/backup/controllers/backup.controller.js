@@ -327,3 +327,337 @@ export const exportExcel = async (req, res) => {
         });
     }
 };
+
+export const exportFilteredData = async (req, res) => {
+    try {
+        const { models, filters, exportPath, exportType, userId } = req.body;
+        
+        // Get settings to find backup path
+        const { findOneSettingsService } = (await import('../../settings/services/settings.crud.js'));
+        const settings = await findOneSettingsService({ userId: userId || "global" });
+        
+        const backupPath = exportPath || settings?.backup?.excelBackupPath || "./backups";
+        
+        // Ensure directory exists
+        if (!fs.existsSync(backupPath)) {
+            fs.mkdirSync(backupPath, { recursive: true });
+        }
+
+        // Model to service mapping
+        const modelServiceMap = {
+            orders: { service: '../../pos/services/order.service.js', method: 'getAllOrders' },
+            holdOrders: { service: '../../pos/services/holdOrder.service.js', method: 'getAllHoldOrders' },
+            products: { service: '../../product/services/product.service.js', method: 'getProducts' },
+            categories: { service: '../../product/services/category.service.js', method: 'getCategories' },
+            brands: { service: '../../product/services/brand.service.js', method: 'getBrands' },
+            wastage: { service: '../../wastage/services/wastage.service.js', method: 'getAllWastages' },
+            purchases: { service: '../../productPurchases/services/purchase.service.js', method: 'getPurchases' },
+            purchaseReturns: { service: '../../productPurchases/services/purchaseReturn.service.js', method: 'getAllPurchaseReturns' },
+            customers: { service: '../../customer/services/customer.service.js', method: 'getAllCustomers' },
+            suppliers: { service: '../../suppliers/services/supplier.service.js', method: 'getAllSuppliers' },
+            qarzaAccounts: { service: '../../qarza/services/qarza.service.js', method: 'getAllQarzaAccounts' },
+            expenses: { service: '../../expenses/services/expense.service.js', method: 'getAllExpenses' },
+            staff: { service: '../../staff/services/staff.service.js', method: 'getAllStaff' },
+            users: { service: '../../auth/services/user.service.js', method: 'getAllUsers' },
+        };
+
+        const exportData = {};
+
+        // Fetch data for selected models
+        for (const modelId of models) {
+            try {
+                const serviceConfig = modelServiceMap[modelId];
+                if (!serviceConfig) {
+                    console.error(`No service configuration found for model: ${modelId}`);
+                    continue;
+                }
+
+                console.log(`Fetching data for model: ${modelId}`);
+                const serviceModule = await import(serviceConfig.service);
+                const fetchMethod = serviceModule[serviceConfig.method];
+                
+                if (typeof fetchMethod === 'function') {
+                    let data;
+                    const modelFilters = filters[modelId] || {};
+                    
+                    // Apply filters to the fetch call
+                    if (modelId === 'staff') {
+                        data = await fetchMethod(modelFilters);
+                    } else if (modelId === 'products') {
+                        data = await fetchMethod();
+                        // Apply client-side filtering for products
+                        if (modelFilters.category || modelFilters.subCategory || modelFilters.brand || modelFilters.stockStatus || modelFilters.search) {
+                            data = data.filter(item => {
+                                if (modelFilters.category && item.category?.name !== modelFilters.category) return false;
+                                if (modelFilters.subCategory && item.subCategory?.name !== modelFilters.subCategory) return false;
+                                if (modelFilters.brand && item.brandName !== modelFilters.brand) return false;
+                                if (modelFilters.stockStatus === 'in_stock' && item.currentStockLevel <= 0) return false;
+                                if (modelFilters.stockStatus === 'out_of_stock' && item.currentStockLevel > 0) return false;
+                                if (modelFilters.stockStatus === 'low_stock' && (item.currentStockLevel <= 0 || item.currentStockLevel >= 5)) return false;
+                                if (modelFilters.search && !item.name.toLowerCase().includes(modelFilters.search.toLowerCase()) && !item.productCode?.toLowerCase().includes(modelFilters.search.toLowerCase())) return false;
+                                return true;
+                            });
+                        }
+                    } else if (modelId === 'customers' || modelId === 'holdOrders' || modelId === 'purchaseReturns') {
+                        // These models should fetch all data without filters initially
+                        data = await fetchMethod();
+                    } else {
+                        data = await fetchMethod();
+                    }
+                    
+                    console.log(`Raw data for ${modelId}:`, data?.length || 0, 'records');
+                    
+                    // Handle paginated responses
+                    if (data && data.data && Array.isArray(data.data)) {
+                        data = data.data;
+                    }
+                    
+                    // Apply date range filters
+                    if (modelFilters.dateRange && (modelFilters.dateRange.startDate || modelFilters.dateRange.endDate)) {
+                        data = data.filter(item => {
+                            const itemDate = new Date(item.createdAt || item.date);
+                            if (modelFilters.dateRange.startDate && itemDate < new Date(modelFilters.dateRange.startDate)) return false;
+                            if (modelFilters.dateRange.endDate && itemDate > new Date(modelFilters.dateRange.endDate)) return false;
+                            return true;
+                        });
+                    }
+                    
+                    // Apply text search filters
+                    if (modelFilters.search) {
+                        data = data.filter(item => {
+                            const searchStr = modelFilters.search.toLowerCase();
+                            return Object.values(item).some(val => 
+                                val && String(val).toLowerCase().includes(searchStr)
+                            );
+                        });
+                    }
+                    
+                    // Apply status filters
+                    if (modelFilters.status && modelFilters.status !== 'all') {
+                        data = data.filter(item => item.status === modelFilters.status);
+                    }
+                    
+                    console.log(`Filtered data for ${modelId}:`, data?.length || 0, 'records');
+                    
+                    if (data && data.length > 0) {
+                        // Convert Mongoose documents to plain objects and remove _id, __v
+                        exportData[modelId] = data.map(doc => {
+                            const plainDoc = doc.toObject ? doc.toObject() : doc;
+                            const { _id, __v, ...rest } = plainDoc;
+                            return rest;
+                        });
+                        console.log(`Added ${modelId} to exportData with ${exportData[modelId].length} records`);
+                    } else {
+                        console.log(`No data found for ${modelId} after filtering`);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching data for ${modelId}:`, error.message);
+            }
+        }
+        
+        console.log('Final exportData keys:', Object.keys(exportData));
+
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        
+        if (exportType === 'excel') {
+            const workbook = XLSX.utils.book_new();
+            
+            // Create sheets for each model
+            for (const [modelId, data] of Object.entries(exportData)) {
+                if (data && data.length > 0) {
+                    const worksheet = XLSX.utils.json_to_sheet(data);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, modelId);
+                }
+            }
+            
+            const filename = `filtered_backup_${timestamp}.xlsx`;
+            const filepath = path.join(backupPath, filename);
+            XLSX.writeFile(workbook, filepath);
+
+            res.json({
+                success: true,
+                message: "Excel export completed successfully",
+                data: {
+                    filepath,
+                    filename,
+                    modelsExported: Object.keys(exportData),
+                },
+            });
+        } else if (exportType === 'pdf') {
+            // PDF export implementation with proper tables
+            const PDFDocument = await import('pdfkit');
+            const doc = new PDFDocument.default({ margin: 50 });
+            const filename = `filtered_backup_${timestamp}.pdf`;
+            const filepath = path.join(backupPath, filename);
+            
+            doc.pipe(fs.createWriteStream(filepath));
+            
+            // Add title
+            doc.fontSize(20).text('Filtered Data Export', { align: 'center' });
+            doc.moveDown();
+            doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+            doc.moveDown();
+            doc.moveDown();
+            
+            // Helper function to format nested objects
+            const formatValue = (val) => {
+                if (val === null || val === undefined) return '';
+                if (typeof val === 'object') {
+                    if (Array.isArray(val)) {
+                        return val.length > 0 ? `[${val.length} items]` : '[]';
+                    }
+                    if (val.name) return val.name;
+                    if (val.fullName) return val.fullName;
+                    if (val.productCode) return val.productCode;
+                    return JSON.stringify(val).substring(0, 50);
+                }
+                if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+                if (val instanceof Date) return val.toLocaleDateString();
+                return String(val);
+            };
+            
+            // Helper function to draw table
+            const drawTable = (data, startY) => {
+                if (data.length === 0) return startY;
+                
+                const tableTop = startY;
+                const rowHeight = 30;
+                const tableWidth = doc.page.width - 100;
+                const pageMargin = 50;
+                const bottomMargin = 80;
+                
+                // Get all unique keys from all items
+                const allKeys = [...new Set(data.flatMap(item => Object.keys(item)))].slice(0, 6);
+                const numCols = allKeys.length;
+                const colWidths = Array(numCols).fill(tableWidth / numCols);
+                
+                // Define professional colors
+                const headerBg = '#e8f4f8';
+                const headerBorder = '#b8d4e3';
+                const rowBorder = '#e0e0e0';
+                const altRowBg = '#f9fbfd';
+                const textColor = '#333333';
+                
+                // Draw header with soft styling
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#2c5282');
+                let xPos = pageMargin;
+                allKeys.forEach((key, index) => {
+                    doc.rect(xPos, tableTop, colWidths[index], rowHeight)
+                       .fill(headerBg)
+                       .lineWidth(0.5)
+                       .stroke(headerBorder);
+                    
+                    doc.fillColor('#2c5282').text(key.toUpperCase(), xPos + 6, tableTop + 8, {
+                        width: colWidths[index] - 12,
+                        align: 'left'
+                    });
+                    xPos += colWidths[index];
+                });
+                
+                let currentY = tableTop + rowHeight;
+                
+                // Draw rows with alternating colors and soft borders
+                doc.font('Helvetica').fontSize(8).fillColor(textColor);
+                for (let i = 0; i < data.length; i++) {
+                    // Check if we need a new page before drawing the row
+                    if (currentY + rowHeight > doc.page.height - bottomMargin) {
+                        doc.addPage();
+                        currentY = pageMargin;
+                        
+                        // Redraw header on new page
+                        doc.fontSize(9).font('Helvetica-Bold').fillColor('#2c5282');
+                        xPos = pageMargin;
+                        allKeys.forEach((key, index) => {
+                            doc.rect(xPos, currentY, colWidths[index], rowHeight)
+                               .fill(headerBg)
+                               .lineWidth(0.5)
+                               .stroke(headerBorder);
+                            doc.fillColor('#2c5282').text(key.toUpperCase(), xPos + 6, currentY + 8, {
+                                width: colWidths[index] - 12,
+                                align: 'left'
+                            });
+                            xPos += colWidths[index];
+                        });
+                        currentY += rowHeight;
+                        doc.font('Helvetica').fontSize(8).fillColor(textColor);
+                    }
+                    
+                    const isAltRow = i % 2 === 1;
+                    
+                    xPos = pageMargin;
+                    allKeys.forEach((key, index) => {
+                        const value = formatValue(data[i][key]);
+                        
+                        // Alternating row background
+                        if (isAltRow) {
+                            doc.rect(xPos, currentY, colWidths[index], rowHeight).fill(altRowBg);
+                        }
+                        
+                        // Soft border
+                        doc.rect(xPos, currentY, colWidths[index], rowHeight)
+                           .lineWidth(0.3)
+                           .stroke(rowBorder);
+                        
+                        // Text with proper wrapping
+                        doc.fillColor(textColor).text(value, xPos + 6, currentY + 8, {
+                            width: colWidths[index] - 12,
+                            align: 'left',
+                            lineGap: 2
+                        });
+                        xPos += colWidths[index];
+                    });
+                    
+                    currentY += rowHeight;
+                }
+                
+                return currentY + 20;
+            };
+            
+            let currentY = 100;
+            
+            for (const [modelId, data] of Object.entries(exportData)) {
+                if (data.length === 0) continue;
+                
+                // Check if we need a new page for the model header
+                if (currentY > doc.page.height - 100) {
+                    doc.addPage();
+                    currentY = 50;
+                }
+                
+                // Draw model header
+                doc.fontSize(12).font('Helvetica-Bold').fillColor('#333333')
+                   .text(`${modelId.toUpperCase()} (${data.length} records)`, 50, currentY);
+                currentY += 20;
+                
+                // Draw table
+                currentY = drawTable(data, currentY);
+                currentY += 20;
+            }
+            
+            doc.end();
+            
+            res.json({
+                success: true,
+                message: "PDF export completed successfully",
+                data: {
+                    filepath,
+                    filename,
+                    modelsExported: Object.keys(exportData),
+                },
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: "Invalid export type. Must be 'excel' or 'pdf'",
+            });
+        }
+    } catch (error) {
+        console.error("Error during filtered export:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Export failed",
+        });
+    }
+};
