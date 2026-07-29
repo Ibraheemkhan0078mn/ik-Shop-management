@@ -7,6 +7,8 @@ export const productLabels = {
     editProduct: "Edit Product",
     productCategories: "Product Categories",
     productSubCategories: "Product Sub-Categories",
+    brands: "Brands",
+    manageBrands: "Manage your shop brands",
     
     // Form labels
     name: "Name",
@@ -62,6 +64,7 @@ export const productLabels = {
     productDescription: "Product description",
     selectCategory: "Select category",
     selectSubCategory: "Select sub category",
+    selectBrand: "Select brand",
     selectUnit: "Select unit",
     selectTaxType: "Select tax type",
     defaultCostPrice: "Default Cost Price",
@@ -110,6 +113,21 @@ export const productLabels = {
     categoryUpdated: "Category updated successfully",
     categoryLoading: "Loading category...",
     somethingWentWrong: "Something went wrong",
+    
+    // Brand CRUD
+    addNewBrand: "Add New Brand",
+    editBrand: "Edit Brand",
+    brandName: "Brand Name",
+    brandNameRequired: "Brand name is required",
+    brandDescription: "Brand Description",
+    brandPlaceholder: "Enter brand name",
+    brandDescriptionPlaceholder: "Enter brand description",
+    saveBrand: "Save Brand",
+    updateBrand: "Update Brand",
+    brandCreated: "Brand created successfully",
+    brandUpdated: "Brand updated successfully",
+    brandDeleted: "Brand deleted successfully",
+    brandLoading: "Loading brand...",
     
     // Sub Category CRUD
     addNewSubCategory: "Add New Sub-Category",
@@ -207,6 +225,8 @@ export const productLabels = {
     editProduct: "پروڈکٹ میں ترمیم کریں",
     productCategories: "پروڈکٹ زمرے",
     productSubCategories: "پروڈکٹ ذیلی زمرے",
+    brands: "برانڈز",
+    manageBrands: "اپنے دکان کے برانڈز کا انتظام کریں",
     
     // Form labels
     name: "نام",
@@ -262,6 +282,7 @@ export const productLabels = {
     productDescription: "پروڈکٹ کی تفصیل",
     selectCategory: "زمرہ منتخب کریں",
     selectSubCategory: "ذیلی زمرہ منتخب کریں",
+    selectBrand: "برانڈ منتخب کریں / Select brand",
     selectUnit: "یونٹ منتخب کریں",
     selectTaxType: "ٹیکس کی قسم منتخب کریں",
     defaultCostPrice: "ڈیفالٹ لاگت قیمت",
@@ -310,6 +331,21 @@ export const productLabels = {
     categoryUpdated: "زمرہ کامیابی سے اپ ڈیٹ ہو گیا / Category updated successfully",
     categoryLoading: "زمرہ لوڈ ہو رہا ہے / Category load ho raha hai...",
     somethingWentWrong: "کچھ غلط ہو گیا / Something went wrong",
+    
+    // Brand CRUD
+    addNewBrand: "نیا برانڈ شامل کریں / Add New Brand",
+    editBrand: "برانڈ میں ترمیم کریں / Edit Brand",
+    brandName: "برانڈ کا نام / Brand Name",
+    brandNameRequired: "برانڈ کا نام درکار ہے / Brand name is required",
+    brandDescription: "برانڈ کی تفصیل / Brand Description",
+    brandPlaceholder: "برانڈ کا نام لکھیں / Enter brand name",
+    brandDescriptionPlaceholder: "برانڈ کی تفصیل لکھیں / Enter brand description",
+    saveBrand: "برانڈ محفوظ کریں / Save Brand",
+    updateBrand: "برانڈ اپ ڈیٹ کریں / Update Brand",
+    brandCreated: "برانڈ کامیابی سے بنایا گیا / Brand created successfully",
+    brandUpdated: "برانڈ کامیابی سے اپ ڈیٹ ہو گیا / Brand updated successfully",
+    brandDeleted: "برانڈ کامیابی سے حذف ہو گیا / Brand deleted successfully",
+    brandLoading: "برانڈ لوڈ ہو رہا ہے / Loading brand...",
     
     // Sub Category CRUD
     addNewSubCategory: "نیا ذیلی زمرہ شامل کریں / Add New Sub-Category",
@@ -407,6 +443,8 @@ export const productLabels = {
     editProduct: "پروڈکٹ میں ترمیم کریں / Edit Product",
     productCategories: "پروڈکٹ زمرے / Product Categories",
     productSubCategories: "پروڈکٹ ذیلی زمرے / Product Sub-Categories",
+    brands: "برانڈز / Brands",
+    manageBrands: "اپنے دکان کے برانڈز کا انتظام کریں / Manage your shop brands",
     
     // Form labels
     name: "نام / Name",
@@ -462,6 +500,7 @@ export const productLabels = {
     productDescription: "پروڈکٹ کی تفصیل / Product description",
     selectCategory: "زمرہ منتخب کریں / Select category",
     selectSubCategory: "ذیلی زمرہ منتخب کریں / Select sub category",
+    selectBrand: "برانڈ منتخب کریں / Select brand",
     selectUnit: "یونٹ منتخب کریں / Select unit",
     selectTaxType: "ٹیکس کی قسم منتخب کریں / Select tax type",
     defaultCostPrice: "ڈیفالٹ لاگت قیمت / Default Cost Price",
@@ -510,6 +549,21 @@ export const productLabels = {
     categoryUpdated: "زمرہ کامیابی سے اپ ڈیٹ ہو گیا / Category updated successfully",
     categoryLoading: "زمرہ لوڈ ہو رہا ہے / Loading category...",
     somethingWentWrong: "کچھ غلط ہو گیا / Something went wrong",
+    
+    // Brand CRUD
+    addNewBrand: "نیا برانڈ شامل کریں / Add New Brand",
+    editBrand: "برانڈ میں ترمیم کریں / Edit Brand",
+    brandName: "برانڈ کا نام / Brand Name",
+    brandNameRequired: "برانڈ کا نام درکار ہے / Brand name is required",
+    brandDescription: "برانڈ کی تفصیل / Brand Description",
+    brandPlaceholder: "برانڈ کا نام لکھیں / Enter brand name",
+    brandDescriptionPlaceholder: "برانڈ کی تفصیل لکھیں / Enter brand description",
+    saveBrand: "برانڈ محفوظ کریں / Save Brand",
+    updateBrand: "برانڈ اپ ڈیٹ کریں / Update Brand",
+    brandCreated: "برانڈ کامیابی سے بنایا گیا / Brand created successfully",
+    brandUpdated: "برانڈ کامیابی سے اپ ڈیٹ ہو گیا / Brand updated successfully",
+    brandDeleted: "برانڈ کامیابی سے حذف ہو گیا / Brand deleted successfully",
+    brandLoading: "برانڈ لوڈ ہو رہا ہے / Loading brand...",
     
     // Sub Category CRUD
     addNewSubCategory: "نیا ذیلی زمرہ شامل کریں / Add New Sub-Category",

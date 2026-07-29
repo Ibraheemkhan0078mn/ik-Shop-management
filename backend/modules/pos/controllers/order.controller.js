@@ -22,23 +22,91 @@ import { createQarzaPaymentService } from "../../qarza/services/qarzaPayment.cru
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
-//  Returns a unique order number for today — e.g. ORD-20250613-0001
+//  Returns a unique short order number — e.g. o-12345
+//  Uses duplication detection with 5-digit numbers, falls back to 6 digits if needed
 // ─────────────────────────────────────────────────────────────────────────────
 export const generateOrderNumber = asyncHandler(async (req, res) => {
-    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
-    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
-    const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
-
-    // Count from BOTH collections so hold numbers and order numbers never clash
-    const [orderCount, holdCount] = await Promise.all([
-        countOrdersService(dateRange),
-        countHoldOrderService(dateRange),
-    ]);
-
-    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
-    const orderNumber = `ORD-${dateStr}-${String(orderCount + holdCount + 1).padStart(4, "0")}`;
-
-    res.status(200).json({ success: true, orderNumber });
+    const OrderModel = getLocalOrderModel();
+    const HoldOrderModel = getLocalHoldOrderModel();
+    
+    // Find the highest existing order number to maintain sequence
+    const existingOrders = await OrderModel.find({}, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(100);
+    const existingHoldOrders = await HoldOrderModel.find({}, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(100);
+    
+    // Extract numeric parts from existing order numbers (format: o-12345 or o-123456)
+    const extractNumber = (orderNumber) => {
+        if (!orderNumber || !orderNumber.startsWith('o-')) return 0;
+        const numStr = orderNumber.slice(2);
+        return parseInt(numStr) || 0;
+    };
+    
+    const allNumbers = [
+        ...existingOrders.map(o => extractNumber(o.orderNumber)),
+        ...existingHoldOrders.map(o => extractNumber(o.orderNumber))
+    ];
+    
+    const maxNumber = Math.max(...allNumbers, 0);
+    
+    // Try to generate a unique 5-digit number starting from maxNumber + 1
+    let attempts = 0;
+    const maxAttempts = 5;
+    let candidateNumber = maxNumber + 1;
+    let finalNumber;
+    
+    while (attempts < maxAttempts) {
+        // Ensure it's at least 5 digits
+        if (candidateNumber < 10000) {
+            candidateNumber = 10000;
+        }
+        
+        // Check if it's 5 digits
+        const numStr = String(candidateNumber);
+        if (numStr.length <= 5) {
+            const orderNumber = `o-${candidateNumber}`;
+            
+            // Check for duplicates in both collections
+            const [orderExists, holdExists] = await Promise.all([
+                OrderModel.findOne({ orderNumber }),
+                HoldOrderModel.findOne({ orderNumber })
+            ]);
+            
+            if (!orderExists && !holdExists) {
+                finalNumber = orderNumber;
+                break;
+            }
+        } else {
+            // If we exceed 5 digits, break and use 6 digits
+            break;
+        }
+        
+        candidateNumber++;
+        attempts++;
+    }
+    
+    // If we couldn't find a unique 5-digit number, use 6 digits
+    if (!finalNumber) {
+        // Start from 100000 for 6-digit numbers
+        const sixDigitStart = Math.max(candidateNumber, 100000);
+        let sixDigitCandidate = sixDigitStart;
+        
+        while (true) {
+            const orderNumber = `o-${sixDigitCandidate}`;
+            
+            const [orderExists, holdExists] = await Promise.all([
+                OrderModel.findOne({ orderNumber }),
+                HoldOrderModel.findOne({ orderNumber })
+            ]);
+            
+            if (!orderExists && !holdExists) {
+                finalNumber = orderNumber;
+                break;
+            }
+            
+            sixDigitCandidate++;
+        }
+    }
+    
+    res.status(200).json({ success: true, orderNumber: finalNumber });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,6 +153,28 @@ export const getOrdersByCustomer = asyncHandler(async (req, res) => {
         success: true,
         message: "Customer orders fetched successfully",
         data: orders
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/:id
+//  Returns a single order by ID
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrderById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const order = await getOrderByIdService(id);
+
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: "Order not found"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Order fetched successfully",
+        data: order
     });
 });
 

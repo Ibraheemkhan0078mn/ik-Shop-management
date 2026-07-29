@@ -6,7 +6,8 @@
 //   onSuccess  fn
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Search, CheckCircle, Pencil, Trash2, Calendar } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { X, Search, CheckCircle, Pencil, Trash2, Calendar, Lock, Unlock } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -18,8 +19,10 @@ import {
     approvePurchaseReturnApi,
     rejectPurchaseReturnApi,
     getPurchaseByInvoiceNumberApi,
+    getPurchaseReturnsApi,
 } from "../api/purchaseReturnApi.js";
 import { usePurchases } from "../../productPurchases/services/purchases.service.js";
+import { productApi } from "../../productsModule/services/product.service.js";
 
 const REASONS = [
     { label: "Damaged", value: "damaged" },
@@ -190,7 +193,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
-    
+    const dispatch = useDispatch();
+
     const isUpdate = mode === "update";
 
     const [existingPurchaseReturn, setExistingPurchaseReturn] = useState(null);
@@ -209,6 +213,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [endDate, setEndDate] = useState("");
     const [filteredPurchases, setFilteredPurchases] = useState([]);
     const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
+    const [purchaseReturnNumber, setPurchaseReturnNumber] = useState("");
+    const [isPurchaseReturnNumberLocked, setIsPurchaseReturnNumberLocked] = useState(true);
 
     const { data: purchasesData } = usePurchases({ page: 1, limit: 100 });
     const allPurchases = purchasesData?.data ?? [];
@@ -227,9 +233,20 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 const data = res?.data;
                 setExistingPurchaseReturn(data);
 
+                // Fetch full purchase data if purchase ID is available
                 if (data?.purchase && !purchaseData) {
-                    setPurchaseData(data.purchase);
-                    setInvoiceNumber(data.purchase.invoiceNumber || "");
+                    const purchaseId = typeof data.purchase === 'string' ? data.purchase : data.purchase._id;
+                    if (purchaseId) {
+                        try {
+                            const purchaseRes = await getPurchaseByInvoiceNumberApi(purchaseId);
+                            if (purchaseRes?.success && purchaseRes?.data) {
+                                setPurchaseData(purchaseRes.data);
+                                setInvoiceNumber(purchaseRes.data.invoiceNumber || "");
+                            }
+                        } catch (e) {
+                            console.error("Failed to fetch purchase data:", e);
+                        }
+                    }
                 }
 
                 setForm({
@@ -240,9 +257,13 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     notes: data?.notes ?? "",
                 });
 
+                setPurchaseReturnNumber(data?.purchaseReturnNumber || "");
+                setIsPurchaseReturnNumberLocked(true);
+
                 const selected = {};
                 (data?.items ?? []).forEach((it) => {
-                    selected[it.batch?._id || it.batch] = {
+                    const batchId = it.batch?._id || it.batch;
+                    selected[batchId] = {
                         returnQuantity: it.quantity,
                         returnReason: it.returnReason,
                         condition: it.condition || "good",
@@ -399,6 +420,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             returnDate: form.returnDate,
             notes: form.returnReason,
             items,
+            purchaseReturnNumber: purchaseReturnNumber || undefined,
         };
 
         console.log(payload, "the paylaod")
@@ -416,7 +438,11 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 setPurchaseData(null);
                 setSelectedItems({});
                 setInvoiceNumber("");
+                setPurchaseReturnNumber("");
+                setIsPurchaseReturnNumberLocked(true);
             }
+            // Invalidate product cache to refresh product data
+            dispatch(productApi.util.invalidateTags(["Product"]));
             onSuccess?.();
             onClose();
         } catch (e) {
@@ -451,17 +477,41 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         }
     };
 
-    const handleReject = async () => {
-        if (!purchaseReturnId) return;
-        const reason = prompt(labels.enterRejectionReason);
-        if (!reason) return;
-        try {
-            await rejectPurchaseReturnApi(purchaseReturnId, reason);
-            showSuccess(labels.returnRejected);
-            onSuccess?.();
-            onClose();
-        } catch (e) {
-            showError(e?.response?.data?.message || e?.message || labels.operationFailed);
+    const handlePurchaseReturnNumberChange = async (value) => {
+        setPurchaseReturnNumber(value);
+        
+        // Check for duplicates if the value matches the PR-XXXXX pattern
+        if (value && value.match(/^PR-\d{5}$/)) {
+            try {
+                const result = await getPurchaseReturnsApi({ purchaseReturnNumber: value });
+                if (result?.data && result.data.length > 0) {
+                    showError("Purchase return number already exists. Generating a new one...");
+                    // Generate new unique number
+                    let isUnique = false;
+                    let attempts = 0;
+                    let newNumber;
+                    while (!isUnique && attempts < 100) {
+                        const randomNum = Math.floor(10000 + Math.random() * 90000);
+                        newNumber = `PR-${randomNum}`;
+                        try {
+                            const checkResult = await getPurchaseReturnsApi({ purchaseReturnNumber: newNumber });
+                            if (!checkResult?.data || checkResult.data.length === 0) {
+                                isUnique = true;
+                            }
+                        } catch (e) {
+                            // If error, assume it doesn't exist
+                            isUnique = true;
+                        }
+                        attempts++;
+                    }
+                    if (isUnique && newNumber) {
+                        setPurchaseReturnNumber(newNumber);
+                    }
+                }
+            } catch (e) {
+                // Ignore errors during duplicate check
+                console.log("Duplicate check error:", e);
+            }
         }
     };
 
@@ -510,6 +560,29 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 </div>
 
                 <div className="p-5 space-y-5">
+                    {/* Purchase Return Number */}
+                    <Card>
+                        <Field>
+                            <Label>{labels.purchaseReturnNumber || "Purchase Return Number"}</Label>
+                            <div className="flex gap-2">
+                                <Inp
+                                    placeholder="PR-XXXXX"
+                                    value={purchaseReturnNumber}
+                                    onChange={(e) => handlePurchaseReturnNumberChange(e.target.value)}
+                                    disabled={isPurchaseReturnNumberLocked}
+                                    className={isPurchaseReturnNumberLocked ? "bg-muted" : ""}
+                                />
+                                <Btn
+                                    variant="secondary"
+                                    onClick={() => setIsPurchaseReturnNumberLocked(!isPurchaseReturnNumberLocked)}
+                                    title={isPurchaseReturnNumberLocked ? "Unlock to edit" : "Lock to prevent edits"}
+                                >
+                                    {isPurchaseReturnNumberLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                </Btn>
+                            </div>
+                        </Field>
+                    </Card>
+
                     {/* Search by invoice number */}
                     {!isUpdate && (
                         <Card>

@@ -18,15 +18,6 @@ const ACTIVE_STATUS_OPTIONS = (labels) => [
   { value: "false", label: labels.inactive },
 ];
 
-const DEFAULT_PRICE_RANGES = (labels) => [
-  { label: labels.allPrices, min: 0, max: 100000 },
-  { label: labels.under100, min: 0, max: 100 },
-  { label: labels.price100to500, min: 100, max: 500 },
-  { label: labels.price500to1000, min: 500, max: 1000 },
-  { label: labels.price1000to5000, min: 1000, max: 5000 },
-  { label: labels.above5000, min: 5000, max: 100000 },
-];
-
 export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, brands = [] }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
@@ -46,7 +37,6 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
 
   const stockStatusOptions = STOCK_STATUS_OPTIONS(labels);
   const activeStatusOptions = ACTIVE_STATUS_OPTIONS(labels);
-  const defaultPriceRanges = DEFAULT_PRICE_RANGES(labels);
 
   const [expandedSections, setExpandedSections] = useState({
     category: true,
@@ -74,11 +64,6 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
       ? currentBrands.filter((b) => b !== brandName)
       : [...currentBrands, brandName];
     updateFilter("brandName", newBrands);
-  };
-
-  const handlePriceRangeSelect = (min, max) => {
-    updateFilter("minPrice", min);
-    updateFilter("maxPrice", max);
   };
 
   const handleApply = () => {
@@ -216,42 +201,22 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
             {expandedSections.price ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expandedSections.price && (
-            <div className="space-y-1">
-              {defaultPriceRanges.map((range) => (
-                <label
-                  key={range.label}
-                  className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
-                >
-                  <input
-                    type="radio"
-                    name="priceRange"
-                    checked={
-                      filters.minPrice === range.min && filters.maxPrice === range.max
-                    }
-                    onChange={() => handlePriceRangeSelect(range.min, range.max)}
-                    className="w-4 h-4 border-[var(--border)] accent-[var(--accent-2)]"
-                  />
-                  <span className="text-sm text-[var(--ink)]">{range.label}</span>
-                </label>
-              ))}
-              {/* Custom price range */}
-              <div className="flex items-center gap-2 p-2">
-                <input
-                  type="number"
-                  placeholder={labels.min}
-                  value={filters.minPrice === 0 ? "" : filters.minPrice}
-                  onChange={(e) => updateFilter("minPrice", Number(e.target.value) || 0)}
-                  className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
-                />
-                <span className="text-[var(--muted)]">-</span>
-                <input
-                  type="number"
-                  placeholder={labels.max}
-                  value={filters.maxPrice === 100000 ? "" : filters.maxPrice}
-                  onChange={(e) => updateFilter("maxPrice", Number(e.target.value) || 100000)}
-                  className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
-                />
-              </div>
+            <div className="flex items-center gap-2 p-2">
+              <input
+                type="number"
+                placeholder={labels.min}
+                value={filters.minPrice === 0 ? "" : filters.minPrice}
+                onChange={(e) => updateFilter("minPrice", Number(e.target.value) || 0)}
+                className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
+              />
+              <span className="text-[var(--muted)]">-</span>
+              <input
+                type="number"
+                placeholder={labels.max}
+                value={filters.maxPrice === 0 ? "" : filters.maxPrice}
+                onChange={(e) => updateFilter("maxPrice", Number(e.target.value) || 0)}
+                className="w-full px-2 py-1 text-xs border border-[var(--border)] rounded bg-[var(--app-bg)] text-[var(--ink)]"
+              />
             </div>
           )}
         </div>

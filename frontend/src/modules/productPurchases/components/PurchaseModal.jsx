@@ -1,6 +1,6 @@
 // src/modules/productPurchases/components/PurchaseModal.jsx
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
-import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown } from "lucide-react";
+import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown, Lock, Unlock } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
 import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } from "../services/purchases.service";
@@ -207,6 +207,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [batchStamp, setBatchStamp] = useState(() => Date.now().toString());
     const [showProductModal, setShowProductModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
+    const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
 
     const { data: batchesRaw = [] } = useBatchesByProduct(itemForm.item, { skip: !itemForm.item });
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
@@ -621,7 +622,26 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <button type="button" onClick={() => setShowSupplierModal(true)} className="px-3 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-1 shrink-0" style={{ background: "var(--accent-2)", color: "#fff" }} title="Create new supplier"><Plus size={16} /></button>
                                 </div>
                             </Field>
-                            <Field><Label>{labels.invoiceNo}</Label><Inp value={bill.invoiceNumber} readOnly style={{ background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" }} /></Field>
+                            <Field>
+                                <Label>{labels.invoiceNo}</Label>
+                                <div className="flex gap-2">
+                                    <Inp 
+                                        value={bill.invoiceNumber} 
+                                        onChange={handleBillChange}
+                                        name="invoiceNumber"
+                                        readOnly={isInvoiceNumberLocked}
+                                        style={isInvoiceNumberLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}} 
+                                    />
+                                    <Btn
+                                        variant="secondary"
+                                        onClick={() => setIsInvoiceNumberLocked(!isInvoiceNumberLocked)}
+                                        title={isInvoiceNumberLocked ? "Unlock to edit" : "Lock to prevent edits"}
+                                        className="px-3"
+                                    >
+                                        {isInvoiceNumberLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                    </Btn>
+                                </div>
+                            </Field>
                             <Field><Label><Calendar className="inline w-3 h-3 mr-1" />{labels.date} *</Label><Inp type="date" name="purchaseDate" value={bill.purchaseDate} onChange={handleBillChange} /></Field>
                             <Field>
                                 <Label><DollarSign className="inline w-3 h-3 mr-1" />{labels.discount}</Label>

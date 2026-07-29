@@ -26,6 +26,7 @@ import AllExpenses from "../modules/expense/pages/AllExpense.jsx";
 import PosPage from "../modules/POSmodule/pages/PosPage.jsx";
 import ProductCategoriesPage from "../modules/productsModule/pages/ProductCategoriesPage.jsx";
 import ProductSubCategoriesPage from "../modules/productsModule/pages/ProductSubCategoriesPage.jsx";
+import BrandPage from "../modules/productsModule/pages/BrandPage.jsx";
 import MainBusinessReport from "../modules/reports/pages/MainBusinessReport.jsx";
 import PurchaseReport from "../modules/reports/pages/PurchaseReport.jsx";
 import InventoryReport from "../modules/reports/pages/InventoryReport.jsx";
@@ -44,6 +45,7 @@ import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
 import StaffAttendance from "../modules/staff/pages/StaffAttendance.jsx";
 import SettingsPage from "../modules/settings/pages/SettingsPage.jsx";
 import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
+import OrderDetailsPage from "../modules/orders/pages/OrderDetailsPage.jsx";
 
 function AppRoutes() {
     return (
@@ -59,6 +61,7 @@ function AppRoutes() {
             <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
             <Route path="/products/categories" element={<ProtectedRoute><ProductCategoriesPage /></ProtectedRoute>} />
             <Route path="/products/sub-categories" element={<ProtectedRoute><ProductSubCategoriesPage /></ProtectedRoute>} />
+            <Route path="/products/brands" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
             <Route path="/products/view/:id" element={<ProtectedRoute><ViewProductPage /></ProtectedRoute>} />
             <Route path="/products/batches" element={<ProtectedRoute><Products /></ProtectedRoute>} />
 
@@ -81,6 +84,7 @@ function AppRoutes() {
             <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
             <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
+            <Route path="/order-history/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
             {/* Reports Routes */}

@@ -106,12 +106,12 @@ const getPaginationProduct = async (filters = {}) => {
 
     // Price range filter
     if (filterParams.minPrice !== undefined || filterParams.maxPrice !== undefined) {
-        query.defaultRetailPrice = {};
+        query.defaultSalePrice = {};
         if (filterParams.minPrice !== undefined) {
-            query.defaultRetailPrice.$gte = Number(filterParams.minPrice);
+            query.defaultSalePrice.$gte = Number(filterParams.minPrice);
         }
         if (filterParams.maxPrice !== undefined) {
-            query.defaultRetailPrice.$lte = Number(filterParams.maxPrice);
+            query.defaultSalePrice.$lte = Number(filterParams.maxPrice);
         }
     }
 
@@ -143,6 +143,12 @@ const getPaginationProduct = async (filters = {}) => {
             { barcode: searchRegex },
             { productCode: searchRegex }
         ];
+    }
+
+    // Product code filter (exact match or partial match)
+    if (filterParams.productCode) {
+        const codeRegex = new RegExp(filterParams.productCode, 'i');
+        query.productCode = codeRegex;
     }
 
     const products = await findProductService(query, {

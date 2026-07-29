@@ -13,13 +13,18 @@ const getOrderNumber = (order) => {
   return generateTempOrderNumber();
 };
 
-export const printOrder = (order, title) => {
+export const printOrder = (order, title, posDirectPrint = false) => {
   // Printer settings from localStorage
   const printWidth = getItem("printWidth") || 400;
   const printHeight = getItem("printHeight") || 600;
   const printCenter = getItem("printCenter") !== "false"; // default true
   const printFullscreen = getItem("printFullscreen") === "true"; // default false
   const printShowWindow = getItem("printShowWindow") !== "false"; // default true
+
+  // If posDirectPrint is false, don't show any print window
+  if (!posDirectPrint) {
+    return; // Caller will show success popup
+  }
 
   const styles = `
     <style>

@@ -1,6 +1,7 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Plus, CheckCircle, Pencil, Trash2, Check, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -12,6 +13,7 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi, approvePurchaseReturnApi } from "../api/purchaseReturnApi.js";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { productApi } from "../../productsModule/services/product.service.js";
 
 const STATUS_CLASS = {
     draft: "bg-gray-100 text-gray-600",
@@ -24,6 +26,7 @@ export default function PurchaseReturnPage() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
+    const dispatch = useDispatch();
     
     const [modal, setModal] = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
@@ -60,6 +63,8 @@ export default function PurchaseReturnPage() {
             await deletePurchaseReturnApi(id);
             showSuccess(labels.returnDeleted);
             setRefreshKey((v) => v + 1);
+            // Invalidate product cache to refresh product data
+            dispatch(productApi.util.invalidateTags(["Product"]));
         } catch (error) {
             showError(error?.response?.data?.message || error?.message || labels.failedToDelete);
         }
@@ -70,6 +75,13 @@ export default function PurchaseReturnPage() {
             await approvePurchaseReturnApi(id);
             showSuccess(labels.returnApproved);
             setRefreshKey((v) => v + 1);
+            // Invalidate product cache to refresh product data
+            dispatch(productApi.util.invalidateTags(["Product"]));
+            // Also refresh the approval modal data
+            if (approvalModal) {
+                setApprovalModal(false);
+                setTimeout(() => setApprovalModal(true), 100);
+            }
         } catch (error) {
             showError(error?.response?.data?.message || error?.message || labels.failedToApprove);
         }
@@ -214,14 +226,16 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
-                        <button
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
-                            title={labels.edit}
-                        >
-                            <Pencil className="w-3 h-3" />
-                        </button>
-                    </PermissionGuard>
+                    {purchaseReturn?.status !== 'approved' && (
+                        <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
+                            <button
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
+                                title={labels.edit}
+                            >
+                                <Pencil className="w-3 h-3" />
+                            </button>
+                        </PermissionGuard>
+                    )}
                     <PermissionGuard execute={onDelete} permission="purchaseReturns.delete" isConfirmation={true}>
                         <button
                             className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"

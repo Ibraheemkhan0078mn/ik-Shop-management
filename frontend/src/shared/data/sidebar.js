@@ -2,13 +2,13 @@
 import {
   BarChart3, Wallet, Users, DollarSign, CreditCard,
   Package, TrendingUp, Trash2, RotateCcw, Truck,
-  FileText, Receipt, Boxes, User, UserCircle
+  FileText, Receipt, Boxes, User, UserCircle, Tag
 } from "lucide-react";
 
 const translations = {
   en: {
     quickList: "Quick List", dashboard: "Dashboard", products: "Products",
-    categories: "Categories", subCategories: "Sub Categories", productWastage: "Product Wastage",
+    categories: "Categories", subCategories: "Sub Categories", brands: "Brands", productWastage: "Product Wastage",
     purchases: "Purchases", purchaseReturn: "Purchase Return", customers: "Customers",
     suppliers: "Suppliers", reports: "Reports", mainBusinessReport: "Main Business",
     salesReport: "Sales", purchaseReport: "Purchases", inventoryReport: "Inventory",
@@ -18,7 +18,7 @@ const translations = {
   },
   ur: {
     quickList: "فوری لسٹ", dashboard: "ڈیش بورڈ", products: "پروڈکٹس",
-    categories: "زمرے", subCategories: "ذیلی زمرے", productWastage: "ضیاع",
+    categories: "زمرے", subCategories: "ذیلی زمرے", brands: "برانڈز", productWastage: "ضیاع",
     purchases: "خریداری", purchaseReturn: "خریداری واپسی", customers: "گاہک",
     suppliers: "سپلائرز", reports: "رپورٹس", mainBusinessReport: "مین بزنس",
     salesReport: "سیلز", purchaseReport: "خریداری", inventoryReport: "انوینٹری",
@@ -28,7 +28,7 @@ const translations = {
   },
   ur_en: {
     quickList: "فوری / Quick", dashboard: "ڈیش / Dashboard", products: "پروڈکٹس / Products",
-    categories: "زمرے / Categories", subCategories: "ذیلی / Sub Categories", productWastage: "ضیاع / Wastage",
+    categories: "زمرے / Categories", subCategories: "ذیلی / Sub Categories", brands: "برانڈز / Brands", productWastage: "ضیاع / Wastage",
     purchases: "خریداری / Purchases", purchaseReturn: "واپسی / Return", customers: "گاہک / Customers",
     suppliers: "سپلائرز / Suppliers", reports: "رپورٹس / Reports", mainBusinessReport: "مین / Main Business",
     salesReport: "سیلز / Sales", purchaseReport: "خریداری / Purchases", inventoryReport: "انوینٹری / Inventory",
@@ -43,9 +43,10 @@ const NAV_ITEMS = [
   { id: "dashboard", icon: BarChart3, url: "/dashboard", allowedUrls: ["/dashboard"] },
   {
     id: "products", icon: Boxes, url: "/products",
-    allowedUrls: ["/products", "/products/categories", "/products/sub-categories"],
+    allowedUrls: ["/products", "/products/categories", "/products/sub-categories", "/products/brands"],
     items: [
       { id: "categories", icon: FileText, url: "/products/categories" },
+      { id: "brands", icon: Tag, url: "/products/brands" },
       // { id: "subCategories", icon: FileText, url: "/products/sub-categories" },
     ],
   },

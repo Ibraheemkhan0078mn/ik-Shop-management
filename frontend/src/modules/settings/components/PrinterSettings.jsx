@@ -7,18 +7,20 @@ export default function PrinterSettings({ settingsData, userId, labels }) {
     const [printerHeight, setPrinterHeight] = useState(300);
     const [printerWidth, setPrinterWidth] = useState(80);
     const [printMode, setPrintMode] = useState("preview");
+    const [posDirectPrint, setPosDirectPrint] = useState(false);
 
     useEffect(() => {
         if (settingsData) {
             setPrinterHeight(settingsData.printer?.height || 300);
             setPrinterWidth(settingsData.printer?.width || 80);
             setPrintMode(settingsData.printer?.printMode || "preview");
+            setPosDirectPrint(settingsData.printer?.posDirectPrint || false);
         }
     }, [settingsData]);
 
     const handleSave = async () => {
         try {
-            await updatePrinterSettings({ userId, height: printerHeight, width: printerWidth, printMode }).unwrap();
+            await updatePrinterSettings({ userId, height: printerHeight, width: printerWidth, printMode, posDirectPrint }).unwrap();
             toast.success(labels.printerSettingsSaved);
         } catch (error) {
             toast.error(labels.failedToSave);
@@ -57,6 +59,26 @@ export default function PrinterSettings({ settingsData, userId, labels }) {
                     <option value="preview">Preview</option>
                     <option value="direct">Direct Print</option>
                 </select>
+            </div>
+            <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                    <div className="relative">
+                        <input
+                            type="checkbox"
+                            checked={posDirectPrint}
+                            onChange={(e) => setPosDirectPrint(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                            posDirectPrint ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'
+                        }`}></div>
+                        <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${
+                            posDirectPrint ? 'translate-x-5' : ''
+                        }`}></div>
+                    </div>
+                    <span className="text-sm font-medium text-[var(--ink)]">POS Direct Print</span>
+                </label>
+                <p className="text-xs text-[var(--muted)] mt-1">When enabled, POS payment completion will show print popup instead of window</p>
             </div>
             <button onClick={handleSave} className="btn-add">
                 {labels.save} {labels.printer}

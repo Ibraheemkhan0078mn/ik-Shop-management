@@ -4,6 +4,7 @@ import userSchema from "../modules/auth/models/auth.model.js";
 import productSchema from "../modules/product/models/product.model.js";
 import categorySchema from "../modules/product/models/category.model.js";
 import subCategorySchema from "../modules/product/models/subCategory.model.js";
+import brandSchema from "../modules/product/models/brand.model.js";
 import batchSchema from "../modules/productPurchases/models/batch.model.js";
 import supplierSchema from "../modules/suppliers/models/supplier.model.js";
 import purchaseSchema from "../modules/productPurchases/models/purchase.model.js";
@@ -58,6 +59,7 @@ let UserModel = null;
 let ProductModel = null;
 let CategoryModel = null;
 let SubCategoryModel = null;
+let BrandModel = null;
 let BatchModel = null;
 let SupplierModel = null;
 let PurchaseModel = null;
@@ -100,6 +102,7 @@ export const connectDb = async () => {
     addChangeTrackingMiddleware(productSchema, "Products");
     addChangeTrackingMiddleware(categorySchema, "Categories");
     addChangeTrackingMiddleware(subCategorySchema, "SubCategories");
+    addChangeTrackingMiddleware(brandSchema, "Brands");
     addChangeTrackingMiddleware(batchSchema, "Batches");
     addChangeTrackingMiddleware(supplierSchema, "Suppliers");
     addChangeTrackingMiddleware(purchaseSchema, "Purchases");
@@ -132,6 +135,7 @@ export const connectDb = async () => {
         "SubCategories",
         subCategorySchema,
     );
+    BrandModel = LocalConnection.model("Brands", brandSchema);
     BatchModel = LocalConnection.model("Batches", batchSchema);
     SupplierModel = LocalConnection.model("Suppliers", supplierSchema);
     PurchaseModel = LocalConnection.model("Purchases", purchaseSchema);
@@ -177,6 +181,7 @@ export const getLocalUserModel = () => UserModel || null;
 export const getLocalProductModel = () => ProductModel || null;
 export const getLocalCategoryModel = () => CategoryModel || null;
 export const getLocalSubCategoryModel = () => SubCategoryModel || null;
+export const getLocalBrandModel = () => BrandModel || null;
 export const getLocalBatchModel = () => BatchModel || null;
 export const getLocalSupplierModel = () => SupplierModel || null;
 export const getLocalPurchaseModel = () => PurchaseModel || null;

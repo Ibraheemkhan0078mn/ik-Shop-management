@@ -12,6 +12,8 @@ import {
 } from "../services/purchaseReturn.crud.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { findByIdPurchaseService } from "../../productPurchases/services/purchase.crud.js";
+import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
+import { findOneProductService } from "../../product/services/product.crud.js";
 
 const normalizePurchaseReturnItems = async (items = []) => {
     if (!Array.isArray(items)) return [];
@@ -41,14 +43,36 @@ export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
     }
 
     const purchaseReturns = await findPurchaseReturnService(query, {
-        populate: [
-            { path: "purchase", select: "invoiceNumber" },
-            { path: "supplier", select: "name" },
-            { path: "items.product", select: "name" },
-            { path: "items.batch", select: "batchNumber" }
-        ],
         sort: { createdAt: -1 }
     });
+
+    // Manually fetch supplier and product data using findOne
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+            if (supplier) {
+                purchaseReturn.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+            }
+        }
+    }
 
     return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns);
 });
@@ -60,16 +84,38 @@ export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => 
     if (supplier) query.supplier = supplier;
 
     const purchaseReturns = await findPurchaseReturnService(query, {
-        populate: [
-            { path: "purchase", select: "invoiceNumber" },
-            { path: "supplier", select: "name" },
-            { path: "items.product", select: "name" },
-            { path: "items.batch", select: "batchNumber" }
-        ],
         sort: { createdAt: -1 },
         skip: (page - 1) * limit,
         limit: parseInt(limit)
     });
+
+    // Manually fetch supplier and product data using findOne
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+            if (supplier) {
+                purchaseReturn.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+            }
+        }
+    }
 
     const total = await countPurchaseReturnService(query);
 
@@ -85,12 +131,38 @@ export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => 
 
 export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const purchaseReturn = await findByIdPurchaseReturnService(id, {
-        populate: ["purchase", "supplier", "items.product", "items.batch"]
-    });
+    const purchaseReturn = await findByIdPurchaseReturnService(id);
     if (!purchaseReturn) {
         throw new Error("Purchase return not found");
     }
+
+    // Manually fetch supplier data using findOne
+    if (purchaseReturn.supplier) {
+        const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+        if (supplier) {
+            purchaseReturn.supplier = {
+                _id: supplier._id,
+                name: supplier.name
+            };
+        }
+    }
+
+    // Manually fetch product data for items using findOne
+    if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+        for (const item of purchaseReturn.items) {
+            if (item.product) {
+                const product = await findOneProductService({ _id: item.product });
+                if (product) {
+                    item.product = {
+                        _id: product._id,
+                        name: product.name,
+                        productCode: product.productCode
+                    };
+                }
+            }
+        }
+    }
+
     return ApiResponse(res, 200, "Purchase return retrieved successfully", purchaseReturn);
 });
 
@@ -99,13 +171,31 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
 
     const data = req.body;
 
-    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
-    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
-    const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
-
-    const countValue = await countPurchaseReturnService(dateRange);
-    const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
-    const purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+    // Use provided purchase return number or generate a short one
+    let purchaseReturnNumber = data.purchaseReturnNumber;
+    if (!purchaseReturnNumber) {
+        // Generate short 5-digit number
+        let isUnique = false;
+        let attempts = 0;
+        while (!isUnique && attempts < 100) {
+            const randomNum = Math.floor(10000 + Math.random() * 90000); // 5-digit number between 10000-99999
+            purchaseReturnNumber = `PR-${randomNum}`;
+            const existing = await findPurchaseReturnService({ purchaseReturnNumber });
+            if (!existing || existing.length === 0) {
+                isUnique = true;
+            }
+            attempts++;
+        }
+        if (!isUnique) {
+            throw new Error("Failed to generate unique purchase return number");
+        }
+    } else {
+        // Check if the provided number already exists
+        const existing = await findPurchaseReturnService({ purchaseReturnNumber });
+        if (existing && existing.length > 0) {
+            throw new Error("Purchase return number already exists");
+        }
+    }
 
     const purchase = await findByIdPurchaseService(data.purchase);
     if (!purchase) {
@@ -124,10 +214,21 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
+    // Calculate total refund amount
+    let totalRefundAmount = 0;
+    let totalQuantity = 0;
+    for (const item of normalizedItems) {
+        const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+        totalRefundAmount += refund;
+        totalQuantity += item.quantity;
+    }
+
     const purchaseReturn = await createPurchaseReturnService({
         ...data,
         items: normalizedItems,
         purchaseReturnNumber,
+        totalRefundAmount,
+        totalQuantity,
         createdBy: userId,
     });
 
@@ -152,7 +253,7 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     if (incomingItems) {
         // Step 1: Normalize items (resolves batchNumber, batch ref, etc.)
         incomingItems = await normalizePurchaseReturnItems(incomingItems);
- 
+
         // Step 2: Make sure every batch exists and has enough stock
         for (const item of incomingItems) {
             const batch = await findByIdBatchService(item.batch);
@@ -177,9 +278,28 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
+    // Calculate total refund amount and total quantity
+    let totalRefundAmount = 0;
+    let totalQuantity = 0;
+    if (incomingItems) {
+        for (const item of incomingItems) {
+            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            totalRefundAmount += refund;
+            totalQuantity += item.quantity;
+        }
+    } else if (existing.items) {
+        for (const item of existing.items) {
+            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            totalRefundAmount += refund;
+            totalQuantity += item.quantity;
+        }
+    }
+
     const updated = await updatePurchaseReturnService(id, {
         ...req.body,
         items: incomingItems,
+        totalRefundAmount,
+        totalQuantity,
         updatedAt: new Date(),
     });
 

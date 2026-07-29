@@ -24,13 +24,7 @@ const getPurchaseById = async (id) => {
 };
 
 const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
-    return await findOnePurchaseService({ invoiceNumber }, {
-        populate: [
-            { path: "supplier", select: "name" },
-            { path: "items.product", select: "name productCode" },
-            { path: "items.batch", select: "batchNumber expiryDate" }
-        ]
-    });
+    return await findOnePurchaseService({ invoiceNumber });
 };
 
 const getPaginatedPurchases = async (filters = {}) => {

@@ -9,7 +9,7 @@ const findUserByEmail = async (email) => {
 };
 
 const findUserByEmailWithPassword = async (email) => {
-    return await findOneUserService({ email }, { select: "+password" });
+    return await findOneUserService({ email }, { select: "+password", lean: false });
 };
 
 const findUserById = async (id) => {

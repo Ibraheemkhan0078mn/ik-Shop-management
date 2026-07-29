@@ -23,6 +23,10 @@ const settingsSchema = new mongoose.Schema(
                 enum: ["preview", "direct"],
                 default: "preview",
             },
+            posDirectPrint: {
+                type: Boolean,
+                default: false,
+            },
         },
         // Language Settings
         language: {

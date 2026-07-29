@@ -19,6 +19,8 @@ import {
     getPurchasePaymentById,
     deletePurchasePayment,
 } from "../services/purchasePayment.service.js";
+import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
+import { findOneProductService } from "../../product/services/product.crud.js";
 
 export const getPurchasesData = asyncHandler(async (req, res, next) => {
     const purchases = await getPurchases();
@@ -48,11 +50,48 @@ export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
     if (!invoiceNumber)
         return res.status(400).json({ success: false, message: "Invoice number is required" });
 
-    const purchase = await getPurchaseByInvoiceNumber(invoiceNumber);
+    let purchaseDoc = await getPurchaseByInvoiceNumber(invoiceNumber, { lean: true });
+    const purchase = purchaseDoc.toObject();
     if (!purchase)
         return res.status(404).json({ success: false, message: "Purchase not found" });
 
-    return res.status(200).json({ success: true, message: "Purchase found", data: purchase });
+    // Manually fetch supplier data using findOne
+    if (purchase.supplier) {
+        // const { findOneSupplierService } = await import("../../suppliers/services/supplier.crud.js");
+        const supplier = await findOneSupplierService({ _id: purchase.supplier });
+        if (supplier) {
+            purchase.supplier = {
+                _id: supplier._id,
+                name: supplier.name
+            };
+        } else {
+            console.log("Supplier not found for ID:", purchase.supplier);
+        }
+    }
+
+    // Manually fetch product data for items using findOne
+    if (purchase.items && Array.isArray(purchase.items)) {
+        // const { findOneProductService } = await import("../../product/services/product.crud.js");
+        for (const item of purchase.items) {
+            if (item.product) {
+                const product = await findOneProductService({ _id: item.product });
+                console.log(product, "the product")
+                if (product) {
+                    item.product = {
+                        _id: product._id,
+                        name: product.name,
+                        productCode: product.productCode
+                    };
+                } else {
+                    console.log("Product not found for ID:", item.product);
+                }
+            }
+        }
+    }
+
+    console.log("Final purchase data:", JSON.stringify(purchase, null, 2));
+
+    return res.status(200).json({ success: true, message: "Purchase found", data: purchase});
 });
 
 
@@ -298,7 +337,7 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
                     await updateBatchService(item.batch, { quantity: newQuantity });
                 }
             }
-            
+
             // Reverse master product stock
             await updateProductService(item.product, { $inc: { currentStockLevel: -item.quantity } });
         }
@@ -313,7 +352,7 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
             if (batch) {
                 await updateBatchService(item.batch, { quantity: batch.quantity + item.quantity });
             }
-            
+
             // Increment master product stock
             await updateProductService(item.product, { $inc: { currentStockLevel: item.quantity } });
         }
@@ -343,7 +382,7 @@ export const createPurchasePaymentData = asyncHandler(async (req, res) => {
     } catch (error) {
         return res.status(400).json({ success: false, message: error.message });
     }
-}); 
+});
 
 export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
     try {

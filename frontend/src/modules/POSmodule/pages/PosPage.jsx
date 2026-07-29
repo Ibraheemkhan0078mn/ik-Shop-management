@@ -13,6 +13,7 @@ import {
   useUpdateHoldOrder
 } from "../services/holdOrders.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
+import { useGetBrandsQuery } from "../../productsModule/services/brand.service.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
@@ -133,7 +134,9 @@ export default function PosPage() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
   const [activeFilters, setActiveFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [uniqueBrands, setUniqueBrands] = useState([]);
+  
+  const { data: brandsData } = useGetBrandsQuery();
+  const uniqueBrands = brandsData?.data?.filter(b => b.isActive).map(b => b.name) || [];
 
   const toggleModal = (modalName) =>
     setOpenModals((prev) => ({ ...prev, [modalName]: !prev[modalName] }));
@@ -558,16 +561,24 @@ export default function PosPage() {
 
       // Print receipt
       const creditQarzaAccount = qarzaAccounts?.accounts?.find((a) => a._id === selectedQarzaAccountId);
-      printOrder({
-        ...orderPayload,
-        ...createdOrder,
-        orderNumber: createdOrder?.orderNumber || orderPayload.orderNumber,
-        createdAt: createdOrder?.createdAt || orderPayload.createdAt,
-        qarzaAccount:
-          paymentMethod === "credit" && creditQarzaAccount
-            ? { _id: creditQarzaAccount._id, name: creditQarzaAccount.name }
-            : null,
-      });
+      const posDirectPrint = settingsData?.printer?.posDirectPrint || false;
+      
+      if (posDirectPrint) {
+        // Show print popup with content
+        printOrder({
+          ...orderPayload,
+          ...createdOrder,
+          orderNumber: createdOrder?.orderNumber || orderPayload.orderNumber,
+          createdAt: createdOrder?.createdAt || orderPayload.createdAt,
+          qarzaAccount:
+            paymentMethod === "credit" && creditQarzaAccount
+              ? { _id: creditQarzaAccount._id, name: creditQarzaAccount.name }
+              : null,
+        }, "Order Receipt", true);
+      } else {
+        // Show 1-second success popup with green tick
+        showSuccess(isUrdu ? "آرڈر مکمل ہو گیا!" : "Order completed successfully!");
+      }
 
       // Clean up resumed hold order
       if (resumedHoldOrderId) {
@@ -589,7 +600,6 @@ export default function PosPage() {
       toggleModal("payment");
       refetchQarzaAccounts();
       refetchProducts();
-      showSuccess(isUrdu ? "آرڈر مکمل ہو گیا!" : "Order completed successfully!");
     } catch (err) {
       console.error("Checkout error:", err);
       const errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || "Failed to create order.";

@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Eye } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
+import { useGetBrandsQuery } from "../services/brand.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -58,7 +59,9 @@ export default function Products() {
     const [filterPanelOpen, setFilterPanelOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
-    const [uniqueBrands] = useState([]);
+    
+    const { data: brandsData } = useGetBrandsQuery();
+    const uniqueBrands = brandsData?.data?.filter(b => b.isActive).map(b => b.name) || [];
 
     const handleFiltersChange = useCallback((f) => { setActiveFilters(f); setCurrentPage(1); }, []);
     const openEdit = (id) => { setSelectedProductId(id); setModalMode("update"); setIsModalOpen(true); };

@@ -13,8 +13,8 @@ const findUserService = (query = {}, options = {}) => {
 
 const findOneUserService = (query, options = {}) => {
     const UserModel = getLocalUserModel();
-    const { select } = options;
-    return findOneDoc({ model: UserModel, filter: query, options: { select } });
+    const { select, lean = true } = options;
+    return findOneDoc({ model: UserModel, filter: query, options: { select, lean } });
 };
 
 const findByIdUserService = (id, options = {}) => {

@@ -631,6 +631,15 @@ export default function OrderHistory() {
                                                 <div>
                                                     <p className="font-semibold text-ink truncate flex items-center gap-2">
                                                         {order.customerName || "Walk-in"}
+                                                        {order.customerName ? (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-[#0d8a7e] text-white">
+                                                                Regular
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-(--surface-muted) text-ink-subtle border border-edge">
+                                                                Walk-in
+                                                            </span>
+                                                        )}
                                                     </p>
                                                     {order.waiter && (
                                                         <p className="text-xs text-ink-subtle truncate mt-0.5 flex items-center gap-1">
@@ -691,7 +700,7 @@ export default function OrderHistory() {
                                             <td className="px-5 py-4">
                                                 <div className="flex gap-2 justify-center">
                                                     <button
-                                                        onClick={() => setSelectedOrder(order)}
+                                                        onClick={() => navigate(`/order-history/${order._id}`)}
                                                         title="View Details"
                                                         className="w-9 h-9 rounded-xl transition-all flex items-center justify-center bg-(--surface-muted) border-2 border-edge hover:border-primary hover:bg-primary/10 text-ink-subtle hover:text-primary group-hover:scale-105"
                                                     >

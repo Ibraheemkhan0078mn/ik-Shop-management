@@ -119,7 +119,7 @@ export default function AuthPage() {
       {/* ── LEFT PANEL ── */}
       <div
         className="hidden lg:flex lg:w-[45%] min-h-[300px] lg:min-h-screen flex-col justify-between p-8 lg:p-16 relative overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #0f1923 0%, #0f2d29 60%, #0b3d35 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #14b8a6 100%)" }}
       >
         {/* subtle grid overlay */}
         <div
@@ -130,36 +130,36 @@ export default function AuthPage() {
         {/* accent glow */}
         <div
           className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(15,118,110,0.18) 0%, transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)", opacity: 1 }}
         />
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(15,118,110,0.35)", border: "1px solid rgba(15,118,110,0.5)" }}
+            style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}
           >
             <span className="font-bold text-white text-base leading-none">S</span>
           </div>
-          <span className="font-display text-lg font-semibold text-white/90 tracking-tight">Shop Management</span>
+          <span className="font-display text-lg font-semibold text-white tracking-tight">Shop Management</span>
         </div>
 
         {/* Hero text + features */}
         <div className="relative flex-1 flex flex-col justify-center py-12 lg:py-0">
           <div
             className="text-xs font-semibold uppercase tracking-widest mb-4"
-            style={{ color: "var(--accent-2)" }}
+            style={{ color: "rgba(255,255,255,0.7)" }}
           >
             {isLoginMode ? "Welcome back" : "Get started"}
           </div>
 
           <h1 className="font-display text-4xl lg:text-5xl font-bold text-white leading-[1.1] mb-5">
             {isLoginMode
-              ? <>Run your shop<br /><span style={{ color: "var(--accent-2)" }}>with clarity.</span></>
-              : <>Your business,<br /><span style={{ color: "var(--accent-2)" }}>fully managed.</span></>}
+              ? <>Run your shop<br /><span style={{ color: "rgba(255,255,255,0.9)" }}>with clarity.</span></>
+              : <>Your business,<br /><span style={{ color: "rgba(255,255,255,0.9)" }}>fully managed.</span></>}
           </h1>
 
-          <p className="text-white/50 text-sm max-w-xs leading-relaxed mb-10">
+          <p className="text-white/60 text-sm max-w-xs leading-relaxed mb-10">
             {isLoginMode
               ? "Sign in to your dashboard and keep everything in order."
               : "Create your account and take control of every moving part."}
@@ -170,11 +170,11 @@ export default function AuthPage() {
               <li key={label} className="flex items-center gap-3">
                 <span
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(15,118,110,0.2)", border: "1px solid rgba(15,118,110,0.3)" }}
+                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)" }}
                 >
-                  <Icon size={15} color="var(--accent-2)" />
+                  <Icon size={15} color="white" />
                 </span>
-                <span className="text-white/70 text-sm font-medium">{label}</span>
+                <span className="text-white/80 text-sm font-medium">{label}</span>
               </li>
             ))}
           </ul>
@@ -183,20 +183,20 @@ export default function AuthPage() {
         {/* Bottom trust strip */}
         <div
           className="relative flex items-center gap-4 pt-6"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
         >
           <div className="flex -space-x-2">
             {["AK", "MR", "JD"].map(initials => (
               <div
                 key={initials}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white ring-2"
-                style={{ background: "rgba(15,118,110,0.4)", ringColor: "#0f1923" }}
+                style={{ background: "rgba(255,255,255,0.25)", ringColor: "#0f766e" }}
               >
                 {initials}
               </div>
             ))}
           </div>
-          <p className="text-white/40 text-xs">Trusted by 500+ shop owners</p>
+          <p className="text-white/50 text-xs">Trusted by 500+ shop owners</p>
         </div>
       </div>
 

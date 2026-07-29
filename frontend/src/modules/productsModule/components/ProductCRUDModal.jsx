@@ -4,6 +4,7 @@ import { Scan, Plus, AlertCircle, Check, ChevronDown, ChevronUp } from "lucide-r
 import { useCreateProduct, useUpdateProduct, useProduct } from "../services/product.service";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetSubCategoriesQuery } from "../services/subCategories.service.js";
+import { useGetBrandsQuery } from "../services/brand.service.js";
 import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCrudModel from "./SubCategoryCRUDModal.jsx";
@@ -71,6 +72,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     skip: !productId || isCreate,
   });
   const { data: categoriesRaw, error: catError } = useGetCategoriesQuery();
+  const { data: brandsRaw } = useGetBrandsQuery();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -88,6 +90,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
   const categories = useMemo(() => safeArray(categoriesRaw), [categoriesRaw]);
   const subCategories = useMemo(() => safeArray(subCategoriesRaw), [subCategoriesRaw]);
+  const brands = useMemo(() => safeArray(brandsRaw), [brandsRaw]);
 
   useEffect(() => {
     if (!isCreate && productData) {
@@ -408,14 +411,29 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
             {showMore && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
-                <Field
-                  label={labels.brandName}
-                  name="brandName"
-                  value={form.brandName}
-                  onChange={updateField}
-                  error={errors.brandName}
-                  placeholder="e.g., GSK"
-                />
+                {/* Brand Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
+                    * {labels.brandName}
+                  </label>
+                  <select
+                    value={form.brandName}
+                    onChange={(e) => updateField("brandName", e.target.value)}
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.brandName 
+                        ? 'border-red-500 bg-red-500/5' 
+                        : 'border-[var(--border)] bg-[var(--app-bg)]'
+                    } text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
+                  >
+                    <option value="">{labels.selectBrand || "Select Brand"}</option>
+                    {brands.filter(b => b.isActive).map((brand) => (
+                      <option key={brand._id} value={brand.name}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.brandName && <p className="mt-1 text-xs text-red-500">{errors.brandName}</p>}
+                </div>
 
                 {/* Barcode */}
                 <Field

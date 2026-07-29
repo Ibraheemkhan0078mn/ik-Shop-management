@@ -69,7 +69,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
     // Take all models and filter the models only which have images only.
     let allowedModels = modelArray.filter(m => {
-      return ["student", "teacher", "qarzaAccount"].includes(m.local.modelName)
+      return ["Products", "Categories", "SubCategories", "Brands", "Users", "QarzaAccounts"].includes(m.local.modelName)
     })
 
 
@@ -120,7 +120,29 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
       // checking each image is already present local and if not then push it in array
       for (let doc of allDocs) {
-        if (eachModel.local.modelName == "student" || eachModel.local.modelName == "teacher") {
+        if (eachModel.local.modelName == "Products") {
+          // ✅ Guard: skip if image is null/undefined
+          if (!doc?.image) continue;
+
+          (!fs.existsSync(path.join(localImagePath, doc.image))) &&
+            imagesToDownloadCloudinaryPublicUrl.push({
+              cloudinaryPublicId: doc?.cloudinaryPublicId,
+              localImageName: doc.image,
+              documentId: doc._id
+            });
+
+        } else if (eachModel.local.modelName == "Categories" || eachModel.local.modelName == "SubCategories" || eachModel.local.modelName == "Brands") {
+          // ✅ Guard: skip if image is null/undefined
+          if (!doc?.image) continue;
+
+          (!fs.existsSync(path.join(localImagePath, doc.image))) &&
+            imagesToDownloadCloudinaryPublicUrl.push({
+              cloudinaryPublicId: doc?.cloudinaryPublicId,
+              localImageName: doc.image,
+              documentId: doc._id
+            });
+
+        } else if (eachModel.local.modelName == "Users") {
           // ✅ Guard: skip if profileImage is null/undefined
           if (!doc?.profileImage) continue;
 
@@ -131,7 +153,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
               documentId: doc._id
             });
 
-        } else if (eachModel.local.modelName == "qarzaAccount") {
+        } else if (eachModel.local.modelName == "QarzaAccounts") {
           // ✅ Guard: skip if qarzaProfileImage is null/undefined
           if (!doc?.qarzaProfileImage) continue;
 
