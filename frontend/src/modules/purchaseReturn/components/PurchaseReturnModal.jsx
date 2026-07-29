@@ -6,7 +6,7 @@
 //   onSuccess  fn
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Search, CheckCircle, Pencil, Trash2 } from "lucide-react";
+import { X, Search, CheckCircle, Pencil, Trash2, Calendar } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -19,6 +19,7 @@ import {
     rejectPurchaseReturnApi,
     getPurchaseByInvoiceNumberApi,
 } from "../api/purchaseReturnApi.js";
+import { usePurchases } from "../../productPurchases/services/purchases.service.js";
 
 const REASONS = [
     { label: "Damaged", value: "damaged" },
@@ -203,6 +204,14 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [selectedItems, setSelectedItems] = useState({});
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [showFindPopup, setShowFindPopup] = useState(false);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [filteredPurchases, setFilteredPurchases] = useState([]);
+    const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
+
+    const { data: purchasesData } = usePurchases({ page: 1, limit: 100 });
+    const allPurchases = purchasesData?.data ?? [];
 
     const localizedReasons = useMemo(() => getLocalizedReasons(labels), [labels]);
     const localizedConditions = useMemo(() => getLocalizedConditions(labels), [labels]);
@@ -276,6 +285,34 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         } finally {
             setIsSearching(false);
         }
+    };
+
+    const handleFilterPurchases = () => {
+        if (!startDate || !endDate) return showError(labels.pleaseSelectDateRange);
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const filtered = allPurchases.filter(p => {
+            const purchaseDate = new Date(p.date || p.createdAt);
+            return purchaseDate >= start && purchaseDate <= end;
+        });
+
+        setFilteredPurchases(filtered);
+    };
+
+    const handleSelectPurchase = (purchase) => {
+        setInvoiceNumber(purchase.invoiceNumber || "");
+        setShowFindPopup(false);
+        setPurchaseData(purchase);
+        setForm((prev) => ({
+            ...prev,
+            purchase: purchase._id,
+            supplier: purchase.supplier?._id,
+        }));
+        setSelectedItems({});
+        showSuccess(labels.purchaseSelected);
     };
 
     const handleItemSelect = (batchId, item) => {
@@ -437,11 +474,11 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-3 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 overflow-y-auto"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-4xl my-4 rounded-3xl shadow-2xl overflow-hidden"
+                className="relative w-full max-w-4xl my-auto rounded-3xl shadow-2xl overflow-hidden"
                 style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -488,6 +525,9 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                         />
                                         <Btn variant="primary" onClick={handleSearchInvoice} disabled={isSearching}>
                                             <Search className="w-4 h-4" />
+                                        </Btn>
+                                        <Btn variant="secondary" onClick={() => setShowFindPopup(true)} title="Find purchases by date">
+                                            <Calendar className="w-4 h-4" />
                                         </Btn>
                                     </div>
                                 </Field>
@@ -681,6 +721,68 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     </div>
                 </div>
             </div>
+
+            {/* Find Purchase Popup */}
+            {showFindPopup && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowFindPopup(false)}>
+                    <div className="relative w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-6 py-4" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+                            <h3 className="text-base font-bold" style={{ color: "var(--ink)" }}>{labels.findPurchases || "Find Purchases"}</h3>
+                            <button onClick={() => setShowFindPopup(false)} className="w-8 h-8 flex items-center justify-center rounded-xl transition" style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field>
+                                    <Label>{labels.startDate || "Start Date"}</Label>
+                                    <Inp type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                </Field>
+                                <Field>
+                                    <Label>{labels.endDate || "End Date"}</Label>
+                                    <Inp type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                </Field>
+                            </div>
+                            <Btn variant="primary" className="w-full" onClick={handleFilterPurchases}>
+                                {labels.filter || "Filter"}
+                            </Btn>
+                            
+                            {filteredPurchases.length > 0 && (
+                                <div className="mt-4 border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)", maxHeight: "300px", overflowY: "auto" }}>
+                                    <table className="w-full text-sm">
+                                        <thead style={{ background: "var(--surface-muted)" }}>
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>{labels.invoiceNumber}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>{labels.date}</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>{labels.totalAmount}</th>
+                                                <th className="px-4 py-2 text-center text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>{labels.actions}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredPurchases.map(p => (
+                                                <tr key={p._id} className="hover:bg-[var(--surface-muted)]" style={{ borderBottom: "1px solid var(--border)" }}>
+                                                    <td className="px-4 py-2 font-mono text-xs" style={{ color: "var(--ink)" }}>{p.invoiceNumber || "—"}</td>
+                                                    <td className="px-4 py-2 text-xs" style={{ color: "var(--ink)" }}>{p.date ? new Date(p.date).toLocaleDateString() : "—"}</td>
+                                                    <td className="px-4 py-2 text-right text-xs font-semibold" style={{ color: "var(--accent)" }}>Rs {(p.totalAmount || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        <Btn variant="primary" size="sm" onClick={() => handleSelectPurchase(p)}>
+                                                            {labels.select || "Select"}
+                                                        </Btn>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            {filteredPurchases.length === 0 && startDate && endDate && (
+                                <p className="text-center text-sm" style={{ color: "var(--muted)" }}>{labels.noPurchasesFound || "No purchases found in this date range"}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

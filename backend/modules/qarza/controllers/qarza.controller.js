@@ -27,8 +27,10 @@ export const qarzaAccountCreate = async (req, res) => {
         let { name, type, phoneNo, address, notes, isActive } = req.body;
         // console.log(req.file, req.files)
         let file = null;
+        let cloudinaryPublicId = null;
         if (req?.file) {
-            file = req.file.filename
+            file = req.file.filename;
+            cloudinaryPublicId = req.file.filename; // For Cloudinary, filename is the public_id
         }
 
         let QarzaAccountModel = getLocalQarzaAccountModel();
@@ -40,6 +42,7 @@ export const qarzaAccountCreate = async (req, res) => {
 
         let createdAccount = await qarzaAccountCreateService({
             qarzaProfileImage: file,
+            cloudinaryPublicId,
             name,
             type,
             phoneNo,
@@ -175,8 +178,10 @@ export const qarzaAccountUpdate = async (req, res) => {
     try {
         let { _id, name, type, phoneNo, address, notes, isActive } = req.body;
         let file = null;
+        let cloudinaryPublicId = null;
         if (req?.file?.filename) {
-            file = req?.file?.filename
+            file = req?.file?.filename;
+            cloudinaryPublicId = req?.file?.filename; // For Cloudinary, filename is the public_id
         }
 
         let QarzaAccountModel = getLocalQarzaAccountModel();
@@ -192,6 +197,7 @@ export const qarzaAccountUpdate = async (req, res) => {
 
         let updated = await qarzaAccountUpdateService(_id, {
             qarzaProfileImage: file,
+            cloudinaryPublicId,
             name, type, phoneNo, address, notes, isActive
         });
 

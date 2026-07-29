@@ -14,20 +14,35 @@ const createPurchaseReturn = async (data) => {
 
 const getAllPurchaseReturns = async (query = {}) => {
     return await findPurchaseReturnService(query, {
-        populate: ["purchase", "products.productId", "products.batchId"],
+        populate: [
+            { path: "purchase", select: "invoiceNumber date totalAmount" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
         sort: { createdAt: -1 }
     });
 };
 
 const getPurchaseReturnById = async (id) => {
     return await findByIdPurchaseReturnService(id, {
-        populate: ["purchase", "products.productId", "products.batchId"]
+        populate: [
+            { path: "purchase", select: "invoiceNumber date totalAmount" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
     });
 };
 
 const findPurchaseReturnByPurchase = async (purchaseId) => {
     return await findOnePurchaseReturnService({ purchase: purchaseId }, {
-        populate: ["purchase", "products.productId", "products.batchId"]
+        populate: [
+            { path: "purchase", select: "invoiceNumber date totalAmount" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
     });
 };
 
@@ -61,7 +76,12 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
         sort: { createdAt: -1 },
         skip: skip,
         limit: limit,
-        populate: ["purchase", "products.productId", "products.batchId"]
+        populate: [
+            { path: "purchase", select: "invoiceNumber date totalAmount" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
     });
     
     const total = await countPurchaseReturnService(query);

@@ -108,7 +108,7 @@ export default function QarzaAccounts() {
                                     const initials = getInitials(acc.name);
                                     const formattedName = formatName(acc.name);
                                     const imageUrl = acc.qarzaProfileImage 
-                                        ? `${backendBaseUrl}/${acc.qarzaProfileImage}` 
+                                        ? `${backendBaseUrl}/uploads/${acc.qarzaProfileImage}` 
                                         : null;
                                     
                                     return (

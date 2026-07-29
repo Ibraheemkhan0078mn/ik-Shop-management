@@ -1,6 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Check, X, DollarSign, Eye } from "lucide-react";
+import { Plus, Check, X, DollarSign, Eye, Copy } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
@@ -184,7 +184,22 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, on
         <tr className="transition border-b border-edge hover:bg-surface-muted">
 
             <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                {purchase?.invoiceNumber ?? "—"}
+                <div className="flex items-center gap-2">
+                    <span>{purchase?.invoiceNumber ?? "—"}</span>
+                    {purchase?.invoiceNumber && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(purchase.invoiceNumber);
+                                showSuccess("Invoice number copied");
+                            }}
+                            className="hover:text-primary transition-colors"
+                            title="Copy invoice number"
+                        >
+                            <Copy className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
             </td>
             <td className="px-4 py-3 text-center text-ink">
                 <div className="text-sm font-medium">{purchase?.items?.length ?? 0}</div>

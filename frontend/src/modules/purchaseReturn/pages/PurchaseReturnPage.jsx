@@ -1,7 +1,7 @@
 // src/modules/purchaseReturn/pages/PurchaseReturnPage.jsx
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Pencil, Trash2, Check, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -216,16 +216,18 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
                         <button
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
+                            title={labels.edit}
                         >
-                            {labels.edit}
+                            <Pencil className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                     <PermissionGuard execute={onDelete} permission="purchaseReturns.delete" isConfirmation={true}>
                         <button
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
+                            title={labels.delete}
                         >
-                            {labels.delete}
+                            <Trash2 className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                 </div>
@@ -335,15 +337,17 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
                                                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                     <button
                                                         onClick={() => onApprove(pr._id)}
-                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
+                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
+                                                        title={labels.approve}
                                                     >
-                                                        {labels.approve}
+                                                        <Check className="w-3 h-3" />
                                                     </button>
                                                     <button
                                                         onClick={(e) => onDelete(pr._id, e)}
-                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
+                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
+                                                        title={labels.delete}
                                                     >
-                                                        {labels.delete}
+                                                        <Trash2 className="w-3 h-3" />
                                                     </button>
                                                 </div>
                                             </td>

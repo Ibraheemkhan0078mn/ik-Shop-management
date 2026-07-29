@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
@@ -133,13 +133,13 @@ function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <PermissionGuard execute={onEdit} permission="customers.update" isConfirmation={true}>
-                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
-                            {labels.edit}
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }} title={labels.edit}>
+                            <Pencil className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                     <PermissionGuard execute={onDelete} permission="customers.delete" isConfirmation={true}>
-                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
-                            {labels.delete}
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }} title={labels.delete}>
+                            <Trash2 className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                 </div>

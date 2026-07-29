@@ -492,8 +492,8 @@ export default function UserManagement() {
                                         permission="users.view" 
                                         isConfirmation={false}
                                     >
-                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
-                                            <Eye size={16} /> {labels.view}
+                                        <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm" title={labels.view}>
+                                            <Eye size={16} />
                                         </button>
                                     </PermissionGuard>
                                     <PermissionGuard 
@@ -501,8 +501,8 @@ export default function UserManagement() {
                                         permission="users.update" 
                                         isConfirmation={true}
                                     >
-                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm">
-                                            <Edit2 size={16} /> {labels.edit}
+                                        <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm" title={labels.edit}>
+                                            <Edit2 size={16} />
                                         </button>
                                     </PermissionGuard>
                                     <PermissionGuard 
@@ -510,8 +510,8 @@ export default function UserManagement() {
                                         permission="users.delete" 
                                         isConfirmation={true}
                                     >
-                                        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm">
-                                            <Trash2 size={16} /> {labels.delete}
+                                        <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm" title={labels.delete}>
+                                            <Trash2 size={16} />
                                         </button>
                                     </PermissionGuard>
                                 </div>

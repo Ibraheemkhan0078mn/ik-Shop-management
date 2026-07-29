@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Package, DollarSign, User, FileText, Truck, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, Calendar, Package, DollarSign, User, FileText, Truck, CreditCard, Plus, Copy } from "lucide-react";
 import { usePurchase, useGetPurchasePayments } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
+import { showSuccess } from "../../../shared/utilities/toastHelpers.js";
 
 const STATUS_STYLE = {
     ordered: { background: "rgba(180,83,9,0.1)", color: "#d97706", text: "Ordered" },
@@ -209,9 +210,23 @@ export default function PurchaseDetail() {
                                     <label className="text-xs text-[var(--muted)] uppercase font-bold">
                                         {labels.purchaseNumber || "Purchase #"}
                                     </label>
-                                    <p className="font-semibold text-[var(--ink)] mt-1">
-                                        {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <p className="font-semibold text-[var(--ink)]">
+                                            {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
+                                        </p>
+                                        {(purchase?.purchaseNumber || purchase?.invoiceNumber) && (
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(purchase?.purchaseNumber || purchase?.invoiceNumber);
+                                                    showSuccess("Invoice number copied");
+                                                }}
+                                                className="hover:text-primary transition-colors"
+                                                title="Copy invoice number"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="text-xs text-[var(--muted)] uppercase font-bold">
