@@ -79,7 +79,7 @@ export default function EachQarzaAccountRecords() {
 
             {/* toolbar */}
             <div className="flex flex-wrap items-center gap-3 mb-5">
-                {(role === "admin" || hasPermission(permissions, "accounts.payment.create")) && (
+                {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
                     <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
                         <Plus className="w-4 h-4" />
                         {language === "en" ? "Add Payment" : "ادائیگی شامل کریں"}
@@ -222,7 +222,7 @@ export default function EachQarzaAccountRecords() {
                                             {/* actions */}
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {(role === "admin" || hasPermission(permissions, "accounts.payment.update")) && (
+                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
                                                         <button onClick={() => setModal({ mode: "update", payment: p })}
                                                             className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                             style={{ color: "var(--muted)" }}
@@ -231,7 +231,7 @@ export default function EachQarzaAccountRecords() {
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     )}
-                                                    {(role === "admin" || hasPermission(permissions, "accounts.payment.delete")) && (
+                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
                                                         <button onClick={() => handleDelete(p._id)}
                                                             className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                             style={{ color: "var(--muted)" }}

@@ -75,7 +75,7 @@ export default function QarzaAccounts() {
                     heading={labels.creditDebits}
                     subheading={labels.manageCreditDebitAccounts}
                     leftActions={
-                        (role === "admin" || hasPermission(permissions, "accounts.create")) && (
+                        (role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.create")) && (
                             <div onClick={() => setModal({ mode: "create" })}>
                                 <ScreenTabButton lucideIcon={Plus} text={labels.addAccount} />
                             </div>
@@ -161,8 +161,8 @@ export default function QarzaAccounts() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                                    {(role === "admin" || hasPermission(permissions, "accounts.update")) && (
-                                                        <PermissionGuard execute={() => setModal({ mode: "update", account: acc })} permission="accounts.update" isConfirmation={true}>
+                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.update")) && (
+                                                        <PermissionGuard execute={() => setModal({ mode: "update", account: acc })} permission="creditsAndDebitsAccounts.update" isConfirmation={true}>
                                                             <button
                                                                 className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                                 style={{ color: "var(--muted)" }}
@@ -173,8 +173,8 @@ export default function QarzaAccounts() {
                                                             </button>
                                                         </PermissionGuard>
                                                     )}
-                                                    {(role === "admin" || hasPermission(permissions, "accounts.delete")) && (
-                                                        <PermissionGuard execute={() => handleDelete(acc._id)} permission="accounts.delete" isConfirmation={true}>
+                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.delete")) && (
+                                                        <PermissionGuard execute={() => handleDelete(acc._id)} permission="creditsAndDebitsAccounts.delete" isConfirmation={true}>
                                                             <button
                                                                 className="w-8 h-8 flex items-center justify-center rounded-lg transition"
                                                                 style={{ color: "var(--muted)" }}

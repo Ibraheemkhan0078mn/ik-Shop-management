@@ -14,13 +14,13 @@ import { AppPermissionContext } from "../../../shared/context/Permission.context
 // import { DEFAULT_PERMISSIONS } from "../../../../backend/common/constants/permissions.constant.js";
 
 export default function UserManagement() {
-    let {appPermissions}= useContext(AppPermissionContext)
+    let { appPermissions } = useContext(AppPermissionContext)
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getUserLabels(language);
     const currentUserId = useSelector((state) => state.auth.id);
-    
+
     const { data: response, refetch } = useGetAllUsersQuery();
     const users = response?.data || [];
     const [createUser] = useCreateUserMutation();
@@ -82,37 +82,37 @@ export default function UserManagement() {
 
     const handleRoleSelect = (role) => {
         let rolePermissions = [];
-        
-        if(appPermissions){
+
+        if (appPermissions) {
             if (role === "admin") {
                 console.log("The role is admin. ")
-            rolePermissions = appPermissions;
-        } else if (role === "manager") {
-            // Manager permissions - most permissions except user management
-            rolePermissions = appPermissions.filter(perm => 
-                !perm.startsWith("users.") || perm === "users.view"
-            );
-        } else {
-            // Staff permissions - limited permissions
-            rolePermissions = [
-                "dashboard.view",
-                "pos.view",
-                "pos.orders.create",
-                "pos.orders.view",
-                "products.view",
-                "categories.view",
-                "subcategories.view",
-                "customers.view",
-                "customers.create",
-                "customers.update",
-                "customers.details",
-                "customers.payment",
-                "suppliers.view",
-                "suppliers.details",
-            ];
+                rolePermissions = appPermissions;
+            } else if (role === "manager") {
+                // Manager permissions - most permissions except user management
+                rolePermissions = appPermissions.filter(perm =>
+                    !perm.startsWith("users.") || perm === "users.view"
+                );
+            } else {
+                // Staff permissions - limited permissions
+                rolePermissions = [
+                    "dashboard.view",
+                    "pos.view",
+                    "pos.orders.create",
+                    "pos.orders.view",
+                    "products.view",
+                    "categories.view",
+                    "subcategories.view",
+                    "customers.view",
+                    "customers.create",
+                    "customers.update",
+                    "customers.details",
+                    "customers.payment",
+                    "suppliers.view",
+                    "suppliers.details",
+                ];
+            }
         }
-        }
-        
+
         setFormData(prev => ({
             ...prev,
             role,
@@ -128,11 +128,11 @@ export default function UserManagement() {
     const handleGroupToggle = (group) => {
         const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
         const allChecked = isGroupAllChecked(group);
-        
+
         setFormData(prev => {
             const currentPermissions = prev.permissions || [];
             let newPermissions;
-            
+
             if (allChecked) {
                 // Uncheck all in group
                 newPermissions = currentPermissions.filter(perm => !groupPermissions.includes(perm));
@@ -140,7 +140,7 @@ export default function UserManagement() {
                 // Check all in group (add missing ones)
                 newPermissions = [...new Set([...currentPermissions, ...groupPermissions])];
             }
-            
+
             return { ...prev, permissions: newPermissions };
         });
     };
@@ -203,7 +203,7 @@ export default function UserManagement() {
                             <X size={20} />
                         </button>
                         <h2 className="text-xl font-bold mb-4">
-                            {modal.mode === "create" ? labels.addStaff : labels.edit}
+                            {modal.mode === "create" ? labels.addUser : labels.edit}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -419,37 +419,36 @@ export default function UserManagement() {
                                         <td className="px-4 py-3 text-sm text-(--muted)">{user.email}</td>
                                         <td className="px-4 py-3 text-sm text-(--muted)">{user.phoneNo || labels.noPhone}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                                                user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
-                                                user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
-                                                'bg-gray-500/10 text-gray-600'
-                                            }`}>
+                                            <span className={`px-2 py-1 rounded-md text-xs font-medium ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
+                                                    user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
+                                                        'bg-gray-500/10 text-gray-600'
+                                                }`}>
                                                 {labels[user.role] || user.role}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-end gap-2">
-                                                <PermissionGuard 
-                                                    execute={() => handleViewDetails(user._id)} 
-                                                    permission="users.view" 
+                                                <PermissionGuard
+                                                    execute={() => handleViewDetails(user._id)}
+                                                    permission="users.view"
                                                     isConfirmation={false}
                                                 >
                                                     <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
                                                         <Eye size={16} />
                                                     </button>
                                                 </PermissionGuard>
-                                                <PermissionGuard 
-                                                    execute={() => openEditModal(user)} 
-                                                    permission="users.update" 
+                                                <PermissionGuard
+                                                    execute={() => openEditModal(user)}
+                                                    permission="users.update"
                                                     isConfirmation={true}
                                                 >
                                                     <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all">
                                                         <Edit2 size={16} />
                                                     </button>
                                                 </PermissionGuard>
-                                                <PermissionGuard 
-                                                    execute={() => handleDelete(user._id)} 
-                                                    permission="users.delete" 
+                                                <PermissionGuard
+                                                    execute={() => handleDelete(user._id)}
+                                                    permission="users.delete"
                                                     isConfirmation={true}
                                                 >
                                                     <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all">
@@ -490,37 +489,36 @@ export default function UserManagement() {
                                         </div>
                                         <p className="text-sm text-(--muted) truncate">{user.email}</p>
                                         <p className="text-xs text-(--muted)">{user.phoneNo || labels.noPhone}</p>
-                                        <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${
-                                            user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
-                                            user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
-                                            'bg-gray-500/10 text-gray-600'
-                                        }`}>
+                                        <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
+                                                user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
+                                                    'bg-gray-500/10 text-gray-600'
+                                            }`}>
                                             {labels[user.role] || user.role}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-                                    <PermissionGuard 
-                                        execute={() => handleViewDetails(user._id)} 
-                                        permission="users.view" 
+                                    <PermissionGuard
+                                        execute={() => handleViewDetails(user._id)}
+                                        permission="users.view"
                                         isConfirmation={false}
                                     >
                                         <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm" title={labels.view}>
                                             <Eye size={16} />
                                         </button>
                                     </PermissionGuard>
-                                    <PermissionGuard 
-                                        execute={() => openEditModal(user)} 
-                                        permission="users.update" 
+                                    <PermissionGuard
+                                        execute={() => openEditModal(user)}
+                                        permission="users.update"
                                         isConfirmation={true}
                                     >
                                         <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all text-sm" title={labels.edit}>
                                             <Edit2 size={16} />
                                         </button>
                                     </PermissionGuard>
-                                    <PermissionGuard 
-                                        execute={() => handleDelete(user._id)} 
-                                        permission="users.delete" 
+                                    <PermissionGuard
+                                        execute={() => handleDelete(user._id)}
+                                        permission="users.delete"
                                         isConfirmation={true}
                                     >
                                         <button className="flex-1 flex items-center justify-center px-3 py-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-red-500 hover:text-red-500 transition-all text-sm" title={labels.delete}>

@@ -52,9 +52,9 @@ export default function SettingsPage() {
     ];
 
     // Only add permission password tab for admin users
-    if (role === "admin") {
-        tabs.push({ id: "permissionPassword", icon: Shield, label: labels.permissionPassword });
-    }
+    // if (role === "admin") {
+    //     tabs.push({ id: "permissionPassword", icon: Shield, label: labels.permissionPassword });
+    // }
 
     return (
         <div className="container mx-auto p-6">
@@ -91,7 +91,7 @@ export default function SettingsPage() {
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
                 {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "fileBackup" && <FileBackup labels={labels} />}
-                {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />}
+                {/* {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />} */}
             </div>
         </div>
     );

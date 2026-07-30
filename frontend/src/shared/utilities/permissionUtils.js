@@ -89,7 +89,7 @@ export const normalizeUserPermissions = (permissions = []) => {
     purchases: "purchases.view",
     expenses: "expenses.view",
     reports: "reports.view",
-    accounts: "accounts.view",
+    creditsAndDebitsAccounts: "creditsAndDebitsAccounts.view",
     staff: "staff.view",
     manageUsers: "users.manage",
     settings: "settings.view",
