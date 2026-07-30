@@ -330,18 +330,11 @@ export const exportExcel = async (req, res) => {
 
 export const exportFilteredData = async (req, res) => {
     try {
-        const { models, filters, exportPath, exportType, userId } = req.body;
+        const { models, filters, exportType, userId } = req.body;
         
-        // Get settings to find backup path
-        const { findOneSettingsService } = (await import('../../settings/services/settings.crud.js'));
-        const settings = await findOneSettingsService({ userId: userId || "global" });
-        
-        const backupPath = exportPath || settings?.backup?.excelBackupPath || "./backups";
-        
-        // Ensure directory exists
-        if (!fs.existsSync(backupPath)) {
-            fs.mkdirSync(backupPath, { recursive: true });
-        }
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const filename = exportType === 'excel' ? `filtered_backup_${timestamp}.xlsx` : `filtered_backup_${timestamp}.pdf`;
 
         // Model to service mapping
         const modelServiceMap = {
@@ -457,9 +450,6 @@ export const exportFilteredData = async (req, res) => {
         }
         
         console.log('Final exportData keys:', Object.keys(exportData));
-
-        // Generate filename with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
         
         if (exportType === 'excel') {
             const workbook = XLSX.utils.book_new();
@@ -472,16 +462,16 @@ export const exportFilteredData = async (req, res) => {
                 }
             }
             
-            const filename = `filtered_backup_${timestamp}.xlsx`;
-            const filepath = path.join(backupPath, filename);
-            XLSX.writeFile(workbook, filepath);
+            // Write to buffer instead of file
+            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+            const fileBuffer = buffer.toString('base64');
 
             res.json({
                 success: true,
                 message: "Excel export completed successfully",
                 data: {
-                    filepath,
                     filename,
+                    fileBuffer,
                     modelsExported: Object.keys(exportData),
                 },
             });
@@ -490,9 +480,18 @@ export const exportFilteredData = async (req, res) => {
             const PDFDocument = await import('pdfkit');
             const doc = new PDFDocument.default({ margin: 50 });
             const filename = `filtered_backup_${timestamp}.pdf`;
-            const filepath = path.join(backupPath, filename);
             
-            doc.pipe(fs.createWriteStream(filepath));
+            // Collect PDF data into buffer
+            const chunks = [];
+            doc.on('data', chunk => chunks.push(chunk));
+            
+            const pdfPromise = new Promise((resolve, reject) => {
+                doc.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    resolve(buffer.toString('base64'));
+                });
+                doc.on('error', reject);
+            });
             
             // Add title
             doc.fontSize(20).text('Filtered Data Export', { align: 'center' });
@@ -638,12 +637,15 @@ export const exportFilteredData = async (req, res) => {
             
             doc.end();
             
+            // Wait for PDF to finish generating
+            const fileBuffer = await pdfPromise;
+
             res.json({
                 success: true,
                 message: "PDF export completed successfully",
                 data: {
-                    filepath,
                     filename,
+                    fileBuffer,
                     modelsExported: Object.keys(exportData),
                 },
             });

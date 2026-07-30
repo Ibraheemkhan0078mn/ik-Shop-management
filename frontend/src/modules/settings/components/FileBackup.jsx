@@ -91,17 +91,15 @@ export default function FileBackup({ labels }) {
     const [selectedModels, setSelectedModels] = useState([]);
     const [expandedFilters, setExpandedFilters] = useState({});
     const [filters, setFilters] = useState({});
-    const [exportPath, setExportPath] = useState('./backups');
     const [isExporting, setIsExporting] = useState(false);
-    const [showPathDialog, setShowPathDialog] = useState(false);
     const [exportType, setExportType] = useState(null);
 
     const toggleModelSelection = (modelId) => {
         setSelectedModels(prev => {
-            const newSelection = prev.includes(modelId) 
+            const newSelection = prev.includes(modelId)
                 ? prev.filter(id => id !== modelId)
                 : [...prev, modelId];
-            
+
             // Initialize filters for newly selected model
             if (!prev.includes(modelId) && newSelection.includes(modelId)) {
                 setFilters(prev => ({
@@ -109,7 +107,7 @@ export default function FileBackup({ labels }) {
                     [modelId]: {}
                 }));
             }
-            
+
             // Remove filters for deselected model
             if (prev.includes(modelId) && !newSelection.includes(modelId)) {
                 setFilters(prev => {
@@ -118,7 +116,7 @@ export default function FileBackup({ labels }) {
                     return newFilters;
                 });
             }
-            
+
             return newSelection;
         });
     };
@@ -160,38 +158,49 @@ export default function FileBackup({ labels }) {
             toast.error('Please select at least one model to export');
             return;
         }
-        
-        if (!exportPath || exportPath.trim() === '') {
-            toast.error('Please provide an export path');
-            return;
-        }
-        
-        setExportType(type);
-        setShowPathDialog(true);
-    };
 
-    const confirmExport = async () => {
-        setShowPathDialog(false);
+        setExportType(type);
         setIsExporting(true);
-        
+
         try {
             const exportData = {
                 models: selectedModels,
                 filters: filters,
-                exportPath: exportPath,
-                exportType: exportType,
+                exportType: type,
                 userId: userId || "global"
             };
 
             const result = await exportFilteredData(exportData).unwrap();
-            
-            toast.success(`${exportType === 'excel' ? 'Excel' : 'PDF'} export completed successfully`);
-            console.log('Export result:', result);
+
+            // Trigger file download
+            if (result.data && result.data.fileBuffer) {
+                // Convert base64 to binary string, then to Uint8Array
+                const binaryString = atob(result.data.fileBuffer);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([bytes], {
+                    type: type === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf'
+                });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = result.data.filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+
+            toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} export completed successfully`);
         } catch (error) {
             console.error('Export failed:', error);
-            toast.error(`${exportType === 'excel' ? 'Excel' : 'PDF'} export failed`);
+            toast.error(`${type === 'excel' ? 'Excel' : 'PDF'} export failed`);
         } finally {
             setIsExporting(false);
+            setExportType(null);
         }
     };
 
@@ -281,11 +290,10 @@ export default function FileBackup({ labels }) {
                             <button
                                 key={model.id}
                                 onClick={() => toggleModelSelection(model.id)}
-                                className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
-                                    isSelected 
-                                        ? 'border-[var(--accent-2)] bg-[var(--accent-2)]/10 text-[var(--accent-2)]' 
+                                className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${isSelected
+                                        ? 'border-[var(--accent-2)] bg-[var(--accent-2)]/10 text-[var(--accent-2)]'
                                         : 'border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)]'
-                                }`}
+                                    }`}
                             >
                                 {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                                 <Icon size={16} />
@@ -300,7 +308,7 @@ export default function FileBackup({ labels }) {
             {selectedModels.length > 0 && (
                 <div className="card p-6">
                     <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Apply Filters</h3>
-                    
+
                     <div className="space-y-4">
                         {selectedModels.map(modelId => {
                             const modelConfig = MODEL_CONFIG.find(m => m.id === modelId);
@@ -347,23 +355,6 @@ export default function FileBackup({ labels }) {
                 </div>
             )}
 
-            {/* Export Path */}
-            <div className="card p-6">
-                <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Export Settings</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-sm font-medium text-[var(--ink)] mb-2 block">Export Path</label>
-                        <input
-                            type="text"
-                            value={exportPath}
-                            onChange={(e) => setExportPath(e.target.value)}
-                            placeholder="./backups"
-                            className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                        />
-                    </div>
-                </div>
-            </div>
-
             {/* Export Buttons */}
             <div className="card p-6">
                 <div className="flex flex-wrap gap-4">
@@ -385,35 +376,6 @@ export default function FileBackup({ labels }) {
                     </button>
                 </div>
             </div>
-
-            {/* Path Confirmation Dialog */}
-            {showPathDialog && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-[var(--surface)] rounded-xl p-6 max-w-md w-full border border-[var(--border)]">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">Confirm Export</h3>
-                        <p className="text-sm text-[var(--muted)] mb-4">
-                            Export {selectedModels.length} model(s) to {exportType.toUpperCase()} at path:
-                        </p>
-                        <div className="bg-[var(--surface-muted)] p-3 rounded-lg mb-4">
-                            <code className="text-sm text-[var(--accent-2)]">{exportPath}</code>
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={confirmExport}
-                                className="flex-1 px-4 py-2 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/90 transition-colors"
-                            >
-                                Confirm
-                            </button>
-                            <button
-                                onClick={() => setShowPathDialog(false)}
-                                className="flex-1 px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
