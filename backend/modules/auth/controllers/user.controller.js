@@ -1,8 +1,10 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
+import { decrypt } from "../../../common/utils/encryption.util.js";
 import {
     getAllUsers,
     getUserById,
+    getUserByIdWithPassword,
     findUserById,
     userUpdate,
     userDelete,
@@ -30,6 +32,34 @@ export const getUserByIdController = asyncHandler(async (req, res, next) => {
         success: true,
         message: "User fetched successfully",
         data: user,
+    });
+});
+
+export const getUserByIdWithPasswordController = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { requesterRole } = req.query;
+
+    // Only allow admins to fetch user with password
+    if (requesterRole !== 'admin') {
+        return next(new ErrorResponse("Unauthorized", 403));
+    }
+
+    const user = await getUserByIdWithPassword(id);
+
+    if (!user) {
+        return next(new ErrorResponse("User not found", 404));
+    }
+
+    // Decrypt password for admin view
+    const userWithDecryptedPassword = {
+        ...(user.toObject ? user.toObject() : user),
+        password: decrypt(user.password)
+    };
+
+    res.status(200).json({
+        success: true,
+        message: "User fetched successfully",
+        data: userWithDecryptedPassword,
     });
 });
 

@@ -22,6 +22,13 @@ export const authApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/users/${id}` }),
             providesTags: (_r, _e, id) => [{ type: "User", id }],
         }),
+        getUserByIdWithPassword: build.query({
+            query: ({ id, requesterRole }) => ({ 
+                url: `/users/${id}/with-password`, 
+                params: { requesterRole } 
+            }),
+            providesTags: (_r, _e, id) => [{ type: "User", id }],
+        }),
         createUser: build.mutation({
             query: (data) => ({ url: "/users/create", method: "POST", body: data }),
             invalidatesTags: ["User"],
@@ -44,6 +51,7 @@ export const {
     useGetUserQuery,
     useGetAllUsersQuery,
     useGetUserByIdQuery,
+    useGetUserByIdWithPasswordQuery,
     useCreateUserMutation,
     useUpdateUserMutation,
     useDeleteUserMutation,

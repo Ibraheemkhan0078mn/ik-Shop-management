@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import { encrypt, comparePassword } from "../../../common/utils/encryption.util.js";
 import { normalizePermissions } from "../utils/permission.utils.js";
 
 const userSchema = new mongoose.Schema(
@@ -45,16 +45,15 @@ const userSchema = new mongoose.Schema(
     { timestamps: true },
 );
 
-userSchema.pre("save", async function () {
+userSchema.pre("save", function () {
     if (!this.isModified("password")) {
         return;
     }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = encrypt(this.password);
 });
 
-userSchema.methods.comparePassword = async function (candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
+userSchema.methods.comparePassword = function (candidatePassword) {
+    return comparePassword(candidatePassword, this.password);
 };
 
 export default userSchema;

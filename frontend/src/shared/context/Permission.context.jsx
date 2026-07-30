@@ -21,11 +21,8 @@ const AppPermissionContextProvider = ({ children }) => {
                     let res = await api.get("/permissionRoutes/getDefaultPermissions")
                     let permissionArray = res.data.permissions
 
-                    let tempPermissionObj = {}
-                    permissionArray.forEach((p) => {
-                        tempPermissionObj[p] = false
-                    })
-                    setAppPermissions(tempPermissionObj)
+                    // Store as array instead of object for categorization
+                    setAppPermissions(permissionArray)
                 }
             )()
         } catch (error) {

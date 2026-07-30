@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, User as UserIcon, Mail, Phone, Shield, Calendar, Edit2 } from "lucide-react";
+import { ArrowLeft, User as UserIcon, Mail, Phone, Shield, Calendar, Edit2, Lock } from "lucide-react";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getUserLabels } from "../labels/userLabels.js";
-import { useGetUserByIdQuery } from "../services/authApi.js";
+import { useGetUserByIdQuery, useGetUserByIdWithPasswordQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { useSelector } from "react-redux";
 
 export default function UserDetails() {
     const { userId } = useParams();
@@ -14,8 +15,13 @@ export default function UserDetails() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getUserLabels(language);
+    const { role: currentUserRole } = useSelector(s => s.auth) || {};
 
-    const { data: response, isLoading, error } = useGetUserByIdQuery(userId);
+    // Use different query based on current user role
+    const isAdmin = currentUserRole === 'admin';
+    const { data: response, isLoading, error } = isAdmin 
+        ? useGetUserByIdWithPasswordQuery({ id: userId, requesterRole: currentUserRole })
+        : useGetUserByIdQuery(userId);
     const user = response?.data;
 
     const handleEdit = () => {
@@ -135,6 +141,15 @@ export default function UserDetails() {
                                     <label className="block text-sm text-(--muted) mb-1">{labels.role}</label>
                                     <p className="font-medium">{labels[user.role] || user.role}</p>
                                 </div>
+                                {currentUserRole === 'admin' && (
+                                    <div>
+                                        <label className="block text-sm text-(--muted) mb-1 flex items-center gap-2">
+                                            <Lock size={14} />
+                                            {labels.password || "Password"}
+                                        </label>
+                                        <p className="font-medium font-mono bg-[var(--surface-muted)] px-3 py-2 rounded-lg">{user.password || labels.notAvailable}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm text-(--muted) mb-1">{labels.status || "Status"}</label>
                                     <span className={`px-2 py-1 rounded-md text-xs font-medium ${user.isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>

@@ -8,6 +8,10 @@ const getUserById = async (id) => {
     return await findByIdUserService(id, { select: "-password" });
 };
 
+const getUserByIdWithPassword = async (id) => {
+    return await findByIdUserService(id);
+};
+
 const findUserById = async (id) => {
     return await findOneUserService({ _id: id });
 };
@@ -28,6 +32,7 @@ const countUsers = async (query = {}) => {
 export {
     getAllUsers,
     getUserById,
+    getUserByIdWithPassword,
     findUserById,
     userUpdate,
     userDelete,

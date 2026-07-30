@@ -62,6 +62,7 @@ export default function UserManagement() {
             name: user.name,
             email: user.email,
             phoneNo: user.phoneNo,
+            password: "",
             role: user.role,
             permissions: user.permissions || [],
         });
@@ -241,7 +242,7 @@ export default function UserManagement() {
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                     />
                                 </div>
-                                {modal.mode === "create" && (
+                                {modal.mode === "create" ? (
                                     <>
                                         <div>
                                             <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
@@ -268,6 +269,18 @@ export default function UserManagement() {
                                             />
                                         </div>
                                     </>
+                                ) : (
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password} <span className="text-xs text-gray-500">({labels.optional || "Optional - leave blank to keep current"})</span></label>
+                                        <input
+                                            type="password"
+                                            placeholder={labels.enterNewPassword || "Enter new password"}
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            className="w-full px-4 py-2 rounded-lg border"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                        />
+                                    </div>
                                 )}
                             </div>
                             {/* <div>

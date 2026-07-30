@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Upload, X, Camera, User } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, Camera, User, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useGetStaffByIdQuery, useCreateStaffMutation, useUpdateStaffMutation } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
+import { categorizePermissions } from "../../../shared/utilities/permissionUtils.js";
+import { AppPermissionContext } from "../../../shared/context/Permission.context.jsx";
+import { useContext } from "react";
 
 const inputCls = "w-full px-3 py-2.5 text-sm rounded-xl border border-edge bg-surface-muted text-ink placeholder:text-ink-muted focus:outline-none focus:border-primary transition";
 const labelCls = "block text-xs font-semibold text-ink-muted uppercase tracking-wide mb-1.5";
@@ -15,15 +18,20 @@ export default function StaffForm({ isEdit = false }) {
     const navigate = useNavigate();
     const { id } = useParams();
     const fileInputRef = useRef(null);
+    const { appPermissions } = useContext(AppPermissionContext);
 
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getStaffLabels(language);
 
+    // Categorize permissions from backend
+    const permissionGroups = categorizePermissions(appPermissions || []);
+
     const [formData, setFormData] = useState({
         fullName: "", cnic: "", phone: "", role: "other", salaryType: "fixed",
         joinDate: new Date().toISOString().split("T")[0], address: "", emergencyContact: "",
         notes: "", monthlySalary: 0, percentage: 0, status: "active",
+        permissions: [],
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -41,10 +49,45 @@ export default function StaffForm({ isEdit = false }) {
                 joinDate: s.joinDate ? new Date(s.joinDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
                 address: s.address || "", emergencyContact: s.emergencyContact || "", notes: s.notes || "",
                 monthlySalary: s.monthlySalary || 0, percentage: s.percentage || 0, status: s.status || "active",
+                permissions: s.permissions || [],
             });
             if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
     }, [isEdit, staffData]);
+
+    const handlePermissionChange = (permission) => {
+        setFormData(prev => {
+            const permissions = prev.permissions || [];
+            const nextPermissions = permissions.includes(permission)
+                ? permissions.filter((item) => item !== permission)
+                : [...permissions, permission];
+
+            return { ...prev, permissions: nextPermissions };
+        });
+    };
+
+    const isGroupAllChecked = (group) => {
+        const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
+        return groupPermissions.every(perm => (formData.permissions || []).includes(perm));
+    };
+
+    const handleGroupToggle = (group) => {
+        const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
+        const allChecked = isGroupAllChecked(group);
+        
+        setFormData(prev => {
+            const currentPermissions = prev.permissions || [];
+            let newPermissions;
+            
+            if (allChecked) {
+                newPermissions = currentPermissions.filter(perm => !groupPermissions.includes(perm));
+            } else {
+                newPermissions = [...new Set([...currentPermissions, ...groupPermissions])];
+            }
+            
+            return { ...prev, permissions: newPermissions };
+        });
+    };
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -228,6 +271,55 @@ export default function StaffForm({ isEdit = false }) {
                         <div>
                             <label className={labelCls}>{labels.notes || "Notes"}</label>
                             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={4} className={`${inputCls} resize-none`} placeholder="Add any additional notes or comments..." />
+                        </div>
+                    </div>
+
+                    {/* Permissions */}
+                    <div className={sectionCls}>
+                        <h3 className="text-sm font-semibold text-ink flex items-center gap-2"><Shield size={16} className="text-primary" /> Permissions</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs text-ink-muted">Select the permissions for this staff member</p>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, permissions: [] }))}
+                                className="px-3 py-1 text-xs rounded-lg border border-edge text-ink-muted hover:text-ink hover:bg-surface-muted transition"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                        <div className="grid gap-3">
+                            {permissionGroups.map((group) => (
+                                <div key={group.module} className="rounded-xl p-3 bg-surface-muted border border-edge">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="font-semibold text-sm">{group.label}</p>
+                                        <label className="flex items-center gap-2">
+                                            <span className="text-xs text-ink-muted">All</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={isGroupAllChecked(group)}
+                                                onChange={() => handleGroupToggle(group)}
+                                                className="w-4 h-4"
+                                            />
+                                        </label>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {group.actions.map(({ key, label }) => {
+                                            const permission = `${group.module}.${key}`;
+                                            return (
+                                                <label key={permission} className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={(formData.permissions || []).includes(permission)}
+                                                        onChange={() => handlePermissionChange(permission)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <span className="text-xs">{label}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
