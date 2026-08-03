@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { X, Search, Pencil, Calendar, Lock, Unlock } from "lucide-react";
+import { X, Search, Pencil, Calendar, Lock, Unlock, ChevronDown, ChevronUp } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -193,6 +193,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
     const [purchaseReturnNumber, setPurchaseReturnNumber] = useState("");
     const [isPurchaseReturnNumberLocked, setIsPurchaseReturnNumberLocked] = useState(true);
+    const [expandedCalculation, setExpandedCalculation] = useState({});
+    const [batchStocks, setBatchStocks] = useState({});
 
     const { data: purchasesData } = usePurchases({ page: 1, limit: 100 });
     const allPurchases = purchasesData?.data ?? [];
@@ -201,6 +203,36 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const localizedReasons = useMemo(() => getLocalizedReasons(labels), [labels]);
 
     const update = (f, v) => setForm((p) => ({ ...p, [f]: v }));
+
+    // Fetch batch stocks when purchase data is loaded
+    useEffect(() => {
+        const fetchBatchStocks = async () => {
+            if (purchaseData?.items) {
+                const stocks = {};
+                for (const item of purchaseData.items) {
+                    const batchId = item.batch?._id || item.batch;
+                    if (batchId && !stocks[batchId]) {
+                        try {
+                            const response = await fetch(`${import.meta.env.VITE_API_URL}/batches/${batchId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                }
+                            });
+                            const data = await response.json();
+                            if (data.success && data.data) {
+                                stocks[batchId] = data.data.quantity || 0;
+                            }
+                        } catch (error) {
+                            console.error("Error fetching batch stock:", error);
+                            stocks[batchId] = item.quantity || 0; // Fallback to purchase quantity
+                        }
+                    }
+                }
+                setBatchStocks(stocks);
+            }
+        };
+        fetchBatchStocks();
+    }, [purchaseData]);
 
     // Generate default purchase return number on mount for create mode
     useEffect(() => {
@@ -438,6 +470,26 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         console.log("the submit is running.")
         if (!purchaseData) return showError(labels.pleaseSelectPurchase);
         if (Object.keys(selectedItems).length === 0) return showError(labels.pleaseSelectItem);
+
+        // Validate purchase return number for duplicates (only in create mode)
+        if (!isUpdate && purchaseReturnNumber) {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/purchase-returns/validate-number`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ purchaseReturnNumber })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    return showError(data.message || "Purchase return number already exists");
+                }
+            } catch (error) {
+                console.error("Error validating purchase return number:", error);
+            }
+        }
 
         // Validate all selected items
         for (const [batchId, details] of Object.entries(selectedItems)) {
@@ -760,10 +812,13 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                             <Inp
                                                                 type="number"
                                                                 min={1}
-                                                                max={item.quantity}
+                                                                max={batchStocks[batchId] || item.quantity}
                                                                 value={details.returnQuantity}
                                                                 onChange={(e) => handleItemDetailChange(batchId, "returnQuantity", e.target.value)}
                                                             />
+                                                            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                                                                Max limit: Stock ({batchStocks[batchId] || item.quantity})
+                                                            </p>
                                                         </Field>
                                                         <Field>
                                                             <Label>{labels.returnReason} *</Label>
@@ -786,43 +841,54 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         </Field>
                                                     </div>
                                                     <Field className="mt-3">
-                                                        <Label>{labels.refundPreview}</Label>
-                                                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                                                            <table className="w-full text-sm">
-                                                                <thead>
-                                                                    <tr style={{ background: "var(--surface-muted)" }}>
-                                                                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "var(--muted)" }}>Label</th>
-                                                                        <th className="px-3 py-2 text-right font-semibold" style={{ color: "var(--muted)" }}>Calculation</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Without Discount Total (Purchase)</td>
-                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
-                                                                            Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)}) = Rs. {(item.quantity * item.price).toFixed(2)}
-                                                                        </td>
-                                                                    </tr>
-                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>With Discount Total (Purchase)</td>
-                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
-                                                                            (Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)})) - Discount({calculateDiscountAmount(item, item.quantity).toFixed(2)}) = Rs. {((item.quantity * item.price) - calculateDiscountAmount(item, item.quantity)).toFixed(2)}
-                                                                        </td>
-                                                                    </tr>
-                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Per Discounted Item Price</td>
-                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
-                                                                            ItemPrice({item.price.toFixed(2)}) - DiscountPerItem({calculateDiscountPerItem(item).toFixed(2)}) = Rs. {(item.price - calculateDiscountPerItem(item)).toFixed(2)}
-                                                                        </td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <td className="px-3 py-2 font-semibold" style={{ color: "var(--accent-2)" }}>Refund Amount</td>
-                                                                        <td className="px-3 py-2 text-right font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                            (ReturnQty({details.returnQuantity}) × DiscountedPrice({(item.price - calculateDiscountPerItem(item)).toFixed(2)})) - Cut({Number(details.cut).toFixed(2)}) = Rs. {refund.toFixed(2)}
-                                                                        </td>
-                                                                    </tr>
-                                                                </tbody>
-                                                            </table>
+                                                        <div 
+                                                            className="flex items-center justify-between cursor-pointer"
+                                                            onClick={() => setExpandedCalculation(prev => ({
+                                                                ...prev,
+                                                                [batchId]: !prev[batchId]
+                                                            }))}
+                                                        >
+                                                            <Label className="cursor-pointer">{labels.refundPreview}</Label>
+                                                            {expandedCalculation[batchId] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                         </div>
+                                                        {expandedCalculation[batchId] && (
+                                                            <div className="rounded-xl overflow-hidden mt-2" style={{ border: "1px solid var(--border)" }}>
+                                                                <table className="w-full text-sm">
+                                                                    <thead>
+                                                                        <tr style={{ background: "var(--surface-muted)" }}>
+                                                                            <th className="px-3 py-2 text-left font-semibold" style={{ color: "var(--muted)" }}>Label</th>
+                                                                            <th className="px-3 py-2 text-right font-semibold" style={{ color: "var(--muted)" }}>Calculation</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                            <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Without Discount Total (Purchase)</td>
+                                                                            <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                                Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)}) = Rs. {(item.quantity * item.price).toFixed(2)}
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                            <td className="px-3 py-2" style={{ color: "var(--ink)" }}>With Discount Total (Purchase)</td>
+                                                                            <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                                (Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)})) - Discount({calculateDiscountAmount(item, item.quantity).toFixed(2)}) = Rs. {((item.quantity * item.price) - calculateDiscountAmount(item, item.quantity)).toFixed(2)}
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                            <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Per Discounted Item Price</td>
+                                                                            <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                                ItemPrice({item.price.toFixed(2)}) - DiscountPerItem({calculateDiscountPerItem(item).toFixed(2)}) = Rs. {(item.price - calculateDiscountPerItem(item)).toFixed(2)}
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td className="px-3 py-2 font-semibold" style={{ color: "var(--accent-2)" }}>Refund Amount</td>
+                                                                            <td className="px-3 py-2 text-right font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                                (ReturnQty({details.returnQuantity}) × DiscountedPrice({(item.price - calculateDiscountPerItem(item)).toFixed(2)})) - Cut({Number(details.cut).toFixed(2)}) = Rs. {refund.toFixed(2)}
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        )}
                                                     </Field>
                                                 </div>
                                             )}

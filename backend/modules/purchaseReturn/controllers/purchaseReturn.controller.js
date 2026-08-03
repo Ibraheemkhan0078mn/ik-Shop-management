@@ -461,7 +461,7 @@ export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) =>
         limit: 1
     });
 
-    let nextNumber = 10000; // Start from PR-10000
+    let nextNumber = 1; // Start from PR-00001
 
     if (allReturns && allReturns.length > 0) {
         const latestReturn = allReturns[0];
