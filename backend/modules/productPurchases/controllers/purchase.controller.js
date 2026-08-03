@@ -373,6 +373,8 @@ export const createPurchasePaymentData = asyncHandler(async (req, res) => {
             ...req.body,
             createdBy: req.user?._id,
         };
+
+        console.log(paymentData, "The payment data is here &&&")
         const payment = await createPurchasePayment(paymentData);
         res.status(201).json({
             success: true,

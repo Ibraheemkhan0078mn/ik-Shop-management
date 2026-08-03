@@ -15,6 +15,9 @@ import {
 import { 
     createQarzaPaymentService 
 } from "../../qarza/services/qarzaPayment.crud.js";
+import { 
+    findByIdPaymentMethodService 
+} from "../../settings/services/paymentMethod.crud.js";
 
 export const createPurchasePayment = async (paymentData) => {
     const purchase = await findByIdPurchaseService(paymentData.purchase);
@@ -37,12 +40,23 @@ export const createPurchasePayment = async (paymentData) => {
         paymentStatus = 'partial';
     }
 
+    // Get payment method name if paymentMethodId is provided
+    let paymentMethodName = paymentData.paymentMethodName || "";
+    if (paymentData.paymentMethodId) {
+        const paymentMethod = await findByIdPaymentMethodService(paymentData.paymentMethodId);
+        if (paymentMethod) {
+            paymentMethodName = paymentMethod.name;
+        }
+    }
+    
     // Create purchase payment using CRUD service
     const purchasePayment = await createPurchasePaymentService({
         purchase: paymentData.purchase,
         amount: paymentData.amount,
         paymentDate: paymentData.paymentDate,
         paymentMethod: paymentData.paymentMethod,
+        paymentMethodId: paymentData.paymentMethodId,
+        paymentMethodName: paymentMethodName,
         creditAccount: paymentData.creditAccount,
         cashAmount: paymentData.cashAmount || 0,
         creditAmount: paymentData.creditAmount || 0,

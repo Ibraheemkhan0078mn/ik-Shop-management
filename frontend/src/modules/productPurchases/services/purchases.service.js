@@ -70,6 +70,25 @@ export const purchaseApi = baseApi.injectEndpoints({
             providesTags: (result, error, purchaseId) => [{ type: "Purchase", id: `payments-${purchaseId}` }],
         }),
 
+        // Update Payment
+        updatePurchasePayment: build.mutation({
+            query: ({ paymentId, ...body }) => ({ 
+                url: `/purchases/payments/${paymentId}`, 
+                method: "PUT", 
+                body 
+            }),
+            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", { type: "Purchase", id: `payments-${purchaseId}` }],
+        }),
+
+        // Delete Payment
+        deletePurchasePayment: build.mutation({
+            query: ({ paymentId }) => ({ 
+                url: `/purchases/payments/${paymentId}`, 
+                method: "DELETE" 
+            }),
+            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", { type: "Purchase", id: `payments-${purchaseId}` }],
+        }),
+
         // Get Purchases by Supplier
         getPurchasesBySupplier: build.query({
             query: ({ supplierId, startDate, endDate, page = 1, limit = 20 }) => ({
@@ -93,5 +112,7 @@ export const {
     useUpdatePurchaseStatusMutation: useUpdatePurchaseStatus,
     useCreatePurchasePaymentMutation: useCreatePurchasePayment,
     useGetPurchasePaymentsQuery: useGetPurchasePayments,
+    useUpdatePurchasePaymentMutation: useUpdatePurchasePayment,
+    useDeletePurchasePaymentMutation: useDeletePurchasePayment,
     useGetPurchasesBySupplierQuery: usePurchasesBySupplier,
 } = purchaseApi;

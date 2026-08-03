@@ -48,7 +48,9 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
             paymentDate,
             paymentMethod,
             paymentMethodId: selectedPaymentMethodId,
-            paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
+            paymentMethodName: selectedPaymentMethodId 
+                ? (paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "")
+                : (payment?.paymentMethodName || ""),
             creditAccount: null,
             cashAmount: 0,
             creditAmount: 0,
@@ -229,33 +231,35 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                     )}
 
                     {paymentMethod === 'credit' && (
-                        <div>
-                            <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
-                            <div className="flex gap-2">
-                                <select
-                                    value={creditAccountId}
-                                    onChange={(e) => setCreditAccountId(e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                    required
-                                >
-                                    <option value="">Select credit account</option>
-                                    {creditAccounts?.accounts?.map(account => (
-                                        <option key={account._id} value={account._id}>
-                                            {account.name} (Type: {account.type})
-                                        </option>
-                                    ))}
-                                </select>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowQarzaModal(true)}
-                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                    title="Create new account"
-                                >
-                                    <Plus size={16} />
-                                </button>
+                        <>
+                            <div>
+                                <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={creditAccountId}
+                                        onChange={(e) => setCreditAccountId(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                        required
+                                    >
+                                        <option value="">Select credit account</option>
+                                        {creditAccounts?.accounts?.map(account => (
+                                            <option key={account._id} value={account._id}>
+                                                {account.name} (Type: {account.type})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowQarzaModal(true)}
+                                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                        title="Create new account"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-[var(--muted)] mt-1">Full payment of Rs {remainingAmount.toLocaleString()} will be charged to this account.</p>
                             </div>
-                            <p className="text-xs text-[var(--muted)] mt-1">Full payment of Rs {remainingAmount.toLocaleString()} will be charged to this account.</p>
-                        </div>
+                        </>
                     )}
 
                     {paymentMethod === 'hybrid' && (
