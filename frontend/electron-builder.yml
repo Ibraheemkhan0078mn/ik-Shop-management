@@ -1,0 +1,28 @@
+appId: com.yourcompany.Edc-Software
+productName: Edc-Software
+icon: public/logo.ico
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+extraResources:
+  - from: src/backend.exe
+    to: backend.exe
+publish:
+  provider: github
+  owner: Ibraheemkhan0078mn
+  repo: ik-shop-management
+  releaseType: release
+win:
+  icon: public/logo.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: public/logo.ico
+  uninstallerIcon: public/logo.ico
+  installerHeaderIcon: public/logo.ico

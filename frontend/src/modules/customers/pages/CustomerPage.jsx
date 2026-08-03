@@ -1,0 +1,149 @@
+import { useState } from "react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
+import { getCustomerLabels } from "../labels/customerLabels.js";
+import { useSettings } from "../../settings/hooks/useSettings.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import CustomerModal from "../components/CustomerModal.jsx";
+import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+
+const IMAGE_BASE_URL = "http://localhost:5001";
+
+export default function CustomerPage() {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getCustomerLabels(language);
+    const navigate = useNavigate();
+    
+    const [deleteCustomer] = useDeleteCustomer();
+    const [modal, setModal] = useState(null);
+
+    const handleDelete = async (id) => {
+        try {
+            await deleteCustomer(id).unwrap();
+            showSuccess(labels.customerDeleted);
+        } catch (error) {
+            showError(error?.data?.message || labels.failedToDelete);
+        }
+    };
+
+    const handleRowClick = (customerId) => {
+        navigate(`/customers/${customerId}`);
+    };
+
+    return (
+        <div className="h-screen flex flex-col">
+            {modal && <CustomerModal mode={modal.mode} customerId={modal.id} onClose={() => setModal(null)} />}
+
+            <div className="flex-none">
+                <PageHeading
+                    heading={labels.customerManagement}
+                    subheading={labels.manageCustomers}
+                    leftActions={
+                        <PermissionGuard 
+                            execute={() => setModal({ mode: "create" })} 
+                            permission="customers.create" 
+                            isConfirmation={false}
+                        >
+                            <div>
+                                <ScreenTabButton lucideIcon={Plus} text={labels.addCustomer} />
+                            </div>
+                        </PermissionGuard>
+                    }
+                />
+            </div>
+
+            <PaginatedList
+                rtkQuery={useCustomers}
+                limit={20}
+                dataKey="data"
+                wrapperClassName="flex-1"
+                renderItems={(customers) => (
+                    <div className="overflow-x-auto rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                        <table className="w-full text-sm text-left">
+                            <thead>
+                                <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
+                                    <th className="px-4 py-3 font-semibold">{labels.image}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.name}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.phone}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.cnic}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.address}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
+                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {customers.map((customer) => (
+                                    <CustomerRow
+                                        key={customer._id}
+                                        customer={customer}
+                                        onEdit={() => setModal({ mode: "update", id: customer._id })}
+                                        onDelete={() => handleDelete(customer._id)}
+                                        onRowClick={() => handleRowClick(customer._id)}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                renderEmpty={() => <p className="text-center py-12 text-sm" style={{ color: "var(--muted)" }}>{labels.noCustomersFound}</p>}
+            />
+        </div>
+    );
+}
+
+function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
+    const { settings } = useSettings();
+    const language = settings?.language || "en";
+    const labels = getCustomerLabels(language);
+    
+    const isActive = customer?.isActive ?? true;
+
+    return (
+        <tr 
+            className="transition cursor-pointer" 
+            style={{ borderBottom: "1px solid var(--border)" }} 
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-muted)")} 
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            onClick={onRowClick}
+        >
+            <td className="px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
+                    {customer?.image ? (
+                        <img src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} alt={customer?.name ?? "Customer"} className="h-full w-full object-cover" />
+                    ) : (
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
+                    )}
+                </div>
+            </td>
+            <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>{customer?.name ?? "—"}</td>
+            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.phoneNo ?? "—"}</td>
+            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.cnic ?? "—"}</td>
+            <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.address ?? "—"}</td>
+            <td className="px-4 py-3 text-center">
+                <span className="px-2 py-0.5 rounded-lg text-xs font-semibold" style={{ background: isActive ? "rgba(15,118,110,0.1)" : "rgba(107,114,128,0.1)", color: isActive ? "var(--accent-2)" : "#6b7280" }}>
+                    {isActive ? labels.active : labels.inactive}
+                </span>
+            </td>
+            <td className="px-4 py-3">
+                <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <PermissionGuard execute={onEdit} permission="customers.update" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }} title={labels.edit}>
+                            <Pencil className="w-3 h-3" />
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard execute={onDelete} permission="customers.delete" isConfirmation={true}>
+                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }} title={labels.delete}>
+                            <Trash2 className="w-3 h-3" />
+                        </button>
+                    </PermissionGuard>
+                </div>
+            </td>
+        </tr>
+    );
+}

@@ -1,0 +1,8 @@
+
+
+
+
+1: when update the purcahse then new batch is created for product. 
+
+
+3: when image is not working then also show the letters.

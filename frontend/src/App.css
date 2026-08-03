@@ -1,0 +1,49 @@
+
+
+
+
+#root {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+/* Laser scan line */
+.scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+
+    /* Laser gradient */
+    background: linear-gradient(90deg, transparent, #ef4444, transparent);
+
+    /* Glow + laser feel */
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.9);
+    filter: blur(0.5px);
+
+    animation: scan 2.6s linear infinite;
+}
+
+/* Keyframes */
+@keyframes scan {
+    0% {
+        top: 0%;
+        opacity: 0.6;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0.6;
+    }
+}

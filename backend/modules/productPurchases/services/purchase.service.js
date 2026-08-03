@@ -1,0 +1,276 @@
+import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
+import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
+
+const getPurchases = async () => {
+    return await findPurchaseService({}, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 }
+    });
+};
+
+const getPurchaseById = async (id) => {
+    return await findByIdPurchaseService(id, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
+    });
+};
+
+const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
+    return await findOnePurchaseService({ invoiceNumber });
+};
+
+const getPaginatedPurchases = async (filters = {}) => {
+    const { page = 1, limit = 20 } = filters;
+    const query = {};
+    const purchases = await findPurchaseService(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" },
+        ]
+    });
+    const total = await countPurchaseService(query);
+    return {
+        data: purchases,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+    };
+};
+
+const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
+    const purchaseItems = [];
+
+    for (const item of purchaseData.items) {
+        let batch = await findOneBatchService({
+            batchNumber: item.batchNumber,
+            product: item.product,
+        });
+
+        if (!batch) {
+            batch = await createBatchService({
+                product: item.product,
+                batchNumber: item.batchNumber,
+                supplier: purchaseData.supplier,
+                quantity: item.quantity,
+                purchasePrice: item.price,
+                sellingPrice: item.price,
+                mfgDate: item.mfgDate,
+                expiryDate: item.expiryDate,
+            });
+
+            await ProductModel.findByIdAndUpdate(item.product, {
+                $push: { batches: batch._id },
+            });
+        } else {
+            const updatedQuantity = batch.quantity + item.quantity;
+            await updateBatchService(batch._id, {
+                quantity: updatedQuantity,
+                purchasePrice: item.price,
+                mfgDate: item.mfgDate,
+                expiryDate: item.expiryDate,
+                supplier: purchaseData.supplier,
+            });
+        }
+
+        purchaseItems.push({
+            product: item.product,
+            batch: batch._id,
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount,
+            discountType: item.discountType,
+            tax: item.tax,
+            taxType: item.taxType,
+            mfgDate: item.mfgDate,
+            expiryDate: item.expiryDate,
+        });
+    }
+
+    const purchase = await createPurchaseService({
+        supplier: purchaseData.supplier,
+        date: purchaseData.date,
+        invoiceNumber: purchaseData.invoiceNumber,
+        items: purchaseItems,
+        subtotal: purchaseData.subtotal,
+        discount: purchaseData.discount,
+        discountType: purchaseData.discountType,
+        gst: purchaseData.gst,
+        gstType: purchaseData.gstType,
+        shippingCost: purchaseData.shippingCost,
+        totalAmount: purchaseData.totalAmount,
+        notes: purchaseData.notes,
+        status: 'ordered',
+        paymentStatus: 'pending',
+        paidAmount: 0,
+    });
+
+    // Don't increment stock for pre-orders - stock is incremented when status changes to 'delivered'
+
+    return purchase;
+};
+
+const updatePurchase = async (id, data, BatchModel, ProductModel) => {
+    const existing = await findByIdPurchaseService(id);
+    if (!existing) {
+        throw new Error("Purchase not found");
+    }
+
+    // Only adjust stock if purchase was delivered
+    if (existing.status === 'delivered') {
+        // Calculate stock differences
+        const stockAdjustments = calculateStockDiff(existing.items, data.items);
+
+        // Apply stock adjustments
+        for (const adj of stockAdjustments) {
+            await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
+        }
+    }
+
+    const purchaseItems = [];
+    
+    // Create a map of existing items by product for quick lookup
+    const existingItemsByProduct = {};
+    for (const item of existing.items) {
+        existingItemsByProduct[item.product?.toString()] = item;
+    }
+
+    for (const item of data.items) {
+        let batch;
+        const productId = item.product?.toString();
+        const existingItem = existingItemsByProduct[productId];
+
+        // If updating an existing product, try to reuse the existing batch
+        if (existingItem && existingItem.batch) {
+            batch = await findOneBatchService({ _id: existingItem.batch });
+            
+            // If existing batch exists, update it instead of creating new one
+            if (batch) {
+                await updateBatchService(batch._id, {
+                    quantity: item.quantity,
+                    purchasePrice: item.price,
+                    mfgDate: item.mfgDate,
+                    expiryDate: item.expiryDate,
+                    supplier: data.supplier,
+                });
+            } else {
+                // Fallback: if existing batch reference is invalid, create new batch
+                batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
+                if (!batch) {
+                    batch = await createBatchService({
+                        product: item.product, 
+                        batchNumber: item.batchNumber,
+                        supplier: data.supplier, 
+                        quantity: item.quantity,
+                        purchasePrice: item.price, 
+                        sellingPrice: item.price,
+                        mfgDate: item.mfgDate, 
+                        expiryDate: item.expiryDate,
+                    });
+                    await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
+                } else {
+                    await updateBatchService(batch._id, {
+                        quantity: item.quantity,
+                        purchasePrice: item.price,
+                        mfgDate: item.mfgDate,
+                        expiryDate: item.expiryDate,
+                        supplier: data.supplier,
+                    });
+                }
+            }
+        } else {
+            // New product - check if batch exists by batchNumber
+            batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
+            if (!batch) {
+                batch = await createBatchService({
+                    product: item.product, 
+                    batchNumber: item.batchNumber,
+                    supplier: data.supplier, 
+                    quantity: item.quantity,
+                    purchasePrice: item.price, 
+                    sellingPrice: item.price,
+                    mfgDate: item.mfgDate, 
+                    expiryDate: item.expiryDate,
+                });
+                await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
+            } else {
+                await updateBatchService(batch._id, {
+                    quantity: item.quantity,
+                    purchasePrice: item.price,
+                    mfgDate: item.mfgDate,
+                    expiryDate: item.expiryDate,
+                    supplier: data.supplier,
+                });
+            }
+        }
+
+        purchaseItems.push({
+            product: item.product, 
+            batch: batch._id,
+            quantity: item.quantity, 
+            price: item.price,
+            discount: item.discount, 
+            discountType: item.discountType,
+            tax: item.tax, 
+            taxType: item.taxType,
+            mfgDate: item.mfgDate, 
+            expiryDate: item.expiryDate,
+        });
+    }
+
+    const purchase = await updatePurchaseService(id, {
+        supplier: data.supplier, 
+        date: data.date,
+        invoiceNumber: data.invoiceNumber, 
+        items: purchaseItems,
+        subtotal: data.subtotal, 
+        discount: data.discount,
+        discountType: data.discountType, 
+        gst: data.gst,
+        gstType: data.gstType, 
+        shippingCost: data.shippingCost, 
+        totalAmount: data.totalAmount,
+        notes: data.notes,
+    });
+
+    return purchase;
+};
+
+const deletePurchase = async (id, BatchModel, ProductModel) => {
+    const existing = await findByIdPurchaseService(id);
+    if (!existing) {
+        throw new Error("Purchase not found");
+    }
+
+    // Only decrement stock if purchase was delivered
+    if (existing.status === 'delivered') {
+        // Decrement stock for all items before deletion
+        for (const item of existing.items) {
+            await adjustStock(item.product, item.batch, 'decr', item.quantity);
+        }
+    }
+
+    return await deleteOnePurchaseService(id);
+};
+
+export {
+    getPurchases,
+    getPurchaseById,
+    getPurchaseByInvoiceNumber,
+    getPaginatedPurchases,
+    createPurchase,
+    updatePurchase,
+    deletePurchase,
+};

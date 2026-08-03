@@ -1,0 +1,415 @@
+import asyncHandler from "express-async-handler";
+import {
+    getLocalBatchModel,
+    getLocalProductModel,
+} from "../../../configs/connect.db.js";
+import mongoose from "mongoose";
+import {
+    getPurchases,
+    getPurchaseById,
+    getPurchaseByInvoiceNumber,
+    getPaginatedPurchases,
+    createPurchase,
+    updatePurchase,
+    deletePurchase,
+} from "../services/purchase.service.js";
+import {
+    createPurchasePayment,
+    getPurchasePayments,
+    getPurchasePaymentById,
+    deletePurchasePayment,
+} from "../services/purchasePayment.service.js";
+import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
+import { findOneProductService } from "../../product/services/product.crud.js";
+
+export const getPurchasesData = asyncHandler(async (req, res, next) => {
+    const purchases = await getPurchases();
+    res.status(200).json({
+        success: true,
+        message: "Purchases retrieved successfully",
+        data: purchases,
+    });
+});
+
+
+
+
+export const getPurchaseDataById = asyncHandler(async (req, res, next) => {
+    const purchase = await getPurchaseById(req.params.id);
+    res.status(200).json({
+        success: true,
+        message: "Purchase retrieved successfully",
+        data: purchase,
+    });
+})
+
+
+
+export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
+    const { invoiceNumber } = req.body;
+    if (!invoiceNumber)
+        return res.status(400).json({ success: false, message: "Invoice number is required" });
+
+    let purchaseDoc = await getPurchaseByInvoiceNumber(invoiceNumber, { lean: true });
+    const purchase = purchaseDoc; // Already a plain object due to lean: true
+    if (!purchase)
+        return res.status(404).json({ success: false, message: "Purchase not found" });
+
+    // Manually fetch supplier data using findOne
+    if (purchase.supplier) {
+        // const { findOneSupplierService } = await import("../../suppliers/services/supplier.crud.js");
+        const supplier = await findOneSupplierService({ _id: purchase.supplier });
+        if (supplier) {
+            purchase.supplier = {
+                _id: supplier._id,
+                name: supplier.name
+            };
+        } else {
+            console.log("Supplier not found for ID:", purchase.supplier);
+        }
+    }
+
+    // Manually fetch product data for items using findOne
+    if (purchase.items && Array.isArray(purchase.items)) {
+        // const { findOneProductService } = await import("../../product/services/product.crud.js");
+        for (const item of purchase.items) {
+            if (item.product) {
+                const product = await findOneProductService({ _id: item.product });
+                console.log(product, "the product")
+                if (product) {
+                    item.product = {
+                        _id: product._id,
+                        name: product.name,
+                        productCode: product.productCode
+                    };
+                } else {
+                    console.log("Product not found for ID:", item.product);
+                }
+            }
+        }
+    }
+
+    console.log("Final purchase data:", JSON.stringify(purchase, null, 2));
+
+    return res.status(200).json({ success: true, message: "Purchase found", data: purchase});
+});
+
+
+
+export const getPaginatedPurchasesData = asyncHandler(async (req, res) => {
+    const result = await getPaginatedPurchases(req.query);
+    res.status(200).json({
+        success: true,
+        message: "Purchases retrieved successfully",
+        ...result,
+    });
+});
+
+export const createPurchaseData = asyncHandler(async (req, res, next) => {
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
+
+    const validatedData = req.body || {};
+
+    const purchase = await createPurchase(validatedData, BatchModel, ProductModel);
+
+    res.status(201).json({
+        success: true,
+        message: "Purchase recorded successfully",
+        data: purchase,
+    });
+});
+
+
+
+
+// export const updatePurchase = asyncHandler(async (req, res, next) => {
+
+
+
+//     const PurchaseModel = getLocalPurchaseModel();
+//     const BatchModel    = getLocalBatchModel();
+//     const ProductModel  = getLocalProductModel();
+
+//     const { id } = req.params;
+
+//     // ── Purani purchase fetch karo ───────────────────────────
+//     const existingPurchase = await PurchaseModel.findById(id);
+//     if (!existingPurchase) return next(new ErrorResponse("Purchase not found", 404));
+
+//     const validatedData = await updatePurchaseSchema.validate(req.body, {
+//         abortEarly: false,
+//         stripUnknown: true,
+//     });
+
+//     // ── Step 1: Purane items ka stock WAPAS karo ─────────────
+//     // Pehle purani purchase ke items ka stock reverse karo
+//     for (const oldItem of existingPurchase.items) {
+//         // Product ka stock minus karo
+//         await ProductModel.findByIdAndUpdate(oldItem.product, {
+//             $inc: { currentStockLevel: -oldItem.quantity },
+//         });
+
+//         // Batch ki quantity bhi reverse karo
+//         const oldBatch = await BatchModel.findById(oldItem.batch);
+//         if (oldBatch) {
+//             oldBatch.quantity -= oldItem.quantity;
+//             if (oldBatch.quantity <= 0) {
+//                 // Quantity zero ya negative ho gayi — batch delete karo
+//                 await oldBatch.deleteOne();
+//                 await ProductModel.findByIdAndUpdate(oldItem.product, {
+//                     $pull: { batches: oldBatch._id },
+//                 });
+//             } else {
+//                 await oldBatch.save();
+//             }
+//         }
+//     }
+
+//     // ── Step 2: Naye items process karo ─────────────────────
+//     const purchaseItems = [];
+
+//     for (const item of validatedData.items) {
+//         let batch = await BatchModel.findOne({
+//             batchNumber: item.batchNumber,
+//             product:     item.product,
+//         });
+
+//         if (!batch) {
+//             // Naya batch banao
+//             batch = await BatchModel.create({
+//                 product:       item.product,
+//                 batchNumber:   item.batchNumber,
+//                 supplier:      validatedData.supplier,
+//                 quantity:      item.quantity,
+//                 purchasePrice: item.price,
+//                 sellingPrice:  item.price,
+//                 mfgDate:       item.mfgDate,
+//                 expiryDate:    item.expiryDate,
+//             });
+
+//             await ProductModel.findByIdAndUpdate(item.product, {
+//                 $push: { batches: batch._id },
+//             });
+//         } else {
+//             // Existing batch update karo
+//             batch.quantity      += item.quantity;
+//             batch.purchasePrice  = item.price;
+//             if (item.mfgDate)          batch.mfgDate   = item.mfgDate;
+//             if (item.expiryDate)       batch.expiryDate = item.expiryDate;
+//             if (validatedData.supplier) batch.supplier  = validatedData.supplier;
+//             await batch.save();
+//         }
+
+//         // Product ka stock add karo
+//         await ProductModel.findByIdAndUpdate(item.product, {
+//             $inc: { currentStockLevel: item.quantity },
+//         });
+
+//         purchaseItems.push({
+//             product:      item.product,
+//             batch:        batch._id,
+//             quantity:     item.quantity,
+//             price:        item.price,
+//             discount:     item.discount,
+//             discountType: item.discountType,
+//             tax:          item.tax,
+//             taxType:      item.taxType,
+//             mfgDate:      item.mfgDate,
+//             expiryDate:   item.expiryDate,
+//         });
+//     }
+
+//     // ── Step 3: Purchase update karo ────────────────────────
+//     const updatedPurchase = await PurchaseModel.findByIdAndUpdate(
+//         id,
+//         {
+//             supplier:      validatedData.supplier,
+//             date:          validatedData.date,
+//             invoiceNumber: validatedData.invoiceNumber,
+//             items:         purchaseItems,
+//             subtotal:      validatedData.subtotal,
+//             discount:      validatedData.discount,
+//             discountType:  validatedData.discountType,
+//             gst:           validatedData.gst,
+//             shippingCost:  validatedData.shippingCost,
+//             totalAmount:   validatedData.totalAmount,
+//             notes:         validatedData.notes,
+//         },
+//         { new: true, runValidators: true }
+//     );
+
+//     res.status(200).json({
+//         success: true,
+//         message: "Purchase updated successfully",
+//         data: updatedPurchase,
+//     });
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const updatePurchaseData = asyncHandler(async (req, res, next) => {
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
+
+    const data = req.body || {};
+
+    try {
+        const updated = await updatePurchase(req.params.id, data, BatchModel, ProductModel);
+        res.status(200).json({ success: true, message: "Purchase updated successfully", data: updated });
+    } catch (error) {
+        return res.status(404).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
+
+
+
+
+export const deletePurchaseData = asyncHandler(async (req, res) => {
+    const BatchModel = getLocalBatchModel();
+    const ProductModel = getLocalProductModel();
+
+    try {
+        await deletePurchase(req.params.id, BatchModel, ProductModel);
+        res.status(200).json({ success: true, message: "Purchase deleted successfully" });
+    } catch (error) {
+        return res.status(404).json({ success: false, message: error.message });
+    }
+});
+
+export const updatePurchaseStatus = asyncHandler(async (req, res) => {
+    const { getLocalPurchaseModel, getLocalBatchModel, getLocalProductModel } = await import("../../../configs/connect.db.js");
+    const { findByIdPurchaseService, updatePurchaseService } = await import("../services/purchase.crud.js");
+    const { findByIdBatchService, updateBatchService } = await import("../services/batch.crud.js");
+    const { findByIdProductService, updateProductService } = await import("../../product/services/product.crud.js");
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['ordered', 'delivered', 'rejected'].includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
+    const purchase = await findByIdPurchaseService(id);
+    if (!purchase) {
+        return res.status(404).json({ success: false, message: "Purchase not found" });
+    }
+
+    const oldStatus = purchase.status;
+
+    // If changing from delivered to something else, reverse stock
+    if (oldStatus === 'delivered' && status !== 'delivered') {
+        for (const item of purchase.items) {
+            const batch = await findByIdBatchService(item.batch);
+            if (batch) {
+                const newQuantity = batch.quantity - item.quantity;
+                if (newQuantity < 0) {
+                    await updateBatchService(item.batch, { quantity: 0 });
+                } else {
+                    await updateBatchService(item.batch, { quantity: newQuantity });
+                }
+            }
+
+            // Reverse master product stock
+            await updateProductService(item.product, { $inc: { currentStockLevel: -item.quantity } });
+        }
+    }
+
+    purchase.status = status;
+
+    // If status is delivered (and wasn't before), increment stock for all items
+    if (status === 'delivered' && oldStatus !== 'delivered') {
+        for (const item of purchase.items) {
+            const batch = await findByIdBatchService(item.batch);
+            if (batch) {
+                await updateBatchService(item.batch, { quantity: batch.quantity + item.quantity });
+            }
+
+            // Increment master product stock
+            await updateProductService(item.product, { $inc: { currentStockLevel: item.quantity } });
+        }
+    }
+
+    await updatePurchaseService(id, { status });
+
+    res.status(200).json({
+        success: true,
+        message: `Purchase status updated to ${status}`,
+        data: purchase,
+    });
+});
+
+export const createPurchasePaymentData = asyncHandler(async (req, res) => {
+    try {
+        const paymentData = {
+            ...req.body,
+            createdBy: req.user?._id,
+        };
+        const payment = await createPurchasePayment(paymentData);
+        res.status(201).json({
+            success: true,
+            message: "Purchase payment recorded successfully",
+            data: payment,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
+    try {
+        const payments = await getPurchasePayments(req.params.id);
+        res.status(200).json({
+            success: true,
+            message: "Purchase payments retrieved successfully",
+            data: payments,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const deletePurchasePaymentData = asyncHandler(async (req, res) => {
+    try {
+        const result = await deletePurchasePayment(req.params.paymentId);
+        res.status(200).json({
+            success: true,
+            message: result.message,
+            data: result,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+
+
+

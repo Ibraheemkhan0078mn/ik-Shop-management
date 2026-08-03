@@ -1,0 +1,422 @@
+import asyncHandler from "express-async-handler";
+import { getPurchaseById as getPurchaseDetails } from "../../productPurchases/services/purchase.service.js";
+import { ApiResponse, ApiError } from "../../../common/services/apiResponses.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
+import {
+    createPurchaseReturnService,
+    findPurchaseReturnService,
+    findByIdPurchaseReturnService,
+    updatePurchaseReturnService,
+    deleteOnePurchaseReturnService,
+    countPurchaseReturnService,
+} from "../services/purchaseReturn.crud.js";
+import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
+import { findByIdPurchaseService } from "../../productPurchases/services/purchase.crud.js";
+import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
+import { findOneProductService } from "../../product/services/product.crud.js";
+
+const normalizePurchaseReturnItems = async (items = []) => {
+    if (!Array.isArray(items)) return [];
+
+    const normalizedItems = [];
+
+    for (const item of items) {
+        const batch = item.batch ? await findByIdBatchService(item.batch) : null;
+        normalizedItems.push({
+            ...item,
+            batchNumber: item.batchNumber?.trim() || batch?.batchNumber || "",
+        });
+    }
+
+    return normalizedItems;
+};
+
+export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
+    const { status, supplier, startDate, endDate } = req.query;
+    let query = {};
+    if (status) query.status = status;
+    if (supplier) query.supplier = supplier;
+    if (startDate || endDate) {
+        query.returnDate = {};
+        if (startDate) query.returnDate.$gte = new Date(startDate);
+        if (endDate) query.returnDate.$lte = new Date(endDate);
+    }
+
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        sort: { createdAt: -1 }
+    });
+
+    // Manually fetch supplier and product data using findOne
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+            if (supplier) {
+                purchaseReturn.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns);
+});
+
+export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, status, supplier } = req.query;
+    let query = {};
+    if (status) query.status = status;
+    if (supplier) query.supplier = supplier;
+
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit)
+    });
+
+    // Manually fetch supplier and product data using findOne
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+            if (supplier) {
+                purchaseReturn.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    const total = await countPurchaseReturnService(query);
+
+    return ApiResponse(res, 200, "Purchase returns retrieved successfully", purchaseReturns, {
+        pagination: {
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const purchaseReturn = await findByIdPurchaseReturnService(id);
+    if (!purchaseReturn) {
+        throw new Error("Purchase return not found");
+    }
+
+    // Manually fetch supplier data using findOne
+    if (purchaseReturn.supplier) {
+        const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+        if (supplier) {
+            purchaseReturn.supplier = {
+                _id: supplier._id,
+                name: supplier.name
+            };
+        }
+    }
+
+    // Manually fetch product data for items using findOne
+    if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+        for (const item of purchaseReturn.items) {
+            if (item.product) {
+                const product = await findOneProductService({ _id: item.product });
+                if (product) {
+                    item.product = {
+                        _id: product._id,
+                        name: product.name,
+                        productCode: product.productCode
+                    };
+                }
+            }
+        }
+    }
+
+    return ApiResponse(res, 200, "Purchase return retrieved successfully", purchaseReturn);
+});
+
+export const createPurchaseReturnData = asyncHandler(async (req, res) => {
+    const userId = req.user?._id || req.user?.id || null;
+
+    const data = req.body;
+
+    // Use provided purchase return number or generate a date-based one
+    let purchaseReturnNumber = data.purchaseReturnNumber;
+    if (!purchaseReturnNumber) {
+        // Generate date-based number: PR-YYYYMMDD-0001
+        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+        const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+        const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+
+        const countValue = await countPurchaseReturnService(dateRange);
+        const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+        purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+    } else {
+        // Check if the provided number already exists
+        const existing = await findPurchaseReturnService({ purchaseReturnNumber });
+        if (existing && existing.length > 0) {
+            throw new Error("Purchase return number already exists");
+        }
+    }
+
+    const purchase = await findByIdPurchaseService(data.purchase);
+    if (!purchase) {
+        throw new Error("Purchase not found");
+    }
+
+    const normalizedItems = await normalizePurchaseReturnItems(data.items);
+
+    for (const item of normalizedItems) {
+        const batch = await findByIdBatchService(item.batch);
+        if (!batch) {
+            throw new Error(`Batch not found: ${item.batchNumber}`);
+        }
+        if (batch.quantity < item.quantity) {
+            throw new Error(`Insufficient quantity in batch ${item.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}`);
+        }
+    }
+
+    // Calculate total refund amount
+    let totalRefundAmount = 0;
+    let totalQuantity = 0;
+    for (const item of normalizedItems) {
+        const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+        totalRefundAmount += refund;
+        totalQuantity += item.quantity;
+    }
+
+    const purchaseReturn = await createPurchaseReturnService({
+        ...data,
+        items: normalizedItems,
+        purchaseReturnNumber,
+        totalRefundAmount,
+        totalQuantity,
+        createdBy: userId,
+    });
+
+    // If status is approved, deduct stock immediately
+    if (data.status === 'approved') {
+        for (const item of normalizedItems) {
+            await adjustStock(item.product, item.batch, 'decr', item.quantity);
+        }
+    }
+
+    return ApiResponse(res, 201, "Purchase return created successfully", purchaseReturn);
+});
+
+export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) throw new Error("Purchase return not found");
+
+    let incomingItems = req.body.items;
+
+    if (incomingItems) {
+        // Step 1: Normalize items (resolves batchNumber, batch ref, etc.)
+        incomingItems = await normalizePurchaseReturnItems(incomingItems);
+
+        // Step 2: Make sure every batch exists and has enough stock
+        for (const item of incomingItems) {
+            const batch = await findByIdBatchService(item.batch);
+            if (!batch) throw new Error(`Batch "${item.batchNumber}" not found`);
+            if (batch.quantity < item.quantity)
+                throw new Error(`Not enough stock in batch "${item.batchNumber}". Available: ${batch.quantity}, Requested: ${item.quantity}`);
+        }
+
+        // Step 3: Compare old vs new quantities and adjust stock for each item
+        const oldItemsByBatch = Object.fromEntries(
+            existing.items.map(item => [String(item.batch), item.quantity])
+        );
+
+        for (const item of incomingItems) {
+            const oldQty = oldItemsByBatch[String(item.batch)] ?? 0;
+            const diff = Number(item.quantity) - oldQty;
+            console.log((item.quantity), oldQty, diff);
+
+            if (diff === 0) continue;                                        // no change, skip
+            if (diff > 0) await adjustStock(item.product, item.batch, 'decr', diff);   // returning more → reduce stock
+            if (diff < 0) await adjustStock(item.product, item.batch, 'inc', Math.abs(diff)); // returning less → restore stock
+        }
+    }
+
+    // Calculate total refund amount and total quantity
+    let totalRefundAmount = 0;
+    let totalQuantity = 0;
+    if (incomingItems) {
+        for (const item of incomingItems) {
+            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            totalRefundAmount += refund;
+            totalQuantity += item.quantity;
+        }
+    } else if (existing.items) {
+        for (const item of existing.items) {
+            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            totalRefundAmount += refund;
+            totalQuantity += item.quantity;
+        }
+    }
+
+    const updated = await updatePurchaseReturnService(id, {
+        ...req.body,
+        items: incomingItems,
+        totalRefundAmount,
+        totalQuantity,
+        updatedAt: new Date(),
+    });
+
+    return ApiResponse(res, 200, "Purchase return updated successfully", updated);
+});
+
+export const deletePurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    // if (existing.status !== "pending") {
+    //     throw new Error("Only pending purchase returns can be deleted");
+    // }
+
+    // If approved, restore stock before deletion
+    if (existing.status === "approved") {
+        for (const item of existing.items) {
+            await adjustStock(item.product, item.batch, 'inc', item.quantity);
+        }
+    }
+
+    await deleteOnePurchaseReturnService(id);
+    return ApiResponse(res, 200, "Purchase return deleted successfully", {});
+});
+
+export const submitPurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "draft") {
+        throw new Error("Only draft purchase returns can be submitted for approval");
+    }
+
+    const submitted = await updatePurchaseReturnService(id, { status: "pending" });
+    return ApiResponse(res, 200, "Purchase return submitted for approval", submitted);
+});
+
+export const approvePurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user?._id || req.user?.id || null;
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "pending") {
+        throw new Error(`Only pending purchase returns can be approved. Current status: ${existing.status}`);
+    }
+
+    for (const item of existing.items) {
+        await adjustStock(item.product, item.batch, 'decr', item.quantity);
+    }
+
+    const approved = await updatePurchaseReturnService(id, {
+        status: "approved",
+        approvedBy: userId,
+        approvedAt: new Date(),
+    });
+
+    return ApiResponse(res, 200, "Purchase return approved and stock deducted successfully", approved);
+});
+
+export const rejectPurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+    if (!rejectionReason) {
+        throw new Error("Rejection reason is required");
+    }
+
+    const existing = await findByIdPurchaseReturnService(id);
+    if (!existing) {
+        throw new Error("Purchase return not found");
+    }
+
+    if (existing.status !== "pending") {
+        throw new Error(`Only pending purchase returns can be rejected. Current status: ${existing.status}`);
+    }
+
+    const rejected = await updatePurchaseReturnService(id, { status: "rejected", rejectionReason });
+    return ApiResponse(res, 200, "Purchase return rejected successfully", rejected);
+});
+
+export const getPurchaseDetailsForReturn = asyncHandler(async (req, res) => {
+    const { purchaseId } = req.params;
+    const purchase = await getPurchaseDetails(purchaseId);
+    return ApiResponse(res, 200, "Purchase details retrieved successfully", purchase);
+});
+
+export const validatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
+    const { purchaseReturnNumber } = req.body;
+    
+    if (!purchaseReturnNumber) {
+        throw new Error("Purchase return number is required");
+    }
+
+    // Check if the provided number already exists
+    const existing = await findPurchaseReturnService({ purchaseReturnNumber });
+    if (existing && existing.length > 0) {
+        // Duplicate found - generate a new date-based number
+        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+        const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+        const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
+
+        const countValue = await countPurchaseReturnService(dateRange);
+        const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
+        const newNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+
+        return ApiResponse(res, 200, "Duplicate found, new number generated", {
+            isDuplicate: true,
+            suggestedNumber: newNumber
+        });
+    }
+
+    return ApiResponse(res, 200, "Purchase return number is available", {
+        isDuplicate: false,
+        suggestedNumber: purchaseReturnNumber
+    });
+});

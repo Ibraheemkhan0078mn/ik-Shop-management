@@ -1,0 +1,609 @@
+AUTO APP UPDATER SETUP - COMPLETE DOCUMENTATION
+================================================
+
+This file explains all the changes made to set up automatic app updater for the Electron application.
+
+
+WHAT IS AUTO UPDATER?
+---------------------
+Auto updater is a feature that allows the application to automatically check for new versions on GitHub, download updates, and install them without the user having to manually download and install new versions.
+
+
+FILES CHANGED AND WHY
+---------------------
+
+1. frontend/electron/main.ts
+   WHAT CHANGED: Added three new functions for update handling
+   - check-for-updates: Checks GitHub for new version
+   - download-update: Downloads the update file
+   - install-update: Installs the downloaded update
+   
+   WHY CHANGED: These functions allow the frontend (React) to communicate with the Electron main process to control the update process. The frontend can't directly check GitHub, so it needs to ask the main process to do it.
+
+2. frontend/electron/preload.ts
+   WHAT CHANGED: Added three new functions to electronAPI
+   - checkForUpdates()
+   - downloadUpdate()
+   - installUpdate()
+   
+   WHY CHANGED: The preload file acts as a bridge between the Electron main process and the React frontend. It exposes safe functions that the React app can call to control updates.
+
+3. frontend/src/modules/settings/components/AppUpdateSettings.jsx
+   WHAT CHANGED: Created a new React component
+   - Shows current app version
+   - Button to check for updates manually
+   - Shows update status (checking, available, downloading, downloaded, error)
+   - Shows download progress with percentage
+   - Shows new version details and release notes
+   - Buttons to download and install updates
+   - Information about how auto-update works
+   
+   WHY CHANGED: Users need a place in the app to see update status and manually trigger updates. This component provides a user-friendly interface for the update process.
+
+4. frontend/src/modules/settings/pages/SettingsPage.jsx
+   WHAT CHANGED: 
+   - Added Download icon import
+   - Added AppUpdateSettings component import
+   - Added "App Update" tab to the settings navigation
+   - Added render condition for the App Update tab
+   
+   WHY CHANGED: The new update component needs to be accessible to users. Adding it as a tab in Settings makes it easy to find and use.
+
+5. frontend/package.json
+   WHAT CHANGED: 
+   - Renamed buildNew script to build:github
+   - build:github runs: tsc && vite build && electron-builder --publish always
+   
+   WHY CHANGED: The --publish always flag tells electron-builder to automatically create a GitHub release and upload the installer files when building. This makes the release process automatic.
+
+6. frontend/electron-builder.yml
+   WHAT CHANGED: Already had correct configuration
+   - publish.provider: github
+   - publish.owner: Ibraheemkhan0078mn
+   - publish.repo: ik-shop-management
+   - publish.releaseType: release
+   
+   WHY CHANGED: This file was already configured correctly. It tells electron-builder where to publish the releases (GitHub) and which repository to use.
+
+7. AUTO_UPDATE_SETUP.md (new file)
+   WHAT CHANGED: Created comprehensive documentation
+   - GitHub setup instructions
+   - How to generate GitHub token
+   - How to set environment variables
+   - Build and publish process
+   - Troubleshooting guide
+   - Security best practices
+   
+   WHY CHANGED: You need clear instructions on how to set up GitHub and use the auto-update feature. This document serves as a complete guide.
+
+
+HOW AUTO UPDATER WORKS
+----------------------
+
+1. When the app starts (in packaged mode):
+   - The Electron main process automatically checks for updates on GitHub
+   - If a new version is found, it notifies the user
+
+2. Manual update check:
+   - User goes to Settings → App Update
+   - Clicks "Check for Updates" button
+   - App checks GitHub for new version
+   - Shows result to user
+
+3. Download process:
+   - If update is available, user clicks "Download Update"
+   - Update downloads in background
+   - Progress bar shows download percentage
+
+4. Install process:
+   - When download completes, user clicks "Install and Restart"
+   - App closes
+   - Installer runs automatically
+   - App restarts with new version
+
+
+CHALLENGES FACED AND SOLUTIONS
+-------------------------------
+
+Challenge 1: Icon Import Error
+PROBLEM: Build failed with error "RotateCounterClockwise is not exported by lucide-react"
+CAUSE: The icon name RotateCounterClockwise does not exist in lucide-react library
+SOLUTION: Changed RotateCounterClockwise to RotateCcw in two files:
+- frontend/src/modules/productPurchases/pages/ProductPurchase.jsx
+- frontend/src/modules/orders/pages/OrderHistory.jsx
+
+Challenge 2: GitHub Token Not Set
+PROBLEM: Build failed with error "GitHub Personal Access Token is not set"
+CAUSE: electron-builder needs a GitHub token to authenticate and create releases
+SOLUTION: User needs to:
+1. Generate GitHub Personal Access Token with repo scope
+2. Set it as environment variable GH_TOKEN
+3. Can be set in system environment variables or in .env file
+
+Challenge 3: Backend.exe File Missing
+PROBLEM: Warning "file source doesn't exist from=frontend/src/backend.exe"
+CAUSE: The electron-builder.yml references backend.exe but it doesn't exist in that location
+SOLUTION: This is a warning, not an error. The build still succeeds. The backend.exe needs to be built separately or the path needs to be corrected in electron-builder.yml
+
+
+GITHUB SETUP REQUIREMENTS
+--------------------------
+
+To use auto-update, you need:
+
+1. GitHub Repository: ik-shop-management (already created by you)
+
+2. GitHub Personal Access Token:
+   - Go to https://github.com/settings/tokens
+   - Click "Generate new token (classic)"
+   - Select "repo" scope
+   - Generate and copy the token
+   - Set as environment variable GH_TOKEN
+
+3. Environment Variable:
+   - Set GH_TOKEN=your_token_here
+   - Can be set in system environment variables
+   - Or in .env file as GH_Token=your_token_here
+
+
+HOW TO BUILD AND PUBLISH
+-------------------------
+
+Step 1: Update version in frontend/package.json
+   Change version to a higher number (e.g., 1.0.2)
+
+Step 2: Set GH_TOKEN environment variable
+   $env:GH_TOKEN="your_token"
+
+Step 3: Run build command
+   cd frontend
+   npm run build:github
+
+Step 4: Verify
+   - Check GitHub repository for new release
+   - Release should have installer files uploaded
+
+
+CURRENT STATUS
+--------------
+
+✓ Auto-updater code is fully implemented
+✓ Frontend UI is complete (Settings → App Update tab)
+✓ IPC communication between main and renderer is working
+✓ Build script is configured for GitHub publishing
+✓ Documentation is complete
+
+⚠ GitHub token needs to be set for publishing
+⚠ Backend.exe path needs to be verified in electron-builder.yml
+
+
+TESTING THE UPDATER
+-------------------
+
+To test without publishing to GitHub:
+1. Run: npm run build (without :github)
+2. This builds the executable locally
+3. Install and run the built app
+4. Check Settings → App Update tab
+5. Click "Check for Updates" (will show no update available since not published)
+
+To test with GitHub publishing:
+1. Set GH_TOKEN environment variable
+2. Update version in package.json
+3. Run: npm run build:github
+4. This creates GitHub release
+5. Install older version
+6. Check for updates - should find new version
+
+
+DETAILED CODE EXPLANATION
+==========================
+
+This section shows the actual code I wrote for the auto-updater and explains each part in simple English.
+
+
+FILE 1: frontend/electron/main.ts
+---------------------------------
+
+This is the main Electron process file. It runs in the background and controls the app. I added three new functions here.
+
+CODE ADDED:
+-----------
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const updateCheckResult = await autoUpdater.checkForUpdates()
+    return {
+      success: true,
+      updateAvailable: updateCheckResult !== null,
+      version: updateCheckResult?.updateInfo?.version || null,
+      releaseNotes: updateCheckResult?.updateInfo?.releaseNotes || null
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+})
+
+EXPLANATION:
+------------
+- ipcMain.handle('check-for-updates', async () => { ... })
+  This creates a listener that waits for the frontend to ask "check for updates"
+  
+- try { ... } catch (error) { ... }
+  This is error handling. If something goes wrong, it catches the error instead of crashing
+  
+- const updateCheckResult = await autoUpdater.checkForUpdates()
+  This calls the electron-updater library to check GitHub for new versions
+  await means "wait for this to finish before continuing"
+  
+- return { success: true, updateAvailable: ... }
+  If successful, it sends back information about whether an update is available
+  updateAvailable: true means there is a new version
+  version: the new version number
+  releaseNotes: what's new in this version
+  
+- catch (error) { return { success: false, error: ... } }
+  If there's an error, it returns success: false with the error message
+
+
+CODE ADDED:
+-----------
+ipcMain.handle('download-update', async () => {
+  autoUpdater.autoDownload = true
+  autoUpdater.downloadUpdate()
+})
+
+EXPLANATION:
+------------
+- ipcMain.handle('download-update', async () => { ... })
+  This creates a listener for when the frontend asks to download the update
+  
+- autoUpdater.autoDownload = true
+  This tells the updater to automatically download when asked
+  
+- autoUpdater.downloadUpdate()
+  This starts the download process
+
+
+CODE ADDED:
+-----------
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall()
+})
+
+EXPLANATION:
+------------
+- ipcMain.handle('install-update', () => { ... })
+  This creates a listener for when the frontend asks to install the update
+  
+- autoUpdater.quitAndInstall()
+  This closes the app and runs the installer to update it
+
+
+FILE 2: frontend/electron/preload.ts
+------------------------------------
+
+This file acts as a bridge between the Electron main process and the React frontend. It exposes safe functions that React can call.
+
+CODE ADDED:
+-----------
+contextBridge.exposeInMainWorld('electronAPI', {
+  onUpdateStatus: (cb: (data: { status: string; percent?: number; message?: string }) => void) =>
+    ipcRenderer.on('update-status', (_e, data) => cb(data)),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+})
+
+EXPLANATION:
+------------
+- contextBridge.exposeInMainWorld('electronAPI', { ... })
+  This makes the electronAPI available in the React app via window.electronAPI
+  
+- onUpdateStatus: (cb) => ipcRenderer.on('update-status', ...)
+  This listens for update status messages from the main process
+  When the main process sends an update (like "downloading 50%"), this function runs
+  cb is a callback function that React provides to handle the status
+  
+- checkForUpdates: () => ipcRenderer.invoke('check-for-updates')
+  This is a function that React can call to check for updates
+  It sends a message to the main process to run the check-for-updates function
+  
+- downloadUpdate: () => ipcRenderer.invoke('download-update')
+  This is a function React can call to start downloading the update
+  
+- installUpdate: () => ipcRenderer.invoke('install-update')
+  This is a function React can call to install the update
+
+
+FILE 3: frontend/src/modules/settings/components/AppUpdateSettings.jsx
+---------------------------------------------------------------------
+
+This is the React component that shows the update UI in the Settings page. It's what the user sees and interacts with.
+
+CODE EXPLANATION - STATE VARIABLES:
+-----------------------------------
+const [updateStatus, setUpdateStatus] = useState({
+    status: 'idle', // idle, checking, available, not-available, downloading, downloaded, error
+    version: null,
+    releaseNotes: null,
+    percent: 0,
+    message: null
+});
+
+EXPLANATION:
+------------
+- useState stores data that can change over time
+- updateStatus keeps track of the current state of the update process
+- status: what's happening right now (idle, checking, downloading, etc.)
+- version: the new version number if available
+- releaseNotes: what's new in the update
+- percent: download progress (0 to 100)
+- message: any error or status message
+
+
+CODE EXPLANATION - CHECK FOR UPDATES FUNCTION:
+----------------------------------------------
+const checkForUpdates = async () => {
+    if (!window.electronAPI) return;
+
+    setUpdateStatus(prev => ({ ...prev, status: 'checking', message: null }));
+
+    try {
+        const result = await window.electronAPI.checkForUpdates();
+        
+        if (result.success) {
+            if (result.updateAvailable) {
+                setUpdateStatus({
+                    status: 'available',
+                    version: result.version,
+                    releaseNotes: result.releaseNotes,
+                    percent: 0,
+                    message: null
+                });
+            } else {
+                setUpdateStatus({
+                    status: 'not-available',
+                    version: null,
+                    releaseNotes: null,
+                    percent: 0,
+                    message: 'You are using the latest version'
+                });
+            }
+        } else {
+            setUpdateStatus({
+                status: 'error',
+                version: null,
+                releaseNotes: null,
+                percent: 0,
+                message: result.error || 'Failed to check for updates'
+            });
+        }
+    } catch (error) {
+        setUpdateStatus({
+            status: 'error',
+            version: null,
+            releaseNotes: null,
+            percent: 0,
+            message: 'Failed to check for updates'
+        });
+    }
+};
+
+EXPLANATION:
+------------
+- if (!window.electronAPI) return;
+  Check if the Electron API is available (only works in desktop app, not web browser)
+  
+- setUpdateStatus(prev => ({ ...prev, status: 'checking', message: null }));
+  Change status to 'checking' to show the user we're looking for updates
+  
+- const result = await window.electronAPI.checkForUpdates();
+  Call the Electron function to check GitHub for updates
+  Wait for the result
+  
+- if (result.success && result.updateAvailable)
+  If check succeeded and update is available, show the new version info
+  
+- else if (result.success && !result.updateAvailable)
+  If check succeeded but no update, tell user they have latest version
+  
+- else
+  If check failed, show error message
+
+
+CODE EXPLANATION - DOWNLOAD UPDATE FUNCTION:
+--------------------------------------------
+const downloadUpdate = async () => {
+    if (!window.electronAPI) return;
+
+    setUpdateStatus(prev => ({ ...prev, status: 'downloading' }));
+
+    try {
+        await window.electronAPI.downloadUpdate();
+    } catch (error) {
+        setUpdateStatus({
+            status: 'error',
+            version: null,
+            releaseNotes: null,
+            percent: 0,
+            message: 'Failed to download update'
+        });
+    }
+};
+
+EXPLANATION:
+------------
+- setUpdateStatus(prev => ({ ...prev, status: 'downloading' }));
+  Change status to show download is starting
+  
+- await window.electronAPI.downloadUpdate();
+  Tell Electron to start downloading the update
+  The main process will send progress updates automatically
+  
+- catch (error)
+  If download fails, show error message
+
+
+CODE EXPLANATION - INSTALL UPDATE FUNCTION:
+-------------------------------------------
+const installUpdate = async () => {
+    if (!window.electronAPI) return;
+
+    try {
+        await window.electronAPI.installUpdate();
+    } catch (error) {
+        setUpdateStatus({
+            status: 'error',
+            version: null,
+            releaseNotes: null,
+            percent: 0,
+            message: 'Failed to install update'
+        });
+    }
+};
+
+EXPLANATION:
+------------
+- await window.electronAPI.installUpdate();
+  Tell Electron to install the update
+  This will close the app and run the installer
+
+
+CODE EXPLANATION - LISTEN FOR UPDATE STATUS:
+--------------------------------------------
+useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleUpdateStatus = (data) => {
+        setUpdateStatus(prev => ({
+            ...prev,
+            status: data.status,
+            percent: data.percent || prev.percent,
+            message: data.message || prev.message
+        }));
+    };
+
+    window.electronAPI.onUpdateStatus(handleUpdateStatus);
+
+    return () => {
+        // Cleanup listener if needed
+    };
+}, []);
+
+EXPLANATION:
+------------
+- useEffect(() => { ... }, [])
+  This runs once when the component loads
+  
+- const handleUpdateStatus = (data) => { ... }
+  This function runs when Electron sends an update status message
+  It updates the UI with the new status, percent, or message
+  
+- window.electronAPI.onUpdateStatus(handleUpdateStatus);
+  Tell Electron to call this function whenever update status changes
+  
+- return () => { ... }
+  Cleanup function (not used currently, but good practice)
+
+
+CODE EXPLANATION - UI RENDERING:
+--------------------------------
+The return statement shows the user interface:
+
+1. Header with "App Update" title and current version
+2. Status card showing current state with icon and message
+3. Progress bar when downloading
+4. Update details card when update is available (shows version and release notes)
+5. Action buttons:
+   - "Check for Updates" button (when idle or error)
+   - "Download Update" button (when update available)
+   - "Install and Restart" button (when downloaded)
+6. Information section explaining how auto-update works
+7. Warning message if Electron API is not available
+
+
+CODE EXPLANATION - HELPER FUNCTIONS:
+------------------------------------
+getStatusIcon() - Returns the right icon based on status
+  - CheckCircle for available or not-available
+  - RefreshCw (spinning) for checking or downloading
+  - Download for downloaded
+  - AlertCircle for error
+  - Info for idle
+
+getStatusText() - Returns the right message based on status
+  - Shows different text for each state
+
+getStatusColor() - Returns the right color scheme based on status
+  - Green for success states
+  - Blue for checking/not-available
+  - Yellow for downloading
+  - Red for error
+  - Gray for idle
+
+
+FILE 4: frontend/src/modules/settings/pages/SettingsPage.jsx
+--------------------------------------------------------------
+
+This file adds the App Update tab to the Settings page.
+
+CODE ADDED:
+------------
+import { Download } from "lucide-react";
+import AppUpdateSettings from "../components/AppUpdateSettings.jsx";
+
+EXPLANATION:
+------------
+- Import Download icon for the tab button
+- Import the AppUpdateSettings component we created
+
+
+CODE ADDED:
+------------
+{ id: "appUpdate", icon: Download, label: "App Update" },
+
+EXPLANATION:
+------------
+- Add a new tab to the tabs array
+- id: unique identifier for this tab
+- icon: Download icon to show on the tab
+- label: text to display on the tab
+
+
+CODE ADDED:
+------------
+{activeTab === "appUpdate" && <AppUpdateSettings labels={labels} />}
+
+EXPLANATION:
+------------
+- When activeTab is "appUpdate", render the AppUpdateSettings component
+- This shows the update UI when the tab is selected
+
+
+FILE 5: frontend/package.json
+------------------------------
+
+This file defines the build scripts.
+
+CODE CHANGED:
+-------------
+"build:github": "tsc && vite build && electron-builder --publish always"
+
+EXPLANATION:
+------------
+- build:github is the new script name
+- tsc: compiles TypeScript to JavaScript
+- vite build: builds the React frontend
+- electron-builder --publish always: packages the Electron app AND publishes to GitHub
+- --publish always tells electron-builder to always create a GitHub release
+
+
+SUMMARY
+-------
+
+The auto-updater is now fully implemented in your application. The app will automatically check for updates on startup, and users can manually check for updates in the Settings page. When you run npm run build:github with the GH_TOKEN set, it will automatically create a GitHub release with the new version.
+
+The main remaining task is to set up your GitHub Personal Access Token and ensure the GH_TOKEN environment variable is set before building.

@@ -1,0 +1,53 @@
+import mongoose from "mongoose";
+
+const productSchema = new mongoose.Schema(
+    {
+        // ─── Basic Info ───────────────────────────────────────────
+        name: { type: String, trim: true },
+        brandName: { type: String, trim: true },
+        productCode: { type: String, trim: true },
+        barcode: { type: String, trim: true },
+        description: { type: String, trim: true },
+        image: { type: String },
+
+        // ─── Classification ───────────────────────────────────────
+        category: { type: mongoose.Schema.Types.ObjectId, ref: "Categories" },
+        subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategories" },
+
+        // ─── Count Format ─────────────────────────────────────────
+        countFormat: { type: String, enum: ["volume", "weight", "length"], default: "volume" },
+
+        // ─── Pricing ──────────────────────────────────────────────
+        defaultCostPrice: { type: Number, default: 0 },
+        defaultSalePrice: { type: Number, default: 0 },
+        taxPercent: { type: Number, default: 0 },
+        taxType: { type: String, default: "percentage" },
+        isDiscountAllowed: { type: Boolean, default: true },
+        maxDiscountPercent: { type: Number, default: 0 },
+        discountLimitType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+
+        // ─── Stock ────────────────────────────────────────────────
+        minStockLevel: { type: Number, default: 5 },
+        maxStockLevel: { type: Number, default: 10 },
+        allowNegativeStock: { type: Boolean, default: false },
+        rackLocation: { type: String, trim: true },
+
+        // ─── Batches & Status ─────────────────────────────────────
+        batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batches" }],
+        isActive: { type: Boolean, default: true },
+        currentStockLevel: {type: Number, default: 0},
+
+        // Soft Delete Fields
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: { type: Date, default: null },
+
+        created: { type: Date, default: Date.now },
+        updated: { type: Date },
+
+
+
+    },
+    { timestamps: true }
+);
+
+export default productSchema;
