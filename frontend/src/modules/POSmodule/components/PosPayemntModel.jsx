@@ -6,6 +6,7 @@ import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { useAllCustomers } from "../../customers/services/customers.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
+import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 
@@ -118,14 +119,13 @@ const CustomerTypeToggle = ({ value, onChange, labels }) => (
 
 // ─── Tab Panels ───────────────────────────────────────────────────────────────
 
-function CashTab({ cashReceived, setCashReceived, total, cashChange, labels, showPaymentMethod = true, selectedPaymentMethodId, setSelectedPaymentMethodId, paymentMethodOptions }) {
+function CashTab({ cashReceived, setCashReceived, total, cashChange, labels, showPaymentMethod = true, selectedPaymentMethodId, setSelectedPaymentMethodId, paymentMethodOptions, onOpenPaymentMethodModal }) {
     const received = Number(cashReceived) || 0;
     const isShort = received > 0 && received < total;
     const isSufficient = received >= total && cashReceived;
 
     const quickAmounts = [
         total,
-        Math.ceil(total / 100) * 100,
         Math.ceil(total / 500) * 500,
         Math.ceil(total / 1000) * 1000,
     ].filter((v, i, arr) => arr.indexOf(v) === i && v >= total).slice(0, 4);
@@ -135,21 +135,31 @@ function CashTab({ cashReceived, setCashReceived, total, cashChange, labels, sho
             {showPaymentMethod && (
                 <>
                     <FormField label={labels.paymentMethod}>
-                        <select
-                            value={selectedPaymentMethodId}
-                            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                            className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                            style={{
-                                background: "var(--surface)",
-                                color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
-                                border: "1px solid var(--border)",
-                            }}
-                        >
-                            <option value="">{labels.selectPaymentMethod}</option>
-                            {paymentMethodOptions.map((pm) => (
-                                <option key={pm.value} value={pm.value}>{pm.label}</option>
-                            ))}
-                        </select>
+                        <div className="flex gap-2">
+                            <select
+                                value={selectedPaymentMethodId}
+                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                                style={{
+                                    background: "var(--surface)",
+                                    color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
+                                    border: "1px solid var(--border)",
+                                }}
+                            >
+                                <option value="">{labels.selectPaymentMethod}</option>
+                                {paymentMethodOptions.map((pm) => (
+                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={onOpenPaymentMethodModal}
+                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                title="Create new payment method"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
                     </FormField>
                     <FormField label={labels.cashReceived}>
                         <Input
@@ -277,6 +287,7 @@ function HybridTab({
     labels,
     showPaymentMethod = true,
     selectedPaymentMethodId, setSelectedPaymentMethodId, paymentMethodOptions,
+    onOpenPaymentMethodModal,
 }) {
     return (
         <div className="space-y-3">
@@ -286,21 +297,31 @@ function HybridTab({
 
             {showPaymentMethod && (
                 <FormField label={labels.paymentMethod}>
-                    <select
-                        value={selectedPaymentMethodId}
-                        onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                        className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                        style={{
-                            background: "var(--surface)",
-                            color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
-                            border: "1px solid var(--border)",
-                        }}
-                    >
-                        <option value="">{labels.selectPaymentMethod}</option>
-                        {paymentMethodOptions.map((pm) => (
-                            <option key={pm.value} value={pm.value}>{pm.label}</option>
-                        ))}
-                    </select>
+                    <div className="flex gap-2">
+                        <select
+                            value={selectedPaymentMethodId}
+                            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                            className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                            style={{
+                                background: "var(--surface)",
+                                color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
+                                border: "1px solid var(--border)",
+                            }}
+                        >
+                            <option value="">{labels.selectPaymentMethod}</option>
+                            {paymentMethodOptions.map((pm) => (
+                                <option key={pm.value} value={pm.value}>{pm.label}</option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={onOpenPaymentMethodModal}
+                            className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                            title="Create new payment method"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
                 </FormField>
             )}
 
@@ -412,6 +433,7 @@ export default function PosPaymentModal({
     const [hybridQarza, setHybridQarza] = useState("");
     const [hybridQarzaAccountId, setHybridQarzaAccountId] = useState("");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
+    const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
     const discountAmt = Math.max(0, Number(orderDiscount) || 0);
     const total = Math.max(0, subtotal - discountAmt);
@@ -427,6 +449,10 @@ export default function PosPaymentModal({
     const handleQarzaAccountCreated = () => {
         setShowQarzaModal(false);
         refetchQarzaAccounts();
+    };
+
+    const handlePaymentMethodCreated = () => {
+        setShowPaymentMethodModal(false);
     };
 
     const qarzaOptions = qarzaAccounts?.accounts?.map((a) => ({
@@ -703,19 +729,29 @@ export default function PosPaymentModal({
                                 <div className={rowClass}>
                                     <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
                                     <div className={controlWrapClass}>
-                                        <select
-                                            value={selectedPaymentMethodId}
-                                            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                            style={inputStyle}
-                                            {...fieldFocus}
-                                            required
-                                        >
-                                            <option value="">{labels.selectPaymentMethod}</option>
-                                            {paymentMethodOptions.map((pm) => (
-                                                <option key={pm.value} value={pm.value}>{pm.label}</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={selectedPaymentMethodId}
+                                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                                className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                style={inputStyle}
+                                                {...fieldFocus}
+                                                required
+                                            >
+                                                <option value="">{labels.selectPaymentMethod}</option>
+                                                {paymentMethodOptions.map((pm) => (
+                                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPaymentMethodModal(true)}
+                                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                title="Create new payment method"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -882,19 +918,29 @@ export default function PosPaymentModal({
                                 <div className={rowClass}>
                                     <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
                                     <div className={controlWrapClass}>
-                                        <select
-                                            value={selectedPaymentMethodId}
-                                            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                            style={inputStyle}
-                                            {...fieldFocus}
-                                            required
-                                        >
-                                            <option value="">{labels.selectPaymentMethod}</option>
-                                            {paymentMethodOptions.map((pm) => (
-                                                <option key={pm.value} value={pm.value}>{pm.label}</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={selectedPaymentMethodId}
+                                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                                className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                style={inputStyle}
+                                                {...fieldFocus}
+                                                required
+                                            >
+                                                <option value="">{labels.selectPaymentMethod}</option>
+                                                {paymentMethodOptions.map((pm) => (
+                                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPaymentMethodModal(true)}
+                                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                title="Create new payment method"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1009,6 +1055,14 @@ export default function PosPaymentModal({
                     mode="create"
                     onClose={() => setShowQarzaModal(false)}
                     onSuccess={handleQarzaAccountCreated}
+                />
+            )}
+            {showPaymentMethodModal && (
+                <PaymentMethodModal
+                    mode="create"
+                    onClose={() => setShowPaymentMethodModal(false)}
+                    onSuccess={handlePaymentMethodCreated}
+                    labels={{ addPaymentMethod: "Add Payment Method", paymentMethodName: "Payment Method Name", paymentMethodNameRequired: "Payment method name is required", paymentMethodPlaceholder: "e.g., Cash, Bank Transfer", active: "Active", cancel: "Cancel", add: "Add", saving: "Saving..." }}
                 />
             )}
         </div>

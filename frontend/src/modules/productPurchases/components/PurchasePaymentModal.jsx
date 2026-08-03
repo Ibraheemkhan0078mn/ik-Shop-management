@@ -4,6 +4,7 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
+import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 
 export default function PurchasePaymentModal({ purchase, payment, onClose, onSuccess }) {
     const isEditing = Boolean(payment);
@@ -13,6 +14,7 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
     const [cashAmount, setCashAmount] = useState(payment?.cashAmount?.toString() || "");
     const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(payment?.paymentMethodId || "");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
+    const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
@@ -32,6 +34,10 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
     const handleQarzaAccountCreated = () => {
         setShowQarzaModal(false);
         refetchAccounts();
+    };
+
+    const handlePaymentMethodCreated = () => {
+        setShowPaymentMethodModal(false);
     };
 
     const handleSubmit = async (e) => {
@@ -194,17 +200,27 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                         <>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Payment Method</label>
-                                <select
-                                    value={selectedPaymentMethodId}
-                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                    required
-                                >
-                                    <option value="">Select payment method</option>
-                                    {paymentMethodsData.map(pm => (
-                                        <option key={pm._id} value={pm._id}>{pm.name}</option>
-                                    ))}
-                                </select>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={selectedPaymentMethodId}
+                                        onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                        required
+                                    >
+                                        <option value="">Select payment method</option>
+                                        {paymentMethodsData.map(pm => (
+                                            <option key={pm._id} value={pm._id}>{pm.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPaymentMethodModal(true)}
+                                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                        title="Create new payment method"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
                                 <p className="text-sm text-green-800">Full payment of Rs {remainingAmount.toLocaleString()} will be recorded as cash.</p>
@@ -246,17 +262,27 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                         <>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Payment Method</label>
-                                <select
-                                    value={selectedPaymentMethodId}
-                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                    required
-                                >
-                                    <option value="">Select payment method</option>
-                                    {paymentMethodsData.map(pm => (
-                                        <option key={pm._id} value={pm._id}>{pm.name}</option>
-                                    ))}
-                                </select>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={selectedPaymentMethodId}
+                                        onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
+                                        required
+                                    >
+                                        <option value="">Select payment method</option>
+                                        {paymentMethodsData.map(pm => (
+                                            <option key={pm._id} value={pm._id}>{pm.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPaymentMethodModal(true)}
+                                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                        title="Create new payment method"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Cash Amount</label>
@@ -323,6 +349,14 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                     mode="create"
                     onClose={() => setShowQarzaModal(false)}
                     onSuccess={handleQarzaAccountCreated}
+                />
+            )}
+            {showPaymentMethodModal && (
+                <PaymentMethodModal
+                    mode="create"
+                    onClose={() => setShowPaymentMethodModal(false)}
+                    onSuccess={handlePaymentMethodCreated}
+                    labels={{ addPaymentMethod: "Add Payment Method", paymentMethodName: "Payment Method Name", paymentMethodNameRequired: "Payment method name is required", paymentMethodPlaceholder: "e.g., Cash, Bank Transfer", active: "Active", cancel: "Cancel", add: "Add", saving: "Saving..." }}
                 />
             )}
         </div>
