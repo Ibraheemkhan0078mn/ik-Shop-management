@@ -171,17 +171,28 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
 
     const data = req.body;
 
-    // Use provided purchase return number or generate a date-based one
+    // Generate sequential purchase return number
     let purchaseReturnNumber = data.purchaseReturnNumber;
     if (!purchaseReturnNumber) {
-        // Generate date-based number: PR-YYYYMMDD-0001
-        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
-        const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
-        const dateRange = { createdAt: { $gte: startOfDay, $lt: endOfDay } };
-
-        const countValue = await countPurchaseReturnService(dateRange);
-        const dateStr = startOfDay.toISOString().slice(0, 10).replace(/-/g, "");
-        purchaseReturnNumber = `PR-${dateStr}-${String(countValue + 1).padStart(4, "0")}`;
+        // Generate sequential number: PR-XXXXX
+        let isUnique = false;
+        let attempts = 0;
+        let newNumber;
+        while (!isUnique && attempts < 100) {
+            const randomNum = Math.floor(10000 + Math.random() * 90000);
+            newNumber = `PR-${randomNum}`;
+            try {
+                const existing = await findPurchaseReturnService({ purchaseReturnNumber: newNumber });
+                if (!existing || existing.length === 0) {
+                    isUnique = true;
+                }
+            } catch (e) {
+                // If error, assume it doesn't exist
+                isUnique = true;
+            }
+            attempts++;
+        }
+        purchaseReturnNumber = newNumber;
     } else {
         // Check if the provided number already exists
         const existing = await findPurchaseReturnService({ purchaseReturnNumber });
@@ -207,11 +218,28 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
-    // Calculate total refund amount
+    // Calculate total refund amount with discount consideration
     let totalRefundAmount = 0;
     let totalQuantity = 0;
+    
     for (const item of normalizedItems) {
-        const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+        let discountedPrice = item.purchasePrice;
+        
+        // Apply purchase discount if available
+        if (purchase.discountType && purchase.discount) {
+            const discount = Number(purchase.discount) || 0;
+            if (purchase.discountType === 'percentage') {
+                // Apply percentage discount
+                discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
+            } else if (purchase.discountType === 'fixed') {
+                // Apply fixed discount (distributed across total quantity)
+                const totalPurchaseQuantity = purchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                const discountPerItem = discount / totalPurchaseQuantity;
+                discountedPrice = item.purchasePrice - discountPerItem;
+            }
+        }
+        
+        const refund = (item.quantity * discountedPrice) - (item.cut || 0);
         totalRefundAmount += refund;
         totalQuantity += item.quantity;
     }
@@ -271,18 +299,54 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
-    // Calculate total refund amount and total quantity
+    // Calculate total refund amount and total quantity with discount consideration
     let totalRefundAmount = 0;
     let totalQuantity = 0;
+    
+    // Fetch the original purchase to get discount info
+    const originalPurchase = await findByIdPurchaseService(existing.purchase);
+    
     if (incomingItems) {
         for (const item of incomingItems) {
-            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            let discountedPrice = item.purchasePrice;
+            
+            // Apply purchase discount if available
+            if (originalPurchase?.discountType && originalPurchase?.discount) {
+                const discount = Number(originalPurchase.discount) || 0;
+                if (originalPurchase.discountType === 'percentage') {
+                    // Apply percentage discount
+                    discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
+                } else if (originalPurchase.discountType === 'fixed') {
+                    // Apply fixed discount (distributed across total quantity)
+                    const totalPurchaseQuantity = originalPurchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                    const discountPerItem = discount / totalPurchaseQuantity;
+                    discountedPrice = item.purchasePrice - discountPerItem;
+                }
+            }
+            
+            const refund = (item.quantity * discountedPrice) - (item.cut || 0);
             totalRefundAmount += refund;
             totalQuantity += item.quantity;
         }
     } else if (existing.items) {
         for (const item of existing.items) {
-            const refund = (item.quantity * item.purchasePrice) - (item.cut || 0);
+            let discountedPrice = item.purchasePrice;
+            
+            // Apply purchase discount if available
+            if (originalPurchase?.discountType && originalPurchase?.discount) {
+                const discount = Number(originalPurchase.discount) || 0;
+                if (originalPurchase.discountType === 'percentage') {
+                    // Apply percentage discount
+                    discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
+                } else if (originalPurchase.discountType === 'fixed') {
+                    // Apply fixed discount (distributed across total quantity)
+                    const totalPurchaseQuantity = originalPurchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                    const discountPerItem = discount / totalPurchaseQuantity;
+                    discountedPrice = item.purchasePrice - discountPerItem;
+                }
+            }
+            
+            const refund = (item.quantity * discountedPrice) - (item.cut || 0);
             totalRefundAmount += refund;
             totalQuantity += item.quantity;
         }
@@ -388,6 +452,53 @@ export const getPurchaseDetailsForReturn = asyncHandler(async (req, res) => {
     const { purchaseId } = req.params;
     const purchase = await getPurchaseDetails(purchaseId);
     return ApiResponse(res, 200, "Purchase details retrieved successfully", purchase);
+});
+
+export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
+    // Find all purchase returns with PR-XXXXX format
+    const allReturns = await findPurchaseReturnService({}, {
+        sort: { purchaseReturnNumber: -1 },
+        limit: 1
+    });
+
+    let nextNumber = 10000; // Start from PR-10000
+
+    if (allReturns && allReturns.length > 0) {
+        const latestReturn = allReturns[0];
+        const latestNumber = latestReturn.purchaseReturnNumber;
+        
+        // Extract the numeric part from PR-XXXXX format
+        const match = latestNumber.match(/^PR-(\d{5})$/);
+        if (match) {
+            const currentNum = parseInt(match[1], 10);
+            nextNumber = currentNum + 1;
+        }
+    }
+
+    // Check for duplicates and increment until unique
+    let isUnique = false;
+    let attempts = 0;
+    let finalNumber;
+
+    while (!isUnique && attempts < 1000) {
+        finalNumber = `PR-${String(nextNumber).padStart(5, "0")}`;
+        const existing = await findPurchaseReturnService({ purchaseReturnNumber: finalNumber });
+        
+        if (!existing || existing.length === 0) {
+            isUnique = true;
+        } else {
+            nextNumber++;
+            attempts++;
+        }
+    }
+
+    if (!isUnique) {
+        throw new Error("Unable to generate unique purchase return number after multiple attempts");
+    }
+
+    return ApiResponse(res, 200, "Purchase return number generated successfully", {
+        purchaseReturnNumber: finalNumber
+    });
 });
 
 export const validatePurchaseReturnNumberData = asyncHandler(async (req, res) => {

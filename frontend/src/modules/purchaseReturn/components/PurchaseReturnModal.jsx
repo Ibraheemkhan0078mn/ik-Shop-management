@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { X, Search, CheckCircle, Pencil, Trash2, Calendar, Lock, Unlock } from "lucide-react";
+import { X, Search, Pencil, Calendar, Lock, Unlock } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -18,28 +18,12 @@ import {
     getPurchaseReturnByIdApi,
     submitPurchaseReturnApi,
     approvePurchaseReturnApi,
-    rejectPurchaseReturnApi,
     getPurchaseByInvoiceNumberApi,
     getPurchaseReturnsApi,
+    generatePurchaseReturnNumberApi,
 } from "../api/purchaseReturnApi.js";
 import { usePurchases, usePurchase } from "../../productPurchases/services/purchases.service.js";
 import { productApi } from "../../productsModule/services/product.service.js";
-
-const REASONS = [
-    { label: "Damaged", value: "damaged" },
-    { label: "Expired", value: "expired" },
-    { label: "Wrong Item", value: "wrong_item" },
-    { label: "Excess", value: "excess" },
-    { label: "Quality Issue", value: "quality_issue" },
-    { label: "Other", value: "other" },
-];
-
-const CONDITIONS = [
-    { label: "Good", value: "good" },
-    { label: "Fair", value: "fair" },
-    { label: "Poor", value: "poor" },
-    { label: "Damaged", value: "damaged" },
-];
 
 const getLocalizedReasons = (labels) => [
     { label: labels.damaged, value: "damaged" },
@@ -48,13 +32,6 @@ const getLocalizedReasons = (labels) => [
     { label: labels.excess, value: "excess" },
     { label: labels.qualityIssue, value: "quality_issue" },
     { label: labels.other, value: "other" },
-];
-
-const getLocalizedConditions = (labels) => [
-    { label: labels.good, value: "good" },
-    { label: labels.fair, value: "fair" },
-    { label: labels.poor, value: "poor" },
-    { label: labels.damaged, value: "damaged" },
 ];
 
 const emptyForm = () => ({
@@ -89,7 +66,7 @@ const Txt = ({ className = "", ...p }) => (
     />
 );
 
-const SSelect = ({ options = [], value, onChange, placeholder = "Select…", zIndex = 60 }) => {
+const SSelect = ({ options = [], value, onChange, placeholder = "Select…", zIndex = 100 }) => {
     const [open, setOpen] = useState(false);
     const selected = options.find((o) => o.value === value);
 
@@ -222,9 +199,28 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const { data: purchaseDataById } = usePurchase(purchaseId, { skip: isUpdate || !purchaseId });
 
     const localizedReasons = useMemo(() => getLocalizedReasons(labels), [labels]);
-    const localizedConditions = useMemo(() => getLocalizedConditions(labels), [labels]);
 
     const update = (f, v) => setForm((p) => ({ ...p, [f]: v }));
+
+    // Generate default purchase return number on mount for create mode
+    useEffect(() => {
+        const generateNumber = async () => {
+            if (!isUpdate) {
+                try {
+                    const result = await generatePurchaseReturnNumberApi();
+                    if (result?.success && result?.data?.purchaseReturnNumber) {
+                        setPurchaseReturnNumber(result.data.purchaseReturnNumber);
+                    }
+                } catch (e) {
+                    console.error("Failed to generate purchase return number:", e);
+                    // Fallback to random number if API fails
+                    const randomNum = Math.floor(10000 + Math.random() * 90000);
+                    setPurchaseReturnNumber(`PR-${randomNum}`);
+                }
+            }
+        };
+        generateNumber();
+    }, [isUpdate]);
 
     useEffect(() => {
         const loadExisting = async () => {
@@ -382,11 +378,51 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         }));
     };
 
+    const calculateDiscountPerItem = (item) => {
+        let discountedPrice = item.price;
+        
+        if (purchaseData?.discountType && purchaseData?.discount) {
+            const discount = Number(purchaseData.discount) || 0;
+            if (purchaseData.discountType === 'percentage') {
+                discountedPrice = item.price - (item.price * (discount / 100));
+            } else if (purchaseData.discountType === 'fixed') {
+                const totalQuantity = purchaseData.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                const discountPerItem = discount / totalQuantity;
+                discountedPrice = item.price - discountPerItem;
+            }
+        }
+        
+        return item.price - discountedPrice;
+    };
+
+    const calculateDiscountAmount = (item, quantity) => {
+        const discountPerItem = calculateDiscountPerItem(item);
+        return discountPerItem * quantity;
+    };
+
     const calculateRefund = (item, details) => {
         const returnQty = Number(details.returnQuantity) || 0;
         const costPrice = Number(item.price) || 0;
         const cut = Number(details.cut) || 0;
-        return (returnQty * costPrice) - cut;
+
+        // Calculate discounted price based on purchase discount
+        let discountedPrice = costPrice;
+        
+        if (purchaseData?.discountType && purchaseData?.discount) {
+            const discount = Number(purchaseData.discount) || 0;
+            if (purchaseData.discountType === 'percentage') {
+                // Apply percentage discount
+                discountedPrice = costPrice - (costPrice * (discount / 100));
+            } else if (purchaseData.discountType === 'fixed') {
+                // Apply fixed discount (distributed across total quantity)
+                const totalQuantity = purchaseData.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                const discountPerItem = discount / totalQuantity;
+                discountedPrice = costPrice - discountPerItem;
+            }
+        }
+
+        // Calculate refund: (discounted price × quantity) - cut
+        return (returnQty * discountedPrice) - cut;
     };
 
     const totalRefund = useMemo(() => {
@@ -406,7 +442,6 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         // Validate all selected items
         for (const [batchId, details] of Object.entries(selectedItems)) {
             if (!details.returnReason) return showError(labels.specifyReturnReason);
-            if (!details.condition) return showError(labels.specifyCondition);
             if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError(labels.specifyValidQuantity);
         }
 
@@ -719,7 +754,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                             {/* Inline form for selected item */}
                                             {isSelected && (
                                                 <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                         <Field>
                                                             <Label>{labels.returnQuantity} *</Label>
                                                             <Inp
@@ -737,17 +772,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                                 value={details.returnReason}
                                                                 onChange={(v) => handleItemDetailChange(batchId, "returnReason", v)}
                                                                 placeholder={labels.returnReason + "…"}
-                                                                zIndex={70}
-                                                            />
-                                                        </Field>
-                                                        <Field>
-                                                            <Label>{labels.condition} *</Label>
-                                                            <SSelect
-                                                                options={localizedConditions}
-                                                                value={details.condition}
-                                                                onChange={(v) => handleItemDetailChange(batchId, "condition", v)}
-                                                                placeholder={labels.condition + "…"}
-                                                                zIndex={70}
+                                                                zIndex={100}
                                                             />
                                                         </Field>
                                                         <Field>
@@ -762,8 +787,41 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                     </div>
                                                     <Field className="mt-3">
                                                         <Label>{labels.refundPreview}</Label>
-                                                        <div className="px-3 py-2 text-sm rounded-xl font-semibold" style={{ background: "var(--surface)", color: "var(--accent)" }}>
-                                                            Rs. {refund.toFixed(2)} = ({details.returnQuantity} × Rs. {Number(item.price || 0).toFixed(2)}) - Rs. {Number(details.cut || 0).toFixed(2)}
+                                                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr style={{ background: "var(--surface-muted)" }}>
+                                                                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "var(--muted)" }}>Label</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold" style={{ color: "var(--muted)" }}>Calculation</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Without Discount Total (Purchase)</td>
+                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                            Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)}) = Rs. {(item.quantity * item.price).toFixed(2)}
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>With Discount Total (Purchase)</td>
+                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                            (Quantity({item.quantity}) × ItemPrice({item.price.toFixed(2)})) - Discount({calculateDiscountAmount(item, item.quantity).toFixed(2)}) = Rs. {((item.quantity * item.price) - calculateDiscountAmount(item, item.quantity)).toFixed(2)}
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                        <td className="px-3 py-2" style={{ color: "var(--ink)" }}>Per Discounted Item Price</td>
+                                                                        <td className="px-3 py-2 text-right font-mono" style={{ color: "var(--ink)" }}>
+                                                                            ItemPrice({item.price.toFixed(2)}) - DiscountPerItem({calculateDiscountPerItem(item).toFixed(2)}) = Rs. {(item.price - calculateDiscountPerItem(item)).toFixed(2)}
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td className="px-3 py-2 font-semibold" style={{ color: "var(--accent-2)" }}>Refund Amount</td>
+                                                                        <td className="px-3 py-2 text-right font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                            (ReturnQty({details.returnQuantity}) × DiscountedPrice({(item.price - calculateDiscountPerItem(item)).toFixed(2)})) - Cut({Number(details.cut).toFixed(2)}) = Rs. {refund.toFixed(2)}
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </Field>
                                                 </div>
@@ -794,10 +852,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                         <div className="flex gap-2">
                             {isUpdate && existingPurchaseReturn?.status === "draft" && <Btn variant="secondary" onClick={handleSubmitForApproval}>{labels.submitForApproval}</Btn>}
                             {isUpdate && existingPurchaseReturn?.status === "pending" && (
-                                <>
-                                    <Btn variant="secondary" onClick={handleApprove}>{labels.approve}</Btn>
-                                    <Btn variant="danger" onClick={handleReject}>{labels.reject}</Btn>
-                                </>
+                                <Btn variant="secondary" onClick={handleApprove}>{labels.approve}</Btn>
                             )}
                         </div>
                         <div className="flex gap-2">
