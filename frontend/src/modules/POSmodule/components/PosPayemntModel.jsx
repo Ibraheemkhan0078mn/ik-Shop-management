@@ -481,6 +481,8 @@ export default function PosPaymentModal({
 
     const canCheckout = useMemo(() => {
         if (total === 0) return true;
+        // Require customerId when customerType is regular
+        if (customerType === "regular" && !selectedCustomerId) return false;
         switch (activeTab) {
             case "cash": return Number(cashReceived) >= total && !!selectedPaymentMethodId;
             case "online": return !!onlinePlatform && Number(onlineAmount) >= total;
@@ -488,26 +490,29 @@ export default function PosPaymentModal({
             case "hybrid": return hybridValid && !!selectedPaymentMethodId;
             default: return false;
         }
-    }, [activeTab, cashReceived, total, onlinePlatform, onlineAmount, qarzaAccountId, hybridValid, selectedPaymentMethodId]);
+    }, [activeTab, cashReceived, total, onlinePlatform, onlineAmount, qarzaAccountId, hybridValid, selectedPaymentMethodId, customerType, selectedCustomerId]);
 
-    const buildPayload = () => ({
-        customerName: customerType === "walkin" ? customerName : "",
-        customerType,
-        customerId: customerType === "regular" ? selectedCustomerId : null,
-        selectedWaiter: initialWaiter,
-        selectedStaffId,
-        orderDiscount: discountAmt,
-        paymentMethod: activeTab,
-        paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
-        orderType,
-        cashReceived: activeTab === "cash" ? cashReceived : "",
-        onlinePlatform: activeTab === "online" ? onlinePlatform : "",
-        onlineAmount: activeTab === "online" ? onlineAmount : "",
-        selectedQarzaAccountId: activeTab === "credit" ? qarzaAccountId : "",
-        hybridCash: activeTab === "hybrid" ? hybridCash : "",
-        hybridQarza: activeTab === "hybrid" ? hybridQarza : "",
-        hybridQarzaAccountId: activeTab === "hybrid" ? hybridQarzaAccountId : "",
-    });
+    const buildPayload = () => {
+        const selectedCustomer = customersData?.find(c => c._id === selectedCustomerId);
+        return {
+            customerName: customerType === "walkin" ? customerName : (selectedCustomer?.name || ""),
+            customerType,
+            selectedCustomerId: customerType === "regular" ? (selectedCustomerId || null) : null,
+            selectedWaiter: initialWaiter,
+            selectedStaffId,
+            orderDiscount: discountAmt,
+            paymentMethod: activeTab,
+            paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
+            orderType,
+            cashReceived: activeTab === "cash" ? cashReceived : "",
+            onlinePlatform: activeTab === "online" ? onlinePlatform : "",
+            onlineAmount: activeTab === "online" ? onlineAmount : "",
+            selectedQarzaAccountId: activeTab === "credit" ? qarzaAccountId : "",
+            hybridCash: activeTab === "hybrid" ? hybridCash : "",
+            hybridQarza: activeTab === "hybrid" ? hybridQarza : "",
+            hybridQarzaAccountId: activeTab === "hybrid" ? hybridQarzaAccountId : "",
+        };
+    };
 
     const handleCheckout = useCallback(() => { if (canCheckout) onCheckout(buildPayload()); }, [canCheckout, buildPayload]);
     const fillHybridQarza = () => { const r = total - (Number(hybridCash) || 0); if (r > 0) setHybridQarza(String(r.toFixed(0))); };
@@ -515,6 +520,7 @@ export default function PosPaymentModal({
 
     const getValidationError = () => {
         if (total === 0) return null;
+        if (customerType === "regular" && !selectedCustomerId) return labels.selectCustomer;
         switch (activeTab) {
             case "cash":
                 if (!selectedPaymentMethodId) return labels.selectPaymentMethod;
@@ -622,23 +628,47 @@ export default function PosPaymentModal({
                                     </p>
                                 )}
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.discount}</p>
-                                <div className="w-28">
-                                    <Input
-                                        type="number" min={0} placeholder="Rs 0"
-                                        value={orderDiscount}
-                                        onChange={(e) => setOrderDiscount(e.target.value)}
-                                    />
-                                </div>
-                            </div>
                         </div>
                     </div>
 
                     <div className="px-5 py-4 space-y-4">
 
-                        {/* Customer + Staff */}
+                        {/* Row 1: Discount & Staff */}
                         <div className="grid grid-cols-2 gap-3">
+                            <FormField label={labels.discount}>
+                                <Input
+                                    type="number" min={0} placeholder="Rs 0"
+                                    value={orderDiscount}
+                                    onChange={(e) => setOrderDiscount(e.target.value)}
+                                />
+                            </FormField>
+
+                            <FormField label={labels.staffMember}>
+                                <select
+                                    value={selectedStaffId}
+                                    onChange={(e) => setSelectedStaffId(e.target.value)}
+                                    className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                                    style={{
+                                        background: "var(--surface)",
+                                        color: selectedStaffId ? "var(--ink)" : "var(--muted)",
+                                        border: "1px solid var(--border)",
+                                    }}
+                                >
+                                    <option value="">{labels.selectStaff}</option>
+                                    {staffList_.map((s) => (
+                                        <option key={s._id} value={s._id}>{s.fullName}</option>
+                                    ))}
+                                </select>
+                            </FormField>
+                        </div>
+
+                        {/* Row 2: Customer Type Toggle & Customer Selection */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.customerType}</p>
+                                <CustomerTypeToggle value={customerType} onChange={setCustomerType} labels={labels} />
+                            </div>
+
                             <FormField label={labels.customerName}>
                                 {customerType === "walkin" ? (
                                     <Input placeholder={labels.optional}
@@ -661,30 +691,6 @@ export default function PosPaymentModal({
                                     </select>
                                 )}
                             </FormField>
-
-                            <FormField label={labels.staffMember}>
-                                <select
-                                    value={selectedStaffId}
-                                    onChange={(e) => setSelectedStaffId(e.target.value)}
-                                    className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                    style={{
-                                        background: "var(--surface)",
-                                        color: selectedStaffId ? "var(--ink)" : "var(--muted)",
-                                        border: "1px solid var(--border)",
-                                    }}
-                                >
-                                    <option value="">{labels.selectStaff}</option>
-                                    {staffList_.map((s) => (
-                                        <option key={s._id} value={s._id}>{s.fullName}</option>
-                                    ))}
-                                </select>
-                            </FormField>
-                        </div>
-
-                        {/* Customer type toggle */}
-                        <div>
-                            <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.customerType}</p>
-                            <CustomerTypeToggle value={customerType} onChange={setCustomerType} labels={labels} />
                         </div>
 
                         {/* Order type toggle */}
