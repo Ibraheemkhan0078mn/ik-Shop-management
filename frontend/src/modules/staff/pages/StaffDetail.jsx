@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery } from "../api/staff.api.js";
@@ -9,6 +9,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import PercentageShare from "../components/PercentageShare.jsx";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
@@ -28,6 +29,8 @@ export default function StaffDetail() {
     });
     const [staffPaymentForm, setStaffPaymentForm] = useState({ amount: "", notes: "" });
     const [selectedImages, setSelectedImages] = useState([]);
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [selectedImageForModal, setSelectedImageForModal] = useState(null);
 
     const { data: staffData, isLoading, refetch } = useGetStaffByIdQuery(id);
     const { data: paymentsData } = useGetSalaryPaymentsQuery(id);
@@ -35,7 +38,7 @@ export default function StaffDetail() {
         staffId: id, 
         startDate: salaryBreakdownFilter.startDate, 
         endDate: salaryBreakdownFilter.endDate 
-    }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate });
+    }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate || staffData?.data?.salaryType !== 'fixed' });
     const { data: paymentSummaryData } = useGetPaymentSummaryQuery(id);
 
     const [addDocument] = useAddDocumentMutation();
@@ -165,6 +168,16 @@ export default function StaffDetail() {
         }
     };
 
+    const handleImageClick = (imageSrc) => {
+        setSelectedImageForModal(imageSrc);
+        setShowImageModal(true);
+    };
+
+    const closeImageModal = () => {
+        setShowImageModal(false);
+        setSelectedImageForModal(null);
+    };
+
     if (isLoading) {
         return <div className="p-6 text-center">{labels.loading}</div>;
     }
@@ -186,17 +199,11 @@ export default function StaffDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{staff.fullName}</h1>
                     <p className="text-sm text-[var(--muted)]">{staff.role} - {staff.salaryType} {labels.salary}</p>
                 </div>
-                <button
-                    onClick={() => navigate(`/staff/edit/${id}`)}
-                    className="btn-add"
-                >
-                    <Edit size={16} /> {labels.edit}
-                </button>
             </div>
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["profile", "documents", "saleOrders", "salaryBreakdown", "paymentSummary", "staffPayments"].map((tab) => (
+                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown"] : []), "paymentSummary", "staffPayments"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -206,7 +213,7 @@ export default function StaffDetail() {
                                 : "text-[var(--muted)] hover:text-[var(--ink)]"
                         }`}
                     >
-                        {tab === "saleOrders" ? labels.saleOrders : tab === "staffPayments" ? labels.staffPayments : tab === "salaryBreakdown" ? labels.salaryBreakdown : tab === "paymentSummary" ? labels.paymentSummary : labels[tab] || tab}
+                        {tab === "saleOrders" ? labels.saleOrders : tab === "staffPayments" ? labels.staffPayments : tab === "salaryBreakdown" ? labels.salaryBreakdown : tab === "paymentSummary" ? labels.paymentSummary : tab === "percentageShare" ? "Percentage Share" : labels[tab] || tab}
                     </button>
                 ))}
             </div>
@@ -365,7 +372,8 @@ export default function StaffDetail() {
                                             <img
                                                 src={`http://localhost:5001/uploads/${doc.filePath}`}
                                                 alt="Document"
-                                                className="w-full h-32 object-cover rounded-md border border-[var(--border)]"
+                                                className="w-full h-32 object-cover rounded-md border border-[var(--border)] cursor-pointer hover:opacity-90 transition-opacity"
+                                                onClick={() => handleImageClick(`http://localhost:5001/uploads/${doc.filePath}`)}
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';
                                                     e.target.parentElement.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-[var(--surface-muted)] text-[var(--muted)] text-sm">Image not found</div>';
@@ -481,6 +489,11 @@ export default function StaffDetail() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Percentage Share Tab - Only for Percentage-based Salary */}
+            {activeTab === "percentageShare" && staff?.salaryType === "percentage" && (
+                <PercentageShare staffId={id} staffData={staff} />
             )}
 
             {/* Salary Breakdown Tab - Only for Fixed Salary */}
@@ -651,7 +664,7 @@ export default function StaffDetail() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
                                         <p className="text-sm text-[var(--muted)] mb-1">{labels.totalEarnings}</p>
                                         <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {paymentSummaryData.data.totalEarnings.toLocaleString()}</p>
@@ -664,6 +677,12 @@ export default function StaffDetail() {
                                         <p className="text-sm text-[var(--muted)] mb-1">{labels.totalRemaining}</p>
                                         <p className="text-2xl font-bold text-red-500">Rs {paymentSummaryData.data.totalRemaining.toLocaleString()}</p>
                                     </div>
+                                    {paymentSummaryData.data.totalAdvance > 0 && (
+                                        <div className="p-4 border border-[var(--border)] rounded-md text-center bg-purple-50">
+                                            <p className="text-sm text-[var(--muted)] mb-1">Advance</p>
+                                            <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalAdvance.toLocaleString()}</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="p-4 border border-[var(--border)] rounded-md">
@@ -707,7 +726,7 @@ export default function StaffDetail() {
                         {payments.length ? (
                             <div className="space-y-2">
                                 {payments.map((payment) => (
-                                    <div key={payment._id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md">
+                                    <div key={payment._id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md bg-[var(--app-bg)]">
                                         <div>
                                             <p className="font-medium text-[var(--ink)]">Rs {payment.amount}</p>
                                             <p className="text-sm text-[var(--muted)]">{payment.month} - {new Date(payment.paidAt).toLocaleDateString()}</p>
@@ -715,7 +734,7 @@ export default function StaffDetail() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className={`px-2 py-1 text-xs rounded-full ${
-                                                payment.status === 'paid' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
+                                                payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                             }`}>
                                                 {payment.status === 'paid' ? labels.paid : labels.partial}
                                             </span>
@@ -740,34 +759,34 @@ export default function StaffDetail() {
             {/* Staff Payment Modal */}
             {showStaffPaymentModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                    <div className="bg-[var(--surface)] rounded-lg p-6 w-full max-w-md border border-[var(--border)]">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold">Create Staff Payment</h3>
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Create Staff Payment</h3>
                             <button
                                 onClick={() => setShowStaffPaymentModal(false)}
-                                className="p-2 hover:bg-gray-100 rounded"
+                                className="p-2 hover:bg-[var(--app-bg)] rounded"
                             >
-                                <X size={20} />
+                                <X size={20} className="text-[var(--ink)]" />
                             </button>
                         </div>
                         <form onSubmit={handleCreateStaffPayment} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Amount (Rs)</label>
+                                <label className="block text-sm font-medium mb-1 text-[var(--ink)]">Amount (Rs)</label>
                                 <input
                                     type="number"
                                     value={staffPaymentForm.amount}
                                     onChange={(e) => setStaffPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
                                     required
                                     min="0"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Notes</label>
+                                <label className="block text-sm font-medium mb-1 text-[var(--ink)]">Notes</label>
                                 <textarea
                                     value={staffPaymentForm.notes}
                                     onChange={(e) => setStaffPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
                                     rows="3"
                                 />
                             </div>
@@ -775,18 +794,41 @@ export default function StaffDetail() {
                                 <button
                                     type="button"
                                     onClick={() => setShowStaffPaymentModal(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                                    className="flex-1 px-4 py-2 border border-[var(--border)] rounded-md hover:bg-[var(--app-bg)] text-[var(--ink)]"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                    className="flex-1 px-4 py-2 bg-[var(--accent-2)] text-white rounded-md hover:opacity-90"
                                 >
                                     Create Payment
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Preview Modal */}
+            {showImageModal && selectedImageForModal && (
+                <div 
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+                    onClick={closeImageModal}
+                >
+                    <div className="relative max-w-5xl max-h-[90vh]">
+                        <button
+                            onClick={closeImageModal}
+                            className="absolute -top-10 right-0 p-2 text-white hover:text-gray-300 transition-colors"
+                        >
+                            <X size={32} />
+                        </button>
+                        <img
+                            src={selectedImageForModal}
+                            alt="Enlarged view"
+                            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                            onClick={(e) => e.stopPropagation()}
+                        />
                     </div>
                 </div>
             )}

@@ -159,7 +159,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
     const onSubmit = useCallback(async () => {
         if (!validateForm()) return;
         const payload = new FormData();
-        const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id", "percentage"];
+        const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id"];
         Object.entries(form).forEach(([key, value]) => {
             if (exclude.includes(key)) return;
             if (key === "photo" && typeof value === "string") return; // Don't send string photo, only file

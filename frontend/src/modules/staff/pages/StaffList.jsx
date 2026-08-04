@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, Eye, Calendar, User, IdCard, Phone, Briefcase } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Eye, Calendar, User, IdCard, Phone, Briefcase, Percent } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffListQuery, useDeleteStaffMutation } from "../api/staff.api.js";
+import { useGetStaffListQuery, useDeleteStaffMutation, useGetStaffCommissionQuery, useGetStaffRolesQuery } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -27,6 +27,8 @@ export default function StaffList() {
     const language = settings?.language || "en";
     const labels = getStaffLabels(language);
 
+    const { data: rolesData } = useGetStaffRolesQuery();
+    const roles = rolesData?.data || [];
     const [deleteStaff] = useDeleteStaffMutation();
 
     const handleDelete = async (id, name) => {
@@ -141,10 +143,11 @@ export default function StaffList() {
             className="flex-1 min-w-[130px] px-3 py-2 text-sm rounded-xl border border-edge bg-surface text-ink focus:outline-none focus:border-primary transition"
         >
             <option value="">{labels.allRoles}</option>
-            <option value="cashier">{labels.cashier}</option>
-            <option value="tailor">{labels.tailor}</option>
-            <option value="stockKeeper">{labels.stockKeeper}</option>
-            <option value="other">{labels.other}</option>
+            {roles.map((role) => (
+                <option key={role._id} value={role.name}>
+                    {role.name}
+                </option>
+            ))}
         </select>
 
         <select
@@ -300,6 +303,19 @@ function StaffRow({ item, onView, onEdit, onDelete }) {
                 <span className="text-xs text-ink-muted capitalize">
                     {item.salaryType}
                 </span>
+            </td>
+
+            <td className="px-4 py-3 text-center hidden xl:table-cell">
+                {item.salaryType === 'percentage' ? (
+                    <div className="flex items-center justify-center gap-1">
+                        <Percent className="w-3 h-3 text-primary" />
+                        <span className="text-xs font-semibold text-ink">
+                            {item.percentage || 0}%
+                        </span>
+                    </div>
+                ) : (
+                    <span className="text-xs text-ink-muted">—</span>
+                )}
             </td>
 
             <td className="px-4 py-3 text-center">

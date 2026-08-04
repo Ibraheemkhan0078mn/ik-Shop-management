@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
+import { getLocalStaffModel } from "../../../configs/connect.db.js";
 import {
     createStaff,
     getAllStaff,
@@ -14,6 +15,9 @@ import {
     getActiveStaff,
     calculateSalaryBreakdown,
     calculatePaymentSummary,
+    calculateStaffCommission,
+    calculateStaffCommissionAllTime,
+    getStaffCommissionOrders
 } from "../services/staff.service.js";
 
 // Create Staff
@@ -225,5 +229,46 @@ export const getPaymentSummaryData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Payment summary calculated successfully",
         data: summary,
+    });
+});
+
+// Calculate Staff Commission (Percentage-based)
+export const getStaffCommissionData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const commission = await calculateStaffCommission(id, startDate, endDate);
+
+    res.status(200).json({
+        success: true,
+        message: "Staff commission calculated successfully",
+        data: commission,
+    });
+});
+
+// Calculate Staff Commission All-Time (from join date to current)
+export const getStaffCommissionAllTimeData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const commission = await calculateStaffCommissionAllTime(id);
+
+    res.status(200).json({
+        success: true,
+        message: "Staff all-time commission calculated successfully",
+        data: commission,
+    });
+});
+
+// Get Staff Commission Orders (paginated)
+export const getStaffCommissionOrdersData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { startDate, endDate, page = 1, limit = 20 } = req.query;
+
+    const result = await getStaffCommissionOrders(id, startDate, endDate, parseInt(page), parseInt(limit));
+
+    res.status(200).json({
+        success: true,
+        message: "Staff commission orders retrieved successfully",
+        data: result,
     });
 });

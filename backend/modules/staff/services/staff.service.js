@@ -30,6 +30,166 @@ import {
     countStaffAttendanceService
 } from "./staffAttendance.crud.js";
 
+// Calculate staff commission from orders (with date range)
+export const calculateStaffCommission = async (staffId, startDate, endDate) => {
+    const OrderModel = getLocalOrderModel();
+    const StaffModel = getLocalStaffModel();
+    
+    // Get staff details
+    const staff = await StaffModel.findById(staffId);
+    if (!staff) {
+        throw new Error('Staff not found');
+    }
+
+    // Build base query for orders with this staff
+    const matchQuery = {
+        staffId: staffId,
+        status: 'completed'
+    };
+    
+    if (startDate || endDate) {
+        matchQuery.createdAt = {};
+        if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+        if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+    }
+    
+    const orders = await OrderModel.find(matchQuery);
+    
+    // Calculate commission for orders that don't have it yet (for percentage-based staff)
+    if (staff.salaryType === 'percentage' && staff.percentage > 0) {
+        for (const order of orders) {
+            if (!order.staffCommission || order.staffCommission === 0) {
+                const commissionAmount = (order.totalAmount * staff.percentage) / 100;
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    { staffCommission: commissionAmount }
+                );
+                order.staffCommission = commissionAmount;
+            }
+        }
+    }
+    
+    // Filter orders that have commission
+    const ordersWithCommission = orders.filter(order => order.staffCommission > 0);
+    
+    const totalCommission = ordersWithCommission.reduce((sum, order) => sum + (order.staffCommission || 0), 0);
+    const totalOrders = ordersWithCommission.length;
+    const totalSales = ordersWithCommission.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    return {
+        totalCommission,
+        totalOrders,
+        totalSales,
+        orders: ordersWithCommission
+    };
+};
+
+// Calculate all-time commission KPI (from staff join date to current)
+export const calculateStaffCommissionAllTime = async (staffId) => {
+    const OrderModel = getLocalOrderModel();
+    const StaffModel = getLocalStaffModel();
+    
+    // Get staff details
+    const staff = await StaffModel.findById(staffId);
+    if (!staff) {
+        throw new Error('Staff not found');
+    }
+
+    // Build query from staff join date to current
+    const matchQuery = {
+        staffId: staffId,
+        status: 'completed',
+        createdAt: { $gte: new Date(staff.joinDate) }
+    };
+    
+    const orders = await OrderModel.find(matchQuery);
+    
+    // Calculate commission for orders that don't have it yet
+    if (staff.salaryType === 'percentage' && staff.percentage > 0) {
+        for (const order of orders) {
+            if (!order.staffCommission || order.staffCommission === 0) {
+                const commissionAmount = (order.totalAmount * staff.percentage) / 100;
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    { staffCommission: commissionAmount }
+                );
+                order.staffCommission = commissionAmount;
+            }
+        }
+    }
+    
+    const ordersWithCommission = orders.filter(order => order.staffCommission > 0);
+    
+    const totalCommission = ordersWithCommission.reduce((sum, order) => sum + (order.staffCommission || 0), 0);
+    const totalOrders = ordersWithCommission.length;
+    const totalSales = ordersWithCommission.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    return {
+        totalCommission,
+        totalOrders,
+        totalSales,
+        joinDate: staff.joinDate,
+        percentage: staff.percentage
+    };
+};
+
+// Get paginated commission orders with date range
+export const getStaffCommissionOrders = async (staffId, startDate, endDate, page = 1, limit = 20) => {
+    const OrderModel = getLocalOrderModel();
+    const StaffModel = getLocalStaffModel();
+    
+    // Get staff details
+    const staff = await StaffModel.findById(staffId);
+    if (!staff) {
+        throw new Error('Staff not found');
+    }
+
+    // Build query
+    const matchQuery = {
+        staffId: staffId,
+        status: 'completed'
+    };
+    
+    if (startDate || endDate) {
+        matchQuery.createdAt = {};
+        if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+        if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+    }
+    
+    const skip = (page - 1) * limit;
+    
+    const [orders, total] = await Promise.all([
+        OrderModel.find(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        OrderModel.countDocuments(matchQuery)
+    ]);
+    
+    // Calculate commission for orders that don't have it yet
+    if (staff.salaryType === 'percentage' && staff.percentage > 0) {
+        for (const order of orders) {
+            if (!order.staffCommission || order.staffCommission === 0) {
+                const commissionAmount = (order.totalAmount * staff.percentage) / 100;
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    { staffCommission: commissionAmount }
+                );
+                order.staffCommission = commissionAmount;
+            }
+        }
+    }
+    
+    const totalPages = Math.ceil(total / limit);
+    
+    return {
+        orders,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages
+        }
+    };
+};
+
 // Create staff sale bill from POS order
 export const createStaffSaleBillFromPOS = async (staffId, posOrder) => {
     const StaffModel = getLocalStaffModel();
@@ -523,21 +683,21 @@ export const calculatePaymentSummary = async (staffId) => {
     let totalEarnings = 0;
     let totalPaid = 0;
     let totalRemaining = 0;
+    let totalAdvance = 0;
     let paymentStatus = 'remaining';
     
     if (staff.salaryType === 'percentage') {
-        // Calculate from POS orders
+        // Calculate from all completed orders (all-time)
         const orders = await OrderModel.find({
             staffId,
-            isPosOrder: true,
             status: 'completed'
         });
         
         totalEarnings = orders.reduce((sum, order) => {
-            return sum + ((order.totalAmount || 0) * (staff.percentage || 0) / 100);
+            return sum + (order.staffCommission || 0);
         }, 0);
         
-        // Get payments
+        // Get all payments (all-time)
         const payments = await findStaffSalaryPaymentService({ staffId });
         totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
         
@@ -585,6 +745,7 @@ export const calculatePaymentSummary = async (staffId) => {
     }
     
     totalRemaining = Math.max(0, totalEarnings - totalPaid);
+    totalAdvance = Math.max(0, totalPaid - totalEarnings);
     
     if (totalPaid >= totalEarnings) {
         paymentStatus = 'advanced';
@@ -604,6 +765,7 @@ export const calculatePaymentSummary = async (staffId) => {
         totalEarnings: Math.round(totalEarnings * 100) / 100,
         totalPaid: Math.round(totalPaid * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
+        totalAdvance: Math.round(totalAdvance * 100) / 100,
         paymentStatus
     };
 };

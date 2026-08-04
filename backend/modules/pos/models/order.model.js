@@ -35,6 +35,7 @@ const orderSchema = new mongoose.Schema(
         customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", default: null },
         waiter: { type: String, default: "" },
         staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", default: null },
+        staffCommission: { type: Number, default: 0 }, // Commission amount for percentage-based staff
 
         // Order Type
         orderType: {

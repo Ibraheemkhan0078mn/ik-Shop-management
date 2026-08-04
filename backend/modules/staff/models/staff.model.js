@@ -52,6 +52,10 @@ const staffSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    percentage: {
+        type: Number,
+        default: 0
+    },
     documents: [{
         documentType: {
             type: String,

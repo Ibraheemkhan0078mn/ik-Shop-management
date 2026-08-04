@@ -150,6 +150,26 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             providesTags: ["Attendance"],
         }),
+        getStaffCommission: builder.query({
+            query: ({ id, startDate, endDate }) => ({
+                url: `/staff/${id}/commission`,
+                params: { startDate, endDate },
+            }),
+            providesTags: (result, error, { id }) => [{ type: "Staff", id }],
+        }),
+        getStaffCommissionAllTime: builder.query({
+            query: (id) => ({
+                url: `/staff/${id}/commission/all-time`,
+            }),
+            providesTags: (result, error, id) => [{ type: "Staff", id }],
+        }),
+        getStaffCommissionOrders: builder.query({
+            query: ({ id, startDate, endDate, page, limit }) => ({
+                url: `/staff/${id}/commission/orders`,
+                params: { startDate, endDate, page, limit },
+            }),
+            providesTags: (result, error, { id }) => [{ type: "Staff", id }],
+        }),
         getSalaryBreakdown: builder.query({
             query: ({ staffId, startDate, endDate }) => ({
                 url: `/staff/${staffId}/salary-breakdown`,
@@ -211,6 +231,9 @@ export const {
     useGetAttendanceByDateQuery,
     useCreateOrUpdateAttendanceMutation,
     useGetAttendanceHistoryQuery,
+    useGetStaffCommissionQuery,
+    useGetStaffCommissionAllTimeQuery,
+    useGetStaffCommissionOrdersQuery,
     useGetSalaryBreakdownQuery,
     useGetPaymentSummaryQuery,
     useGetStaffRolesQuery,

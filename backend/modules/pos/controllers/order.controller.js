@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel } from "../../../configs/connect.db.js";
+import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel, getLocalStaffModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
 import {
     orderCreate as orderCreateService,
@@ -200,6 +200,22 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     }
 
     const order = await orderCreateService(validatedData);
+
+    // Calculate staff commission if staff has percentage-based salary
+    if (validatedData.staffId) {
+        const StaffModel = getLocalStaffModel();
+        const staff = await StaffModel.findById(validatedData.staffId);
+        
+        if (staff && staff.salaryType === 'percentage' && staff.percentage > 0) {
+            const commissionAmount = (validatedData.totalAmount * staff.percentage) / 100;
+            
+            // Update order with commission
+            await getLocalOrderModel().updateOne(
+                { _id: order._id },
+                { staffCommission: commissionAmount }
+            );
+        }
+    }
 
     // Deduct stock for all items
     for (const item of validatedData.items) {

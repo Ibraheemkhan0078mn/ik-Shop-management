@@ -14,6 +14,9 @@ import {
     getActiveStaffData,
     getSalaryBreakdownData,
     getPaymentSummaryData,
+    getStaffCommissionData,
+    getStaffCommissionAllTimeData,
+    getStaffCommissionOrdersData,
 } from "../controllers/staff.controller.js";
 import {
     createSalaryPaymentData,
@@ -57,6 +60,9 @@ router.get("/active", getActiveStaffData);
 // Staff Salary & Payment Summary Routes (must come before /:id)
 router.get("/:id/salary-breakdown", getSalaryBreakdownData);
 router.get("/:id/payment-summary", getPaymentSummaryData);
+router.get("/:id/commission", getStaffCommissionData);
+router.get("/:id/commission/all-time", getStaffCommissionAllTimeData);
+router.get("/:id/commission/orders", getStaffCommissionOrdersData);
 
 // Staff Routes
 router.post("/", upload.any(), createStaffData);
