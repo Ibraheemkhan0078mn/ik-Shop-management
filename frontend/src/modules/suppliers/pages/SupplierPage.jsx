@@ -1,8 +1,7 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -12,8 +11,10 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 
 export default function SupplierPage() {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getSupplierLabels(language);
@@ -71,6 +72,7 @@ export default function SupplierPage() {
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider"
                                     style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
+                                    <th className="px-4 py-3 font-semibold">Image</th>
                                     <th className="px-4 py-3 font-semibold">{labels.name}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.type}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.phone}</th>
@@ -86,6 +88,7 @@ export default function SupplierPage() {
                                         supplier={s}
                                         onEdit={() => setModal({ mode: "update", id: s._id })}
                                         onDelete={() => handleDelete(s._id)}
+                                        onView={() => navigate(`/suppliers/${s._id}`)}
                                     />
                                 ))}
                             </tbody>
@@ -102,22 +105,34 @@ export default function SupplierPage() {
     );
 }
 
-function SupplierRow({ supplier, onEdit, onDelete }) {
-    const navigate = useNavigate();
+function SupplierRow({ supplier, onEdit, onDelete, onView }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getSupplierLabels(language);
     
     const isActive = supplier?.isActive ?? true;
+    const IMAGE_BASE = "http://localhost:5001/uploads";
 
     return (
         <tr 
-            className="transition cursor-pointer" 
+            className="transition" 
             style={{ borderBottom: "1px solid var(--border)" }}
-            onClick={() => navigate(`/suppliers/${supplier._id}`)}
             onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
+            <td className="px-4 py-3">
+                {supplier?.image ? (
+                    <BigViewImage 
+                        src={`${IMAGE_BASE}/${supplier.image}`} 
+                        alt={supplier.name}
+                        className="w-10 h-10 rounded-lg object-cover"
+                    />
+                ) : (
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
+                        {supplier?.name?.charAt(0).toUpperCase() || "S"}
+                    </div>
+                )}
+            </td>
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>
                 {supplier?.name ?? "—"}
             </td>
@@ -140,7 +155,17 @@ function SupplierRow({ supplier, onEdit, onDelete }) {
                 </span>
             </td>
             <td className="px-4 py-3">
-                <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center gap-2">
+                    <button
+                        onClick={onView}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                        style={{ color: "var(--muted)" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+                        title="View Details"
+                    >
+                        <Eye className="w-3.5 h-3.5" />
+                    </button>
                     <PermissionGuard execute={onEdit} permission="suppliers.update" isConfirmation={true}>
                         <button
                             className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1"

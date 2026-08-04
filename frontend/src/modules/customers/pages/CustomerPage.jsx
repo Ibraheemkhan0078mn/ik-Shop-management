@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import { useDeleteCustomer, useCustomers } from "../services/customers.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -11,6 +10,7 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import CustomerModal from "../components/CustomerModal.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -32,9 +32,6 @@ export default function CustomerPage() {
         }
     };
 
-    const handleRowClick = (customerId) => {
-        navigate(`/customers/${customerId}`);
-    };
 
     return (
         <div className="h-screen flex flex-col">
@@ -84,7 +81,7 @@ export default function CustomerPage() {
                                         customer={customer}
                                         onEdit={() => setModal({ mode: "update", id: customer._id })}
                                         onDelete={() => handleDelete(customer._id)}
-                                        onRowClick={() => handleRowClick(customer._id)}
+                                        onView={() => navigate(`/customers/${customer._id}`)}
                                     />
                                 ))}
                             </tbody>
@@ -97,7 +94,7 @@ export default function CustomerPage() {
     );
 }
 
-function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
+function CustomerRow({ customer, onEdit, onDelete, onView }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getCustomerLabels(language);
@@ -106,20 +103,23 @@ function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
 
     return (
         <tr 
-            className="transition cursor-pointer" 
+            className="transition" 
             style={{ borderBottom: "1px solid var(--border)" }} 
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-muted)")} 
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            onClick={onRowClick}
         >
             <td className="px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
-                    {customer?.image ? (
-                        <img src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} alt={customer?.name ?? "Customer"} className="h-full w-full object-cover" />
-                    ) : (
+                {customer?.image ? (
+                    <BigViewImage 
+                        src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} 
+                        alt={customer?.name ?? "Customer"} 
+                        className="h-10 w-10 rounded-full object-cover"
+                    />
+                ) : (
+                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
                         <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
-                    )}
-                </div>
+                    </div>
+                )}
             </td>
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>{customer?.name ?? "—"}</td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.phoneNo ?? "—"}</td>
@@ -131,7 +131,17 @@ function CustomerRow({ customer, onEdit, onDelete, onRowClick }) {
                 </span>
             </td>
             <td className="px-4 py-3">
-                <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-center gap-2">
+                    <button
+                        onClick={onView}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                        style={{ color: "var(--muted)" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+                        title="View Details"
+                    >
+                        <Eye className="w-3.5 h-3.5" />
+                    </button>
                     <PermissionGuard execute={onEdit} permission="customers.update" isConfirmation={true}>
                         <button className="px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }} title={labels.edit}>
                             <Pencil className="w-3 h-3" />

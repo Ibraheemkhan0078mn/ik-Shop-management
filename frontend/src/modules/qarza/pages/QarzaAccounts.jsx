@@ -10,6 +10,7 @@ import QarzaAccountModal from "../components/QarzaAccountModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
@@ -119,15 +120,10 @@ export default function QarzaAccounts() {
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style={{ border: "1px solid var(--border)", background: "var(--surface-muted)" }}>
                                                         {imageUrl ? (
-                                                            <img
+                                                            <BigViewImage
                                                                 src={imageUrl}
-                                                                className="w-full h-full object-cover"
                                                                 alt={acc.name}
-                                                                onError={(e) => {
-                                                                    e.target.style.display = 'none';
-                                                                    e.target.parentElement.style.display = 'flex';
-                                                                    e.target.parentElement.innerHTML = `<span class="text-sm font-bold" style="color: var(--accent-2)">${initials}</span>`;
-                                                                }}
+                                                                className="w-full h-full object-cover"
                                                             />
                                                         ) : (
                                                             <span className="text-sm font-bold" style={{ color: "var(--accent-2)" }}>{initials}</span>

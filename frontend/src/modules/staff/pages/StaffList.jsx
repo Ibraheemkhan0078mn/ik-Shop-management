@@ -11,6 +11,7 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import StaffModal from "../components/StaffModal.jsx";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 
 export default function StaffList() {
     const navigate = useNavigate();
@@ -262,14 +263,10 @@ function StaffRow({ item, onView, onEdit, onDelete }) {
             <td className="px-4 py-3">
                 <div className="w-9 h-9 rounded-lg overflow-hidden bg-surface-muted shrink-0">
                     {item.photo ? (
-                        <img
+                        <BigViewImage
                             src={toImageUrl(item.photo)}
                             alt={item.fullName}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = "none";
-                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-xs font-semibold text-primary">${item.fullName?.charAt(0) || "S"}</span></div>`;
-                            }}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">

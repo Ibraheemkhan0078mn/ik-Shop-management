@@ -5,6 +5,7 @@ import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { usePurchasesBySupplier } from "../../productPurchases/services/purchases.service.js";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -87,7 +88,7 @@ export default function SupplierDetail() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2 flex items-start gap-4 p-4 bg-[var(--surface-muted)] rounded-xl">
                             {supplier.image ? (
-                                <img 
+                                <BigViewImage 
                                     src={`${IMAGE_BASE}/${supplier.image}`} 
                                     alt={supplier.name} 
                                     className="w-16 h-16 rounded-xl object-cover"
