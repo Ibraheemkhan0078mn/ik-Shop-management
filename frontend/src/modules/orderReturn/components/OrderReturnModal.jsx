@@ -1,6 +1,6 @@
 // ─── components/OrderReturnModal.jsx ──────────────────────────────────────
 import React, { useState, useEffect } from "react";
-import { X, Search, Check, Trash2, DollarSign, Plus, Edit2 } from "lucide-react";
+import { X, Search, ChevronUp, ChevronDown, Trash2, DollarSign, Plus, Edit2 } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGenerateReturnNumberQuery,
@@ -20,28 +20,6 @@ const RETURN_REASONS = [
     { value: "not-needed", label: "Not Needed" },
     { value: "other", label: "Other" },
 ];
-
-const buildReturnLineItem = (item) => ({
-    productId: item.product || item._id,
-    productName: item.name || item.productName,
-    quantity: 1,
-    maxQuantity: item.quantity,
-    returnReason: "damaged",
-    originalPrice: item.unitPrice || item.price,
-    refundAmount: item.unitPrice || item.price,
-    batchId: item.batchId,
-});
-
-const toSubmittableItem = (item) => ({
-    productId: item.productId,
-    productName: item.productName,
-    quantity: item.quantity,
-    returnReason: item.returnReason,
-    originalPrice: item.originalPrice,
-    refundAmount: item.refundAmount,
-    batchId: item.batchId,
-    _id: item._id,
-});
 
 // ─── Sub-components ───────────────────────────────────────────
 const OrderNumberSearch = ({ value, onChange, onSearch, error, isLoading }) => (
@@ -68,75 +46,122 @@ const OrderNumberSearch = ({ value, onChange, onSearch, error, isLoading }) => (
     </div>
 );
 
-const OrderItemPicker = ({ items, onSelect }) => (
+const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, expandedCalculation, onToggleCalculation }) => (
     <div className="mb-6">
         <h3 className="text-lg font-semibold text-(--ink) mb-4 font-display">Order Items</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {items.map((item) => (
-                <div
-                    key={item._id}
-                    onClick={() => onSelect(item)}
-                    className="p-4 border border-(--border) rounded-lg hover:border-(--accent-2) transition-colors cursor-pointer"
-                >
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="font-medium text-(--ink)">{item.name}</p>
-                            <p className="text-sm text-(--muted)">
-                                Qty: {item.quantity} | Price: Rs {item.unitPrice}
-                            </p>
-                        </div>
-                        <Check className="w-5 h-5 text-(--accent-2)" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
+        <div className="space-y-3">
+            {items.map((item, idx) => {
+                const itemId = item._id || item.product || idx;
+                const isSelected = !!selectedItems[itemId];
+                const details = selectedItems[itemId] || {};
 
-const ReturnLineItemEditor = ({ item, onQuantityChange, onReasonChange, onRefundChange, onRemove }) => (
-    <div className="p-4 border border-(--border) rounded-lg bg-(--app-bg)">
-        <div className="flex items-start justify-between mb-3">
-            <div>
-                <p className="font-medium text-(--ink)">{item.productName}</p>
-                <p className="text-sm text-(--muted)">Original Price: Rs {item.originalPrice}</p>
-            </div>
-            <button onClick={() => onRemove(item.productId)} className="p-1 hover:bg-red-100 rounded transition-colors">
-                <Trash2 className="w-4 h-4 text-red-500" />
-            </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-            <div>
-                <label className="block text-xs text-(--muted) mb-1">Quantity (max: {item.maxQuantity})</label>
-                <input
-                    type="number"
-                    min="1"
-                    max={item.maxQuantity}
-                    value={item.quantity}
-                    onChange={(e) => onQuantityChange(item.productId, e.target.value)}
-                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
-                />
-            </div>
-            <div>
-                <label className="block text-xs text-(--muted) mb-1">Refund Amount</label>
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.refundAmount}
-                    onChange={(e) => onRefundChange(item.productId, e.target.value)}
-                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
-                />
-            </div>
-            <div className="col-span-2">
-                <label className="block text-xs text-(--muted) mb-1">Return Reason</label>
-                <select
-                    value={item.returnReason}
-                    onChange={(e) => onReasonChange(item.productId, e.target.value)}
-                    className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
-                >
-                    {RETURN_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-            </div>
+                return (
+                    <div key={itemId} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                        {/* Item header with checkbox */}
+                        <div
+                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition"
+                            style={{ background: isSelected ? "rgba(15,118,110,0.04)" : "var(--surface)" }}
+                            onClick={() => onSelect(itemId, item)}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                    e.stopPropagation();
+                                    onSelect(itemId, item);
+                                }}
+                                className="w-4 h-4 rounded"
+                                style={{ accentColor: "var(--accent-2)" }}
+                            />
+                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                                <div>
+                                    <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.name || item.productName || "—"}</span>
+                                </div>
+                                <div style={{ color: "var(--muted)" }}>
+                                    Qty: {item.quantity}
+                                </div>
+                                <div style={{ color: "var(--muted)" }}>
+                                    Price: Rs {Number(item.unitPrice || item.originalPrice || 0).toFixed(2)}
+                                </div>
+                                <div style={{ color: "var(--muted)" }}>
+                                    Batch: {item.batchNumber || item.batch?.batchNumber || "—"}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Inline form for selected item */}
+                        {isSelected && (
+                            <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-(--muted) mb-1">Return Quantity *</label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={item.quantity}
+                                            value={details.returnQuantity || 1}
+                                            onChange={(e) => onItemDetailChange(itemId, "returnQuantity", e.target.value)}
+                                            className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                        />
+                                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                                            Max limit: {item.quantity}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-(--muted) mb-1">Return Reason *</label>
+                                        <select
+                                            value={details.returnReason || "damaged"}
+                                            onChange={(e) => onItemDetailChange(itemId, "returnReason", e.target.value)}
+                                            className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                        >
+                                            {RETURN_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-(--muted) mb-1">Cut Amount</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={details.cut || 0}
+                                            onChange={(e) => onItemDetailChange(itemId, "cut", e.target.value)}
+                                            className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-3">
+                                    <button
+                                        onClick={() => onToggleCalculation(itemId)}
+                                        className="flex items-center gap-2 text-xs text-(--muted) hover:text-(--ink) transition-colors"
+                                    >
+                                        {expandedCalculation[itemId] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                        Show Refund Calculation
+                                    </button>
+                                    {expandedCalculation[itemId] && (
+                                        <div className="mt-2 p-3 bg-(--surface) rounded-lg text-xs" style={{ border: "1px solid var(--border)" }}>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between">
+                                                    <span>Original Total:</span>
+                                                    <span>Rs {((details.returnQuantity || 1) * (item.unitPrice || item.originalPrice || 0)).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Cut Amount:</span>
+                                                    <span>- Rs {(details.cut || 0).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                    <span>Refund Amount:</span>
+                                                    <span>Rs {(((details.returnQuantity || 1) * (item.unitPrice || item.originalPrice || 0)) - (details.cut || 0)).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     </div>
 );
@@ -144,7 +169,7 @@ const ReturnLineItemEditor = ({ item, onQuantityChange, onReasonChange, onRefund
 // ─── Main Component ───────────────────────────────────────────
 const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, orderId }) => {
     const [orderNumber, setOrderNumber] = useState("");
-    const [returnItems, setReturnItems] = useState([]);
+    const [selectedItems, setSelectedItems] = useState({});
     const [notes, setNotes] = useState("");
     const [generatedReturnNumber, setGeneratedReturnNumber] = useState(null);
     const [fetchedOrder, setFetchedOrder] = useState(null);
@@ -152,6 +177,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const [orderFetching, setOrderFetching] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingRefund, setEditingRefund] = useState(null);
+    const [expandedCalculation, setExpandedCalculation] = useState({});
 
     // RTK Query hooks
     const { data: returnNumberData } = useGenerateReturnNumberQuery(undefined, { skip: isEditMode || isViewMode || !isOpen });
@@ -171,7 +197,19 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     useEffect(() => {
         if ((isEditMode || isViewMode) && editData) {
             setOrderNumber(editData.referenceOrderNumber || "");
-            setReturnItems(editData.items?.map((item) => ({ ...item, maxQuantity: item.quantity })) || []);
+            // Convert items array to selectedItems object
+            const selectedItemsObj = {};
+            editData.items?.forEach((item) => {
+                const itemId = item.productId || item._id;
+                selectedItemsObj[itemId] = {
+                    returnQuantity: item.quantity,
+                    returnReason: item.returnReason,
+                    cut: item.cut || 0,
+                    refundAmount: item.refundAmount,
+                    originalPrice: item.originalPrice,
+                };
+            });
+            setSelectedItems(selectedItemsObj);
             setNotes(editData.notes || "");
         } else {
             resetForm();
@@ -186,52 +224,57 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
         showSuccess("Order loaded successfully");
     }, [isEditMode, isViewMode, orderId, orderDataById]);
 
-    const addOrIncrementItem = (item) => {
-        setReturnItems((prev) => {
-            const productId = item.product || item._id;
-            const existing = prev.find((i) => i.productId === productId);
-            if (existing) {
-                return prev.map((i) =>
-                    i.productId === productId
-                        ? { ...i, quantity: Math.min(i.quantity + 1, i.maxQuantity) }
-                        : i
-                );
+    const handleItemSelect = (itemId, item) => {
+        setSelectedItems((prev) => {
+            if (prev[itemId]) {
+                // Deselect
+                const newSelected = { ...prev };
+                delete newSelected[itemId];
+                return newSelected;
+            } else {
+                // Select with default values
+                return {
+                    ...prev,
+                    [itemId]: {
+                        returnQuantity: 1,
+                        returnReason: "damaged",
+                        cut: 0,
+                        refundAmount: item.unitPrice || item.originalPrice || 0,
+                        originalPrice: item.unitPrice || item.originalPrice || 0,
+                    },
+                };
             }
-            return [...prev, buildReturnLineItem(item)];
         });
     };
 
-    const removeItem = (productId) => setReturnItems((prev) => prev.filter((i) => i.productId !== productId));
-
-    const updateQuantity = (productId, val) => {
-        setReturnItems((prev) =>
-            prev.map((i) => {
-                if (i.productId !== productId) return i;
-                if (val === "" || val === undefined) return { ...i, quantity: "" };
-                const qty = parseInt(val);
-                if (isNaN(qty)) return { ...i, quantity: "" };
-                if (qty > i.maxQuantity) {
-                    showError(`Max returnable quantity is ${i.maxQuantity}`);
-                    return { ...i, quantity: i.maxQuantity };
-                }
-                if (qty < 1) return { ...i, quantity: 1 };
-                return { ...i, quantity: qty };
-            })
-        );
+    const handleItemDetailChange = (itemId, field, value) => {
+        setSelectedItems((prev) => {
+            const updated = {
+                ...prev,
+                [itemId]: {
+                    ...prev[itemId],
+                    [field]: value,
+                },
+            };
+            
+            // Recalculate refund amount when quantity or cut changes
+            if (field === 'returnQuantity' || field === 'cut') {
+                const details = updated[itemId];
+                const qty = Number(details.returnQuantity) || 1;
+                const cut = Number(details.cut) || 0;
+                const refundAmount = (qty * details.originalPrice) - cut;
+                updated[itemId].refundAmount = Math.max(0, refundAmount);
+            }
+            
+            return updated;
+        });
     };
 
-    const updateReason = (productId, reason) => setReturnItems((prev) =>
-        prev.map((i) => i.productId === productId ? { ...i, returnReason: reason } : i)
-    );
-
-    const updateRefund = (productId, amount) => {
-        setReturnItems((prev) =>
-            prev.map((i) => {
-                if (i.productId !== productId) return i;
-                const refundAmt = parseFloat(amount) || 0;
-                return { ...i, refundAmount: refundAmt };
-            })
-        );
+    const toggleCalculation = (itemId) => {
+        setExpandedCalculation((prev) => ({
+            ...prev,
+            [itemId]: !prev[itemId],
+        }));
     };
 
     useEffect(() => {
@@ -248,15 +291,37 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
         // This function can be used for manual trigger if needed
     };
 
-    const totalRefundAmount = returnItems.reduce((sum, i) => sum + (parseFloat(i.refundAmount) || 0) * (parseInt(i.quantity) || 0), 0);
+    const totalRefundAmount = Object.values(selectedItems).reduce((sum, item) => sum + (parseFloat(item.refundAmount) || 0), 0);
 
     const handleSubmit = async () => {
-        if (!returnItems.length) return showError("Please select at least one item to return");
-        if (returnItems.some((i) => !i.quantity || parseInt(i.quantity) < 1))
-            return showError("Fix quantities before submitting");
+        const selectedItemsArray = Object.entries(selectedItems);
+        if (selectedItemsArray.length === 0) return showError("Please select at least one item to return");
+        
+        const itemsPayload = selectedItemsArray.map(([itemId, details]) => ({
+            productId: itemId,
+            productName: "", // Will be filled from fetchedOrder items
+            quantity: details.returnQuantity,
+            returnReason: details.returnReason,
+            originalPrice: details.originalPrice,
+            refundAmount: details.refundAmount,
+            cut: details.cut,
+        }));
+
+        // Fill productName from fetchedOrder items
+        if (fetchedOrder?.items) {
+            itemsPayload.forEach(item => {
+                const orderItem = fetchedOrder.items.find(oi => 
+                    (oi._id === item.productId || oi.product === item.productId)
+                );
+                if (orderItem) {
+                    item.productName = orderItem.name || orderItem.productName;
+                    item.batchId = orderItem.batchId;
+                }
+            });
+        }
+
         setSubmitting(true);
         try {
-            const itemsPayload = returnItems.map(toSubmittableItem);
             if (isEditMode && editData) {
                 await updateOrderReturn({ id: editData._id, items: itemsPayload, notes }).unwrap();
                 showSuccess("Order return updated successfully");
@@ -280,7 +345,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
         }
     };
 
-    const resetForm = () => { setOrderNumber(""); setReturnItems([]); setNotes(""); setFetchedOrder(null); setOrderFetchError(null); };
+    const resetForm = () => { setOrderNumber(""); setSelectedItems({}); setNotes(""); setFetchedOrder(null); setOrderFetchError(null); };
     const handleClose = () => { resetForm(); onClose(); };
 
     const handleDeleteRefund = async (refundId) => {
@@ -369,14 +434,14 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                             <div>
                                 <h3 className="text-lg font-semibold text-(--ink) mb-4 font-display">Returned Items</h3>
                                 <div className="space-y-3">
-                                    {returnItems.map((item) => (
-                                        <div key={item.productId} className="p-4 border border-(--border) rounded-lg bg-(--app-bg)">
+                                    {Object.entries(selectedItems).map(([itemId, item]) => (
+                                        <div key={itemId} className="p-4 border border-(--border) rounded-lg bg-(--app-bg)">
                                             <div className="flex justify-between items-start mb-2">
-                                                <p className="font-medium text-(--ink)">{item.productName}</p>
-                                                <p className="text-sm font-bold text-(--accent-2)">Rs {(parseFloat(item.refundAmount) * parseInt(item.quantity)).toFixed(2)}</p>
+                                                <p className="font-medium text-(--ink)">{item.productName || `Product ${itemId}`}</p>
+                                                <p className="text-sm font-bold text-(--accent-2)">Rs {parseFloat(item.refundAmount).toFixed(2)}</p>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-sm text-(--muted)">
-                                                <div>Qty: {item.quantity}</div>
+                                                <div>Qty: {item.returnQuantity}</div>
                                                 <div>Price: Rs {item.originalPrice}</div>
                                                 <div>Refund: Rs {item.refundAmount}</div>
                                             </div>
@@ -387,7 +452,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                     ))}
                                 </div>
                                 <div className="mt-4 p-4 bg-(--accent-2)/10 rounded-lg flex justify-between items-center">
-                                    <span className="font-semibold text-(--ink)">Total Refund:</span>
+                                    <span className="font-semibold text(--ink)">Total Refund:</span>
                                     <span className="text-2xl font-bold text-(--accent-2)">Rs {totalRefundAmount.toFixed(2)}</span>
                                 </div>
                             </div>
@@ -511,28 +576,20 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                             )}
 
                             {!isEditMode && fetchedOrder?.items?.length > 0 && (
-                                <OrderItemPicker items={fetchedOrder.items} onSelect={addOrIncrementItem} />
+                                <OrderItemPicker 
+                                    items={fetchedOrder.items} 
+                                    selectedItems={selectedItems}
+                                    onSelect={handleItemSelect}
+                                    onItemDetailChange={handleItemDetailChange}
+                                    expandedCalculation={expandedCalculation}
+                                    onToggleCalculation={toggleCalculation}
+                                />
                             )}
 
-                            {returnItems.length > 0 && (
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-(--ink) mb-4 font-display">Items for Return</h3>
-                                    <div className="space-y-4">
-                                        {returnItems.map((item) => (
-                                            <ReturnLineItemEditor
-                                                key={item.productId}
-                                                item={item}
-                                                onQuantityChange={updateQuantity}
-                                                onReasonChange={updateReason}
-                                                onRefundChange={updateRefund}
-                                                onRemove={removeItem}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 p-4 bg-(--accent-2)/10 rounded-lg flex justify-between items-center">
-                                        <span className="font-semibold text-(--ink)">Total Refund:</span>
-                                        <span className="text-2xl font-bold text-(--accent-2)">Rs {totalRefundAmount.toFixed(2)}</span>
-                                    </div>
+                            {Object.keys(selectedItems).length > 0 && (
+                                <div className="mt-4 p-4 bg-(--accent-2)/10 rounded-lg flex justify-between items-center">
+                                    <span className="font-semibold text-(--ink)">Total Refund ({Object.keys(selectedItems).length} items):</span>
+                                    <span className="text-2xl font-bold text-(--accent-2)">Rs {totalRefundAmount.toFixed(2)}</span>
                                 </div>
                             )}
 
@@ -555,7 +612,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                         {isViewMode ? "Close" : "Cancel"}
                     </button>
                     {!isViewMode && (
-                        <button onClick={handleSubmit} disabled={!returnItems.length || submitting} className="px-6 py-2 bg-(--accent-2) text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">
+                        <button onClick={handleSubmit} disabled={Object.keys(selectedItems).length === 0 || submitting} className="px-6 py-2 bg-(--accent-2) text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">
                             {submitting ? "Saving..." : (isEditMode ? "Update Return" : "Create Return")}
                         </button>
                     )}

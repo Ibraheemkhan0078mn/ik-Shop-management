@@ -26,7 +26,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 params: { page, limit, ...filters }
             }),
             providesTags: ["OrderReturn"],
-            transformResponse: (res) => res.data,
+            transformResponse: (res) => res,
         }),
         // Get order return by ID
         getOrderReturnById: build.query({

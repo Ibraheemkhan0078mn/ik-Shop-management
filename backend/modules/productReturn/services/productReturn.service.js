@@ -15,13 +15,24 @@ const getOrderByNumber = async (orderNumber) => {
 
 const createProductReturn = async (returnData) => {
     const returnNumber = await generateReturnNumber();
-    const totalRefundAmount = returnData.items.reduce((sum, item) => sum + item.refundAmount, 0);
+    
+    // Calculate refundAmount for each item if not provided or validate it
+    const itemsWithCalculatedRefund = returnData.items.map(item => {
+        const calculatedRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+        return {
+            ...item,
+            cut: item.cut || 0,
+            refundAmount: item.refundAmount || calculatedRefund,
+        };
+    });
+    
+    const totalRefundAmount = itemsWithCalculatedRefund.reduce((sum, item) => sum + item.refundAmount, 0);
     
     const createdReturn = await createProductReturnService({
         returnNumber,
         referenceOrderId: returnData.referenceOrderId,
         referenceOrderNumber: returnData.referenceOrderNumber,
-        items: returnData.items,
+        items: itemsWithCalculatedRefund,
         totalRefundAmount,
         customerName: returnData.customerName,
         notes: returnData.notes,
@@ -100,6 +111,23 @@ const updateProductReturn = async (id, updateData) => {
     const existing = await findByIdProductReturnService(id);
     if (!existing) {
         throw new Error("Product return not found");
+    }
+
+    // Calculate refundAmount for items if provided
+    let itemsToUpdate = updateData.items;
+    if (itemsToUpdate) {
+        itemsToUpdate = itemsToUpdate.map(item => {
+            const calculatedRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+            return {
+                ...item,
+                cut: item.cut || 0,
+                refundAmount: item.refundAmount || calculatedRefund,
+            };
+        });
+        
+        // Recalculate total refund amount
+        updateData.totalRefundAmount = itemsToUpdate.reduce((sum, item) => sum + item.refundAmount, 0);
+        updateData.items = itemsToUpdate;
     }
 
     // Calculate stock adjustments based on item changes ONLY if returnStatus is approved

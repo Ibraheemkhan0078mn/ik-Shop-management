@@ -1,7 +1,7 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX, Printer, Download, CheckCircle, Check, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -25,7 +25,6 @@ const HIDE_CLASS = { sm: "hidden sm:table-cell", md: "hidden md:table-cell" };
 const colClass = (col) => [HIDE_CLASS[col.hideBelow], col.align && `text-${col.align}`].filter(Boolean).join(" ");
 
 const OrderReturnList = () => {
-    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getOrderReturnLabels(language);
@@ -52,6 +51,7 @@ const OrderReturnList = () => {
     const [deleteOrderReturn] = useDeleteOrderReturnMutation();
     const [approveOrderReturn] = useApproveOrderReturnMutation();
 
+    // The API returns full response with pagination info
     const returns = returnsData?.data || [];
     const pagination = {
         page: returnsData?.page || 1,
@@ -155,13 +155,6 @@ const OrderReturnList = () => {
                     subheading={labels.manageReturns}
                     leftActions={
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate(-1)}
-                                title="Back"
-                                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-edge text-ink-subtle hover:text-primary hover:border-edge-brand hover:bg-primary-hover transition-colors"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                            </button>
                             <PermissionGuard 
                                 execute={() => setShowModal(true)} 
                                 permission="orderReturns.create" 
@@ -181,16 +174,6 @@ const OrderReturnList = () => {
                                 </div>
                             </PermissionGuard>
                         </div>
-                    }
-                    rightActions={
-                        <>
-                            <button onClick={() => console.log("Print")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Printer size={18} />
-                            </button>
-                            <button onClick={() => console.log("Export")} className="p-2 rounded-lg transition-all hover:bg-[var(--surface-muted)]" style={{ color: "var(--muted)" }}>
-                                <Download size={18} />
-                            </button>
-                        </>
                     }
                 />
             </div>

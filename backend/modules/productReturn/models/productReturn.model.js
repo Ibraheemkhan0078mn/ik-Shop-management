@@ -28,6 +28,11 @@ const productReturnItemSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    cut: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
     refundAmount: {
         type: Number,
         required: true,
