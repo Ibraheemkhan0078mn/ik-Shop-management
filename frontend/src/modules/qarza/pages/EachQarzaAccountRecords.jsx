@@ -1,7 +1,7 @@
 // src/modules/qarza/pages/EachQarzaAccountRecords.jsx
-import { useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Edit2, Trash2, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
+import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
     useAccountPaymentsPaginated,
@@ -11,6 +11,9 @@ import {
 import QarzaPaymentModal from "../components/QarzaPaymentModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { hasPermission } from "../../../shared/utilities/permissionUtils.js";
 
 const STATUS_COLOR = {
@@ -21,7 +24,6 @@ const STATUS_COLOR = {
 export default function EachQarzaAccountRecords() {
     const { id } = useParams();
     console.log("the account id", id)
-    const navigate = useNavigate();
     const language = useSelector(s => s.auth?.user?.language ?? "en");
     const { permissions = [], role } = useSelector(s => s.auth) ?? {};
 
@@ -29,13 +31,9 @@ export default function EachQarzaAccountRecords() {
     const [deletePayment] = useDeleteQarzaPayment();
 
     const [modal, setModal] = useState(null);
-    const [page, setPage] = useState(1);
-    const [sourceFilter, setSourceFilter] = useState('all');
-    const limit = 20;
+    const [currentPage, setCurrentPage] = useState(1);
 
-    const { data: paymentsData, isLoading } = useAccountPaymentsPaginated({ qarzaAccountId: id, page, limit, source: sourceFilter });
-
-    const refresh = useCallback(() => { setPage(1); }, []);
+    const refresh = useCallback(() => { setCurrentPage(1); }, []);
 
     const handleDelete = async (paymentId) => {
         if (!window.confirm("Delete this payment?")) return;
@@ -48,11 +46,117 @@ export default function EachQarzaAccountRecords() {
         }
     };
 
-    const payments = paymentsData?.data || [];
-    const totalPages = paymentsData?.totalPages || 1;
+    const renderItems = (items) => {
+        if (!items?.length) return null;
+
+        return (
+            <div className="flex flex-col gap-0">
+                {/* Desktop header */}
+                <div className="hidden lg:grid lg:grid-cols-6 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
+                    style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                    <div className="col-span-1">{language === "en" ? "Type" : "قسم"}</div>
+                    <div className="col-span-1">{language === "en" ? "Amount" : "رقم"}</div>
+                    <div className="col-span-2">{language === "en" ? "Notes" : "نوٹس"}</div>
+                    <div className="col-span-1">{language === "en" ? "Date" : "تاریخ"}</div>
+                    <div className="col-span-1">{language === "en" ? "Actions" : "اقدامات"}</div>
+                </div>
+
+                {/* Desktop rows */}
+                {items.map((item) => {
+                    const { bg, text, Icon } = STATUS_COLOR[item.type] ?? STATUS_COLOR.cashin;
+                    return (
+                        <div key={item._id}
+                            className="hidden lg:grid lg:grid-cols-6 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
+                            style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+                            <div className="col-span-1 flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
+                                    <Icon className="w-4 h-4" style={{ color: text }} />
+                                </div>
+                                <span className="text-xs font-semibold uppercase" style={{ color: text }}>{item.type}</span>
+                            </div>
+                            <div className="col-span-1">
+                                <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
+                                    Rs {(item.amount || 0).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="col-span-2">
+                                <p className="text-xs truncate max-w-[200px]" style={{ color: "var(--muted)" }}>
+                                    {item.notes || "-"}
+                                </p>
+                            </div>
+                            <div className="col-span-1 text-sm" style={{ color: "var(--muted)" }}>
+                                {new Date(item.date).toLocaleDateString()}
+                            </div>
+                            <div onClick={e => e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
+                                {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
+                                    <button onClick={() => setModal({ mode: "update", payment: item })}
+                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
+                                        <Edit2 size={15} />
+                                    </button>
+                                )}
+                                {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
+                                    <button onClick={() => handleDelete(item._id)}
+                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                        <Trash2 size={15} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Mobile / Tablet cards */}
+                <div className="lg:hidden flex flex-col gap-3 pt-1">
+                    {items.map((item) => {
+                        const { bg, text, Icon } = STATUS_COLOR[item.type] ?? STATUS_COLOR.cashin;
+                        return (
+                            <div key={`m-${item._id}`} className="rounded-2xl p-4 border transition-all duration-150 hover:shadow-md"
+                                style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 2px 12px rgba(64,45,28,0.07)" }}>
+                                <div className="flex items-start gap-3">
+                                    <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
+                                        <Icon className="w-6 h-6" style={{ color: text }} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-semibold uppercase" style={{ color: text }}>{item.type}</span>
+                                            <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
+                                                Rs {(item.amount || 0).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
+                                            {item.notes || "-"}
+                                        </p>
+                                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                                            {new Date(item.date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
+                                        <button onClick={() => setModal({ mode: "update", payment: item })}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                            <Edit2 size={14} />
+                                        </button>
+                                    )}
+                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
+                                        <button onClick={() => handleDelete(item._id)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
 
     return (
-        <div style={{ color: "var(--ink)" }}>
+        <div className="h-screen flex flex-col overflow-hidden">
             {modal && (
                 <QarzaPaymentModal
                     mode={modal.mode}
@@ -69,33 +173,19 @@ export default function EachQarzaAccountRecords() {
                     heading={language === "en" ? "Account Payments" : "اکاؤنٹ ادائیگیاں"}
                     subheading={language === "en" ? "View and manage payment records" : "ادائیگی ریکارڈز دیکھیں اور انتظام کریں"}
                     leftActions={
-                        <button className="btn-back" onClick={() => navigate("/qarzaAccount")}>
-                            <ArrowLeft className="w-4 h-4" />
-                            {language === "en" ? "Back" : "واپس"}
-                        </button>
+                        (role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
+                            <PermissionGuard 
+                                execute={() => setModal({ mode: "create" })} 
+                                permission="creditsAndDebitsAccounts.payment.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Payment" : "ادائیگی شامل کریں"} />
+                                </div>
+                            </PermissionGuard>
+                        )
                     }
                 />
-            </div>
-
-            {/* toolbar */}
-            <div className="flex flex-wrap items-center gap-3 mb-5">
-                {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
-                    <button className="btn-add" onClick={() => setModal({ mode: "create" })}>
-                        <Plus className="w-4 h-4" />
-                        {language === "en" ? "Add Payment" : "ادائیگی شامل کریں"}
-                    </button>
-                )}
-                {/* <select
-                    value={sourceFilter}
-                    onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
-                    style={{ borderColor: 'var(--border)', '--tw-ring-color': 'var(--accent-2)' }}
-                >
-                    <option value="all">All Sources</option>
-                    <option value="pos">POS</option>
-                    <option value="purchaseProducts">Purchase</option>
-                    <option value="manual">Manual</option>
-                </select> */}
             </div>
 
             {/* summary cards */}
@@ -134,7 +224,7 @@ export default function EachQarzaAccountRecords() {
                         },
                     ].map(({ label, value, color, bg }) => (
                         <div key={label} className="rounded-2xl p-4"
-                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            style={{ background: bg, border: "1px solid var(--border)" }}>
                             <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--muted)" }}>
                                 {label}
                             </p>
@@ -147,132 +237,16 @@ export default function EachQarzaAccountRecords() {
             )}
 
             {/* payments list */}
-            {isLoading ? (
-                <div className="flex items-center justify-center h-40 text-sm" style={{ color: "var(--muted)" }}>
-                    Loading payments...
-                </div>
-            ) : payments.length === 0 ? (
-                <div className="flex items-center justify-center h-40 text-sm" style={{ color: "var(--muted)" }}>
-                    No payments recorded.
-                </div>
-            ) : (
-                <>
-                    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
-                        <table className="w-full">
-                            <thead>
-                                <tr style={{ background: "var(--surface-muted)" }}>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Type" : "قسم"}</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Amount" : "رقم"}</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Notes" : "نوٹس"}</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Date" : "تاریخ"}</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Source" : "ماخذ"}</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{language === "en" ? "Actions" : "اقدامات"}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {payments.map((p, i) => {
-                                    const { bg, text, Icon } = STATUS_COLOR[p.type] ?? STATUS_COLOR.cashin;
-                                    return (
-                                        <tr key={p._id ?? i}
-                                            className="border-t transition-colors"
-                                            style={{ borderColor: "var(--border)" }}
-                                            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
-                                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-
-                                            {/* type icon */}
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
-                                                        <Icon className="w-4 h-4" style={{ color: text }} />
-                                                    </div>
-                                                    <span className="text-xs font-semibold uppercase" style={{ color: text }}>{p.type}</span>
-                                                </div>
-                                            </td>
-
-                                            {/* amount */}
-                                            <td className="px-4 py-3">
-                                                <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
-                                                    Rs {(p.amount || 0).toLocaleString()}
-                                                </p>
-                                            </td>
-
-                                            {/* notes */}
-                                            <td className="px-4 py-3">
-                                                <p className="text-xs truncate max-w-[200px]" style={{ color: "var(--muted)" }}>
-                                                    {p.notes || "-"}
-                                                </p>
-                                            </td>
-
-                                            {/* date */}
-                                            <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
-                                                {new Date(p.date).toLocaleDateString()}
-                                            </td>
-
-                                            {/* source */}
-                                            <td className="px-4 py-3">
-                                                <span className="text-xs px-2 py-1 rounded-md font-semibold"
-                                                    style={{
-                                                        background: "var(--surface-muted)",
-                                                        color: "var(--ink)"
-                                                    }}>
-                                                    {p.source || "manual"}
-                                                </span>
-                                            </td>
-
-                                            {/* actions */}
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
-                                                        <button onClick={() => setModal({ mode: "update", payment: p })}
-                                                            className="w-8 h-8 flex items-center justify-center rounded-lg transition"
-                                                            style={{ color: "var(--muted)" }}
-                                                            onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                    {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
-                                                        <button onClick={() => handleDelete(p._id)}
-                                                            className="w-8 h-8 flex items-center justify-center rounded-lg transition"
-                                                            style={{ color: "var(--muted)" }}
-                                                            onMouseEnter={e => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}>
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* pagination controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-6">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                className="px-3 py-1 rounded-lg text-sm transition disabled:opacity-50"
-                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                {language === "en" ? "Previous" : "پچھلا"}
-                            </button>
-                            <span className="text-sm" style={{ color: "var(--muted)" }}>
-                                {page} / {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                className="px-3 py-1 rounded-lg text-sm transition disabled:opacity-50"
-                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                {language === "en" ? "Next" : "اگلا"}
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
+            <div className="flex-1 overflow-hidden">
+                <PaginatedList
+                    rtkQuery={useAccountPaymentsPaginated}
+                    limit={20}
+                    dataKey="data"
+                    wrapperClassName="h-full"
+                    renderItems={renderItems}
+                    queryArgs={{ qarzaAccountId: id, page: currentPage, limit: 20 }}
+                />
+            </div>
         </div>
     );
 }

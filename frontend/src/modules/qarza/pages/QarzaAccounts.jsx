@@ -1,14 +1,13 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MapPin, Edit2, Trash2, Phone } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getQarzaLabels } from "../labels/qarzaLabels.js";
 import { useQarzaAccountsPaginated, useDeleteQarzaAccount } from "../services/qarza.service.js";
 import QarzaAccountModal from "../components/QarzaAccountModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import emptyImage from "../../../shared/assets/images/boy-user.jpg";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -98,7 +97,6 @@ export default function QarzaAccounts() {
                                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{labels.balance}</th>
                                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{labels.phone}</th>
                                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{labels.address}</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{labels.status}</th>
                                     <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{labels.actions}</th>
                                 </tr>
                             </thead>
@@ -114,11 +112,8 @@ export default function QarzaAccounts() {
                                     return (
                                         <tr
                                             key={acc._id}
-                                            onClick={() => navigate(`/EachQarzaAccountRecord/${acc._id}`)}
-                                            className="border-t cursor-pointer hover:bg-opacity-50 transition-colors"
+                                            className="border-t transition-colors"
                                             style={{ borderColor: "var(--border)" }}
-                                            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"}
-                                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                                         >
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
@@ -142,25 +137,35 @@ export default function QarzaAccounts() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="font-bold tabular-nums" style={{ color: net >= 0 ? "var(--accent-2)" : "#dc2626" }}>
-                                                    Rs {Math.abs(net).toLocaleString()}
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-bold tabular-nums" style={{ color: net >= 0 ? "var(--accent-2)" : "#dc2626" }}>
+                                                        Rs {Math.abs(net).toLocaleString()}
+                                                    </span>
+                                                    <span className="text-xs px-2 py-0.5 rounded-md font-semibold"
+                                                        style={{
+                                                            background: net >= 0 ? "rgba(15,118,110,0.1)" : "rgba(220,38,38,0.1)",
+                                                            color: net >= 0 ? "var(--accent-2)" : "#dc2626"
+                                                        }}>
+                                                        {net >= 0 ? labels.receivable : labels.payable}
+                                                    </span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>{acc.phone || "-"}</td>
+                                            <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>{acc.phoneNo || "-"}</td>
                                             <td className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
                                                 <span className="truncate block max-w-[200px]">{acc.address || "-"}</span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-xs px-2 py-1 rounded-md font-semibold"
-                                                    style={{
-                                                        background: net >= 0 ? "rgba(15,118,110,0.1)" : "rgba(220,38,38,0.1)",
-                                                        color: net >= 0 ? "var(--accent-2)" : "#dc2626"
-                                                    }}>
-                                                    {net >= 0 ? labels.receivable : labels.payable}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => navigate(`/EachQarzaAccountRecord/${acc._id}`)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                                                        style={{ color: "var(--muted)" }}
+                                                        onMouseEnter={e => { e.currentTarget.style.color = "var(--accent-2)"; e.currentTarget.style.background = "rgba(15,118,110,0.08)"; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}
+                                                        title="View Payments"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" />
+                                                    </button>
                                                     {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.update")) && (
                                                         <PermissionGuard execute={() => setModal({ mode: "update", account: acc })} permission="creditsAndDebitsAccounts.update" isConfirmation={true}>
                                                             <button

@@ -38,6 +38,7 @@ export const qarzaLabels = {
     cancel: "Cancel",
     updating: "Updating…",
     creating: "Creating…",
+    actions: "Actions",
     
     // Messages
     loading: "Loading...",
@@ -110,6 +111,7 @@ export const qarzaLabels = {
     cancel: "منسوخ کریں",
     updating: "اپڈیٹ ہو رہا ہے…",
     creating: "بنایا جا رہا ہے…",
+    actions: "اقدامات",
     
     // Messages
     loading: "لوڈ ہو رہا ہے...",
@@ -182,6 +184,7 @@ export const qarzaLabels = {
     cancel: "منسوخ کریں / Cancel",
     updating: "اپڈیٹ ہو رہا ہے… / Updating…",
     creating: "بنایا جا رہا ہے… / Creating…",
+    actions: "اقدامات / Actions",
     
     // Messages
     loading: "لوڈ ہو رہا ہے / Loading...",
