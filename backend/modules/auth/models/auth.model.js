@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
             default: [],
             set: (value) => normalizePermissions(value),
         },
+        photo: {
+            type: String,
+            default: "",
+        },
         language: { type: String, enum: ["en", "ur"], default: "en" },
         uploadSync: {
             type: Boolean,

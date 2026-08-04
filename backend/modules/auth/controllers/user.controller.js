@@ -85,6 +85,12 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const { confirmPassword: _, ...userData } = req.body;
+    
+    // Add photo filename if file was uploaded
+    if (req.file) {
+        userData.photo = req.file.filename;
+    }
+
     const user = await createUserService({ ...userData, permissions: userData.permissions });
 
     res.status(201).json({
@@ -97,6 +103,7 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
             phoneNo: user.phoneNo,
             role: user.role,
             permissions: user.permissions,
+            photo: user.photo,
         },
     });
 });
@@ -121,7 +128,14 @@ export const updateUserByAdminController = asyncHandler(async (req, res, next) =
         }
     }
 
-    const updated = await userUpdate(_id, req.body);
+    const updateData = { ...req.body };
+    
+    // Add photo filename if file was uploaded
+    if (req.file) {
+        updateData.photo = req.file.filename;
+    }
+
+    const updated = await userUpdate(_id, updateData);
 
     if (!updated) {
         return next(new ErrorResponse("Failed to update user", 500));

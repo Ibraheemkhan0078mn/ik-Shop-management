@@ -33,11 +33,23 @@ export const authApi = baseApi.injectEndpoints({
             providesTags: (_r, _e, id) => [{ type: "User", id }],
         }),
         createUser: build.mutation({
-            query: (data) => ({ url: "/users/create", method: "POST", body: data }),
+            query: (data) => {
+                // If data is FormData, let RTK Query handle the headers automatically
+                if (data instanceof FormData) {
+                    return { url: "/users/create", method: "POST", body: data };
+                }
+                return { url: "/users/create", method: "POST", body: data };
+            },
             invalidatesTags: ["User"],
         }),
         updateUser: build.mutation({
-            query: (data) => ({ url: "/users/update", method: "PUT", body: data }),
+            query: (data) => {
+                // If data is FormData, let RTK Query handle the headers automatically
+                if (data instanceof FormData) {
+                    return { url: "/users/update", method: "PUT", body: data };
+                }
+                return { url: "/users/update", method: "PUT", body: data };
+            },
             invalidatesTags: ["User"],
         }),
         deleteUser: build.mutation({

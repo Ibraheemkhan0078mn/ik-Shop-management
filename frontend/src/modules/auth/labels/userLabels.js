@@ -32,6 +32,7 @@ export const userLabels = {
     selectRole: "Select Role",
     roleDetails: "Role Details",
     viewRoleDetails: "View role details and permissions",
+    showPermissions: "Show Permissions",
     
     // Form labels
     name: "Name",
@@ -177,6 +178,7 @@ export const userLabels = {
     selectRole: "کردار منتخب کریں",
     roleDetails: "کردار کی تفصیلات",
     viewRoleDetails: "کردار کی تفصیلات اور اجازتیں دیکھیں",
+    showPermissions: "اجازتیں دکھائیں",
     
     // Form labels
     name: "نام",
@@ -322,6 +324,7 @@ export const userLabels = {
     selectRole: "کردار منتخب کریں / Select Role",
     roleDetails: "کردار کی تفصیلات / Role Details",
     viewRoleDetails: "کردار کی تفصیلات اور اجازتیں دیکھیں / View role details and permissions",
+    showPermissions: "اجازتیں دکھائیں / Show Permissions",
     
     // Form labels
     name: "نام / Name",

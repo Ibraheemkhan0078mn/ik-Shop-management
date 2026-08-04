@@ -36,30 +36,31 @@ export default function UserManagement() {
     }, [appPermissions]);
 
     const [modal, setModal] = useState(null);
+    const [showPermissions, setShowPermissions] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         email: "",
-        phoneNo: "",
         password: "",
-        confirmPassword: "",
         role: "staff",
         permissions: [],
         photo: "",
+        selectedRoleId: null,
     });
     const [imagePreview, setImagePreview] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
 
     const openCreateModal = () => {
         setFormData({
             name: "",
             email: "",
-            phoneNo: "",
             password: "",
-            confirmPassword: "",
             role: "staff",
             permissions: [],
             photo: "",
+            selectedRoleId: null,
         });
         setImagePreview(null);
+        setImageFile(null);
         setModal({ mode: "create" });
     };
 
@@ -68,17 +69,19 @@ export default function UserManagement() {
             _id: user._id,
             name: user.name,
             email: user.email,
-            phoneNo: user.phoneNo,
             password: "",
             role: user.role,
             permissions: user.permissions || [],
             photo: user.photo || "",
+            selectedRoleId: null,
         });
+        // Photo is now a filename, use toImageUrl
         setImagePreview(user.photo ? toImageUrl(user.photo) : null);
+        setImageFile(null);
         setModal({ mode: "edit" });
     };
 
-    const handleImageChange = async (e) => {
+    const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -87,25 +90,14 @@ export default function UserManagement() {
             return;
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
-            const response = await fetch("http://localhost:5001/api/upload", {
-                method: "POST",
-                body: formData,
-                credentials: "include",
-            });
-            const data = await response.json();
-            if (data.success) {
-                setFormData(prev => ({ ...prev, photo: data.filename }));
-                setImagePreview(toImageUrl(data.filename));
-            } else {
-                showError(data.message || "Failed to upload image");
-            }
-        } catch (error) {
-            showError("Failed to upload image");
-        }
+        setImageFile(file);
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handlePermissionChange = (permission) => {
@@ -164,7 +156,8 @@ export default function UserManagement() {
         if (selectedRole) {
             setFormData(prev => ({
                 ...prev,
-                permissions: selectedRole.permissions || []
+                permissions: selectedRole.permissions || [],
+                selectedRoleId: userRole
             }));
         }
     };
@@ -198,21 +191,49 @@ export default function UserManagement() {
         e.preventDefault();
         try {
             if (modal.mode === "create") {
-                if (formData.password !== formData.confirmPassword) {
-                    showError(labels.passwordsDoNotMatch);
-                    return;
+                // Use FormData if image file exists
+                let data;
+                if (imageFile) {
+                    data = new FormData();
+                    data.append("name", formData.name);
+                    data.append("email", formData.email);
+                    data.append("password", formData.password);
+                    data.append("role", formData.role);
+                    formData.permissions.forEach(perm => data.append("permissions", perm));
+                    data.append("photo", imageFile);
+                } else {
+                    data = formData;
                 }
-                const { confirmPassword: _, ...data } = formData;
+                
                 await createUser(data).unwrap();
                 showSuccess(labels.userCreated);
             } else {
-                await updateUser(formData).unwrap();
+                // Use FormData if image file exists
+                let data;
+                if (imageFile) {
+                    data = new FormData();
+                    data.append("_id", formData._id);
+                    data.append("name", formData.name);
+                    data.append("email", formData.email);
+                    if (formData.password) {
+                        data.append("password", formData.password);
+                    }
+                    data.append("role", formData.role);
+                    formData.permissions.forEach(perm => data.append("permissions", perm));
+                    data.append("photo", imageFile);
+                } else {
+                    data = formData;
+                }
+                
+                await updateUser(data).unwrap();
                 showSuccess(labels.userUpdated);
             }
             setModal(null);
             refetch();
         } catch (err) {
-            showError(err?.data?.message || labels.operationFailed);
+            console.error('User creation error:', err);
+            const errorMessage = err?.error || err?.data?.message || err?.error?.data?.message || err?.message || labels.operationFailed;
+            showError(errorMessage);
         }
     };
 
@@ -226,7 +247,9 @@ export default function UserManagement() {
             showSuccess(labels.userDeleted);
             refetch();
         } catch (err) {
-            showError(err?.data?.message || labels.deleteFailed);
+            console.error('User delete error:', err);
+            const errorMessage = err?.error || err?.data?.message || err?.error?.data?.message || err?.message || labels.deleteFailed;
+            showError(errorMessage);
         }
     };
 
@@ -321,46 +344,21 @@ export default function UserManagement() {
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.phone}</label>
-                                    <input
-                                        type="tel"
-                                        placeholder={labels.enterPhone || "Enter phone number"}
-                                        value={formData.phoneNo}
-                                        onChange={(e) => setFormData({ ...formData, phoneNo: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-lg border"
-                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                    />
-                                </div>
                                 {modal.mode === "create" ? (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
-                                            <input
-                                                type="password"
-                                                required
-                                                placeholder={labels.enterPassword || "Enter password"}
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-lg border"
-                                                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.confirmPassword}</label>
-                                            <input
-                                                type="password"
-                                                required
-                                                placeholder={labels.confirmPasswordPlaceholder || "Confirm password"}
-                                                value={formData.confirmPassword}
-                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-lg border"
-                                                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                            />
-                                        </div>
-                                    </>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            placeholder={labels.enterPassword || "Enter password"}
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            className="w-full px-4 py-2 rounded-lg border"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                        />
+                                    </div>
                                 ) : (
-                                    <div className="col-span-2">
+                                    <div>
                                         <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password} <span className="text-xs text-gray-500">({labels.optional || "Optional - leave blank to keep current"})</span></label>
                                         <input
                                             type="password"
@@ -414,17 +412,21 @@ export default function UserManagement() {
                                             onClick={() => handleUserRoleSelect(role._id)}
                                             className="px-3 py-1.5 text-sm rounded-lg border-2 transition-all"
                                             style={{
-                                                background: "var(--surface-muted)",
-                                                borderColor: "var(--border)",
-                                                color: "var(--ink)"
+                                                background: formData.selectedRoleId === role._id ? "var(--accent-2)" : "var(--surface-muted)",
+                                                borderColor: formData.selectedRoleId === role._id ? "var(--accent-2)" : "var(--border)",
+                                                color: formData.selectedRoleId === role._id ? "white" : "var(--ink)"
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.target.style.borderColor = "var(--accent-2)";
-                                                e.target.style.color = "var(--accent-2)";
+                                                if (formData.selectedRoleId !== role._id) {
+                                                    e.target.style.borderColor = "var(--accent-2)";
+                                                    e.target.style.color = "var(--accent-2)";
+                                                }
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.target.style.borderColor = "var(--border)";
-                                                e.target.style.color = "var(--ink)";
+                                                if (formData.selectedRoleId !== role._id) {
+                                                    e.target.style.borderColor = "var(--border)";
+                                                    e.target.style.color = "var(--ink)";
+                                                }
                                             }}
                                         >
                                             {role.name}
@@ -432,50 +434,68 @@ export default function UserManagement() {
                                     ))}
                                 </div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, permissions: [] })}
-                                        className="px-3 py-1 text-sm rounded-lg"
-                                        style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
-                                    >
-                                        {labels.clearAll}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm" style={{ color: "var(--muted)" }}>{labels.showPermissions || "Show"}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPermissions(!showPermissions)}
+                                            className={`w-12 h-6 rounded-full transition-all relative ${showPermissions ? 'bg-(--accent-2)' : 'bg-(--border)'}`}
+                                        >
+                                            <div
+                                                className={`w-5 h-5 rounded-full absolute top-0.5 transition-all ${showPermissions ? 'left-6 bg-white' : 'left-0.5 bg-white'}`}
+                                            />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="grid gap-3">
-                                    {permissionGroups.map((group) => (
-                                        <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="font-semibold">{group.label}</p>
-                                                <label className="flex items-center gap-2">
-                                                    <span className="text-sm">{labels.all}</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isGroupAllChecked(group)}
-                                                        onChange={() => handleGroupToggle(group)}
-                                                        className="w-4 h-4"
-                                                    />
-                                                </label>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {group.actions.map(({ key, label }) => {
-                                                    const permission = `${group.module}.${key}`;
-                                                    return (
-                                                        <label key={permission} className="flex items-center gap-2">
+                                {showPermissions && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, permissions: [] })}
+                                                className="px-3 py-1 text-sm rounded-lg"
+                                                style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+                                            >
+                                                {labels.clearAll}
+                                            </button>
+                                        </div>
+                                        <div className="grid gap-3">
+                                            {permissionGroups.map((group) => (
+                                                <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <p className="font-semibold">{group.label}</p>
+                                                        <label className="flex items-center gap-2">
+                                                            <span className="text-sm">{labels.all}</span>
                                                             <input
                                                                 type="checkbox"
-                                                                checked={(formData.permissions || []).includes(permission)}
-                                                                onChange={() => handlePermissionChange(permission)}
+                                                                checked={isGroupAllChecked(group)}
+                                                                onChange={() => handleGroupToggle(group)}
                                                                 className="w-4 h-4"
                                                             />
-                                                            <span className="text-sm">{label}</span>
                                                         </label>
-                                                    );
-                                                })}
-                                            </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {group.actions.map(({ key, label }) => {
+                                                            const permission = `${group.module}.${key}`;
+                                                            return (
+                                                                <label key={permission} className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={(formData.permissions || []).includes(permission)}
+                                                                        onChange={() => handlePermissionChange(permission)}
+                                                                        className="w-4 h-4"
+                                                                    />
+                                                                    <span className="text-sm">{label}</span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2 justify-end">
                                 <button
@@ -508,7 +528,7 @@ export default function UserManagement() {
                                 <th className="px-4 py-3 text-left">{labels.photo || "Photo"}</th>
                                 <th className="px-4 py-3 text-left">{labels.name}</th>
                                 <th className="px-4 py-3 text-left">{labels.email}</th>
-                                <th className="px-4 py-3 text-left">{labels.phone}</th>
+                                {/* <th className="px-4 py-3 text-left">{labels.phone}</th> */}
                                 <th className="px-4 py-3 text-left">{labels.role}</th>
                                 <th className="px-4 py-3 text-right">{labels.actions}</th>
                             </tr>
@@ -545,9 +565,21 @@ export default function UserManagement() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCurrentUser ? 'bg-(--accent-2) text-white' : 'bg-(--surface-muted) text-(--muted)'}`}>
-                                                    {isCurrentUser ? <Shield size={16} /> : <UserIcon size={16} />}
-                                                </div>
+                                                {user.photo ? (
+                                                    <img
+                                                        src={toImageUrl(user.photo)}
+                                                        alt={user.name}
+                                                        className="w-8 h-8 rounded-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.style.display = "none";
+                                                            e.target.parentElement.innerHTML = `<div class="w-8 h-8 rounded-full flex items-center justify-center ${isCurrentUser ? 'bg-(--accent-2) text-white' : 'bg-(--surface-muted) text-(--muted)'}">${isCurrentUser ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}</div>`;
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCurrentUser ? 'bg-(--accent-2) text-white' : 'bg-(--surface-muted) text-(--muted)'}`}>
+                                                        {isCurrentUser ? <Shield size={16} /> : <UserIcon size={16} />}
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="font-medium text-(--ink)">{user.name}</p>
                                                     {isCurrentUser && (
@@ -557,7 +589,6 @@ export default function UserManagement() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-(--muted)">{user.email}</td>
-                                        <td className="px-4 py-3 text-sm text-(--muted)">{user.phoneNo || labels.noPhone}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-2 py-1 rounded-md text-xs font-medium ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
                                                     user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
@@ -644,7 +675,6 @@ export default function UserManagement() {
                                             )}
                                         </div>
                                         <p className="text-sm text-(--muted) truncate">{user.email}</p>
-                                        <p className="text-xs text-(--muted)">{user.phoneNo || labels.noPhone}</p>
                                         <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
                                                 user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
                                                     'bg-gray-500/10 text-gray-600'
