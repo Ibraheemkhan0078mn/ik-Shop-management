@@ -36,7 +36,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["OrderReturn", "Product"],
+            invalidatesTags: ["OrderReturn", "Product", "Batch"],
         }),
         // Update order return
         updateOrderReturn: build.mutation({
@@ -45,7 +45,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch"],
         }),
         // Delete order return
         deleteOrderReturn: build.mutation({
@@ -53,7 +53,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["OrderReturn"],
+            invalidatesTags: ["OrderReturn", "Product", "Batch"],
         }),
         // Update return status
         updateReturnStatus: build.mutation({
@@ -62,7 +62,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "PATCH",
                 body: { status },
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch"],
         }),
         // Approve order return
         approveOrderReturn: build.mutation({
@@ -70,7 +70,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${id}/approve`,
                 method: "PATCH",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturn", "Product"],
+            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch"],
         }),
         addOrderReturnRefund: build.mutation({
             query: ({ id, ...data }) => ({

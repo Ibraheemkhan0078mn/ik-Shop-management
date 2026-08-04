@@ -1,6 +1,6 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, Eye, Trash2, ArrowLeft, Edit, ChevronLeft, ChevronRight, PackageX, Printer, Download, CheckCircle, Check, X } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
@@ -112,15 +112,31 @@ const OrderReturnList = () => {
         setCurrentPage(newPage);
     };
 
+    const location = useLocation();
+    const [passedOrderId, setPassedOrderId] = useState(null);
+
+    React.useEffect(() => {
+        if (location.state?.searchOrderId) {
+            setPassedOrderId(location.state.searchOrderId);
+            setShowModal(true);
+            // Clear state so a refresh doesn't keep reopening it
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
     return (
         <div className="h-screen flex flex-col bg-app-bg">
             {showModal && (
                 <OrderReturnModal
                     isOpen={showModal}
-                    onClose={handleModalClose}
+                    onClose={() => {
+                        handleModalClose();
+                        setPassedOrderId(null);
+                    }}
                     editData={selectedReturn}
                     isEditMode={isEditMode}
                     isViewMode={isViewMode}
+                    orderId={passedOrderId}
                 />
             )}
 

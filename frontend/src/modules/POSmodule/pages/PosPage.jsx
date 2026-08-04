@@ -24,11 +24,10 @@ import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
 import PosFilterSidebar from "../components/PosFilterSidebar.jsx";
 import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
-import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
-import { ArrowLeft, ClipboardList, RotateCcw, History, Filter } from "lucide-react";
+import { ArrowLeft, Filter } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -131,9 +130,17 @@ export default function PosPage() {
   });
 
   // ── Filter State ───────────────────────────────────────────────────────────
-  const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('posFilterSidebarOpen');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [activeFilters, setActiveFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Save filter sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('posFilterSidebarOpen', JSON.stringify(filterSidebarOpen));
+  }, [filterSidebarOpen]);
   
   const { data: brandsData } = useGetBrandsQuery();
   const uniqueBrands = brandsData?.data?.filter(b => b.isActive).map(b => b.name) || [];
@@ -150,7 +157,7 @@ export default function PosPage() {
   });
 
   // ── API Queries ───────────────────────────────────────────────────────────
-  const { data: heldOrdersResponse } = useHoldOrders();
+  const { data: heldOrdersResponse, refetch: refetchHeldOrders } = useHoldOrders();
   const heldOrders = heldOrdersResponse?.data || heldOrdersResponse || [];
 
   const { data: fetchedQarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
@@ -407,6 +414,7 @@ export default function PosPage() {
       clearCart();
       setResumedHoldOrderId(null);
       setResumedHoldMeta({ customerName: "", waiter: "", discountAmount: 0, staffId: "" });
+      refetchHeldOrders();
       showSuccess(isUrdu ? "آرڈر روک دیا گیا!" : "Order held!");
     } catch (err) {
       console.error("Hold order error:", err);
@@ -656,28 +664,6 @@ export default function PosPage() {
             </h1>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <div onClick={() => toggleModal("heldOrders")}>
-              <ScreenTabButton
-                lucideIcon={ClipboardList}
-                text={`${labels.heldOrders} (${heldOrders.length})`}
-              />
-            </div>
-
-            <div onClick={() => navigate("/product-return")}>
-              <ScreenTabButton
-                lucideIcon={RotateCcw}
-                text={labels.productReturn}
-              />
-            </div>
-
-            <div onClick={() => navigate("/order-history")}>
-              <ScreenTabButton
-                lucideIcon={History}
-                text={labels.orderHistory}
-              />
-            </div>
-          </div>
 
 
 

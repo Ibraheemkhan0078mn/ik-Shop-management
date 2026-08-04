@@ -465,12 +465,19 @@ export default function PosPaymentModal({
         label: c.name + (c.phoneNo ? ` · ${c.phoneNo}` : ""),
     })) || [];
 
-    const paymentMethodOptions = paymentMethodsData?.map((pm) => ({
+    const paymentMethodOptions = useMemo(() => paymentMethodsData?.map((pm) => ({
         value: pm._id,
         label: pm.name,
-    })) || [];
+    })) || [], [paymentMethodsData]);
 
     const staffList_ = Array.isArray(staffList?.data) ? staffList.data : [];
+
+    // Set first payment method as default when available and not already selected
+    useEffect(() => {
+        if (paymentMethodOptions.length > 0 && !selectedPaymentMethodId) {
+            setSelectedPaymentMethodId(paymentMethodOptions[0].value);
+        }
+    }, [paymentMethodOptions, selectedPaymentMethodId]);
 
     const canCheckout = useMemo(() => {
         if (total === 0) return true;

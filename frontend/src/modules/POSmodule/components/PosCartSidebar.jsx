@@ -1,20 +1,10 @@
-import { useState } from "react";
-import { ShoppingCart, Trash2, RotateCcw, Pause } from "lucide-react";
-import { usePaginatedOrders } from "../../orders/services/orders.service.js";
-import PaginatedList from "../../../shared/components/PaginatedList.jsx";
-import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ShoppingCart, Trash2, RotateCcw, Pause, History } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 
 const PORTION_LABEL = { full: "", half: " ½", custom: " custom" };
-
-const PAYMENT_METHOD_STYLE = {
-    cash: { bg: "rgba(15,118,110,0.1)", color: "var(--accent-2)", border: "rgba(15,118,110,0.2)" },
-    online: { bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.2)" },
-    credit: { bg: "rgba(168,85,247,0.1)", color: "#a855f7", border: "rgba(168,85,247,0.2)" },
-    hybrid: { bg: "rgba(249,115,22,0.1)", color: "#f97316", border: "rgba(249,115,22,0.2)" },
-    free: { bg: "var(--surface-muted)", color: "var(--muted)", border: "var(--border)" },
-};
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -36,16 +26,26 @@ export default function PosCartSidebar({
     handleResumeOrder,
     handleDeleteHeldOrder,
 }) {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPosLabels(language);
 
-    const [activeDrawerTab, setActiveDrawerTab] = useState("held");
+    const [shouldBlink, setShouldBlink] = useState(false);
+    const [prevHoldCount, setPrevHoldCount] = useState(0);
+
     const totalItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const isCartEmpty = cart.length === 0;
 
-
-
+    // Trigger blink animation when hold orders count increases
+    useEffect(() => {
+        if (holdOrders.length > prevHoldCount) {
+            setShouldBlink(true);
+            // Reset blink after animation completes (2 blinks = 1.5s)
+            setTimeout(() => setShouldBlink(false), 1500);
+        }
+        setPrevHoldCount(holdOrders.length);
+    }, [holdOrders.length, prevHoldCount]);
 
     useEffect(() => {
         const onKey = (e) => {
@@ -56,9 +56,6 @@ export default function PosCartSidebar({
         return () => window.removeEventListener("keydown", onKey);
     }, [isCartEmpty, onCheckout]);
 
-
-
-
     return (
         <>
             {/* ── Cart Sidebar ─────────────────────────────────────────────────── */}
@@ -68,35 +65,77 @@ export default function PosCartSidebar({
             >
                 {/* Header */}
                 <div
-                    className="px-4 py-3 flex items-center gap-2.5 shrink-0"
+                    className="px-4 py-3 flex items-center justify-between gap-2 shrink-0"
                     style={{ borderBottom: "1px solid var(--border)" }}
                 >
-                    <ShoppingCart size={18} style={{ color: "var(--accent-2)" }} />
-                    <h2 className="font-bold text-sm" style={{ color: "var(--ink)" }}>
-                        {labels.currentOrder}
-                    </h2>
-
-                    {resumedHoldId && (
-                        <span
-                            className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{
-                                background: "rgba(180,83,9,0.1)",
-                                color: "var(--accent)",
-                                border: "1px solid rgba(180,83,9,0.2)",
-                            }}
-                        >
-                            {labels.resumed}
-                        </span>
-                    )}
-
-                    {totalItemCount > 0 && (
-                        <span
-                            className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: "var(--accent-2)", color: "white" }}
-                        >
-                            {totalItemCount}
-                        </span>
-                    )}
+                    <div className="flex items-center gap-2 min-w-0 w-full">
+  <ShoppingCart size={18} style={{ color: "var(--accent-2)" }} />
+  <h2 className="font-bold text-sm truncate" style={{ color: "var(--ink)" }}>{labels.currentOrder}</h2>
+  {resumedHoldId && (
+    <span
+      className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
+      style={{
+        background: "rgba(180,83,9,0.1)",
+        color: "var(--accent)",
+        border: "1px solid rgba(180,83,9,0.2)",
+      }}
+    >
+      {labels.resumed}
+    </span>
+  )}
+  {totalItemCount > 0 && (
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+      style={{ background: "var(--accent-2)", color: "white" }}
+    >
+      {totalItemCount}
+    </span>
+  )}
+  <div className="flex items-center gap-1 ml-auto">
+    <button
+      onClick={() => setShowHeldOrders(true)}
+      title={labels.heldOrders || "Held Orders"}
+      className="p-1.5 rounded-lg border transition hover:scale-105 relative"
+      style={{
+        background: holdOrders.length > 0 ? "rgba(180,83,9,0.15)" : "var(--surface-muted)",
+        borderColor: holdOrders.length > 0 ? "rgba(180,83,9,0.3)" : "var(--border)",
+        color: "var(--accent)",
+        animation: shouldBlink ? "pulse-accent 1.5s ease-in-out" : "none"
+      }}
+    >
+      <Pause size={14} />
+      {holdOrders.length > 0 && (
+        <span
+          className="absolute -top-1 -right-1 flex items-center justify-center text-[9px] font-bold rounded-full"
+          style={{
+            background: "var(--accent)",
+            color: "white",
+            minWidth: "16px",
+            height: "16px",
+            padding: "0 4px",
+          }}
+        >
+          {holdOrders.length}
+        </span>
+      )}
+    </button>
+    <button
+      onClick={() => navigate("/product-return")}
+      title="Product Return"
+      className="p-1.5 rounded-lg border transition hover:scale-105"
+      style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--accent-2)" }}
+    >
+      <RotateCcw size={14} />
+    </button>
+    <button
+      onClick={() => navigate("/order-history")}
+      title="Order History"
+      className="p-1.5 rounded-lg border transition hover:scale-105"
+      style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
+    >
+      <History size={14} />
+    </button>
+  </div>
+</div>
                 </div>
 
                 {/* Cart Items */}
@@ -159,17 +198,17 @@ export default function PosCartSidebar({
                         <button
                             onClick={onHold}
                             disabled={isCartEmpty}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                            className="py-2.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95"
                             style={{
                                 flex: 1,
-                                background: isCartEmpty ? "var(--surface)" : "rgba(180,83,9,0.09)",
+                                background: isCartEmpty ? "var(--surface)" : "rgba(180,83,9,0.1)",
                                 color: isCartEmpty ? "var(--muted)" : "var(--accent)",
-                                border: `1px solid ${isCartEmpty ? "var(--border)" : "rgba(180,83,9,0.3)"}`,
+                                border: `1px solid ${isCartEmpty ? "var(--border)" : "rgba(180,83,9,0.2)"}`,
                                 cursor: isCartEmpty ? "not-allowed" : "pointer",
                                 opacity: isCartEmpty ? 0.6 : 1,
                             }}
                         >
-                            <Pause size={13} /> {labels.hold}
+                            {labels.hold || "Hold"}
                         </button>
 
                         <button
@@ -400,39 +439,6 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDe
                     </button>
                 )}
             </div>
-        </div>
-    );
-}
-
-// ─── Order History Card ───────────────────────────────────────────────────────
-
-function OrderHistoryCard({ order }) {
-    const methodStyle = PAYMENT_METHOD_STYLE[order.paymentMethod] || PAYMENT_METHOD_STYLE.free;
-
-    return (
-        <div
-            className="rounded-xl p-3 flex items-center justify-between gap-2"
-            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
-        >
-            <div className="min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
-                    {order.orderNumber || "—"}
-                </p>
-                <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
-                    {order.customerName || "—"} · Rs {(order.totalAmount || 0).toLocaleString()}
-                </p>
-            </div>
-
-            <span
-                className="text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize shrink-0"
-                style={{
-                    background: methodStyle.bg,
-                    color: methodStyle.color,
-                    border: `1px solid ${methodStyle.border}`,
-                }}
-            >
-                {order.paymentMethod || "—"}
-            </span>
         </div>
     );
 }

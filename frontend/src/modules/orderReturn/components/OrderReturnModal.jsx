@@ -9,7 +9,7 @@ import {
     useUpdateOrderReturnMutation,
     useGetOrderReturnRefundsQuery,
 } from "../api/orderReturn.api.js";
-import { useOrderById } from "../../orders/services/orders.service.js";
+import { useOrder } from "../../orders/services/orders.service.js";
 import OrderReturnRefundModal from "./OrderReturnRefundModal.jsx";
 
 // ─── Constants ────────────────────────────────────────────────
@@ -156,7 +156,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     // RTK Query hooks
     const { data: returnNumberData } = useGenerateReturnNumberQuery(undefined, { skip: isEditMode || isViewMode || !isOpen });
     const { data: orderData, isLoading: orderFetchingQuery } = useGetOrderForReturnQuery(orderNumber, { skip: !orderNumber });
-    const { data: orderDataById } = useOrderById(orderId, { skip: !orderId || isEditMode });
+    const { data: orderDataById } = useOrder(orderId, { skip: !orderId || isEditMode });
     const { data: refunds, refetch: refetchRefunds, isLoading: refundsLoading } = useGetOrderReturnRefundsQuery(editData?._id, { skip: !isViewMode || !editData?._id });
     const refundsList = Array.isArray(refunds) ? refunds : (refunds?.data || []);
     const [createOrderReturn] = useCreateOrderReturnMutation();
@@ -180,9 +180,9 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
 
     // Auto-load order data when orderId is provided in create mode
     useEffect(() => {
-        if (isEditMode || isViewMode || !orderId || !orderDataById) return;
-        setFetchedOrder(orderDataById);
-        setOrderNumber(orderDataById.orderNumber || "");
+        if (isEditMode || isViewMode || !orderId || !orderDataById?.data) return;
+        setFetchedOrder(orderDataById.data);
+        setOrderNumber(orderDataById.data.orderNumber || "");
         showSuccess("Order loaded successfully");
     }, [isEditMode, isViewMode, orderId, orderDataById]);
 

@@ -26,12 +26,12 @@ export const wastageApi = baseApi.injectEndpoints({
 
         createWastage: build.mutation({
             query: (body) => ({ url: "/wastages", method: "POST", body }),
-            invalidatesTags: ["Wastage", "Product"],
+            invalidatesTags: ["Wastage", "Product", "Batch"],
         }),
 
         updateWastage: build.mutation({
             query: ({ id, ...body }) => ({ url: `/wastages/${id}`, method: "PUT", body }),
-            invalidatesTags: (_r, _e, { id }) => [{ type: "Wastage", id }, "Wastage"],
+            invalidatesTags: (_r, _e, { id }) => [{ type: "Wastage", id }, "Wastage", "Product", "Batch"],
             async onQueryStarted({ id, ...body }, { dispatch, queryFulfilled }) {
                 try {
                     const { data: updatedWastage } = await queryFulfilled;
@@ -52,7 +52,7 @@ export const wastageApi = baseApi.injectEndpoints({
 
         deleteWastage: build.mutation({
             query: (id) => ({ url: `/wastages/${id}`, method: "DELETE" }),
-            invalidatesTags: ["Wastage"],
+            invalidatesTags: ["Wastage", "Product", "Batch"],
             async onQueryStarted(id, { dispatch, queryFulfilled }) {
                 try {
                     await queryFulfilled;
@@ -78,7 +78,7 @@ export const wastageApi = baseApi.injectEndpoints({
 
         approveWastage: build.mutation({
             query: (id) => ({ url: `/wastages/${id}/approve`, method: "PATCH" }),
-            invalidatesTags: (_r, _e, id) => [{ type: "Wastage", id }, "Wastage", "Product"],
+            invalidatesTags: (_r, _e, id) => [{ type: "Wastage", id }, "Wastage", "Product", "Batch"],
             async onQueryStarted(id, { dispatch, queryFulfilled }) {
                 try {
                     const { data: updatedWastage } = await queryFulfilled;

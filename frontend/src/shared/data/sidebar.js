@@ -15,6 +15,7 @@ const translations = {
     customerReport: "Customers", supplierReport: "Suppliers", staffReport: "Staff",
     expenseReport: "Expenses", creditDebits: "Credit & Debits",
     expenses: "Expenses", staff: "Staff", profile: "Profile", users: "Users",
+    orders: "Orders", orderHistory: "Order History", orderReturn: "Order Return",
   },
   ur: {
     quickList: "فوری لسٹ", dashboard: "ڈیش بورڈ", products: "پروڈکٹس",
@@ -25,6 +26,7 @@ const translations = {
     customerReport: "گاہک", supplierReport: "سپلائرز", staffReport: "اسٹاف",
     expenseReport: "خرچے", creditDebits: "کریڈٹ اور ڈیبٹس",
     expenses: "اخراجات", staff: "اسٹاف", profile: "پروفائل", users: "صارفین",
+    orders: "آرڈرز", orderHistory: "آرڈر ہسٹری", orderReturn: "آرڈر واپسی",
   },
   ur_en: {
     quickList: "فوری / Quick", dashboard: "ڈیش / Dashboard", products: "پروڈکٹس / Products",
@@ -35,6 +37,7 @@ const translations = {
     customerReport: "گاہک / Customers", supplierReport: "سپلائرز / Suppliers", staffReport: "اسٹاف / Staff",
     expenseReport: "خرچے / Expenses", creditDebits: "کریڈٹ / Credit & Debits",
     expenses: "اخراجات / Expenses", staff: "اسٹاف / Staff", profile: "پروفائل / Profile", users: "صارفین / Users",
+    orders: "آرڈرز / Orders", orderHistory: "ہسٹری / History", orderReturn: "واپسی / Return",
   },
 };
 
@@ -55,6 +58,14 @@ const NAV_ITEMS = [
   { id: "purchaseReturn", icon: RotateCcw, url: "/purchase-returns", allowedUrls: ["/purchase-returns"] },
   { id: "customers", icon: Users, url: "/customers", allowedUrls: ["/customers"] },
   { id: "suppliers", icon: Truck, url: "/suppliers", allowedUrls: ["/suppliers"] },
+  {
+    id: "orders", icon: Receipt, url: "/order-history",
+    allowedUrls: ["/order-history", "/product-return"],
+    items: [
+      { id: "orderHistory", icon: Receipt, url: "/order-history" },
+      { id: "orderReturn", icon: RotateCcw, url: "/product-return" },
+    ],
+  },
   { id: "creditDebits", icon: Wallet, url: "/qarzaAccount", allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"] },
   { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
   { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff"] },

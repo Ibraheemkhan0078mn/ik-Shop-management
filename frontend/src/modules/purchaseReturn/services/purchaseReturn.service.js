@@ -32,7 +32,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["PurchaseReturn", "Product"],
+            invalidatesTags: ["PurchaseReturn", "Product", "Batch"],
         }),
         updatePurchaseReturn: build.mutation({
             query: ({ id, ...data }) => ({
@@ -40,14 +40,14 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch"],
         }),
         deletePurchaseReturn: build.mutation({
             query: (id) => ({
                 url: `/purchase-returns/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["PurchaseReturn"],
+            invalidatesTags: ["PurchaseReturn", "Product", "Batch"],
         }),
         submitPurchaseReturn: build.mutation({
             query: (id) => ({
@@ -61,7 +61,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 url: `/purchase-returns/${id}/approve`,
                 method: "PUT",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch"],
         }),
         rejectPurchaseReturn: build.mutation({
             query: ({ id, rejectionReason }) => ({

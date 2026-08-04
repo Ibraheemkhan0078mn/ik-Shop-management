@@ -626,18 +626,18 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-4xl my-auto rounded-3xl shadow-2xl overflow-hidden"
+                className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
                 style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* header */}
                 <div
-                    className="flex items-center justify-between px-6 py-4 sticky top-0 z-30"
-                    style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
+                    className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+                    style={{ background: "var(--surface)", borderColor: "var(--border)" }}
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--accent)" }}>
@@ -661,7 +661,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5">
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
                     {/* Purchase Return Number */}
                     <Card>
                         <Field>
@@ -912,21 +912,21 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                             </div>
                         </Card>
                     )}
+                </div>
 
-                    {/* footer */}
-                    <div className="flex justify-between gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                        <div className="flex gap-2">
-                            {isUpdate && existingPurchaseReturn?.status === "draft" && <Btn variant="secondary" onClick={handleSubmitForApproval}>{labels.submitForApproval}</Btn>}
-                            {isUpdate && existingPurchaseReturn?.status === "pending" && (
-                                <Btn variant="secondary" onClick={handleApprove}>{labels.approve}</Btn>
-                            )}
-                        </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
-                            <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting || !purchaseData || Object.keys(selectedItems).length === 0}>
-                                {isSubmitting ? (isUpdate ? labels.updating : labels.saving) : isUpdate ? labels.updatePurchaseReturn : labels.saveReturn}
-                            </Btn>
-                        </div>
+                {/* footer */}
+                <div className="flex justify-between gap-3 p-5 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
+                    <div className="flex gap-2">
+                        {isUpdate && existingPurchaseReturn?.status === "draft" && <Btn variant="secondary" onClick={handleSubmitForApproval}>{labels.submitForApproval}</Btn>}
+                        {isUpdate && existingPurchaseReturn?.status === "pending" && (
+                            <Btn variant="secondary" onClick={handleApprove}>{labels.approve}</Btn>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
+                        <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting || !purchaseData || Object.keys(selectedItems).length === 0}>
+                            {isSubmitting ? (isUpdate ? labels.updating : labels.saving) : isUpdate ? labels.updatePurchaseReturn : labels.saveReturn}
+                        </Btn>
                     </div>
                 </div>
             </div>

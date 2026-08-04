@@ -4,19 +4,19 @@ export const holdOrderApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
         getHoldOrders: build.query({
             query: () => ({ url: "/hold-orders" }),
-            providesTags: ["HoldOrder"],
+            providesTags: ["HoldOrders"],
         }),
         createHoldOrder: build.mutation({
             query: (body) => ({ url: "/hold-orders", method: "POST", body }),
-            invalidatesTags: ["HoldOrder"],
+            invalidatesTags: ["HoldOrders"],
         }),
         updateHoldOrder: build.mutation({
             query: ({ id, body }) => ({ url: `/hold-orders/${id}`, method: "PUT", body }),
-            invalidatesTags: ["HoldOrder"],
+            invalidatesTags: ["HoldOrders"],
         }),
         deleteHoldOrder: build.mutation({
             query: (id) => ({ url: `/hold-orders/${id}`, method: "DELETE" }),
-            invalidatesTags: ["HoldOrder"],
+            invalidatesTags: ["HoldOrders"],
         }),
     }),
 });

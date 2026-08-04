@@ -39,6 +39,7 @@ function PaymentBadge({ method }) {
 // ── Date Filter Component ───────────────────────────────────────────────
 function DateFilter({ startDate, endDate, onStartDateChange, onEndDateChange, onClear }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState(startDate || endDate ? "custom" : "all");
     const hasFilters = startDate || endDate;
 
     const formatDateRange = () => {
@@ -48,6 +49,28 @@ function DateFilter({ startDate, endDate, onStartDateChange, onEndDateChange, on
         if (startDate) return `From ${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         if (endDate) return `Until ${new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         return "Select Date Range";
+    };
+
+    const handlePresetSelect = (presetKey) => {
+        setActiveTab(presetKey);
+        const today = new Date();
+        const end = today.toISOString().split('T')[0];
+
+        if (presetKey === "today") {
+            onStartDateChange(end);
+            onEndDateChange(end);
+        } else if (presetKey === "week") {
+            const startD = new Date(today);
+            startD.setDate(today.getDate() - 7);
+            onStartDateChange(startD.toISOString().split('T')[0]);
+            onEndDateChange(end);
+        } else if (presetKey === "month") {
+            const startD = new Date(today.getFullYear(), today.getMonth(), 1);
+            onStartDateChange(startD.toISOString().split('T')[0]);
+            onEndDateChange(end);
+        } else if (presetKey === "custom") {
+            // Keep current custom dates or leave empty for user input
+        }
     };
 
     return (
@@ -100,80 +123,75 @@ function DateFilter({ startDate, endDate, onStartDateChange, onEndDateChange, on
 
                         {/* Content */}
                         <div className="p-5 space-y-4">
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-semibold text-(--ink) mb-2">
-                                        <Clock size={13} className="text-(--accent-2)" />
-                                        Start Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => onStartDateChange(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border bg-(--surface-muted) text-(--ink) font-medium outline-none transition-all"
-                                        style={{ borderColor: "var(--border)" }}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-semibold text-(--ink) mb-2">
-                                        <Clock size={13} className="text-(--accent-2)" />
-                                        End Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => onEndDateChange(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border bg-(--surface-muted) text-(--ink) font-medium outline-none transition-all"
-                                        style={{ borderColor: "var(--border)" }}
-                                    />
-                                </div>
-                            </div>
-
+                            {/* Preset Buttons */}
                             <div>
-                                <p className="text-xs font-semibold text-(--muted) mb-2 uppercase tracking-wider">Quick Filters</p>
-                                <div className="grid grid-cols-2 gap-2">
+                                <p className="text-xs font-semibold text-(--muted) mb-2 uppercase tracking-wider">Quick Presets</p>
+                                <div className="grid grid-cols-4 gap-1.5">
                                     {[
-                                        { label: "Today", days: 0 },
-                                        { label: "Last 7 Days", days: 7 },
-                                        { label: "Last 30 Days", days: 30 },
-                                        { label: "This Month", days: "month" },
-                                    ].map((filter) => (
+                                        { key: "today", label: "Today" },
+                                        { key: "week", label: "Week" },
+                                        { key: "month", label: "Month" },
+                                        { key: "custom", label: "Custom" },
+                                    ].map((preset) => (
                                         <button
-                                            key={filter.label}
-                                            onClick={() => {
-                                                const today = new Date();
-                                                const end = today.toISOString().split('T')[0];
-                                                let start;
-                                                if (filter.days === "month") {
-                                                    start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                                                } else {
-                                                    const startD = new Date(today);
-                                                    startD.setDate(today.getDate() - filter.days);
-                                                    start = startD.toISOString().split('T')[0];
-                                                }
-                                                onStartDateChange(start);
-                                                onEndDateChange(end);
+                                            key={preset.key}
+                                            onClick={() => handlePresetSelect(preset.key)}
+                                            className="px-2 py-2 rounded-lg border text-xs font-semibold transition-all text-center"
+                                            style={{
+                                                background: activeTab === preset.key ? "rgba(15,118,110,0.12)" : "var(--surface-muted)",
+                                                borderColor: activeTab === preset.key ? "var(--accent-2)" : "var(--border)",
+                                                color: activeTab === preset.key ? "var(--accent-2)" : "var(--ink)",
                                             }}
-                                            className="px-3 py-2 rounded-lg border text-xs font-semibold text-(--muted) hover:border-(--accent-2) hover:text-(--accent-2) transition-all"
-                                            style={{ borderColor: "var(--border)" }}
                                         >
-                                            {filter.label}
+                                            {preset.label}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Custom Date Picker Section */}
+                            {activeTab === "custom" && (
+                                <div className="space-y-3 pt-2 border-t border-(--border)">
+                                    <div>
+                                        <label className="flex items-center gap-2 text-xs font-semibold text-(--ink) mb-1.5">
+                                            <Clock size={13} className="text-(--accent-2)" />
+                                            Start Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => onStartDateChange(e.target.value)}
+                                            className="w-full px-3.5 py-2 rounded-xl border bg-(--surface-muted) text-(--ink) text-xs font-medium outline-none transition-all"
+                                            style={{ borderColor: "var(--border)" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="flex items-center gap-2 text-xs font-semibold text-(--ink) mb-1.5">
+                                            <Clock size={13} className="text-(--accent-2)" />
+                                            End Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => onEndDateChange(e.target.value)}
+                                            className="w-full px-3.5 py-2 rounded-xl border bg-(--surface-muted) text-(--ink) text-xs font-medium outline-none transition-all"
+                                            style={{ borderColor: "var(--border)" }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex gap-2 pt-2">
                                 <button
-                                    onClick={() => { onClear(); setIsOpen(false); }}
-                                    className="flex-1 px-4 py-2.5 rounded-xl border text-(--muted) hover:border-red-400 hover:text-red-500 font-semibold transition-all"
+                                    onClick={() => { onClear(); setActiveTab("all"); setIsOpen(false); }}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border text-(--muted) hover:border-red-400 hover:text-red-500 font-semibold text-xs transition-all"
                                     style={{ borderColor: "var(--border)" }}
                                 >
                                     Clear All
                                 </button>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="flex-1 px-4 py-2.5 rounded-xl font-bold transition-all hover:scale-105"
+                                    className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
                                     style={{ background: "var(--accent-2)", color: "white" }}
                                 >
                                     Apply Filter
@@ -501,7 +519,7 @@ export default function OrderHistory() {
                                                         <Eye size={15} />
                                                     </button>
                                                     <button
-                                                        onClick={() => setReturnModal({ orderId: order._id })}
+                                                        onClick={() => navigate('/order-return', { state: { searchOrderNumber: order.orderNumber, searchOrderId: order._id } })}
                                                         id={`order-history-return-${order._id}`}
                                                         className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-orange-400 hover:text-orange-500"
                                                         title="Return Order"
