@@ -4,6 +4,8 @@ import AuthPage from "../modules/auth/pages/AuthPage.jsx";
 import Profile from "../modules/auth/pages/Profile.jsx";
 import UserManagement from "../modules/auth/pages/UserManagement.jsx";
 import UserDetails from "../modules/auth/pages/UserDetails.jsx";
+import UserRoleManagement from "../modules/auth/pages/UserRoleManagement.jsx";
+import UserRoleDetails from "../modules/auth/pages/UserRoleDetails.jsx";
 import ProtectedRoute from "../shared/components/ProtectedRoute.jsx";
 import Products from "../modules/productsModule/pages/Products.jsx";
 import ProductDetail from "../modules/productsModule/pages/ProductDetail.jsx";
@@ -112,6 +114,8 @@ function AppRoutes() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
             <Route path="/users/:userId" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
+            <Route path="/user-roles" element={<ProtectedRoute><UserRoleManagement /></ProtectedRoute>} />
+            <Route path="/user-roles/:roleId" element={<ProtectedRoute><UserRoleDetails /></ProtectedRoute>} />
 
             {/* Default Route */}
             {/* <Route path="/" element={<Login />} /> */}

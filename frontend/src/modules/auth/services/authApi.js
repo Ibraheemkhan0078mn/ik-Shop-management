@@ -44,6 +44,26 @@ export const authApi = baseApi.injectEndpoints({
             query: (id) => ({ url: "/users/delete", method: "DELETE", body: { _id: id } }),
             invalidatesTags: ["User"],
         }),
+        getAllUserRoles: build.query({
+            query: ({ page = 1, limit = 20 } = {}) => ({ url: "/user-roles/all", params: { page, limit } }),
+            providesTags: ["UserRole"],
+        }),
+        getUserRoleById: build.query({
+            query: (id) => ({ url: `/user-roles/${id}` }),
+            providesTags: (_r, _e, id) => [{ type: "UserRole", id }],
+        }),
+        createUserRole: build.mutation({
+            query: (data) => ({ url: "/user-roles/create", method: "POST", body: data }),
+            invalidatesTags: ["UserRole"],
+        }),
+        updateUserRole: build.mutation({
+            query: (data) => ({ url: "/user-roles/update", method: "PUT", body: data }),
+            invalidatesTags: ["UserRole"],
+        }),
+        deleteUserRole: build.mutation({
+            query: (id) => ({ url: "/user-roles/delete", method: "DELETE", body: { _id: id } }),
+            invalidatesTags: ["UserRole"],
+        }),
     }),
 });
 
@@ -59,4 +79,9 @@ export const {
     useCreateUserMutation,
     useUpdateUserMutation,
     useDeleteUserMutation,
+    useGetAllUserRolesQuery,
+    useGetUserRoleByIdQuery,
+    useCreateUserRoleMutation,
+    useUpdateUserRoleMutation,
+    useDeleteUserRoleMutation,
 } = authApi;

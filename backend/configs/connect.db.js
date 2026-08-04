@@ -1,6 +1,7 @@
 import dns from "dns";
 import mongoose from "mongoose";
 import userSchema from "../modules/auth/models/auth.model.js";
+import userRoleSchema from "../modules/auth/models/userRole.model.js";
 import productSchema from "../modules/product/models/product.model.js";
 import categorySchema from "../modules/product/models/category.model.js";
 import subCategorySchema from "../modules/product/models/subCategory.model.js";
@@ -57,6 +58,7 @@ const addChangeTrackingMiddleware = (schema, modelName) => {
 };
 
 let UserModel = null;
+let UserRoleModel = null;
 let ProductModel = null;
 let CategoryModel = null;
 let SubCategoryModel = null;
@@ -101,6 +103,7 @@ export const connectDb = async () => {
 
     // Add change tracking middleware to schemas before creating models
     addChangeTrackingMiddleware(userSchema, "Users");
+    addChangeTrackingMiddleware(userRoleSchema, "UserRoles");
     addChangeTrackingMiddleware(productSchema, "Products");
     addChangeTrackingMiddleware(categorySchema, "Categories");
     addChangeTrackingMiddleware(subCategorySchema, "SubCategories");
@@ -132,6 +135,7 @@ export const connectDb = async () => {
     addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
 
     UserModel = LocalConnection.model("Users", userSchema);
+    UserRoleModel = LocalConnection.model("UserRoles", userRoleSchema);
     ProductModel = LocalConnection.model("Products", productSchema);
     CategoryModel = LocalConnection.model("Categories", categorySchema);
     SubCategoryModel = LocalConnection.model(
@@ -182,6 +186,7 @@ export const getLocalExpenseCategoryModel = () => ExpenseCategoryModel || null;
 export const getLocalActivityLogModel = () => ActivityLogModel || null;
 export const getLocalChangeTrackModel = () => ChangeTrackModel || null;
 export const getLocalUserModel = () => UserModel || null;
+export const getLocalUserRoleModel = () => UserRoleModel || null;
 export const getLocalProductModel = () => ProductModel || null;
 export const getLocalCategoryModel = () => CategoryModel || null;
 export const getLocalSubCategoryModel = () => SubCategoryModel || null;

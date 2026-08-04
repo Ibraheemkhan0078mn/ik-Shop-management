@@ -4,6 +4,8 @@
 1: the max limit on item of purchase return is not on the basis of current stock of proudct so fix it.
 2: remove the description form teh brand
 3: when empty batch dleeted then it do esnot refetch te baches of product. 
+4: make the supplier nad cusotmer detial page data more detailed. like kpi for all. kpi for date filer and also paginaed data in each.
+
 
 
 3: chek the active work in all models

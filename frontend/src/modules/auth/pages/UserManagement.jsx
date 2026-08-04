@@ -1,10 +1,10 @@
 import { useContext, useState, useMemo } from "react";
-import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X, Upload, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getUserLabels } from "../labels/userLabels.js";
-import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from "../services/authApi.js";
+import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation, useGetAllUserRolesQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -24,6 +24,8 @@ export default function UserManagement() {
 
     const { data: response, refetch } = useGetAllUsersQuery();
     const users = response?.data || [];
+    const { data: rolesResponse } = useGetAllUserRolesQuery();
+    const userRoles = rolesResponse?.data || [];
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
     const [deleteUser] = useDeleteUserMutation();
@@ -157,6 +159,16 @@ export default function UserManagement() {
         }));
     };
 
+    const handleUserRoleSelect = (userRole) => {
+        const selectedRole = userRoles.find(r => r._id === userRole);
+        if (selectedRole) {
+            setFormData(prev => ({
+                ...prev,
+                permissions: selectedRole.permissions || []
+            }));
+        }
+    };
+
     const isGroupAllChecked = (group) => {
         const groupPermissions = group.actions.map(({ key }) => `${group.module}.${key}`);
         return groupPermissions.every(perm => (formData.permissions || []).includes(perm));
@@ -224,8 +236,13 @@ export default function UserManagement() {
                 heading={labels.userManagement}
                 subheading={labels.manageStaffUserAccounts}
                 leftActions={
-                    <div onClick={openCreateModal}>
-                        <ScreenTabButton lucideIcon={Plus} text={labels.addUser} />
+                    <div className="flex gap-2">
+                        <div onClick={openCreateModal}>
+                            <ScreenTabButton lucideIcon={Plus} text={labels.addUser} />
+                        </div>
+                        <div onClick={() => navigate("/user-roles")}>
+                            <ScreenTabButton lucideIcon={Shield} text={labels.userRoles} />
+                        </div>
                     </div>
                 }
             />
@@ -386,6 +403,34 @@ export default function UserManagement() {
                                 </div>
                             </div> */}
                             <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.selectRole || "Select Role"}</label>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {userRoles.map((role) => (
+                                        <button
+                                            key={role._id}
+                                            type="button"
+                                            onClick={() => handleUserRoleSelect(role._id)}
+                                            className="px-3 py-1.5 text-sm rounded-lg border-2 transition-all"
+                                            style={{
+                                                background: "var(--surface-muted)",
+                                                borderColor: "var(--border)",
+                                                color: "var(--ink)"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.borderColor = "var(--accent-2)";
+                                                e.target.style.color = "var(--accent-2)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.borderColor = "var(--border)";
+                                                e.target.style.color = "var(--ink)";
+                                            }}
+                                        >
+                                            {role.name}
+                                        </button>
+                                    ))}
+                                </div>
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
                                     <button
