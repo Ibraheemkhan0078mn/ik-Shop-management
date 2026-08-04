@@ -4,13 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { usePaginatedOrders, useDeleteOrder } from "../services/orders.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import {
-    Eye, Trash2, X, Receipt, Calendar, Download, Printer,
+    Eye, Trash2, X, Receipt, Calendar,
     User, Clock, Package, DollarSign, CreditCard, Wallet, Smartphone,
-    Percent, FileText, ShoppingBag, TrendingUp, Filter, ArrowLeft, Copy, RotateCcw
+    Percent, FileText, ShoppingBag, TrendingUp, Filter, Copy, RotateCcw
 } from "lucide-react";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
-import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
 
 // ── Payment Method Configuration ───────────────────────────────────────
@@ -361,7 +360,7 @@ export default function OrderHistory() {
     const language = user?.language || "en";
 
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [returnModal, setReturnModal] = useState(null);
+    const [returnModalOrderId, setReturnModalOrderId] = useState(null);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [deleteOrder] = useDeleteOrder();
@@ -394,24 +393,13 @@ export default function OrderHistory() {
                     heading={language === "en" ? "Order History" : "آرڈر کی تاریخ"}
                     subheading={language === "en" ? "View, manage and track all your orders" : "تمام آرڈرز دیکھیں اور منظم کریں"}
                     leftActions={
-                        <>
-                            <div id="order-history-back-button" onClick={() => navigate(-1)}>
-                                <ScreenTabButton lucideIcon={ArrowLeft} text="Back" />
-                            </div>
-                            <DateFilter
-                                startDate={startDate}
-                                endDate={endDate}
-                                onStartDateChange={setStartDate}
-                                onEndDateChange={setEndDate}
-                                onClear={handleClearFilters}
-                            />
-                            <div id="order-history-print-button" onClick={() => console.log("Print")}>
-                                <ScreenTabButton lucideIcon={Printer} text="Print" />
-                            </div>
-                            <div id="order-history-export-button" onClick={() => console.log("Export")}>
-                                <ScreenTabButton lucideIcon={Download} text="Export" />
-                            </div>
-                        </>
+                        <DateFilter
+                            startDate={startDate}
+                            endDate={endDate}
+                            onStartDateChange={setStartDate}
+                            onEndDateChange={setEndDate}
+                            onClear={handleClearFilters}
+                        />
                     }
                 />
             </div>
@@ -519,7 +507,7 @@ export default function OrderHistory() {
                                                         <Eye size={15} />
                                                     </button>
                                                     <button
-                                                        onClick={() => navigate('/order-return', { state: { searchOrderNumber: order.orderNumber, searchOrderId: order._id } })}
+                                                        onClick={() => setReturnModalOrderId(order._id)}
                                                         id={`order-history-return-${order._id}`}
                                                         className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-orange-400 hover:text-orange-500"
                                                         title="Return Order"
@@ -546,12 +534,13 @@ export default function OrderHistory() {
             {selectedOrder && (
                 <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
             )}
-            {returnModal && (
+            {returnModalOrderId && (
                 <OrderReturnModal
-                    orderId={returnModal.orderId}
-                    onClose={() => setReturnModal(null)}
+                    isOpen={!!returnModalOrderId}
+                    orderId={returnModalOrderId}
+                    onClose={() => setReturnModalOrderId(null)}
                     onSuccess={() => {
-                        setReturnModal(null);
+                        setReturnModalOrderId(null);
                         paginatedListRef.current?.refetch();
                     }}
                 />

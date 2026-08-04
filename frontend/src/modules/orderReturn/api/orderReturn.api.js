@@ -6,15 +6,18 @@ export const orderReturnApi = baseApi.injectEndpoints({
         // Generate return number
         generateReturnNumber: build.query({
             query: () => ({ url: "/product-returns/generate-number" }),
+            transformResponse: (res) => res.data,
         }),
         // Get order for return
         getOrderForReturn: build.query({
             query: (orderNumber) => ({ url: `/product-returns/order/${orderNumber}` }),
+            transformResponse: (res) => res.data,
         }),
         // Get all order returns
         getAllOrderReturns: build.query({
             query: (params) => ({ url: "/product-returns", params }),
             providesTags: ["OrderReturn"],
+            transformResponse: (res) => res.data,
         }),
         // Get paginated order returns
         getPaginatedOrderReturns: build.query({
@@ -23,11 +26,13 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 params: { page, limit, ...filters }
             }),
             providesTags: ["OrderReturn"],
+            transformResponse: (res) => res.data,
         }),
         // Get order return by ID
         getOrderReturnById: build.query({
             query: (id) => ({ url: `/product-returns/${id}` }),
             providesTags: (result, error, id) => [{ type: "OrderReturn", id }],
+            transformResponse: (res) => res.data,
         }),
         // Create order return
         createOrderReturn: build.mutation({
@@ -83,6 +88,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
         getOrderReturnRefunds: build.query({
             query: (id) => `/product-returns/${id}/refunds`,
             providesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturnRefunds"],
+            transformResponse: (res) => res.data,
         }),
         deleteOrderReturnRefund: build.mutation({
             query: ({ returnId, refundId }) => ({

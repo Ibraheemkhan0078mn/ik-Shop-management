@@ -1,8 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrder } from "../services/orders.service.js";
-import { ArrowLeft, Receipt, User, Clock, Package, DollarSign, CreditCard, Percent, FileText, ShoppingBag, Printer, Download, Copy } from "lucide-react";
+import { Receipt, Package, DollarSign, CreditCard, Percent, FileText, Copy } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
-import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 
 // ── Payment Method Configuration ───────────────────────────────────────
 const PAYMENT_METHODS = {
@@ -27,38 +26,11 @@ function PaymentBadge({ method }) {
     );
 }
 
-function InfoCard({ icon: Icon, label, value }) {
-    return (
-        <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(15,118,110,0.12)" }}>
-                <Icon size={18} className="text-(--accent-2)" />
-            </div>
-            <div className="min-w-0">
-                <p className="text-xs font-semibold text-(--muted) uppercase tracking-wider">{label}</p>
-                <p className="font-bold text-(--ink) mt-0.5 truncate">{value}</p>
-            </div>
-        </div>
-    );
-}
-
-function SummaryRow({ label, value, icon: Icon, isDiscount = false }) {
-    return (
-        <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-2">
-                <Icon size={14} className={isDiscount ? "text-red-500" : "text-(--muted)"} />
-                <span className="font-semibold text-(--ink)">{label}</span>
-            </div>
-            <span className={`font-bold ${isDiscount ? "text-red-500" : "text-(--ink)"}`}>
-                {isDiscount && value > 0 ? "- " : ""}Rs {(value || 0).toLocaleString()}
-            </span>
-        </div>
-    );
-}
-
 export default function OrderDetailsPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { data: order, isLoading, error } = useOrder(id, { skip: !id });
+    console.log(order, "The order data")
 
     const handleCopyOrderNumber = () => {
         if (order?.orderNumber) {
@@ -117,113 +89,264 @@ export default function OrderDetailsPage() {
                             </button>
                         </div>
                     }
-                    leftActions={
-                        <>
-                            <div id="order-details-back-button" onClick={() => navigate(-1)}>
-                                <ScreenTabButton lucideIcon={ArrowLeft} text="Back" />
-                            </div>
-                            <div id="order-details-print-button" onClick={() => console.log("Print")}>
-                                <ScreenTabButton lucideIcon={Printer} text="Print" />
-                            </div>
-                            <div id="order-details-export-button" onClick={() => console.log("Export")}>
-                                <ScreenTabButton lucideIcon={Download} text="Export" />
-                            </div>
-                        </>
-                    }
                 />
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 pb-6">
-                <div className="max-w-4xl mx-auto space-y-6 pt-2">
-                    {/* Info Cards Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InfoCard
-                            icon={User}
-                            label="Customer Name"
-                            value={order.customerName || "Walk-in Customer"}
-                        />
-                        <InfoCard
-                            icon={Clock}
-                            label="Order Date & Time"
-                            value={new Date(order.createdAt).toLocaleString('en-US', {
+                <div className="max-w-5xl mx-auto space-y-6 pt-2">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                                order?.status === "completed" ? "bg-green-100 text-green-700" :
+                                order?.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                                order?.status === "cancelled" ? "bg-red-100 text-red-700" :
+                                "bg-blue-100 text-blue-700"
+                            }`}>
+                                {order?.status || "Unknown"}
+                            </span>
+                            {order?.isPosOrder && (
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700">
+                                    POS Order
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-[var(--muted)]">
+                            Created: {new Date(order?.createdAt).toLocaleString('en-US', {
                                 dateStyle: 'medium',
                                 timeStyle: 'short'
                             })}
-                        />
-                        <InfoCard
-                            icon={User}
-                            label="Served By"
-                            value={order.waiter || "Not specified"}
-                        />
-                        <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
-                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(15,118,110,0.12)" }}>
-                                <CreditCard size={18} className="text-(--accent-2)" />
+                        </p>
+                    </div>
+
+                    {/* Financial Summary Section */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
+                            <DollarSign size={20} />
+                            Financial Summary
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">Subtotal</p>
+                                <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.subtotal ?? 0).toLocaleString()}</p>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-semibold text-(--muted) uppercase tracking-wider">Payment Method</p>
-                                <div className="mt-1">
-                                    <PaymentBadge method={order.paymentMethod} />
-                                </div>
+                            <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">Discount</p>
+                                <p className="font-semibold text-red-600 mt-1">Rs {(order?.discountAmount ?? 0).toLocaleString()}</p>
+                            </div>
+                            <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">Cash Received</p>
+                                <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.cashReceived ?? 0).toLocaleString()}</p>
+                            </div>
+                            <div className="text-center p-4 rounded-xl bg-[var(--accent-2)]">
+                                <p className="text-xs text-white uppercase font-bold">Total Amount</p>
+                                <p className="font-bold text-white text-lg mt-1">Rs {(order?.totalAmount ?? 0).toLocaleString()}</p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Order Information Section */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
+                            <FileText size={20} />
+                            Order Information
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Order Number</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">{order?.orderNumber || "—"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Customer Name</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">{order?.customerName || "Walk-in Customer"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Customer Type</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1 capitalize">{order?.customerType || "—"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Order Date & Time</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">
+                                    {new Date(order?.createdAt).toLocaleString('en-US', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short'
+                                    })}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Served By</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">{order?.waiter || "Not specified"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Order Type</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1 capitalize">{order?.orderType || "Retail"}</p>
+                            </div>
+                        </div>
+                        {order?.note && (
+                            <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Notes</label>
+                                <p className="text-[var(--ink)] mt-1">{order.note}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Items Section */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <ShoppingBag size={16} className="text-(--accent-2)" />
-                            <h3 className="text-sm font-bold text-(--ink)">Order Items</h3>
-                            <span className="ml-auto text-xs font-bold px-3 py-1 rounded-full bg-(--surface-muted) text-(--muted)">
-                                {order.items?.length || 0} items
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
+                            <Package size={20} />
+                            Items in Order
+                            <span className="ml-auto text-xs font-bold px-3 py-1 rounded-full bg-[var(--surface-muted)] text-[var(--muted)]">
+                                {order?.items?.length || 0} items
                             </span>
-                        </div>
-                        <div className="space-y-2">
-                            {order.items?.map((item, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between gap-4 p-3.5 rounded-xl border transition-all duration-150 hover:bg-(--surface-muted)"
-                                    style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-                                >
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(15,118,110,0.12)" }}>
-                                            <Package size={15} className="text-(--accent-2)" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-semibold text-(--ink) truncate text-sm">{item.name}</p>
-                                            <p className="text-xs text-(--muted)">
-                                                Qty: {item.quantity} × Rs {item.unitPrice?.toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-bold text-(--accent-2) shrink-0">
-                                        Rs {(item.quantity * item.unitPrice).toLocaleString()}
-                                    </p>
-                                </div>
-                            ))}
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead style={{ background: "var(--surface-muted)" }}>
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Product
+                                        </th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Portion
+                                        </th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Quantity
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Unit Price
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Line Total
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
+                                    {order?.items?.map((item, index) => (
+                                        <tr key={index} className="hover:bg-[var(--surface-muted)] transition-all">
+                                            <td className="px-4 py-3">
+                                                <p className="font-medium text-[var(--ink)]">
+                                                    {item.name || "—"}
+                                                </p>
+                                                {item.batchNumber && (
+                                                    <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--surface-muted)] text-[var(--ink)] capitalize">
+                                                    {item.portionType || "full"}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center font-medium text-[var(--ink)]">
+                                                {item.quantity || 0}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
+                                                Rs {(item.unitPrice || 0).toLocaleString()}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">
+                                                Rs {(item.lineTotal || (item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    {/* Summary Section */}
-                    <div className="rounded-xl border p-5 space-y-3" style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
-                        <div className="flex items-center gap-2 mb-1">
-                            <FileText size={16} className="text-(--accent-2)" />
-                            <h3 className="text-sm font-bold text-(--ink)">Order Summary</h3>
-                        </div>
-
-                        <div className="space-y-2">
-                            <SummaryRow label="Subtotal" value={order.subtotal} icon={DollarSign} />
-                            <SummaryRow label="Discount" value={order.discountAmount} icon={Percent} isDiscount />
-
-                            <div className="h-px" style={{ background: "var(--border)" }} />
-
-                            <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "var(--accent-2)" }}>
-                                <div className="flex items-center gap-2">
-                                    <DollarSign size={16} className="text-white" />
-                                    <span className="text-sm font-bold text-white">Total Amount</span>
+                    {/* Payment Details Section */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
+                            <CreditCard size={20} />
+                            Payment Details
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Payment Method</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">
+                                    <PaymentBadge method={order?.paymentMethod} />
+                                </p>
+                            </div>
+                            {order?.paymentMethodName && (
+                                <div>
+                                    <label className="text-xs text-[var(--muted)] uppercase font-bold">Payment Method Name</label>
+                                    <p className="font-semibold text-[var(--ink)] mt-1">{order.paymentMethodName}</p>
                                 </div>
-                                <span className="text-xl font-black text-white">
-                                    Rs {(order.totalAmount || 0).toLocaleString()}
-                                </span>
+                            )}
+                            {order?.paymentMethod === "cash" && (
+                                <>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Cash Received</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.cashReceived ?? 0).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Change Returned</label>
+                                        <p className="font-semibold text-[var(--accent-2)] mt-1">Rs {(order?.change ?? 0).toLocaleString()}</p>
+                                    </div>
+                                </>
+                            )}
+                            {order?.paymentMethod === "online" && (
+                                <>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Platform</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1 capitalize">{order?.onlinePlatform || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Online Amount</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.onlineAmount ?? 0).toLocaleString()}</p>
+                                    </div>
+                                </>
+                            )}
+                            {order?.paymentMethod === "credit" && (
+                                <div>
+                                    <label className="text-xs text-[var(--muted)] uppercase font-bold">Qarza Account</label>
+                                    <p className="font-semibold text-[var(--ink)] mt-1">{order?.qarzaAccount?.name || "—"}</p>
+                                </div>
+                            )}
+                            {order?.paymentMethod === "hybrid" && (
+                                <>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Cash Portion</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.hybridCash ?? 0).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Qarza Portion</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.hybridQarza ?? 0).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-[var(--muted)] uppercase font-bold">Qarza Account</label>
+                                        <p className="font-semibold text-[var(--ink)] mt-1">{order?.hybridQarzaAccount?.name || "—"}</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Additional Information */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
+                            <Receipt size={20} />
+                            Additional Information
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Order ID</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1 text-xs">{order?._id || "—"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Last Updated</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">
+                                    {order?.updatedAt ? new Date(order.updatedAt).toLocaleString('en-US', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short'
+                                    }) : "—"}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Staff ID</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">{order?.staffId || "—"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">Customer ID</label>
+                                <p className="font-semibold text-[var(--ink)] mt-1">{order?.customerId || "—"}</p>
                             </div>
                         </div>
                     </div>

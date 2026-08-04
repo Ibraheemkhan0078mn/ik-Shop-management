@@ -158,13 +158,13 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const { data: orderData, isLoading: orderFetchingQuery } = useGetOrderForReturnQuery(orderNumber, { skip: !orderNumber });
     const { data: orderDataById } = useOrder(orderId, { skip: !orderId || isEditMode });
     const { data: refunds, refetch: refetchRefunds, isLoading: refundsLoading } = useGetOrderReturnRefundsQuery(editData?._id, { skip: !isViewMode || !editData?._id });
-    const refundsList = Array.isArray(refunds) ? refunds : (refunds?.data || []);
+    const refundsList = Array.isArray(refunds) ? refunds : [];
     const [createOrderReturn] = useCreateOrderReturnMutation();
     const [updateOrderReturn] = useUpdateOrderReturnMutation();
 
     useEffect(() => {
-        if (returnNumberData?.data) {
-            setGeneratedReturnNumber(returnNumberData.data);
+        if (returnNumberData) {
+            setGeneratedReturnNumber(returnNumberData);
         }
     }, [returnNumberData]);
 
@@ -180,9 +180,9 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
 
     // Auto-load order data when orderId is provided in create mode
     useEffect(() => {
-        if (isEditMode || isViewMode || !orderId || !orderDataById?.data) return;
-        setFetchedOrder(orderDataById.data);
-        setOrderNumber(orderDataById.data.orderNumber || "");
+        if (isEditMode || isViewMode || !orderId || !orderDataById) return;
+        setFetchedOrder(orderDataById);
+        setOrderNumber(orderDataById.orderNumber || "");
         showSuccess("Order loaded successfully");
     }, [isEditMode, isViewMode, orderId, orderDataById]);
 
@@ -235,8 +235,8 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     };
 
     useEffect(() => {
-        if (orderData?.data) {
-            setFetchedOrder(orderData.data);
+        if (orderData) {
+            setFetchedOrder(orderData);
         } else if (!orderNumber || orderNumber.length < 3) {
             setFetchedOrder(null);
         }
