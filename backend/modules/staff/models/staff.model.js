@@ -20,13 +20,11 @@ const staffSchema = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ['cashier', 'tailor', 'stockKeeper', 'other'],
         default: 'other'
     },
     salaryType: {
         type: String,
         required: true,
-        enum: ['fixed', 'percentage'],
         default: 'fixed'
     },
     joinDate: {
@@ -72,7 +70,6 @@ const staffSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['active', 'inactive'],
         default: 'active'
     },
     // Soft Delete Fields

@@ -10,6 +10,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import StaffModal from "../components/StaffModal.jsx";
 
 export default function StaffList() {
     const navigate = useNavigate();
@@ -17,6 +18,9 @@ export default function StaffList() {
     const [roleFilter, setRoleFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [salaryTypeFilter, setSalaryTypeFilter] = useState("");
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState("create");
+    const [staffId, setStaffId] = useState(null);
     const paginatedListRef = useRef(null);
 
     const { settings } = useSettings();
@@ -36,6 +40,27 @@ export default function StaffList() {
             } catch (error) {
                 toast.error(labels.failedToDelete);
             }
+        }
+    };
+
+    const handleOpenCreateModal = () => {
+        setModalMode("create");
+        setStaffId(null);
+        setModalOpen(true);
+    };
+
+    const handleOpenEditModal = (item) => {
+        setModalMode("edit");
+        setStaffId(item._id);
+        setModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setModalOpen(false);
+        setModalMode("create");
+        setStaffId(null);
+        if (paginatedListRef.current) {
+            paginatedListRef.current.refetch();
         }
     };
 
@@ -64,12 +89,21 @@ export default function StaffList() {
                     leftActions={
                         <>
                             <PermissionGuard 
-                                execute={() => navigate("/staff/create")} 
+                                execute={handleOpenCreateModal} 
                                 permission="staff.create" 
                                 isConfirmation={false}
                             >
                                 <div>
                                     <ScreenTabButton lucideIcon={Plus} text={labels.addStaff} />
+                                </div>
+                            </PermissionGuard>
+                            <PermissionGuard 
+                                execute={() => navigate("/staff/role")} 
+                                permission="staff.create" 
+                                isConfirmation={false}
+                            >
+                                <div>
+                                    <ScreenTabButton lucideIcon={Briefcase} text={language === "en" ? "Roles" : "کردار"} />
                                 </div>
                             </PermissionGuard>
                             <PermissionGuard 
@@ -171,7 +205,7 @@ export default function StaffList() {
                                         key={item._id}
                                         item={item}
                                         onView={() => navigate(`/staff/${item._id}`)}
-                                        onEdit={() => navigate(`/staff/edit/${item._id}`)}
+                                        onEdit={() => handleOpenEditModal(item)}
                                         onDelete={() => handleDelete(item._id, item.fullName)}
                                     />
                                 ))}
@@ -202,6 +236,13 @@ export default function StaffList() {
                         )}
                     </div>
                 )}
+            />
+
+            <StaffModal 
+                mode={modalMode}
+                staffId={staffId}
+                open={modalOpen} 
+                onClose={handleModalClose} 
             />
         </div>
     );

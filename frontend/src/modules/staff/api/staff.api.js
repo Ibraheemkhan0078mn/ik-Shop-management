@@ -163,6 +163,31 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             providesTags: (result, error, staffId) => [{ type: "Staff", id: staffId }],
         }),
+
+        // Staff Roles
+        getStaffRoles: builder.query({
+            query: (params) => ({
+                url: "/staff/role",
+                params,
+            }),
+            providesTags: ["StaffRole"],
+        }),
+        createStaffRole: builder.mutation({
+            query: (data) => ({
+                url: "/staff/role",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["StaffRole"],
+        }),
+        deleteStaffRole: builder.mutation({
+            query: (data) => ({
+                url: "/staff/role",
+                method: "DELETE",
+                body: data,
+            }),
+            invalidatesTags: ["StaffRole"],
+        }),
     }),
 });
 
@@ -188,4 +213,7 @@ export const {
     useGetAttendanceHistoryQuery,
     useGetSalaryBreakdownQuery,
     useGetPaymentSummaryQuery,
+    useGetStaffRolesQuery,
+    useCreateStaffRoleMutation,
+    useDeleteStaffRoleMutation,
 } = staffApi;

@@ -43,6 +43,7 @@ import StaffList from "../modules/staff/pages/StaffList.jsx";
 import StaffForm from "../modules/staff/pages/StaffForm.jsx";
 import StaffDetail from "../modules/staff/pages/StaffDetail.jsx";
 import StaffAttendance from "../modules/staff/pages/StaffAttendance.jsx";
+import StaffRole from "../modules/staff/pages/StaffRole.jsx";
 import SettingsPage from "../modules/settings/pages/SettingsPage.jsx";
 import OrderHistory from "../modules/orders/pages/OrderHistory.jsx";
 import OrderDetailsPage from "../modules/orders/pages/OrderDetailsPage.jsx";
@@ -101,6 +102,7 @@ function AppRoutes() {
 
             {/* Staff Routes */}
             <Route path="/staff" element={<ProtectedRoute><StaffList /></ProtectedRoute>} />
+            <Route path="/staff/role" element={<ProtectedRoute><StaffRole /></ProtectedRoute>} />
             <Route path="/staff/create" element={<ProtectedRoute><StaffForm /></ProtectedRoute>} />
             <Route path="/staff/edit/:id" element={<ProtectedRoute><StaffForm isEdit={true} /></ProtectedRoute>} />
             <Route path="/staff/:id" element={<ProtectedRoute><StaffDetail /></ProtectedRoute>} />

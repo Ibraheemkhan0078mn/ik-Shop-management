@@ -15,7 +15,7 @@ export const ordersApi = baseApi.injectEndpoints({
         }),
         getOrdersByCustomer: build.query({
             query: ({ customerId, startDate, endDate }) => ({
-                url: "/orders/by-customer",
+                 url: "/orders/by-customer",
                 params: { customerId, startDate, endDate },
             }),
             providesTags: (result, error, { customerId }) => [{ type: "Orders", id: customerId }],

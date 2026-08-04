@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Upload, X, Camera, User } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffByIdQuery, useCreateStaffMutation, useUpdateStaffMutation } from "../api/staff.api.js";
+import { useGetStaffByIdQuery, useCreateStaffMutation, useUpdateStaffMutation, useGetStaffRolesQuery } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
@@ -29,8 +29,11 @@ export default function StaffForm({ isEdit = false }) {
     const [imagePreview, setImagePreview] = useState(null);
 
     const { data: staffData, isLoading } = useGetStaffByIdQuery(id, { skip: !isEdit || !id });
+    const { data: rolesData } = useGetStaffRolesQuery({});
     const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
     const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
+
+    const roles = rolesData?.data || [];
 
     useEffect(() => {
         if (isEdit && staffData?.data) {
@@ -177,10 +180,20 @@ export default function StaffForm({ isEdit = false }) {
                             <div>
                                 <label className={labelCls}>{labels.role} <span className="text-red-500">*</span></label>
                                 <select name="role" value={formData.role} onChange={handleChange} required className={inputCls}>
-                                    <option value="cashier">{labels.cashier}</option>
-                                    <option value="tailor">{labels.tailor}</option>
-                                    <option value="stockKeeper">{labels.stockKeeper}</option>
-                                    <option value="other">{labels.other}</option>
+                                    {roles.length > 0 ? (
+                                        roles.map((role) => (
+                                            <option key={role._id} value={role.name}>
+                                                {role.name}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="cashier">{labels.cashier}</option>
+                                            <option value="tailor">{labels.tailor}</option>
+                                            <option value="stockKeeper">{labels.stockKeeper}</option>
+                                            <option value="other">{labels.other}</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
                             <div>

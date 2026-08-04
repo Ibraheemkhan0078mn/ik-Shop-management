@@ -23,6 +23,7 @@ import purchaseReturnSchema from "../modules/purchaseReturn/models/purchaseRetur
 import productReturnSchema from "../modules/productReturn/models/productReturn.model.js";
 import customerSchema from "../modules/customer/models/customer.model.js";
 import staffSchema from "../modules/staff/models/staff.model.js";
+import staffRoleSchema from "../modules/staff/models/staffRole.model.js";
 import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment.model.js";
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
@@ -78,6 +79,7 @@ let PurchaseReturnModel = null;
 let ProductReturnModel = null;
 let CustomerModel = null;
 let StaffModel = null;
+let StaffRoleModel = null;
 let StaffSalaryPaymentModel = null;
 let StaffSaleBillModel = null;
 let StaffAttendanceModel = null;
@@ -121,6 +123,7 @@ export const connectDb = async () => {
     addChangeTrackingMiddleware(productReturnSchema, "ProductReturn");
     addChangeTrackingMiddleware(customerSchema, "Customers");
     addChangeTrackingMiddleware(staffSchema, "Staff");
+    addChangeTrackingMiddleware(staffRoleSchema, "StaffRole");
     addChangeTrackingMiddleware(staffSalaryPaymentSchema, "StaffSalaryPayment");
     addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
     addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
@@ -154,6 +157,7 @@ export const connectDb = async () => {
     ProductReturnModel = LocalConnection.model("ProductReturn", productReturnSchema)
     CustomerModel = LocalConnection.model("Customers", customerSchema)
     StaffModel = LocalConnection.model("Staff", staffSchema)
+    StaffRoleModel = LocalConnection.model("StaffRole", staffRoleSchema)
     StaffSalaryPaymentModel = LocalConnection.model("StaffSalaryPayment", staffSalaryPaymentSchema)
     StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
     StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
@@ -189,6 +193,7 @@ export const getLocalPurchasePaymentModel = () => PurchasePaymentModel || null;
 export const getLocalOrderModel = () => OrderModel || null;
 export const getLocalHoldOrderModel = () => HoldOrderModel || null;
 export const getLocalStaffModel = () => StaffModel || null;
+export const getLocalStaffRoleModel = () => StaffRoleModel || null;
 export const getLocalStaffSalaryPaymentModel = () => StaffSalaryPaymentModel || null;
 export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
 export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;

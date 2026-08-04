@@ -1,473 +1,530 @@
-import React, { useState, useEffect, useRef } from "react";
-import { X, Save, Upload, User, Phone, IdCard, Briefcase, MapPin, Calendar, DollarSign } from "lucide-react";
-import { toast } from "sonner";
-import { useCreateStaffMutation, useUpdateStaffMutation } from "../api/staff.api.js";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { AlertCircle, Check, X } from "lucide-react";
+import { useCreateStaffMutation, useUpdateStaffMutation, useGetStaffRolesQuery, useGetStaffByIdQuery } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
-import ImageCropper from "../../../shared/components/ImageCropper.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
-export default function StaffModal({ isOpen, onClose, editData = null, isEditMode = false, onSuccess }) {
-    const fileInputRef = useRef(null);
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+const EMPTY_FORM = {
+    fullName: "",
+    cnic: "",
+    phone: "",
+    role: "other",
+    salaryType: "fixed",
+    joinDate: new Date().toISOString().split('T')[0],
+    address: "",
+    emergencyContact: "",
+    photo: "",
+    notes: "",
+    monthlySalary: 0,
+    percentage: 0,
+    status: "active",
+};
+
+const safeArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === "object" && data.data) return Array.isArray(data.data) ? data.data : [];
+    return [];
+};
+
+export default function StaffModal({ mode = "create", staffId = null, open, onClose }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getStaffLabels(language);
+    
+    const isCreate = mode === "create";
+    const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
+    const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
+    const isSaving = isCreating || isUpdating;
 
-    const [formData, setFormData] = useState({
-        fullName: "",
-        cnic: "",
-        phone: "",
-        role: "other",
-        salaryType: "fixed",
-        joinDate: new Date().toISOString().split('T')[0],
-        address: "",
-        emergencyContact: "",
-        notes: "",
-        monthlySalary: 0,
-        percentage: 0,
-        status: "active",
+    const { data: staffData, isLoading: isFetching, error: staffError } = useGetStaffByIdQuery(staffId, {
+        skip: !staffId || isCreate,
     });
+    const { data: rolesRaw } = useGetStaffRolesQuery({});
 
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [errors, setErrors] = useState({});
+    const [banner, setBanner] = useState(null);
+    const [showMore, setShowMore] = useState(false);
+    const fileInputRef = useRef(null);
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
-    const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
-    const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
+    const roles = safeArray(rolesRaw);
 
     useEffect(() => {
-        if (isEditMode && editData) {
-            setFormData({
-                fullName: editData.fullName || "",
-                cnic: editData.cnic || "",
-                phone: editData.phone || "",
-                role: editData.role || "other",
-                salaryType: editData.salaryType || "fixed",
-                joinDate: editData.joinDate ? new Date(editData.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                address: editData.address || "",
-                emergencyContact: editData.emergencyContact || "",
-                notes: editData.notes || "",
-                monthlySalary: editData.monthlySalary || 0,
-                percentage: editData.percentage || 0,
-                status: editData.status || "active",
+        if (!isCreate && staffData) {
+            const s = staffData.data;
+            setForm({
+                ...EMPTY_FORM,
+                ...s,
+                id: staffData._id || "",
             });
-            if (editData.photo) {
-                setImagePreview(toImageUrl(editData.photo));
-            }
+            if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
-    }, [isEditMode, editData]);
+    }, [isCreate, staffData]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+    useEffect(() => {
+        if (isCreate && open) {
+            setForm(EMPTY_FORM);
+            setImagePreview(null);
+            setErrors({});
+            setBanner(null);
+            setShowMore(false);
+            setImageFile(null);
+        }
+    }, [isCreate, open]);
 
-    const handleImageChange = (files) => {
-        const file = files[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                toast.error("Please select an image file");
+    useEffect(() => {
+        return () => {
+            if (imagePreview?.startsWith?.("blob:")) URL.revokeObjectURL(imagePreview);
+        };
+    }, [imagePreview]);
+
+    useEffect(() => {
+        const apiError = staffError;
+        if (apiError) {
+            setBanner(`⚠️ ${apiError?.data?.message || apiError?.message || "Failed to load data"}`);
+        }
+    }, [staffError]);
+
+    const updateField = useCallback((name, value) => {
+        setForm((prev) => ({ ...prev, [name]: value }));
+        setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
+    }, []);
+
+    const handleImageChange = useCallback(
+        (file) => {
+            if (!file) return;
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                setErrors((prev) => ({ ...prev, photo: "Only PNG, JPG, and WebP images are allowed" }));
                 return;
             }
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                toast.error("Image size should be less than 5MB");
+            if (file.size > MAX_IMAGE_SIZE) {
+                setErrors((prev) => ({ ...prev, photo: "Image size should be less than 5MB" }));
                 return;
             }
-            
+            updateField("photo", file);
             setImageFile(file);
             setImagePreview(URL.createObjectURL(file));
+        },
+        [updateField]
+    );
+
+    const removeImage = useCallback(() => {
+        setImageFile(null);
+        setImagePreview(null);
+        updateField("photo", "");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    }, [updateField]);
+
+    const validateForm = useCallback(() => {
+        const newErrors = {};
+
+        // Always required
+        if (!form.fullName?.trim()) newErrors.fullName = "Full name is required";
+        if (!form.cnic?.trim()) newErrors.cnic = "CNIC is required";
+        if (!form.phone?.trim()) newErrors.phone = "Phone is required";
+        if (!form.role?.trim()) newErrors.role = "Role is required";
+        if (!form.joinDate) newErrors.joinDate = "Join date is required";
+
+        // Required inside "more options" only
+        if (showMore) {
+            if (!form.address?.trim()) newErrors.address = "Address is required";
+            if (form.salaryType === "fixed" && (form.monthlySalary === "" || form.monthlySalary === null || form.monthlySalary === undefined || isNaN(form.monthlySalary)))
+                newErrors.monthlySalary = "Monthly salary is required";
+            if (form.salaryType === "percentage" && (form.percentage === "" || form.percentage === null || form.percentage === undefined || isNaN(form.percentage)))
+                newErrors.percentage = "Commission percentage is required";
         }
-    };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+        setErrors(newErrors);
+        const count = Object.keys(newErrors).length;
+        if (count > 0) {
+            // Auto-expand if errors are in optional section
+            const optionalKeys = ["address", "monthlySalary", "percentage", "emergencyContact", "notes"];
+            if (optionalKeys.some((k) => newErrors[k])) setShowMore(true);
+            setBanner(`Please fix ${count} error(s)`);
+            return false;
+        }
+        setBanner(null);
+        return true;
+    }, [form, showMore]);
 
+    const onSubmit = useCallback(async () => {
+        if (!validateForm()) return;
+        const payload = new FormData();
+        const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id", "percentage"];
+        Object.entries(form).forEach(([key, value]) => {
+            if (exclude.includes(key)) return;
+            if (key === "photo" && typeof value === "string") return; // Don't send string photo, only file
+            if (value === undefined || value === null) return;
+            payload.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+        });
+        if (imageFile) payload.append("photo", imageFile);
+        
         try {
-            const submitData = new FormData();
-            
-            // Append all text fields
-            Object.keys(formData).forEach(key => {
-                submitData.append(key, formData[key]);
-            });
-            
-            // Append image if selected
-            if (imageFile) {
-                submitData.append('photo', imageFile);
-            }
-            
-            if (isEditMode) {
-                await updateStaff({ id: editData._id, data: submitData }).unwrap();
-                toast.success(labels.staffUpdated || "Staff updated successfully");
+            if (isCreate) {
+                await createStaff(payload).unwrap();
+                showSuccess("Staff created successfully 🎉");
             } else {
-                await createStaff(submitData).unwrap();
-                toast.success(labels.staffCreated || "Staff created successfully");
+                await updateStaff({ payload, id: staffData._id }).unwrap();
+                showSuccess("Staff updated successfully ✅");
             }
-            
-            onSuccess?.();
             onClose();
         } catch (error) {
-            console.error('Error:', error);
-            
-            // Handle duplicate field error
-            const errorMessage = error?.data?.error || error?.data?.message || '';
-            
-            if (errorMessage.toLowerCase().includes('already exists') || 
-                errorMessage.toLowerCase().includes('duplicate') ||
-                error?.status === 400 && errorMessage.includes('cnic')) {
-                // Show the backend's detailed error message
-                toast.error(errorMessage);
-            } else if (error?.data?.message) {
-                toast.error(error.data.message);
-            } else if (error?.data?.error) {
-                toast.error(error.data.error);
-            } else {
-                toast.error(isEditMode ? labels.failedToUpdate : labels.failedToCreate);
-            }
+            const msg = error?.data?.message || error?.message || "Something went wrong.";
+            showError(msg);
+            setBanner(`❌ ${msg}`);
         }
-    };
+    }, [form, isCreate, staffData, createStaff, updateStaff, onClose, validateForm, imageFile]);
 
-    if (!isOpen) return null;
+    if (!open) return null;
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 lg:p-8">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
-                onClick={onClose}
-            />
-
-            {/* Main Modal Container */}
-            <div className="relative w-full max-w-5xl bg-(--surface) rounded-3xl shadow-2xl border-2 border-edge overflow-hidden flex flex-col lg:flex-row animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 max-h-[90vh]">
-
-                {/* Left Branding Panel */}
-                <div className="hidden lg:flex w-[35%] bg-gradient-to-b from-primary to-[#0d8a7e] p-12 flex-col justify-between relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full -ml-32 -mb-32 blur-3xl" />
-
-                    <div className="relative z-10">
-                        <div className="flex flex-col items-center mb-8">
-                            {/* Image Upload with Cropper */}
-                            <div className="relative mb-8 flex-shrink-0">
-                                <ImageCropper
-                                    accept="image/*"
-                                    aspectRatio={1}
-                                    cropShape="round"
-                                    showPreview={false}
-                                    onChange={handleImageChange}
-                                >
-                                    <div className="w-40 h-40 rounded-full bg-white/20 backdrop-blur-xl border-4 border-white/30 overflow-hidden cursor-pointer hover:scale-105 transition-all flex items-center justify-center">
-                                        {imagePreview ? (
-                                            <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
-                                        ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                                                <User className="w-12 h-12 text-white/70" />
-                                                <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">Upload Photo</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </ImageCropper>
-                            </div>
-
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={(e) => handleImageChange(e.target.files)}
-                                className="hidden"
-                                accept="image/*"
-                            />
-                        </div>
-
-                        <h2 className="text-4xl font-black text-white leading-tight tracking-tighter">
-                            {isEditMode ? 'Edit' : 'Create'}<br />Staff<br />Member
-                        </h2>
-                        <div className="h-1 w-12 bg-white/40 mt-6 rounded-full" />
-                    </div>
-
-                    <div className="relative z-10">
-                        <p className="text-white/90 text-sm font-medium leading-relaxed">
-                            {isEditMode 
-                                ? "Update staff member information and manage their profile details."
-                                : "Add a new team member with complete details and profile information."
-                            }
-                        </p>
-                    </div>
-                </div>
-
-                {/* Form Content Side */}
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Header Controls */}
-                    <div className="px-8 pt-8 pb-4 flex justify-between items-center shrink-0">
-                        <div className="lg:hidden">
-                            <h2 className="text-xl font-black text-ink">
-                                {isEditMode ? 'Edit Staff Member' : 'New Staff Member'}
-                            </h2>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="ml-auto w-10 h-10 bg-(--surface-muted) hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center transition-all duration-300 active:scale-90"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    {/* Scrollable Form */}
-                    <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar px-8 lg:px-12 pb-12 space-y-8">
-
-                        {/* Personal Information */}
-                        <div className="space-y-6">
-                            <h3 className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em]">Personal Information</h3>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2 group">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Full Name <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            name="fullName"
-                                            value={formData.fullName}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="Enter full name"
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink placeholder:text-ink-subtle/50 shadow-inner"
-                                        />
-                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary text-xl transition-colors" size={20} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 group">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        CNIC <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            name="cnic"
-                                            value={formData.cnic}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="XXXXX-XXXXXXX-X"
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                        />
-                                        <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 group">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Phone <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="tel"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="+92 XXX XXXXXXX"
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                        />
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 group">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Emergency Contact
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="tel"
-                                            name="emergencyContact"
-                                            value={formData.emergencyContact}
-                                            onChange={handleChange}
-                                            placeholder="+92 XXX XXXXXXX"
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                        />
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2 group">
-                                <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">Address</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        value={formData.address}
-                                        onChange={handleChange}
-                                        placeholder="Enter complete address"
-                                        className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                    />
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Employment Information */}
-                        <div className="space-y-6">
-                            <h3 className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em]">Employment Details</h3>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Role <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            name="role"
-                                            value={formData.role}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl px-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink appearance-none cursor-pointer shadow-inner"
-                                        >
-                                            <option value="cashier">{labels.cashier}</option>
-                                            <option value="tailor">{labels.tailor}</option>
-                                            <option value="stockKeeper">{labels.stockKeeper}</option>
-                                            <option value="other">{labels.other}</option>
-                                        </select>
-                                        <Briefcase className="absolute right-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none" size={20} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 group">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Join Date <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="date"
-                                            name="joinDate"
-                                            value={formData.joinDate}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                        />
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">Status</label>
-                                    <div className="relative">
-                                        <select
-                                            name="status"
-                                            value={formData.status}
-                                            onChange={handleChange}
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl px-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink appearance-none cursor-pointer shadow-inner"
-                                        >
-                                            <option value="active">{labels.active}</option>
-                                            <option value="inactive">{labels.inactive}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Salary Information */}
-                        <div className="space-y-6">
-                            <h3 className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em]">Salary Information</h3>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                        Salary Type <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            name="salaryType"
-                                            value={formData.salaryType}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl px-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink appearance-none cursor-pointer shadow-inner"
-                                        >
-                                            <option value="fixed">Fixed Monthly Salary</option>
-                                            <option value="percentage">Percentage Based</option>
-                                        </select>
-                                        <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none" size={20} />
-                                    </div>
-                                </div>
-
-                                {formData.salaryType === "fixed" ? (
-                                    <div className="flex flex-col gap-2 group">
-                                        <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                            Monthly Salary (Rs)
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                name="monthlySalary"
-                                                value={formData.monthlySalary}
-                                                onChange={handleChange}
-                                                min="0"
-                                                placeholder="Enter amount"
-                                                className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                            />
-                                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary transition-colors" size={20} />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-2 group">
-                                        <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">
-                                            Commission (%)
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                name="percentage"
-                                                value={formData.percentage}
-                                                onChange={handleChange}
-                                                min="0"
-                                                max="100"
-                                                step="0.1"
-                                                placeholder="Enter percentage"
-                                                className="w-full bg-(--surface-muted) border-2 border-edge rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-bold text-ink shadow-inner"
-                                            />
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-primary font-black transition-colors">%</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Notes */}
-                        <div className="relative group">
-                            <label className="text-[10px] font-black text-ink-subtle uppercase tracking-[0.2em] ml-1">Additional Notes</label>
-                            <textarea
-                                name="notes"
-                                value={formData.notes}
-                                onChange={handleChange}
-                                className="w-full mt-2 bg-(--surface-muted) border-2 border-edge rounded-2xl p-4 outline-none focus:border-primary focus:bg-(--surface) transition-all font-semibold text-ink resize-none h-24 shadow-inner"
-                                placeholder="Add any specific details or notes..."
-                            />
-                        </div>
-
-                        {/* Submit Button */}
-                        <div className="pt-4">
-                            <button
-                                type="submit"
-                                disabled={isCreating || isUpdating}
-                                className="w-full py-5 bg-gradient-to-r from-primary to-[#0d8a7e] hover:shadow-2xl hover:shadow-primary/30 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] transition-all duration-500 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isCreating || isUpdating ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Saving...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save size={18} />
-                                        <span>{isEditMode ? 'Update Staff' : 'Add Staff Member'}</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
+    if (!isCreate && isFetching && !staffData) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm animate-pulse">
+                    {labels.loading || "Loading..."}
                 </div>
             </div>
+        );
+    }
+
+    return (
+        <div 
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
+            <div 
+                className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
+                    <h2 className="text-base font-semibold text-[var(--ink)]">
+                        {isCreate ? (labels.addStaff || "Add Staff") : (labels.editStaff || "Edit Staff")}
+                    </h2>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors hover:rotate-90 duration-200 text-lg"
+                        aria-label="Close"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Banner */}
+                {banner && (
+                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">
+                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <span>{banner}</span>
+                    </div>
+                )}
+
+                {/* Form */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar space-y-5">
+
+                    {/* ── Core Section ── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        {/* Image Upload */}
+                        <div className="sm:col-span-2">
+                            <label className="text-xs font-medium text-[var(--muted)] mb-1.5 block">
+                                {labels.photo || "Staff Photo"}
+                            </label>
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => { e.preventDefault(); handleImageChange(e.dataTransfer.files?.[0]); }}
+                                className={`flex items-center gap-4 rounded-xl border-2 border-dashed px-4 py-3 cursor-pointer transition-all
+                                    ${errors.photo
+                                        ? "border-red-500 bg-red-500/5"
+                                        : "border-[var(--border)] hover:border-[var(--accent-2)] hover:bg-[var(--accent-2)]/5"
+                                    } bg-[var(--app-bg)]`}
+                            >
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Preview" className="h-14 w-14 rounded-lg object-cover ring-2 ring-[var(--accent-2)]/30" />
+                                ) : (
+                                    <div className="h-14 w-14 rounded-lg bg-[var(--surface)] flex items-center justify-center text-2xl shrink-0">
+                                        👤
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-sm font-medium text-[var(--ink)]">
+                                        {imagePreview ? (labels.changeImage || "Change Photo") : (labels.clickOrDrag || "Click or drag to upload")}
+                                    </p>
+                                    <p className="text-xs text-[var(--muted)] mt-0.5">{labels.pngJpgWebp || "PNG, JPG, WebP — max 5MB"} (optional)</p>
+                                </div>
+                                {imagePreview && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeImage();
+                                        }}
+                                        className="ml-auto text-[var(--muted)] hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                )}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    className="hidden"
+                                    onChange={(e) => handleImageChange(e.target.files?.[0])}
+                                />
+                            </div>
+                            {errors.photo && <p className="mt-1 text-xs text-red-500">{errors.photo}</p>}
+                        </div>
+
+                        {/* Full Name */}
+                        <Field
+                            label={labels.fullName || "Full Name"}
+                            name="fullName"
+                            value={form.fullName}
+                            onChange={updateField}
+                            error={errors.fullName}
+                            required
+                            placeholder="Enter full name"
+                        />
+
+                        {/* CNIC */}
+                        <Field
+                            label={labels.cnic || "CNIC"}
+                            name="cnic"
+                            value={form.cnic}
+                            onChange={updateField}
+                            error={errors.cnic}
+                            required
+                            placeholder="XXXXX-XXXXXXX-X"
+                        />
+
+                        {/* Phone */}
+                        <Field
+                            label={labels.phone || "Phone"}
+                            name="phone"
+                            value={form.phone}
+                            onChange={updateField}
+                            error={errors.phone}
+                            required
+                            placeholder="+92 XXX XXXXXXX"
+                        />
+
+                        {/* Role */}
+                        <SelectField
+                            label={labels.role || "Role"}
+                            name="role"
+                            value={form.role}
+                            onChange={updateField}
+                            options={roles.map((r) => ({ label: r.name, value: r.name }))}
+                            error={errors.role}
+                            required
+                            placeholder="Select role"
+                        />
+
+                        {/* Join Date */}
+                        <Field
+                            label={labels.joinDate || "Join Date"}
+                            name="joinDate"
+                            value={form.joinDate}
+                            onChange={updateField}
+                            error={errors.joinDate}
+                            type="date"
+                            required
+                        />
+
+                        {/* Status */}
+                        <SelectField
+                            label={labels.status || "Status"}
+                            name="status"
+                            value={form.status}
+                            onChange={updateField}
+                            options={[
+                                { label: labels.active || "Active", value: "active" },
+                                { label: labels.inactive || "Inactive", value: "inactive" },
+                            ]}
+                            placeholder="Select status"
+                        />
+                    </div>
+
+                    {/* ── More Options Toggle ── */}
+                    <label className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] cursor-pointer transition-all">
+                        <span className="text-sm text-[var(--muted)]">{labels.showMoreOptions || "Show more options"}</span>
+                        <div className="relative">
+                            <input type="checkbox" checked={showMore} onChange={() => setShowMore((p) => !p)} className="sr-only peer" />
+                            <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${showMore ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
+                            <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${showMore ? 'translate-x-5' : ''}`}></div>
+                        </div>
+                    </label>
+
+                    {/* ── Optional Fields ── */}
+                    {showMore && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+
+                            {/* Emergency Contact */}
+                            <Field
+                                label={labels.emergencyContact || "Emergency Contact"}
+                                name="emergencyContact"
+                                value={form.emergencyContact}
+                                onChange={updateField}
+                                placeholder="+92 XXX XXXXXXX"
+                            />
+
+                            {/* Address */}
+                            <div className="sm:col-span-2">
+                                <Field
+                                    label={labels.address || "Address"}
+                                    name="address"
+                                    value={form.address}
+                                    onChange={updateField}
+                                    error={errors.address}
+                                    placeholder="Enter complete address"
+                                />
+                            </div>
+
+                            {/* Salary Type */}
+                            <SelectField
+                                label={labels.salaryType || "Salary Type"}
+                                name="salaryType"
+                                value={form.salaryType}
+                                onChange={updateField}
+                                options={[
+                                    { label: "Fixed Monthly Salary", value: "fixed" },
+                                    { label: "Percentage Based", value: "percentage" },
+                                ]}
+                                placeholder="Select salary type"
+                            />
+
+                            {/* Monthly Salary or Percentage */}
+                            {form.salaryType === "fixed" ? (
+                                <Field
+                                    label={labels.monthlySalary || "Monthly Salary (Rs)"}
+                                    name="monthlySalary"
+                                    value={form.monthlySalary}
+                                    onChange={updateField}
+                                    error={errors.monthlySalary}
+                                    type="number"
+                                    placeholder="0.00"
+                                />
+                            ) : (
+                                <Field
+                                    label={labels.commissionRate || "Commission Percentage (%)"}
+                                    name="percentage"
+                                    value={form.percentage}
+                                    onChange={updateField}
+                                    error={errors.percentage}
+                                    type="number"
+                                    placeholder="0.00"
+                                />
+                            )}
+
+                            {/* Notes */}
+                            <div className="sm:col-span-2">
+                                <Field
+                                    label={labels.notes || "Notes"}
+                                    name="notes"
+                                    value={form.notes}
+                                    onChange={updateField}
+                                    placeholder="Add any additional notes or comments..."
+                                    type="textarea"
+                                    rows={3}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-[var(--border)] bg-[var(--app-bg)] shrink-0 rounded-b-2xl">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-lg text-sm text-[var(--muted)] hover:bg-[var(--surface)] transition-colors"
+                    >
+                        {labels.cancel || "Cancel"}
+                    </button>
+                    <PermissionGuard 
+                        execute={onSubmit}
+                        permission={isCreate ? "staff.create" : "staff.update"}
+                        isConfirmation={false}
+                    >
+                        <button
+                            type="button"
+                            disabled={isSaving}
+                            className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm bg-[var(--accent-2)] text-white hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+                        >
+                            <Check className="h-4 w-4" />
+                            {isSaving ? (labels.saving || "Saving...") : (isCreate ? (labels.saveStaff || "Save Staff") : (labels.updateStaff || "Update Staff"))}
+                        </button>
+                    </PermissionGuard>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Sub Components ────────────────────────────────────────────────────
+
+function Field({ label, name, value, onChange, error, required, type = "text", placeholder, rows }) {
+    const base = `w-full rounded-lg border px-3 py-2 text-sm bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] outline-none transition-colors`;
+    const state = error
+        ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
+        : "border-[var(--border)] focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)]/20";
+
+    return (
+        <div>
+            <label className="flex items-center justify-between text-xs font-medium text-[var(--muted)] mb-1">
+                <span>{label}{required && <span className="text-red-500 ml-0.5">*</span>}</span>
+            </label>
+            {type === "textarea" ? (
+                <textarea rows={rows || 3} className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
+                    onChange={(e) => onChange(name, e.target.value)} />
+            ) : type === "number" ? (
+                <input type="number" min={0} step="any" className={`${base} ${state}`} value={value ?? 0} placeholder={placeholder}
+                    onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} />
+            ) : type === "date" ? (
+                <input type="date" className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
+                    onChange={(e) => onChange(name, e.target.value)} />
+            ) : (
+                <input type="text" className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
+                    onChange={(e) => onChange(name, e.target.value)} />
+            )}
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        </div>
+    );
+}
+
+function SelectField({ label, name, value, onChange, options, error, required, placeholder, disabled }) {
+    const base = `w-full rounded-lg border px-3 py-2 text-sm bg-[var(--app-bg)] text-[var(--ink)] outline-none transition-colors`;
+    const state = error
+        ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
+        : "border-[var(--border)] focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)]/20";
+
+    return (
+        <div>
+            <label className="flex items-center justify-between text-xs font-medium text-[var(--muted)] mb-1">
+                <span>{label}{required && <span className="text-red-500 ml-0.5">*</span>}</span>
+            </label>
+            <select disabled={disabled} className={`${base} ${state} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                value={value || ""} onChange={(e) => onChange(name, e.target.value)}>
+                <option value="">{placeholder}</option>
+                {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
     );
 }

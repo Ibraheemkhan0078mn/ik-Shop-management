@@ -25,8 +25,18 @@ import {
     getSaleBillsByStaffData,
     markSaleBillAsPaidData,
 } from "../controllers/staffSaleBill.controller.js";
+import {
+    createStaffRole,
+    getAllStaffRoles,
+    deleteStaffRole,
+} from "../controllers/staffRole.controller.js";
 
 const router = express.Router();
+
+// Staff Role Routes (must come before /:id)
+router.post("/role", createStaffRole);
+router.get("/role", getAllStaffRoles);
+router.delete("/role", deleteStaffRole);
 
 // Staff Salary Payment Routes (must come before /:id)
 router.post("/salary-payment", createSalaryPaymentData);
@@ -49,10 +59,10 @@ router.get("/:id/salary-breakdown", getSalaryBreakdownData);
 router.get("/:id/payment-summary", getPaymentSummaryData);
 
 // Staff Routes
-router.post("/", upload.single("photo"), createStaffData);
+router.post("/", upload.any(), createStaffData);
 router.get("/", getAllStaffData);
 router.get("/:id", getStaffDataById);
-router.put("/:id", upload.single("photo"), updateStaffData);
+router.put("/:id", upload.any(), updateStaffData);
 router.delete("/:id", deleteStaffData);
 router.post("/:id/images", upload.array("images", 10), addImagesToStaffData);
 router.delete("/:id/images/:imageId", removeImageFromStaffData);
