@@ -60,11 +60,12 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         });
 
         if (!batch) {
+            // Create new batch with quantity=0 — stock will be incremented when status changes to 'delivered'
             batch = await createBatchService({
                 product: item.product,
                 batchNumber: item.batchNumber,
                 supplier: purchaseData.supplier,
-                quantity: item.quantity,
+                quantity: 0,
                 purchasePrice: item.price,
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate,
@@ -75,9 +76,9 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 $push: { batches: batch._id },
             });
         } else {
-            const updatedQuantity = batch.quantity + item.quantity;
+            // Only update batch metadata — do NOT modify quantity here.
+            // Batch quantity is managed solely through updatePurchaseStatus (ordered → delivered).
             await updateBatchService(batch._id, {
-                quantity: updatedQuantity,
                 purchasePrice: item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
@@ -117,7 +118,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         paidAmount: 0,
     });
 
-    // Don't increment stock for pre-orders - stock is incremented when status changes to 'delivered'
+    // Don't increment stock for pre-orders - stock (both product AND batch) is incremented when status changes to 'delivered'
 
     return purchase;
 };
@@ -128,92 +129,34 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         throw new Error("Purchase not found");
     }
 
-    // Only adjust stock if purchase was delivered
-    if (existing.status === 'delivered') {
-        // Calculate stock differences
-        const stockAdjustments = calculateStockDiff(existing.items, data.items);
-
-        // Apply stock adjustments
-        for (const adj of stockAdjustments) {
-            await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
-        }
-    }
-
     const purchaseItems = [];
-    
-    // Create a map of existing items by product for quick lookup
-    const existingItemsByProduct = {};
-    for (const item of existing.items) {
-        existingItemsByProduct[item.product?.toString()] = item;
-    }
 
+    // First pass: create/update batches (without adjusting stock yet)
     for (const item of data.items) {
-        let batch;
-        const productId = item.product?.toString();
-        const existingItem = existingItemsByProduct[productId];
-
-        // If updating an existing product, try to reuse the existing batch
-        if (existingItem && existingItem.batch) {
-            batch = await findOneBatchService({ _id: existingItem.batch });
-            
-            // If existing batch exists, update it instead of creating new one
-            if (batch) {
-                await updateBatchService(batch._id, {
-                    quantity: item.quantity,
-                    purchasePrice: item.price,
-                    mfgDate: item.mfgDate,
-                    expiryDate: item.expiryDate,
-                    supplier: data.supplier,
-                });
-            } else {
-                // Fallback: if existing batch reference is invalid, create new batch
-                batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
-                if (!batch) {
-                    batch = await createBatchService({
-                        product: item.product, 
-                        batchNumber: item.batchNumber,
-                        supplier: data.supplier, 
-                        quantity: item.quantity,
-                        purchasePrice: item.price, 
-                        sellingPrice: item.price,
-                        mfgDate: item.mfgDate, 
-                        expiryDate: item.expiryDate,
-                    });
-                    await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
-                } else {
-                    await updateBatchService(batch._id, {
-                        quantity: item.quantity,
-                        purchasePrice: item.price,
-                        mfgDate: item.mfgDate,
-                        expiryDate: item.expiryDate,
-                        supplier: data.supplier,
-                    });
-                }
-            }
+        // Always look up batch by batchNumber to ensure consistency with stock adjustments
+        let batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
+        
+        if (!batch) {
+            // Create new batch with quantity=0 - adjustStock will handle the increment
+            batch = await createBatchService({
+                product: item.product, 
+                batchNumber: item.batchNumber,
+                supplier: data.supplier, 
+                quantity: 0,  // Start at 0, adjustStock will increment
+                purchasePrice: item.price, 
+                sellingPrice: item.price,
+                mfgDate: item.mfgDate, 
+                expiryDate: item.expiryDate,
+            });
+            await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
         } else {
-            // New product - check if batch exists by batchNumber
-            batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
-            if (!batch) {
-                batch = await createBatchService({
-                    product: item.product, 
-                    batchNumber: item.batchNumber,
-                    supplier: data.supplier, 
-                    quantity: item.quantity,
-                    purchasePrice: item.price, 
-                    sellingPrice: item.price,
-                    mfgDate: item.mfgDate, 
-                    expiryDate: item.expiryDate,
-                });
-                await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
-            } else {
-                await updateBatchService(batch._id, {
-                    quantity: item.quantity,
-                    purchasePrice: item.price,
-                    mfgDate: item.mfgDate,
-                    expiryDate: item.expiryDate,
-                    supplier: data.supplier,
-                });
-            }
+            // Update existing batch (quantity is NOT updated here - adjustStock already handles it)
+            await updateBatchService(batch._id, {
+                purchasePrice: item.price,
+                mfgDate: item.mfgDate,
+                expiryDate: item.expiryDate,
+                supplier: data.supplier,
+            });
         }
 
         purchaseItems.push({
@@ -228,6 +171,26 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             mfgDate: item.mfgDate, 
             expiryDate: item.expiryDate,
         });
+    }
+
+    // Only adjust stock if purchase was delivered
+    if (existing.status === 'delivered') {
+        // Map incoming items to their batch IDs for proper stock diff calculation
+        const newItemsWithBatchIds = purchaseItems.map(item => ({
+            product: item.product,
+            batch: item.batch,
+            quantity: item.quantity
+        }));
+
+        // Calculate stock differences
+        const stockAdjustments = calculateStockDiff(existing.items, newItemsWithBatchIds);
+
+        // Apply stock adjustments
+        for (const adj of stockAdjustments) {
+            if (adj.productId && adj.batchId && adj.quantity > 0) {
+                await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
+            }
+        }
     }
 
     const purchase = await updatePurchaseService(id, {

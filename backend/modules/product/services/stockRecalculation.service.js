@@ -4,108 +4,79 @@ import {
     getLocalOrderModel, 
     getLocalProductReturnModel, 
     getLocalWastageModel,
-    getLocalPurchaseReturnModel
+    getLocalPurchaseReturnModel,
+    getLocalPurchaseModel
 } from "../../../configs/connect.db.js";
 
 /**
  * Recalculate stock for a specific product and its batches
- * This calculates stock based on:
- * 1. Initial batch quantities from purchases (add)
- * 2. Sales from orders (subtract)
- * 3. Product returns (add back)
- * 4. Purchase returns (subtract)
- * 5. Wastage (subtract)
+ * 
+ * Algorithm:
+ * a: Take the product and all its batch IDs.
+ * b: Take all the purchase, purchase return, wastage, order, order return on the basis of this productId.
+ * c: Loop on batch of product and calculate one by one for batch:
+ *    - Purchased quantity (from delivered purchases for this batch)
+ *    - Deducted quantity via purchase return (from approved purchase returns for this batch)
+ *    - Deducted quantity via orders (from completed orders for this batch)
+ *    - Added back quantity via order return (from approved product returns for this batch)
+ *    - Deducted quantity via wastage (from approved wastage for this batch)
+ * d: Sum all batch calculated stock to update product currentStockLevel.
  */
 export const recalculateProductStock = async (productId) => {
     try {
-        // Get the actual Mongoose models
         const BatchModel = getLocalBatchModel();
         const ProductModel = getLocalProductModel();
         const OrderModel = getLocalOrderModel();
         const ProductReturnModel = getLocalProductReturnModel();
         const WastageModel = getLocalWastageModel();
         const PurchaseReturnModel = getLocalPurchaseReturnModel();
+        const PurchaseModel = getLocalPurchaseModel();
 
-        if (!BatchModel || !ProductModel || !OrderModel || !ProductReturnModel || !WastageModel || !PurchaseReturnModel) {
+        if (!BatchModel || !ProductModel || !OrderModel || !ProductReturnModel || !WastageModel || !PurchaseReturnModel || !PurchaseModel) {
             throw new Error("Database models not initialized. Please ensure database connection is established.");
         }
 
-        // Get all batches for this product
+        // a: Take the product and all its batches
         const batches = await BatchModel.find({ 
             product: productId, 
             isDeleted: false 
         }).lean();
 
         if (!batches || batches.length === 0) {
-            // No batches, set product stock to 0
             await ProductModel.findByIdAndUpdate(productId, { currentStockLevel: 0 });
             return { productId, currentStockLevel: 0, batches: [] };
         }
 
-        // Calculate stock for each batch
+        // c: Loop through each batch of the product and calculate stock
         const batchResults = await Promise.all(
             batches.map(async (batch) => {
                 const batchId = batch._id;
-                
-                // Start with initial quantity from purchase
-                let currentStock = batch.quantity;
 
-                // Subtract sales from orders (only completed orders)
-                const sales = await OrderModel.aggregate([
+                // 1. Purchased stock (delivered purchases for this batch)
+                const purchases = await PurchaseModel.aggregate([
                     {
                         $match: {
-                            status: "completed",
+                            status: "delivered",
                             isDeleted: false,
-                            "items.batchId": batchId
+                            "items.batch": batchId
                         }
                     },
-                    {
-                        $unwind: "$items"
-                    },
+                    { $unwind: "$items" },
                     {
                         $match: {
-                            "items.batchId": batchId
+                            "items.batch": batchId
                         }
                     },
                     {
                         $group: {
                             _id: null,
-                            totalSold: { $sum: "$items.quantity" }
+                            totalPurchased: { $sum: "$items.quantity" }
                         }
                     }
                 ]);
+                const totalPurchased = purchases[0]?.totalPurchased || 0;
 
-                const totalSold = sales[0]?.totalSold || 0;
-                currentStock -= totalSold;
-
-                // Add back product returns
-                const productReturns = await ProductReturnModel.aggregate([
-                    {
-                        $match: {
-                            isDeleted: false,
-                            "items.batchId": batchId
-                        }
-                    },
-                    {
-                        $unwind: "$items"
-                    },
-                    {
-                        $match: {
-                            "items.batchId": batchId
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalReturned: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
-
-                const totalProductReturned = productReturns[0]?.totalReturned || 0;
-                currentStock += totalProductReturned;
-
-                // Subtract purchase returns
+                // 2. Purchase returns (approved purchase returns for this batch)
                 const purchaseReturns = await PurchaseReturnModel.aggregate([
                     {
                         $match: {
@@ -114,9 +85,7 @@ export const recalculateProductStock = async (productId) => {
                             "items.batch": batchId
                         }
                     },
-                    {
-                        $unwind: "$items"
-                    },
+                    { $unwind: "$items" },
                     {
                         $match: {
                             "items.batch": batchId
@@ -129,27 +98,75 @@ export const recalculateProductStock = async (productId) => {
                         }
                     }
                 ]);
-
                 const totalPurchaseReturned = purchaseReturns[0]?.totalPurchaseReturned || 0;
-                currentStock -= totalPurchaseReturned;
 
-                // Subtract wastage
+                // 3. Sales from orders (completed orders for this batch)
+                const sales = await OrderModel.aggregate([
+                    {
+                        $match: {
+                            status: "completed",
+                            isDeleted: false,
+                            "items.batchId": batchId
+                        }
+                    },
+                    { $unwind: "$items" },
+                    {
+                        $match: {
+                            "items.batchId": batchId
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            totalSold: { $sum: "$items.quantity" }
+                        }
+                    }
+                ]);
+                const totalSold = sales[0]?.totalSold || 0;
+
+                // 4. Order returns / Product returns (approved returns for this batch)
+                const productReturns = await ProductReturnModel.aggregate([
+                    {
+                        $match: {
+                            returnStatus: "approved",
+                            isDeleted: false,
+                            "items.batchId": batchId
+                        }
+                    },
+                    { $unwind: "$items" },
+                    {
+                        $match: {
+                            "items.batchId": batchId
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            totalReturned: { $sum: "$items.quantity" }
+                        }
+                    }
+                ]);
+                const totalProductReturned = productReturns[0]?.totalReturned || 0;
+
+                // 5. Wastage (approved wastage for this batch)
                 const wastage = await WastageModel.aggregate([
                     {
                         $match: {
                             status: "approved",
                             isDeleted: false,
-                            "items.batchNumber": batch.batchNumber,
-                            "items.product": productId
+                            $or: [
+                                { "items.batch": batchId },
+                                { "items.batchNumber": batch.batchNumber, "items.product": productId }
+                            ]
                         }
                     },
-                    {
-                        $unwind: "$items"
-                    },
+                    { $unwind: "$items" },
                     {
                         $match: {
-                            "items.batchNumber": batch.batchNumber,
-                            "items.product": productId
+                            $or: [
+                                { "items.batch": batchId },
+                                { "items.batchNumber": batch.batchNumber, "items.product": productId }
+                            ]
                         }
                     },
                     {
@@ -159,30 +176,34 @@ export const recalculateProductStock = async (productId) => {
                         }
                     }
                 ]);
-
                 const totalWasted = wastage[0]?.totalWasted || 0;
-                currentStock -= totalWasted;
 
-                // Update batch current stock
-                await BatchModel.findByIdAndUpdate(batchId, { currentStock: Math.max(0, currentStock) });
+                // Calculate current batch stock according to formula:
+                // Purchased - PurchaseReturned - Sold + OrderReturned - Wasted
+                const calculatedStock = Math.max(0, totalPurchased - totalPurchaseReturned - totalSold + totalProductReturned - totalWasted);
+
+                // Update batch in database (quantity is the batch stock level field)
+                await BatchModel.findByIdAndUpdate(batchId, { 
+                    quantity: calculatedStock
+                });
 
                 return {
                     batchId: batchId,
                     batchNumber: batch.batchNumber,
-                    initialQuantity: batch.quantity,
+                    totalPurchased,
+                    totalPurchaseReturned,
                     totalSold,
                     totalProductReturned,
-                    totalPurchaseReturned,
                     totalWasted,
-                    currentStock: Math.max(0, currentStock)
+                    quantity: calculatedStock
                 };
             })
         );
 
-        // Calculate total product stock (sum of all batch stocks)
-        const totalProductStock = batchResults.reduce((sum, batch) => sum + batch.currentStock, 0);
+        // d: Calculate total product stock from the calculated batch stocks
+        const totalProductStock = batchResults.reduce((sum, b) => sum + b.quantity, 0);
 
-        // Update product stock
+        // Update product stock in database
         await ProductModel.findByIdAndUpdate(productId, { currentStockLevel: totalProductStock });
 
         return {

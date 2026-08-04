@@ -1,8 +1,10 @@
 
 
 
+1: the max limit on item of purchase return is not on the basis of current stock of proudct so fix it.
+2: remove the description form teh brand
+3: when empty batch dleeted then it do esnot refetch te baches of product. 
 
-1: when update the purcahse then new batch is created for product. 
 
-
-3: when image is not working then also show the letters.
+3: chek the active work in all models
+4: check taht disocunt limit works or not. 

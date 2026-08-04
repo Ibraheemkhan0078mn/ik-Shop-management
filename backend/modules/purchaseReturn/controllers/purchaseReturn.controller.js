@@ -283,19 +283,15 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
                 throw new Error(`Not enough stock in batch "${item.batchNumber}". Available: ${batch.quantity}, Requested: ${item.quantity}`);
         }
 
-        // Step 3: Compare old vs new quantities and adjust stock for each item
-        const oldItemsByBatch = Object.fromEntries(
-            existing.items.map(item => [String(item.batch), item.quantity])
-        );
-
-        for (const item of incomingItems) {
-            const oldQty = oldItemsByBatch[String(item.batch)] ?? 0;
-            const diff = Number(item.quantity) - oldQty;
-            console.log((item.quantity), oldQty, diff);
-
-            if (diff === 0) continue;                                        // no change, skip
-            if (diff > 0) await adjustStock(item.product, item.batch, 'decr', diff);   // returning more → reduce stock
-            if (diff < 0) await adjustStock(item.product, item.batch, 'inc', Math.abs(diff)); // returning less → restore stock
+        // Step 3: Compare old vs new quantities and adjust stock for each item if currently approved
+        if (existing.status === 'approved') {
+            const adjustments = calculateStockDiff(existing.items, incomingItems);
+            for (const adj of adjustments) {
+                // In purchase return, increasing returned qty ('inc') reduces store stock ('decr')
+                // and decreasing returned qty ('decr') restores store stock ('inc')
+                const op = adj.operation === 'inc' ? 'decr' : 'inc';
+                await adjustStock(adj.productId, adj.batchId, op, adj.quantity);
+            }
         }
     }
 

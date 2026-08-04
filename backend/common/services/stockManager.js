@@ -16,10 +16,17 @@ export async function adjustStock(productId, batchId, operation, quantity) {
     // Adjust product stock 
     await ProductModel.findByIdAndUpdate(productId, { $inc: { currentStockLevel: delta } });
     
-    // Adjust batch stock if batchId provided
+    // Adjust batch stock if batchId / batchRef provided
     if (batchId) {
         const BatchModel = getLocalBatchModel();
-        await BatchModel.findByIdAndUpdate(batchId, { $inc: { quantity: delta } });
+        if (typeof batchId === 'string' && !batchId.match(/^[0-9a-fA-F]{24}$/)) {
+            await BatchModel.findOneAndUpdate(
+                { batchNumber: batchId, product: productId },
+                { $inc: { quantity: delta } }
+            );
+        } else {
+            await BatchModel.findByIdAndUpdate(batchId, { $inc: { quantity: delta } });
+        }
     }
 }
 

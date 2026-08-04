@@ -13,7 +13,7 @@ import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 
 // Helper to adjust batch stock
 async function adjustBatchStock(batchId, delta) {
-  await updateBatchService(batchId, { $inc: { currentStock: delta } });
+  await updateBatchService(batchId, { $inc: { quantity: delta } });
 }
 
 export async function createPurchaseReturn(data) {

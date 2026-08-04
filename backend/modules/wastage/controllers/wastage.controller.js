@@ -106,6 +106,14 @@ export const createWastage = asyncHandler(async (req, res, next) => {
 
     const wastage = await wastageCreateService(validatedData);
 
+    // If status is approved, deduct stock immediately
+    if (validatedData.status === 'approved') {
+        for (const item of validatedData.items) {
+            const batchRef = item.batch || item.batchId || item.batchNumber;
+            await adjustStock(item.product, batchRef, 'decr', item.quantity);
+        }
+    }
+
     res.status(201).json({
         success: true,
         message: "Wastage record created successfully",
@@ -172,7 +180,8 @@ export const approveWastage = asyncHandler(async (req, res, next) => {
 
     // Deduct stock for all items
     for (const item of wastage.items) {
-        await adjustStock(item.product, item.batch, 'decr', item.quantity);
+        const batchRef = item.batch || item.batchId || item.batchNumber;
+        await adjustStock(item.product, batchRef, 'decr', item.quantity);
     }
 
     const approved = await wastageUpdateService(id, {
@@ -249,7 +258,8 @@ export const deleteWastage = asyncHandler(async (req, res, next) => {
     // If approved, restore stock before deletion
     if (wastage.status === "approved") {
         for (const item of wastage.items) {
-            await adjustStock(item.product, item.batch, 'inc', item.quantity);
+            const batchRef = item.batch || item.batchId || item.batchNumber;
+            await adjustStock(item.product, batchRef, 'inc', item.quantity);
         }
     }
 

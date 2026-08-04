@@ -57,10 +57,6 @@ const batchSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
-        currentStock: {
-            type: Number,
-            default: 0
-        },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null }

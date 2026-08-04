@@ -1,6 +1,6 @@
 import { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService } from "./productReturn.crud.js";
 import { findOneOrderService } from "../../pos/services/order.crud.js";
-import { adjustStock } from "../../../common/services/stockManager.js";
+import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
 const generateReturnNumber = async () => {
     const lastReturn = await findProductReturnService({}, { sort: { createdAt: -1 }, limit: 1 });
@@ -102,48 +102,11 @@ const updateProductReturn = async (id, updateData) => {
         throw new Error("Product return not found");
     }
 
-    // Calculate stock adjustments based on item changes
-    if (updateData.items) {
-        const oldItemsMap = new Map();
-        const newItemsMap = new Map();
-
-        // Build old items map using productId and batchId as key
-        for (const item of existing.items) {
-            const key = `${item.productId}_${item.batchId}`;
-            oldItemsMap.set(key, item);
-        }
-
-        // Build new items map using productId and batchId as key
-        for (const item of updateData.items) {
-            const key = `${item.productId}_${item.batchId}`;
-            newItemsMap.set(key, item);
-        }
-
-        // Handle removed items - decrement stock
-        for (const [key, oldItem] of oldItemsMap) {
-            if (!newItemsMap.has(key)) {
-                await adjustStock(oldItem.productId, oldItem.batchId, 'decr', oldItem.quantity);
-            }
-        }
-
-        // Handle added items - increment stock
-        for (const [key, newItem] of newItemsMap) {
-            if (!oldItemsMap.has(key)) {
-                await adjustStock(newItem.productId, newItem.batchId, 'inc', newItem.quantity);
-            }
-        }
-
-        // Handle quantity changes
-        for (const [key, newItem] of newItemsMap) {
-            const oldItem = oldItemsMap.get(key);
-            if (oldItem && oldItem.quantity !== newItem.quantity) {
-                const diff = newItem.quantity - oldItem.quantity;
-                if (diff > 0) {
-                    await adjustStock(newItem.productId, newItem.batchId, 'inc', diff);
-                } else {
-                    await adjustStock(newItem.productId, newItem.batchId, 'decr', Math.abs(diff));
-                }
-            }
+    // Calculate stock adjustments based on item changes ONLY if returnStatus is approved
+    if (updateData.items && existing.returnStatus === 'approved') {
+        const adjustments = calculateStockDiff(existing.items, updateData.items);
+        for (const adj of adjustments) {
+            await adjustStock(adj.productId, adj.batchId, adj.operation, adj.quantity);
         }
     }
 
