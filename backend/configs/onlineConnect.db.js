@@ -115,7 +115,7 @@ export const connectOnlineDb = async () => {
     // Change stream tracking disabled - using local database tracking instead
     // startChangeStreamTracking(OnlineConnection)
    } catch (error) {
-
+      console.error("Online connection failed:", error.message);
    }
 };
 
