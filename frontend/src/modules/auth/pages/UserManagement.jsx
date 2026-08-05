@@ -1,10 +1,10 @@
-import { useContext, useState, useMemo } from "react";
+import { useContext, useState, useMemo, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X, Upload, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getUserLabels } from "../labels/userLabels.js";
-import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation, useGetAllUserRolesQuery } from "../services/authApi.js";
+import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation, useGetAllUserRolesQuery, useGetUserByIdWithPasswordQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -29,6 +29,12 @@ export default function UserManagement() {
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
     const [deleteUser] = useDeleteUserMutation();
+    const currentUserRole = useSelector((state) => state.auth.role);
+    const [editingUserId, setEditingUserId] = useState(null);
+    const { data: userWithPassword } = useGetUserByIdWithPasswordQuery(
+        editingUserId ? { id: editingUserId, requesterRole: currentUserRole } : undefined,
+        { skip: !editingUserId }
+    );
 
     // Categorize permissions from backend
     const permissionGroups = useMemo(() => {
@@ -48,8 +54,20 @@ export default function UserManagement() {
     });
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Update form data when user with password is fetched
+    useEffect(() => {
+        if (userWithPassword?.data && modal?.mode === "edit") {
+            setFormData(prev => ({
+                ...prev,
+                password: userWithPassword.data.password || ""
+            }));
+        }
+    }, [userWithPassword, modal]);
 
     const openCreateModal = () => {
+        setEditingUserId(null);
         setFormData({
             name: "",
             email: "",
@@ -65,6 +83,7 @@ export default function UserManagement() {
     };
 
     const openEditModal = (user) => {
+        setEditingUserId(user._id);
         setFormData({
             _id: user._id,
             name: user.name,
@@ -344,32 +363,28 @@ export default function UserManagement() {
                                         style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                     />
                                 </div>
-                                {modal.mode === "create" ? (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password}</label>
+                                    <div className="relative">
                                         <input
-                                            type="password"
-                                            required
-                                            placeholder={labels.enterPassword || "Enter password"}
+                                            type={showPassword ? "text" : "password"}
+                                            required={modal.mode === "create"}
+                                            placeholder={modal.mode === "create" ? (labels.enterPassword || "Enter password") : (labels.enterPassword || "Enter password")}
                                             value={formData.password}
                                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-lg border"
+                                            className="w-full px-4 py-2 rounded-lg border pr-10"
                                             style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                                            style={{ color: "var(--muted)" }}
+                                        >
+                                            <Eye size={20} />
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>{labels.password} <span className="text-xs text-gray-500">({labels.optional || "Optional - leave blank to keep current"})</span></label>
-                                        <input
-                                            type="password"
-                                            placeholder={labels.enterNewPassword || "Enter new password"}
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-lg border"
-                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                        />
-                                    </div>
-                                )}
+                                </div>
                             </div>
                             {/* <div>
                                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>{labels.role}</label>
