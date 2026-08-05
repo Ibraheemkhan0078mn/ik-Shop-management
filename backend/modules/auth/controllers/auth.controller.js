@@ -6,7 +6,12 @@ import {
     findUserByEmailWithPassword as findUserByEmailWithPasswordService,
     findUserByIdWithoutPassword as findUserByIdWithoutPasswordService,
 } from "../services/auth.service.js";
-import { getOnlineDbInstance, getOnlineUserModel } from "../../../configs/onlineConnect.db.js";
+import {
+    findOnlineUserByEmail as findOnlineUserByEmailService,
+    findOnlineUserByEmailWithPassword as findOnlineUserByEmailWithPasswordService,
+    onlineUserCreate as onlineUserCreateService,
+} from "../services/onlineAuth.service.js";
+import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
 
 export const loginUser = asyncHandler(async (req, res, next) => {
@@ -16,75 +21,89 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Email and password are required", 400));
     }
 
-    // Try local DB first
+    // Step 1: Check local DB first via main services
     let user = await findUserByEmailService(email);
     let userWithPassword = null;
     let isFromOnline = false;
 
     if (user) {
+        // User found in local DB, get user with password for verification
         userWithPassword = await findUserByEmailWithPasswordService(email);
-    } else {
-        // Not found in local, try online DB
-        try {
-            const onlineDb = getOnlineDbInstance();
-            if (onlineDb && onlineDb.readyState === 1) {
-                const OnlineUserModel = getOnlineUserModel();
-                if (OnlineUserModel) {
-                    const onlineUser = await OnlineUserModel.findOne({ email }).select('+password').lean();
-                    if (onlineUser) {
-                        // Verify password against online user
-                        const bcrypt = await import('bcryptjs');
-                        const isMatch = await bcrypt.compare(password, onlineUser.password);
-                        
-                        if (isMatch) {
-                            // User exists online, create in local DB
-                            const { password: _, ...userData } = onlineUser;
-                            const LocalUserModel = getLocalUserModel();
-                            const localUser = await LocalUserModel.create(userData);
-                            
-                            user = localUser;
-                            userWithPassword = await findUserByEmailWithPasswordService(email);
-                            isFromOnline = true;
-                        }
-                    }
-                }
-            }
-        } catch (onlineError) {
-            console.error("Online DB error during login:", onlineError.message);
-            return next(new ErrorResponse("User not found locally. Please check your internet connection to login with online database.", 401));
+        
+        if (!userWithPassword) {
+            return next(new ErrorResponse("Error fetching user data from local database", 500));
         }
+
+        const isMatch = await userWithPassword.comparePassword(password);
+
+        if (!isMatch) {
+            return next(new ErrorResponse("Incorrect password", 401));
+        }
+
+        if (!user.isActive) {
+            return next(new ErrorResponse("This account has been deactivated", 403));
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "User logged in successfully",
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phoneNo: user.phoneNo,
+                role: user.role,
+                permissions: user.permissions || [],
+            },
+        });
     }
 
-    if (!user) {
-        return next(new ErrorResponse("No user found with this email address. Please check your credentials or contact admin.", 401));
+    // Step 2: User not found in local DB, check online DB connection
+    const onlineDb = getOnlineDbInstance();
+    if (!onlineDb || onlineDb.readyState !== 1) {
+        return next(new ErrorResponse("User not found locally. Please connect to the online database to login.", 401));
     }
 
-    if (!userWithPassword) {
-        userWithPassword = await findUserByEmailWithPasswordService(email);
+    // Step 3: Online DB is connected, try login from online DB
+    try {
+        const onlineUser = await findOnlineUserByEmailWithPasswordService(email);
+        
+        if (!onlineUser) {
+            return next(new ErrorResponse("No user found with this email address. Please check your credentials or contact admin.", 401));
+        }
+
+        const isMatch = await onlineUser.comparePassword(password);
+
+        if (!isMatch) {
+            return next(new ErrorResponse("Incorrect password", 401));
+        }
+
+        if (!onlineUser.isActive) {
+            return next(new ErrorResponse("This account has been deactivated", 403));
+        }
+
+        // Step 4: Store online user data in local DB (include password as it's required by schema)
+        const userDataToStore = onlineUser.toObject ? onlineUser.toObject() : onlineUser;
+        const localUser = await userCreateService(userDataToStore);
+        
+        isFromOnline = true;
+
+        return res.status(200).json({
+            success: true,
+            message: "User logged in successfully (synced from online)",
+            data: {
+                id: localUser._id,
+                name: localUser.name,
+                email: localUser.email,
+                phoneNo: localUser.phoneNo,
+                role: localUser.role,
+                permissions: localUser.permissions || [],
+            },
+        });
+    } catch (onlineError) {
+        console.error("Online DB error during login:", onlineError.message);
+        return next(new ErrorResponse("Error accessing online database. Please try again later.", 500));
     }
-
-    const isMatch = await userWithPassword.comparePassword(password);
-
-    if (!isMatch) {
-        return next(new ErrorResponse("Incorrect password", 401));
-    }
-
-    if (!user.isActive) {
-        return next(new ErrorResponse("This account has been deactivated", 403));
-    }
-
-    res.status(200).json({
-        success: true,
-        message: isFromOnline ? "User logged in successfully (synced from online)" : "User logged in successfully",
-        data: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            phoneNo: user.phoneNo,
-            role: user.role,
-            permissions: user.permissions || [],
-        },
-    });
 });
 
 export const registerUser = asyncHandler(async (req, res, next) => {
@@ -115,16 +134,13 @@ export const registerUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("An admin account already exists. Only one admin is allowed.", 400));
     }
 
-    // Also check online DB for existing admin
+    // Also check online DB for existing admin using service
     try {
         const onlineDb = getOnlineDbInstance();
         if (onlineDb && onlineDb.readyState === 1) {
-            const OnlineUserModel = getOnlineUserModel();
-            if (OnlineUserModel) {
-                const existingOnlineAdmin = await OnlineUserModel.findOne({ role: 'admin' });
-                if (existingOnlineAdmin) {
-                    return next(new ErrorResponse("An admin account already exists in the system. Only one admin is allowed.", 400));
-                }
+            const existingOnlineAdmin = await findOnlineUserByEmailService(email);
+            if (existingOnlineAdmin && existingOnlineAdmin.role === 'admin') {
+                return next(new ErrorResponse("An admin account already exists in the system. Only one admin is allowed.", 400));
             }
         }
     } catch (onlineError) {
@@ -135,14 +151,11 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     const { confirmPassword: _, ...userData } = validatedData;
     const user = await userCreateService(userData);
 
-    // Try to sync to online DB if connected
+    // Try to sync to online DB if connected using service
     try {
         const onlineDb = getOnlineDbInstance();
         if (onlineDb && onlineDb.readyState === 1) {
-            const OnlineUserModel = getOnlineUserModel();
-            if (OnlineUserModel) {
-                await OnlineUserModel.create(userData);
-            }
+            await onlineUserCreateService(userData);
         }
     } catch (onlineError) {
         console.error("Failed to sync user to online DB:", onlineError.message);
@@ -192,11 +205,22 @@ export const getMe = asyncHandler(async (req, res, next) => {
 });
 
 export const logoutUser = asyncHandler(async (req, res, next) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return next(new ErrorResponse("Failed to logout", 500));
-        }
+    if (req.session) {
+        req.session.destroy((err) => {
+            if (err) {
+                return next(new ErrorResponse("Failed to logout", 500));
+            }
 
+            res.clearCookie("connect.sid");
+
+            res.status(200).json({
+                success: true,
+                message: "User logged out successfully",
+                data: {},
+            });
+        });
+    } else {
+        // No session to destroy, just clear cookie and return success
         res.clearCookie("connect.sid");
 
         res.status(200).json({
@@ -204,7 +228,7 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
             message: "User logged out successfully",
             data: {},
         });
-    });
+    }
 });
 
 export const checkAdminRegistrationAllowed = asyncHandler(async (req, res, next) => {
@@ -220,20 +244,17 @@ export const checkAdminRegistrationAllowed = asyncHandler(async (req, res, next)
             });
         }
 
-        // Also check online DB
+        // Also check online DB using service
         try {
             const onlineDb = getOnlineDbInstance();
             if (onlineDb && onlineDb.readyState === 1) {
-                const OnlineUserModel = getOnlineUserModel();
-                if (OnlineUserModel) {
-                    const existingOnlineAdmin = await OnlineUserModel.findOne({ role: 'admin' });
-                    if (existingOnlineAdmin) {
-                        return res.status(200).json({
-                            success: false,
-                            allowed: false,
-                            message: "An admin account already exists in the system",
-                        });
-                    }
+                const existingOnlineAdmin = await findOnlineUserByEmailService('admin');
+                if (existingOnlineAdmin && existingOnlineAdmin.role === 'admin') {
+                    return res.status(200).json({
+                        success: false,
+                        allowed: false,
+                        message: "An admin account already exists in the system",
+                    });
                 }
             }
         } catch (onlineError) {

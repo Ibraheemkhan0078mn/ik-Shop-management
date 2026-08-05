@@ -40,8 +40,8 @@ export const getUserByIdWithPasswordController = asyncHandler(async (req, res, n
     const { requesterRole } = req.query;
 
     // Only allow admins to fetch user with password
-    if (requesterRole !== 'admin') {
-        return next(new ErrorResponse("Unauthorized", 403));
+    if (!requesterRole || requesterRole !== 'admin') {
+        return next(new ErrorResponse("Unauthorized - Admin access required", 403));
     }
 
     const user = await getUserByIdWithPassword(id);
