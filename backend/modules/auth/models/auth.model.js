@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { encrypt, comparePassword } from "../../../common/utils/encryption.util.js";
 import { normalizePermissions } from "../utils/permission.utils.js";
 
 const userSchema = new mongoose.Schema(
@@ -48,16 +47,5 @@ const userSchema = new mongoose.Schema(
     },
     { timestamps: true },
 );
-
-userSchema.pre("save", async function () {
-    if (!this.isModified("password")) {
-        return;
-    }
-    this.password = encrypt(this.password);
-});
-
-userSchema.methods.comparePassword = function (candidatePassword) {
-    return comparePassword(candidatePassword, this.password);
-};
 
 export default userSchema;

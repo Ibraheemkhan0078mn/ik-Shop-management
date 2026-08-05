@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { decrypt } from "../../../common/utils/encryption.util.js";
+import { encryptPassword, decryptPassword, isPasswordEncrypted } from "../services/encryption.service.js";
 import {
     getAllUsers,
     getUserById,
@@ -53,7 +53,7 @@ export const getUserByIdWithPasswordController = asyncHandler(async (req, res, n
     // Decrypt password for admin view
     const userWithDecryptedPassword = {
         ...(user.toObject ? user.toObject() : user),
-        password: decrypt(user.password)
+        password: decryptPassword(user.password)
     };
 
     res.status(200).json({
@@ -85,6 +85,11 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const { confirmPassword: _, ...userData } = req.body;
+    
+    // Encrypt password before storing
+    if (userData.password && !isPasswordEncrypted(userData.password)) {
+        userData.password = encryptPassword(userData.password);
+    }
     
     // Add photo filename if file was uploaded
     if (req.file) {
@@ -129,6 +134,11 @@ export const updateUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const updateData = { ...req.body };
+    
+    // Encrypt password if provided and not already encrypted
+    if (updateData.password && !isPasswordEncrypted(updateData.password)) {
+        updateData.password = encryptPassword(updateData.password);
+    }
     
     // Add photo filename if file was uploaded
     if (req.file) {
