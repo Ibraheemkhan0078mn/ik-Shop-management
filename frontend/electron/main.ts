@@ -4,9 +4,14 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { cwd } from 'node:process'
 import { autoUpdater } from 'electron-updater'
+import { readFileSync } from 'node:fs'
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Get app version from package.json
+const packageJsonPath = path.join(__dirname, '..', 'package.json')
+const appVersion = JSON.parse(readFileSync(packageJsonPath, 'utf-8')).version
 
 // ---- Force 1:1 DPI scaling ----
 app.commandLine.appendSwitch("high-dpi-support", "1")
@@ -95,6 +100,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1500,
     height: 800,
+    title: `SSI SOFT v${appVersion}`,
     icon: path.join(__dirname, '../public/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -179,6 +185,10 @@ ipcMain.handle('download-update', async () => {
 
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall()
+})
+
+ipcMain.handle('get-app-version', () => {
+  return appVersion
 })
 
 

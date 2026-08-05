@@ -12,10 +12,19 @@ export default function AppUpdateSettings() {
     const [currentVersion, setCurrentVersion] = useState('');
 
     useEffect(() => {
-        // Get current app version from package.json or electron app
-        if (window.electronAPI) {
-            setCurrentVersion('6.0.0'); // This should come from electron app.getVersion()
-        }
+        // Get current app version from electron app
+        const fetchVersion = async () => {
+            if (window.electronAPI) {
+                try {
+                    const version = await window.electronAPI.getAppVersion();
+                    setCurrentVersion(version);
+                } catch (error) {
+                    console.error('Failed to get app version:', error);
+                    setCurrentVersion('Unknown');
+                }
+            }
+        };
+        fetchVersion();
     }, []);
 
     const checkForUpdates = async () => {
@@ -87,6 +96,7 @@ export default function AppUpdateSettings() {
 
         try {
             await window.electronAPI.installUpdate();
+            // After installation, the app will restart, so we don't need to update state here
         } catch (error) {
             setUpdateStatus({
                 status: 'error',
@@ -95,6 +105,17 @@ export default function AppUpdateSettings() {
                 percent: 0,
                 message: 'Failed to install update'
             });
+        }
+    };
+
+    const refreshVersion = async () => {
+        if (window.electronAPI) {
+            try {
+                const version = await window.electronAPI.getAppVersion();
+                setCurrentVersion(version);
+            } catch (error) {
+                console.error('Failed to refresh app version:', error);
+            }
         }
     };
 
@@ -108,6 +129,11 @@ export default function AppUpdateSettings() {
                 percent: data.percent || prev.percent,
                 message: data.message || prev.message
             }));
+            
+            // Refresh version when update is not available (after successful update and restart)
+            if (data.status === 'not-available') {
+                refreshVersion();
+            }
         };
 
         window.electronAPI.onUpdateStatus(handleUpdateStatus);
