@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Cloud, FileSpreadsheet, Download } from "lucide-react";
+import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Cloud, FileSpreadsheet, Download, Monitor } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
@@ -13,6 +13,7 @@ import ModuleSettings from "../components/ModuleSettings.jsx";
 import ProfileSettings from "../components/ProfileSettings.jsx";
 import PaymentMethodsSettings from "../components/PaymentMethodsSettings.jsx";
 import ThemeSettings from "../components/ThemeSettings.jsx";
+import ZoomSettings from "../components/ZoomSettings.jsx";
 import BackupSettings from "../components/BackupSettings.jsx";
 import FileBackup from "../components/FileBackup.jsx";
 import AppUpdateSettings from "../components/AppUpdateSettings.jsx";
@@ -45,6 +46,7 @@ export default function SettingsPage() {
         { id: "language", icon: Globe, label: labels.language },
         { id: "modules", icon: Lock, label: labels.modules },
         { id: "theme", icon: Palette, label: labels.theme },
+        { id: "zoom", icon: Monitor, label: "Zoom" },
         { id: "paymentMethods", icon: CreditCard, label: labels.paymentMethods },
         { id: "profile", icon: User, label: labels.profile },
         { id: "backup", icon: Cloud, label: labels.backup },
@@ -88,6 +90,7 @@ export default function SettingsPage() {
                 {activeTab === "language" && <LanguageSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "modules" && <ModuleSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "theme" && <ThemeSettings labels={labels} />}
+                {activeTab === "zoom" && <ZoomSettings labels={labels} />}
                 {activeTab === "paymentMethods" && <PaymentMethodsSettings labels={labels} />}
                 {activeTab === "profile" && <ProfileSettings labels={labels} />}
                 {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}
