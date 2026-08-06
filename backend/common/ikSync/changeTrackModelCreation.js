@@ -1,7 +1,7 @@
 
-
 import mongoose from "mongoose";
 import { getLocalActivityLogModel, getLocalChangeTrackModel } from "../../configs/connect.db.js";
+// import { liveChangeSyncFunc } from "./liveChangeSync.js";
 
 
 
@@ -105,46 +105,56 @@ export async function changeTrackDocsCreationFunc(
 
 
     // ── Activity log ────────────────────────────────────────────────────────
-    try {
-      const ActivityLogModel = getLocalActivityLogModel();
-      if (ActivityLogModel) {
+    // try {
+    //   const ActivityLogModel = getLocalActivityLogModel();
+    //   if (ActivityLogModel) {
 
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const fiveSecondsAgo = new Date(Date.now() - 5 * 1000);
+    //     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    //     const fiveSecondsAgo = new Date(Date.now() - 5 * 1000);
 
-        // duplicate check — same doc + same action in last 5 minutes
-        const existingLog = await ActivityLogModel.findOne({
-          action: operation.toLowerCase(),
-          documentId: documentId,
-          model: modelName,
-          date: { $gte: fiveMinutesAgo },
-        });
+    //     // duplicate check — same doc + same action in last 5 minutes
+    //     const existingLog = await ActivityLogModel.findOne({
+    //       action: operation.toLowerCase(),
+    //       documentId: documentId,
+    //       model: modelName,
+    //       date: { $gte: fiveMinutesAgo },
+    //     });
 
-        if (!existingLog) {
+    //     if (!existingLog) {
 
-          // check if ANY other different document was also changed in last 5 seconds
-          const recentOtherLog = await ActivityLogModel.findOne({
-            documentId: { $ne: documentId },  // different document
-            date: { $gte: fiveSecondsAgo },
-          });
+    //       // check if ANY other different document was also changed in last 5 seconds
+    //       const recentOtherLog = await ActivityLogModel.findOne({
+    //         documentId: { $ne: documentId },  // different document
+    //         date: { $gte: fiveSecondsAgo },
+    //       });
 
-          const changedBy = recentOtherLog ? "EDC AI" : "human";
+    //       const changedBy = recentOtherLog ? "EDC AI" : "human";
 
-          await ActivityLogModel.create({
-            action: operation.toLowerCase(),
-            documentId: documentId,
-            model: modelName,
-            description: buildDescription(operation, modelName, documentId, changedBy),
-            changedBy: changedBy,
-          });
+    //       await ActivityLogModel.create({
+    //         action: operation.toLowerCase(),
+    //         documentId: documentId,
+    //         model: modelName,
+    //         description: buildDescription(operation, modelName, documentId, changedBy),
+    //         changedBy: changedBy,
+    //       });
 
-        }
+    //     }
 
-      }
-    } catch (logErr) {
-      console.log("Error while creating activity log: ", logErr);
-    }
+    //   }
+    // } catch (logErr) {
+    //   console.log("Error while creating activity log: ", logErr);
+    // }
     // ────────────────────────────────────────────────────────────────────────
+
+    // // ── Live sync to online DB ───────────────────────────────────────────────
+    // try {
+    //   // Non-blocking - don't await, let it run in background
+    //   liveChangeSyncFunc(operation, modelName, documentId)
+    //     .catch(error => console.error(`[liveChangeSync] Error:`, error));
+    // } catch (syncErr) {
+    //   console.log("Error while syncing to online DB: ", syncErr);
+    // }
+    // // ────────────────────────────────────────────────────────────────────────
 
 
   } catch (error) {

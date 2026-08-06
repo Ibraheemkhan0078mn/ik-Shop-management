@@ -63,7 +63,7 @@ app.use(
 app.use("/uploads", (req, res, next) => {
     console.log('Static file request:', req.path, 'from uploadDir:', uploadDir);
     express.static(uploadDir)(req, res, next);
-});
+}); 
 
 app.use("/api/auth", AuthRouter);
 app.use("/api/users", UserRouter);

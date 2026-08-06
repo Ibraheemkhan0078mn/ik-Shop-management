@@ -66,36 +66,23 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
     let localImagePath = path.join(homeDir, "AppData", "Local", "SSIB", "uploads");
 
+    console.log("[imageDownloadSync] Starting image download sync...");
 
     // Take all models and filter the models only which have images only.
     let allowedModels = modelArray.filter(m => {
       return ["student", "teacher", "qarzaAccount"].includes(m.local.modelName)
     })
 
-
-
-
     if (allowedModels?.length == 0) {
-      console.log("The docs is not present")
-      throw new Error("Allowed model is not found.")
+      console.log("[imageDownloadSync] No image-enabled models found");
+      return;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    console.log(`[imageDownloadSync] Processing ${allowedModels.length} models:`, allowedModels.map(m => m.local.modelName));
 
     // Running loop on this filtered models
     for (let eachModel of allowedModels) {
+      console.log(`[imageDownloadSync] Processing model: ${eachModel.local.modelName}`);
 
       // this array have all the images info which have cloudinray public id (means synced with cloudinayr) and also related info with it in form of array of objects
       let imagesToDownloadCloudinaryPublicUrl = []
@@ -105,18 +92,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
         cloudinaryPublicId: { $exists: true, $ne: null }
       });
 
-
-
-      // checking each image is already present local and if not then push it in array for tracking purpose.
-      // for (let doc of allDocs) {
-      //   // let image;
-      //   if (eachModel.local.modelName == "student" || eachModel.local.modelName == "teacher") {
-      //     (!fs.existsSync(path.join(localImagePath, doc?.profileImage))) && imagesToDownloadCloudinaryPublicUrl.push({ cloudinaryPublicId: doc?.cloudinaryPublicId, localImageName: doc?.profileImage, documentId: doc._id })
-      //   } else if (eachModel.local.modelName == "qarzaAccount") {
-      //     (!fs.existsSync(path.join(localImagePath, doc?.qarzaProfileImage))) && imagesToDownloadCloudinaryPublicUrl.push({ cloudinaryPublicId: doc?.cloudinaryPublicId, localImageName: doc?.qarzaProfileImage, documentId: doc._id })
-      //   }
-      // }
-
+      console.log(`[imageDownloadSync] Found ${allDocs.length} docs with cloudinaryPublicId for ${eachModel.local.modelName}`);
 
       // checking each image is already present local and if not then push it in array
       for (let doc of allDocs) {
@@ -144,17 +120,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
         }
       }
 
-
-
-
-
-
-
-
-
-
-      // console.log(imagesToDownloadCloudinaryPublicUrl, "The images download")
-
+      console.log(`[imageDownloadSync] Found ${imagesToDownloadCloudinaryPublicUrl.length} missing images to download for ${eachModel.local.modelName}`);
 
       if (imagesToDownloadCloudinaryPublicUrl?.length > 0) {
 
@@ -163,11 +129,11 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
           // ✅ Extra guard just in case
           if (!obj.localImageName || !obj.cloudinaryPublicId) {
-            console.warn("Skipping entry with missing localImageName or cloudinaryPublicId:", obj);
+            console.warn("[imageDownloadSync] Skipping entry with missing localImageName or cloudinaryPublicId:", obj);
             continue;
           }
 
-
+          console.log(`[imageDownloadSync] Downloading image: ${obj.localImageName} from Cloudinary`);
 
           // we define cloudinary configuraton which also have cloudinary public id in it.
           const downloadUrl = cloudinary.url(obj.cloudinaryPublicId, {
@@ -175,7 +141,6 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
             format: "jpg",
             flags: "attachment",
           });
-
 
           // Fetch the image, convert to buffer and get the buffer of image in response.
           let response;
@@ -189,62 +154,42 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
             response = { data: Buffer.from(data) };
 
           } catch (error) {
-            throw new Error("error in fetch", error?.message)
+            console.error(`[imageDownloadSync] Error fetching image ${obj.localImageName}:`, error.message);
+            continue;
           }
 
-
-
-          // console.log(response.data)
           // Full path of image in local, save the image with the help of buffer, take public id of cloudinary with helper function and update the original doc with this new cloudinary id. 
           if (response?.data) {
-            // const filename = Date.now() + ".jpg";
-            fs.mkdirSync(localImagePath, { recursive: true });
+            try {
+              fs.mkdirSync(localImagePath, { recursive: true });
 
-            let savePath = path.join(localImagePath, obj.localImageName);
-            fs.writeFileSync(savePath, response.data);
+              let savePath = path.join(localImagePath, obj.localImageName);
+              fs.writeFileSync(savePath, response.data);
 
-            let publicIdFromUrl = getCloudinaryPublicId(downloadUrl);
+              let publicIdFromUrl = getCloudinaryPublicId(downloadUrl);
 
-            // console.log(obj.documentId, "from download sysn")
-            let updatedDocument = await eachModel.local.findOne(
-              { _id: new mongoose.Types.ObjectId(obj.documentId) }
-            );
-            // console.log(updatedDocument)
-            updatedDocument.cloudinaryPublicId = publicIdFromUrl
-            await updatedDocument.save()
-            await changeTrackDocsCreationFunc("update", eachModel.local.modelName, updatedDocument._id)
+              let updatedDocument = await eachModel.local.findOne(
+                { _id: new mongoose.Types.ObjectId(obj.documentId) }
+              );
+              if (updatedDocument) {
+                updatedDocument.cloudinaryPublicId = publicIdFromUrl
+                await updatedDocument.save()
+                await changeTrackDocsCreationFunc("update", eachModel.local.modelName, updatedDocument._id)
+                console.log(`[imageDownloadSync] Successfully downloaded and updated: ${obj.localImageName}`);
+              }
+            } catch (error) {
+              console.error(`[imageDownloadSync] Error saving image ${obj.localImageName}:`, error.message);
+            }
           }
-
-
-
-
-
-
-
-
-
         }
-
-
-
-
       }
-
-
     }
 
-
-
-
-
+    console.log("[imageDownloadSync] Image download sync completed");
 
   } catch (error) {
-    console.log(error)
-    // throw new Error(error?.message, error.stack)
+    console.error("[imageDownloadSync] Error:", error.message);
   }
-
-
-
 }
 
 

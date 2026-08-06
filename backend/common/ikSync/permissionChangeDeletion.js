@@ -35,27 +35,27 @@ export async function permissionChangedDeletionFromLocal(modelArray, loggedInUse
 
 
                 // when loop is running for class then it delete the classes also from local which are not permitted to user. means permistion is changed and new permition these classes are nto allowed
-                let allowedClasses = loggedInUserData?.allowedClases
-                if (loggedInUserData && eachModelCollection?.local?.modelName == "class") {
-                    if (allowedClasses?.length > 0 && !(loggedInUserData?.role == "admin")) {
-                        await eachModelCollection?.local?.deleteMany({
-                            _id: { $nin: allowedClasses }
-                        });
-                    }
-                }
+                // let allowedClasses = loggedInUserData?.allowedClases
+                // if (loggedInUserData && eachModelCollection?.local?.modelName == "class") {
+                //     if (allowedClasses?.length > 0 && !(loggedInUserData?.role == "admin")) {
+                //         await eachModelCollection?.local?.deleteMany({
+                //             _id: { $nin: allowedClasses }
+                //         });
+                //     }
+                // }
 
 
 
 
 
                 // students related with allowed class only remained other is deleted when class permition is changed by admin.
-                if (loggedInUserData && eachModelCollection?.local?.modelName == "student") {
-                    if (allowedClasses?.length > 0 && loggedInUserData?.role != "admin") {
-                        await eachModelCollection?.local?.deleteMany({
-                            classId: { $nin: allowedClasses }
-                        });
-                    }
-                }
+                // if (loggedInUserData && eachModelCollection?.local?.modelName == "student") {
+                //     if (allowedClasses?.length > 0 && loggedInUserData?.role != "admin") {
+                //         await eachModelCollection?.local?.deleteMany({
+                //             classId: { $nin: allowedClasses }
+                //         });
+                //     }
+                // }
 
 
 
