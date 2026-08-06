@@ -90,15 +90,18 @@ let PaymentMethodModel = null;
 let AppThemeModel = null;
 
 export const connectDb = async () => {
-    dns.setServers(['8.8.8.8', '8.8.4.4']);
-// mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0
-    const LocalConnection = await mongoose
-        .createConnection("mongodb://localhost:27017", { dbName: "IMS-NEW" })
-        .asPromise();
+    try {
+        console.log("The local db is running")
+        // dns.setServers(['8.8.8.8', '8.8.4.4']);
+    // mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0
+        const LocalConnection = await mongoose
+            .createConnection("mongodb://localhost:27017", { dbName: "IMS-NEW" })
+            .asPromise();
 
-    if (LocalConnection.host) {
-        console.log(`Server is connected to db host: ${LocalConnection.host}`);
-    }
+            console.log("The db is connected.")
+        if (LocalConnection.host) {
+            console.log(`Server is connected to db host: ${LocalConnection.host}`);
+        }
 
     // Add change tracking middleware to schemas before creating models
     addChangeTrackingMiddleware(userSchema, "Users");
@@ -169,6 +172,9 @@ export const connectDb = async () => {
     AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
 
     console.log("📝 Automatic change tracking enabled for local database models");
+    } catch (error) {
+        console.error("❌ Local database connection failed:", error);
+    }
 };
 
 
