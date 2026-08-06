@@ -36,7 +36,8 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // const settings = settingsData?.data || {};
-  const shopName = "Shop Manager";
+  const appName = "Syed Soft";
+  const shopName = settings?.shop?.name || appName;
   const shopImageUrl = settings?.shop?.imageUrl || "";
   const moduleVisibility = settings?.modules || {};
 
@@ -140,16 +141,12 @@ export default function Sidebar() {
           }`}
           style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
         >
-          {shopImageUrl ? (
-            <img src={shopImageUrl} alt="Shop" className="w-full h-full object-cover" />
-          ) : (
-            <img src={logo} alt="logo" className="w-full h-full object-contain" />
-          )}
+          <img src={logo} alt="logo" className="w-full h-full object-contain" />
         </div>
         {!isCollapsed && (
           <div className="leading-tight min-w-0">
             <p className="font-display text-sm font-bold truncate" style={{ color: "var(--accent)" }}>
-              {shopName}
+              {appName}
             </p>
             <p className="text-[11px] truncate" style={{ color: "var(--muted)" }}>
               {language === "ur" ? "آرڈرز سے اکاؤنٹس" : "Orders to accounts"}

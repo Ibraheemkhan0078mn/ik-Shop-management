@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useUpdateShopSettingsMutation } from "../api/settings.api.js";
+import { useUpdateShopSettingsMutation, useGetSettingsQuery } from "../api/settings.api.js";
 import { toast } from "sonner";
 
 export default function ShopSettings({ settingsData, userId, labels }) {
     const [updateShopSettings] = useUpdateShopSettingsMutation();
+    const { refetch } = useGetSettingsQuery(userId);
     const [shopName, setShopName] = useState("");
     const [shopImage, setShopImage] = useState(null);
     const [shopImagePreview, setShopImagePreview] = useState("");
@@ -34,6 +35,7 @@ export default function ShopSettings({ settingsData, userId, labels }) {
         try {
             await updateShopSettings(formData).unwrap();
             toast.success(labels.shopSettingsSaved);
+            refetch();
         } catch (error) {
             toast.error(labels.failedToSave);
         }

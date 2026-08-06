@@ -63,6 +63,7 @@ let OnlineStaffAttendanceModel = null;
 let OnlineSettingsModel = null;
 let OnlinePaymentMethodModel = null;
 let OnlineAppThemeModel = null;
+let OnlineStaffRoleModel=null
 
 // Store the connection instance for export
 let OnlineConnectionInstance = null;

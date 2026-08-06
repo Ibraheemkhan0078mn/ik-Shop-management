@@ -280,6 +280,30 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         }));
     }, [selectedBatch, isExistingMode]);
 
+    // Ensure existing batch is selected when editing item after batches are loaded
+    useEffect(() => {
+        if (editingIndex === null || !itemForm.item) return;
+        const editingItem = addedItems[editingIndex];
+        if (!editingItem || !editingItem.batchId) return;
+        
+        // If we have a batchId in the editing item but it's not currently selected
+        // and the batch exists in availableBatches, select it
+        if (editingItem.batchId && itemForm.batchSelection !== editingItem.batchId) {
+            const batchExists = availableBatches.find(b => b._id === editingItem.batchId);
+            if (batchExists) {
+                setItemForm(p => ({
+                    ...p,
+                    batchMode: "existing",
+                    batchSelection: editingItem.batchId,
+                    batchNumber: batchExists.batchNumber ?? p.batchNumber,
+                    perItemPrice: batchExists.purchasePrice != null ? String(batchExists.purchasePrice) : p.perItemPrice,
+                    mfgDate: toInputDate(batchExists.mfgDate),
+                    expiryDate: toInputDate(batchExists.expiryDate),
+                }));
+            }
+        }
+    }, [availableBatches, editingIndex, addedItems, itemForm.item]);
+
     // autofill unit and auto-select batch mode (only for a fresh product pick, not while editing an existing row)
     useEffect(() => {
         if (!itemForm.item || editingIndex !== null) return;
@@ -418,11 +442,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
     const handleEditItem = (it, idx) => {
         setBatchStamp(getBatchStamp(it.batchNumber));
+        const hasExistingBatch = it.batchId && it.batchMode === "existing";
         setItemForm({
             item: it.item, name: it.name, quantity: it.quantity, unit: it.unit,
             perItemPrice: it.pricePerUnit, mfgDate: it.mfgDate, expiryDate: it.expiryDate,
-            batchNumber: it.batchNumber, batchMode: it.batchMode ?? (it.batchId ? "existing" : "new"),
-            batchSelection: it.batchId ?? "",
+            batchNumber: it.batchNumber, batchMode: hasExistingBatch ? "existing" : "new",
+            batchSelection: hasExistingBatch ? it.batchId : "",
             discount: it.discount, discountType: it.discountType,
             tax: it.tax, taxType: it.taxType,
         });
