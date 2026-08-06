@@ -10,6 +10,8 @@ import {
     userDelete,
 } from "../services/user.service.js";
 import { findOneUserService, createUserService } from "../services/user.crud.js";
+import { getLocalUserModel } from "../../../configs/connect.db.js";
+import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
 export const getAllUsersController = asyncHandler(async (req, res, next) => {
     const users = await getAllUsers();
@@ -64,6 +66,7 @@ export const getUserByIdWithPasswordController = asyncHandler(async (req, res, n
 });
 
 export const createUserByAdminController = asyncHandler(async (req, res, next) => {
+    const UserModel = getLocalUserModel();
     const { email, password, confirmPassword, name } = req.body;
 
     if (!name || !email || !password) {
@@ -97,6 +100,11 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const user = await createUserService({ ...userData, permissions: userData.permissions });
+    
+    // Track image creation if photo was uploaded
+    if (req.file?.filename) {
+        await imageChangeTrackDocsCreation("create", UserModel.modelName, user._id);
+    }
 
     res.status(201).json({
         success: true,
@@ -114,6 +122,7 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
 });
 
 export const updateUserByAdminController = asyncHandler(async (req, res, next) => {
+    const UserModel = getLocalUserModel();
     const { _id, email } = req.body;
 
     if (!_id) {
@@ -146,6 +155,15 @@ export const updateUserByAdminController = asyncHandler(async (req, res, next) =
     }
 
     const updated = await userUpdate(_id, updateData);
+    
+    // Track image changes
+    if (req.file?.filename) {
+        // New photo uploaded - delete old photo from Cloudinary and track new one
+        if (existingUser?.cloudinaryPublicId) {
+            await imageChangeTrackDocsCreation("delete", UserModel.modelName, updated._id, existingUser.cloudinaryPublicId);
+        }
+        await imageChangeTrackDocsCreation("create", UserModel.modelName, updated._id);
+    }
 
     if (!updated) {
         return next(new ErrorResponse("Failed to update user", 500));

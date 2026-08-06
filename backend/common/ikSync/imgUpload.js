@@ -38,13 +38,16 @@ export async function ImageUpload(modelArray) {
                 if (orgDocs?.length > 0) {
                     for (let doc of orgDocs) {
 
-
                         // The images are stored on different names in each docs thats why i also store in it.
                         let image;
                         if (eachModel.local.modelName == "student" || eachModel.local.modelName == "teacher") {
                             image = doc?.profileImage
                         } else if (eachModel.local.modelName == "qarzaAccount") {
                             image = doc?.qarzaProfileImage
+                        } else if (eachModel.local.modelName == "product" || eachModel.local.modelName == "customer" || eachModel.local.modelName == "supplier") {
+                            image = doc?.image
+                        } else if (eachModel.local.modelName == "staff" || eachModel.local.modelName == "user") {
+                            image = doc?.photo
                         }
                         // }
 

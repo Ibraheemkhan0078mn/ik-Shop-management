@@ -13,6 +13,7 @@ import {
 } from "../services/supplier.service.js";
 import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
+import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
     const suppliers = await getAllSuppliersService();
@@ -67,6 +68,7 @@ export const getSupplierById = asyncHandler(async (req, res, next) => {
 })
 
 export const createSupplier = asyncHandler(async (req, res, next) => {
+    const SupplierModel = getLocalSupplierModel();
     const validatedData = req.body || {};
     const { taxId: _taxId, ...supplierData } = validatedData;
 
@@ -86,6 +88,11 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
     }
 
     const supplier = await supplierCreateService(supplierData);
+    
+    // Track image creation if image was uploaded
+    if (req.file?.filename) {
+        await imageChangeTrackDocsCreation("create", SupplierModel.modelName, supplier._id);
+    }
 
     res.status(201).json({
         success: true,
@@ -95,6 +102,7 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
 });
 
 export const updateSupplier = asyncHandler(async (req, res, next) => {
+    const SupplierModel = getLocalSupplierModel();
     const { id } = req.params;
 
     let supplier = await getSupplierByIdService(id);
@@ -119,6 +127,15 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
     }
 
     supplier = await supplierUpdateService(id, supplierData);
+    
+    // Track image changes
+    if (req.file?.filename) {
+        // New image uploaded - delete old image from Cloudinary and track new one
+        if (supplier?.cloudinaryPublicId) {
+            await imageChangeTrackDocsCreation("delete", SupplierModel.modelName, supplier._id, supplier.cloudinaryPublicId);
+        }
+        await imageChangeTrackDocsCreation("create", SupplierModel.modelName, supplier._id);
+    }
 
     res.status(200).json({
         success: true,

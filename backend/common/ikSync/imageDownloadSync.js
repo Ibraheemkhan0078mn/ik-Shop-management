@@ -70,7 +70,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
     // Take all models and filter the models only which have images only.
     let allowedModels = modelArray.filter(m => {
-      return ["student", "teacher", "qarzaAccount"].includes(m.local.modelName)
+      return ["student", "teacher", "qarzaAccount", "product", "customer", "supplier", "staff", "user"].includes(m.local.modelName)
     })
 
     if (allowedModels?.length == 0) {
@@ -96,28 +96,28 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
 
       // checking each image is already present local and if not then push it in array
       for (let doc of allDocs) {
+        let imageField = null;
+        
+        // Determine the image field name based on model
         if (eachModel.local.modelName == "student" || eachModel.local.modelName == "teacher") {
-          // ✅ Guard: skip if profileImage is null/undefined
-          if (!doc?.profileImage) continue;
-
-          (!fs.existsSync(path.join(localImagePath, doc.profileImage))) &&
-            imagesToDownloadCloudinaryPublicUrl.push({
-              cloudinaryPublicId: doc?.cloudinaryPublicId,
-              localImageName: doc.profileImage,
-              documentId: doc._id
-            });
-
+          imageField = "profileImage";
         } else if (eachModel.local.modelName == "qarzaAccount") {
-          // ✅ Guard: skip if qarzaProfileImage is null/undefined
-          if (!doc?.qarzaProfileImage) continue;
-
-          (!fs.existsSync(path.join(localImagePath, doc.qarzaProfileImage))) &&
-            imagesToDownloadCloudinaryPublicUrl.push({
-              cloudinaryPublicId: doc?.cloudinaryPublicId,
-              localImageName: doc.qarzaProfileImage,
-              documentId: doc._id
-            });
+          imageField = "qarzaProfileImage";
+        } else if (eachModel.local.modelName == "product" || eachModel.local.modelName == "customer" || eachModel.local.modelName == "supplier") {
+          imageField = "image";
+        } else if (eachModel.local.modelName == "staff" || eachModel.local.modelName == "user") {
+          imageField = "photo";
         }
+        
+        // Skip if the image field is null/undefined
+        if (!doc?.[imageField]) continue;
+
+        (!fs.existsSync(path.join(localImagePath, doc[imageField]))) &&
+          imagesToDownloadCloudinaryPublicUrl.push({
+            cloudinaryPublicId: doc?.cloudinaryPublicId,
+            localImageName: doc[imageField],
+            documentId: doc._id
+          });
       }
 
       console.log(`[imageDownloadSync] Found ${imagesToDownloadCloudinaryPublicUrl.length} missing images to download for ${eachModel.local.modelName}`);

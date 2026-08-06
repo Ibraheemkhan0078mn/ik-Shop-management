@@ -10,6 +10,8 @@ import {
     customerDelete as customerDeleteService,
     getPaginatedCustomers as getPaginatedCustomersService,
 } from "../services/customer.service.js";
+import { getLocalCustomerModel } from "../../../configs/connect.db.js";
+import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
 const coerceCustomerBody = (body = {}) => {
     const coerced = { ...body };
@@ -72,6 +74,7 @@ export const getCustomerById = asyncHandler(async (req, res, next) => {
 });
 
 export const createCustomer = asyncHandler(async (req, res, next) => {
+    const CustomerModel = getLocalCustomerModel();
     const validatedData = buildCustomerPayload(req.body || {}, req.file?.filename);
 
     const { phoneNo, cnic } = validatedData;
@@ -82,10 +85,17 @@ export const createCustomer = asyncHandler(async (req, res, next) => {
     }
 
     const customer = await customerCreateService(validatedData);
+    
+    // Track image creation if image was uploaded
+    if (req.file?.filename) {
+        await imageChangeTrackDocsCreation("create", CustomerModel.modelName, customer._id);
+    }
+    
     res.status(201).json({ success: true, message: "Customer created successfully", data: customer });
 });
 
 export const updateCustomer = asyncHandler(async (req, res, next) => {
+    const CustomerModel = getLocalCustomerModel();
     const { id } = req.params;
     let customer = await getCustomerByIdService(id);
 
@@ -116,6 +126,16 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
     }
 
     customer = await customerUpdateService(id, validatedData);
+    
+    // Track image changes
+    if (req.file?.filename) {
+        // New image uploaded - delete old image from Cloudinary and track new one
+        if (customer?.cloudinaryPublicId) {
+            await imageChangeTrackDocsCreation("delete", CustomerModel.modelName, customer._id, customer.cloudinaryPublicId);
+        }
+        await imageChangeTrackDocsCreation("create", CustomerModel.modelName, customer._id);
+    }
+    
     res.status(200).json({ success: true, message: "Customer updated successfully", data: customer });
 });
 

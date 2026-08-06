@@ -12,6 +12,8 @@ import {
     getSubCategories, getPaginationSubCategories, createSubCategory,
     updateSubCategory, deleteSubCategory, getSubCategoriesById, getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
+import { getLocalProductModel } from "../../../configs/connect.db.js";
+import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
 // ─── Product Controllers ───────────────────────────────────────────────────────
 
@@ -54,7 +56,14 @@ const coerceBody = (body) => {
 
 export const createProductData = asyncHandler(async (req, res, next) => {
     try {
+        const ProductModel = getLocalProductModel();
         const data = await createProduct({ ...coerceBody(req.body), image: req.file?.filename });
+        
+        // Track image creation if image was uploaded
+        if (req.file?.filename) {
+            await imageChangeTrackDocsCreation("create", ProductModel.modelName, data._id);
+        }
+        
         res.status(201).json({ success: true, message: "Product created successfully", data });
     } catch (error) {
         next(new ErrorResponse(error.message, 400));
@@ -63,9 +72,27 @@ export const createProductData = asyncHandler(async (req, res, next) => {
 
 export const updateProductData = asyncHandler(async (req, res, next) => {
     try {
+        const ProductModel = getLocalProductModel();
         const body = coerceBody(req.body);
-        if (req.file?.filename) body.image = req.file.filename;
+        
+        // Get existing product to check for image change
+        const existingProduct = await getProductById(req.params.id);
+        
+        if (req.file?.filename) {
+            body.image = req.file.filename;
+        }
+        
         const data = await updateProduct(req.params.id, body);
+        
+        // Track image changes
+        if (req.file?.filename) {
+            // New image uploaded - delete old image from Cloudinary and track new one
+            if (existingProduct?.cloudinaryPublicId) {
+                await imageChangeTrackDocsCreation("delete", ProductModel.modelName, data._id, existingProduct.cloudinaryPublicId);
+            }
+            await imageChangeTrackDocsCreation("create", ProductModel.modelName, data._id);
+        }
+        
         res.status(200).json({ success: true, message: "Product updated successfully", data });
     } catch (error) {
         next(new ErrorResponse(error.message, 400));

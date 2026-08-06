@@ -19,9 +19,11 @@ import {
     calculateStaffCommissionAllTime,
     getStaffCommissionOrders
 } from "../services/staff.service.js";
+import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
 // Create Staff
 export const createStaffData = asyncHandler(async (req, res, next) => {
+    const StaffModel = getLocalStaffModel();
     const staffData = req.body;
     
     // If a photo was uploaded, add its filename to the staff data
@@ -33,6 +35,11 @@ export const createStaffData = asyncHandler(async (req, res, next) => {
     }
     
     const staff = await createStaff(staffData);
+    
+    // Track image creation if photo was uploaded
+    if (staffData.photo) {
+        await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
+    }
 
     res.status(201).json({
         success: true,
@@ -67,8 +74,12 @@ export const getStaffDataById = asyncHandler(async (req, res, next) => {
 
 // Update Staff
 export const updateStaffData = asyncHandler(async (req, res, next) => {
+    const StaffModel = getLocalStaffModel();
     const { id } = req.params;
     const updateData = req.body;
+    
+    // Get existing staff to check for photo change
+    const existingStaff = await getStaffById(id);
     
     // If a photo was uploaded, add its filename to the update data
     if (req.files && req.files.length > 0) {
@@ -79,6 +90,15 @@ export const updateStaffData = asyncHandler(async (req, res, next) => {
     }
     
     const staff = await updateStaff(id, updateData);
+    
+    // Track image changes
+    if (updateData.photo) {
+        // New photo uploaded - delete old photo from Cloudinary and track new one
+        if (existingStaff?.cloudinaryPublicId) {
+            await imageChangeTrackDocsCreation("delete", StaffModel.modelName, staff._id, existingStaff.cloudinaryPublicId);
+        }
+        await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
+    }
 
     res.status(200).json({
         success: true,
