@@ -8,7 +8,7 @@
         "dev": "nodemon index.js",
         "test": "jest",
         "test:watch": "jest --watch",
-        "build:babel": "babel . -d dist --copy-files --ignore node_modules,dist,.git,uploads,**/*.test.js,**/*.spec.js,jest.config.js,babel.config.cjs,build-and-copy.js,seedAdmin.js",
+        "build:babel": "babel . --out-dir dist --ignore node_modules",
         "build:exe": "pkg dist/index.js --targets node18-win-x64 --output dist/backend.exe",
         "build": "npm run build:babel && npm run build:exe",
         "build-and-copy": "node build-and-copy.js"

@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+globalThis.crypto = crypto;
 import express from "express";
 import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
@@ -11,6 +13,7 @@ import { connectDb } from "./configs/connect.db.js";
 import { connectOnlineDb } from "./configs/onlineConnect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
 import { uploadDir } from "./common/services/uploadDirectory.js";
+import { PORT } from "./common/constants/env.js";
 
 import AuthRouter from "./modules/auth/routes/auth.router.js";
 import UserRouter from "./modules/auth/routes/user.router.js";
@@ -60,24 +63,6 @@ app.use("/uploads", (req, res, next) => {
   express.static(uploadDir)(req, res, next);
 });
 
-// app.use(
-//     session({
-//         secret: process.env.SESSION_SECRET || "ims_secret_key",
-//         resave: false,
-//         saveUninitialized: false,
-//         store: MongoStore.create({
-//             mongoUrl: process.env.MONGO_URI_LOCAL,
-//             collectionName: "sessions",
-//             ttl: 14 * 24 * 60 * 60,
-//         }),
-//         cookie: {
-//             httpOnly: true,
-//             secure: process.env.NODE_ENV === "production",
-//             maxAge: 1000 * 60 * 60 * 24,
-//         },
-//     }),
-// );
-
 app.use("/api/auth", AuthRouter);
 app.use("/api/users", UserRouter);
 app.use("/api/user-roles", UserRoleRouter);
@@ -108,8 +93,6 @@ app.use("/api/theme", themeRoutes)
 app.use("/api/backup", BackupRouter)
 
 app.use(errorHandler);
-
-const PORT = process.env.PORT || 5001;
 
 connectDb();
 connectOnlineDb(); // Online database with change stream tracking enabled

@@ -2,6 +2,7 @@
 
 
 import { z } from 'zod';
+import { NODE_ENV } from '../constants/env.js';
 
 
 
@@ -50,7 +51,7 @@ export function ApiError(err, res) {
             success: false,
             msg: err?.message || "Internal Server Error",
             // Stack trace sirf development mode mein dikhani chahiye
-            stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
+            stack: NODE_ENV === 'development' ? err?.stack : undefined,
             type: err.name || "ServerError"
         });
 
