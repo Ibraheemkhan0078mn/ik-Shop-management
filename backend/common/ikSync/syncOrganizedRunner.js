@@ -33,9 +33,11 @@ import {
 } from "../../configs/connect.db.js";
 import {
     getOnlineUserModel,
+    getOnlineUserRoleModel,
     getOnlineProductModel,
     getOnlineCategoryModel,
     getOnlineSubCategoryModel,
+    getOnlineBrandModel,
     getOnlineBatchModel,
     getOnlineSupplierModel,
     getOnlinePurchaseModel,
@@ -54,6 +56,7 @@ import {
     getOnlineProductReturnModel,
     getOnlineCustomerModel,
     getOnlineStaffModel,
+    getOnlineStaffRoleModel,
     getOnlineStaffSalaryPaymentModel,
     getOnlineStaffSaleBillModel,
     getOnlineStaffAttendanceModel,
@@ -84,13 +87,13 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         let modelArray = [
             // Auth & User Management
             { local: getLocalUserModel(), online: getOnlineUserModel(), permissionString: ["users-view"] },
-            { local: getLocalUserRoleModel(), online: null, permissionString: ["users-view"] },
+            { local: getLocalUserRoleModel(), online: getOnlineUserRoleModel(), permissionString: ["users-view"] },
             
             // Product Management
             { local: getLocalProductModel(), online: getOnlineProductModel(), permissionString: ["products-view"] },
             { local: getLocalCategoryModel(), online: getOnlineCategoryModel(), permissionString: ["categories-view"] },
             { local: getLocalSubCategoryModel(), online: getOnlineSubCategoryModel(), permissionString: ["subcategories-view"] },
-            { local: getLocalBrandModel(), online: null, permissionString: ["brands-view"] },
+            { local: getLocalBrandModel(), online: getOnlineBrandModel(), permissionString: ["brands-view"] },
             { local: getLocalBatchModel(), online: getOnlineBatchModel(), permissionString: ["batches-view"] },
             
             // Supplier & Purchase Management
@@ -117,7 +120,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
             
             // Staff Management
             { local: getLocalStaffModel(), online: getOnlineStaffModel(), permissionString: ["staff-view"] },
-            { local: getLocalStaffRoleModel(), online: null, permissionString: ["staff-view"] },
+            { local: getLocalStaffRoleModel(), online: getOnlineStaffRoleModel(), permissionString: ["staff-view"] },
             { local: getLocalStaffSalaryPaymentModel(), online: getOnlineStaffSalaryPaymentModel(), permissionString: ["staff-salary-view"] },
             { local: getLocalStaffSaleBillModel(), online: getOnlineStaffSaleBillModel(), permissionString: ["staff-sales-view"] },
             { local: getLocalStaffAttendanceModel(), online: getOnlineStaffAttendanceModel(), permissionString: ["staff-attendance-view"] },
@@ -169,6 +172,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         await downloadOnlineSync(modelArray, syncType, loggedInUserData)
 
         // Auto-fetch missing images from Cloudinary BEFORE deleting from Cloudinary
+       console.log("The img delete is start")
         await imgDelete(modelArray, loggedInUserData)
         await ImageUpload(modelArray, loggedInUserData)
         await imageDownloadSync(modelArray, loggedInUserData)

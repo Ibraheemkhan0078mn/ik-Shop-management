@@ -1,9 +1,11 @@
 import dns from "dns";
 import mongoose from "mongoose";
 import userSchema from "../modules/auth/models/auth.model.js";
+import userRoleSchema from "../modules/auth/models/userRole.model.js";
 import productSchema from "../modules/product/models/product.model.js";
 import categorySchema from "../modules/product/models/category.model.js";
 import subCategorySchema from "../modules/product/models/subCategory.model.js";
+import brandSchema from "../modules/product/models/brand.model.js";
 import batchSchema from "../modules/productPurchases/models/batch.model.js";
 import supplierSchema from "../modules/suppliers/models/supplier.model.js";
 import purchaseSchema from "../modules/productPurchases/models/purchase.model.js";
@@ -22,6 +24,7 @@ import purchaseReturnSchema from "../modules/purchaseReturn/models/purchaseRetur
 import productReturnSchema from "../modules/productReturn/models/productReturn.model.js";
 import customerSchema from "../modules/customer/models/customer.model.js";
 import staffSchema from "../modules/staff/models/staff.model.js";
+import staffRoleSchema from "../modules/staff/models/staffRole.model.js";
 import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment.model.js";
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
@@ -31,9 +34,11 @@ import appThemeSchema from "../modules/settings/models/appTheme.model.js";
 import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
+let OnlineUserRoleModel = null;
 let OnlineProductModel = null;
 let OnlineCategoryModel = null;
 let OnlineSubCategoryModel = null;
+let OnlineBrandModel = null;
 let OnlineBatchModel = null;
 let OnlineSupplierModel = null;
 let OnlinePurchaseModel = null;
@@ -81,12 +86,14 @@ export const connectOnlineDb = async () => {
     }
 
     OnlineUserModel = OnlineConnectionInstance.model("Users", userSchema);
+    OnlineUserRoleModel = OnlineConnectionInstance.model("UserRoles", userRoleSchema);
     OnlineProductModel = OnlineConnectionInstance.model("Products", productSchema);
     OnlineCategoryModel = OnlineConnectionInstance.model("Categories", categorySchema);
     OnlineSubCategoryModel = OnlineConnectionInstance.model(
         "SubCategories",
         subCategorySchema,
     );
+    OnlineBrandModel = OnlineConnectionInstance.model("Brands", brandSchema);
     OnlineBatchModel = OnlineConnectionInstance.model("Batches", batchSchema);
     OnlineSupplierModel = OnlineConnectionInstance.model("Suppliers", supplierSchema);
     OnlinePurchaseModel = OnlineConnectionInstance.model("Purchases", purchaseSchema);
@@ -105,6 +112,7 @@ export const connectOnlineDb = async () => {
     OnlineProductReturnModel = OnlineConnectionInstance.model("ProductReturn", productReturnSchema)
     OnlineCustomerModel = OnlineConnectionInstance.model("Customers", customerSchema)
     OnlineStaffModel = OnlineConnectionInstance.model("Staff", staffSchema)
+    OnlineStaffRoleModel = OnlineConnectionInstance.model("StaffRoles", staffRoleSchema)
     OnlineStaffSalaryPaymentModel = OnlineConnectionInstance.model("StaffSalaryPayment", staffSalaryPaymentSchema)
     OnlineStaffSaleBillModel = OnlineConnectionInstance.model("StaffSaleBill", staffSaleBillSchema)
     OnlineStaffAttendanceModel = OnlineConnectionInstance.model("StaffAttendance", staffAttendanceSchema)
@@ -131,9 +139,11 @@ export const getOnlineExpenseCategoryModel = () => OnlineExpenseCategoryModel ||
 export const getOnlineActivityLogModel = () => OnlineActivityLogModel || null;
 export const getOnlineChangeTrackModel = () => OnlineChangeTrackModel || null;
 export const getOnlineUserModel = () => OnlineUserModel || null;
+export const getOnlineUserRoleModel = () => OnlineUserRoleModel || null;
 export const getOnlineProductModel = () => OnlineProductModel || null;
 export const getOnlineCategoryModel = () => OnlineCategoryModel || null;
 export const getOnlineSubCategoryModel = () => OnlineSubCategoryModel || null;
+export const getOnlineBrandModel = () => OnlineBrandModel || null;
 export const getOnlineBatchModel = () => OnlineBatchModel || null;
 export const getOnlineSupplierModel = () => OnlineSupplierModel || null;
 export const getOnlinePurchaseModel = () => OnlinePurchaseModel || null;
@@ -141,6 +151,7 @@ export const getOnlinePurchasePaymentModel = () => OnlinePurchasePaymentModel ||
 export const getOnlineOrderModel = () => OnlineOrderModel || null;
 export const getOnlineHoldOrderModel = () => OnlineHoldOrderModel || null;
 export const getOnlineStaffModel = () => OnlineStaffModel || null;
+export const getOnlineStaffRoleModel = () => OnlineStaffRoleModel || null;
 export const getOnlineStaffSalaryPaymentModel = () => OnlineStaffSalaryPaymentModel || null;
 export const getOnlineStaffSaleBillModel = () => OnlineStaffSaleBillModel || null;
 export const getOnlineStaffAttendanceModel = () => OnlineStaffAttendanceModel || null;

@@ -7,31 +7,25 @@ export async function imageChangeTrackDocsCreation(
     cloudinaryPublicId
 ) {
     try {
+        console.log(`[imageChangeTrackDocsCreation] Operation: ${operation}, Model: ${modelName}, Document: ${documentId}`);
 
-        // console.log(operation, modelName, documentId)
-
-        // Take values opreration (create, update, delete), 
-        // modelName means which models have done the operation and 
-        // documentId means which documentId is need to sync and 
-        // when there is delete ooperation then we also send the cloudinary publicid which we also attack with it which help to clean the deleted image from cloudinary
-
+        // Validate required parameters
         if (!operation || !modelName || !documentId) {
+            console.warn("[imageChangeTrackDocsCreation] Missing required parameters");
             return;
         }
 
         let imageChangeTrackModel = getLocalImageChangeTrackModel()
 
-
-        // console.log((operation == "delete") && (!cloudinaryPublicId), operation, cloudinaryPublicId, documentId)
+        // For delete operations without cloudinaryPublicId, remove any existing tracking for this document
+        // This happens when an image is replaced - we delete the old image tracking
         if ((operation == "delete") && (!cloudinaryPublicId)) {
+            console.log(`[imageChangeTrackDocsCreation] Removing tracking for document ${documentId} (image replacement)`);
             await imageChangeTrackModel?.deleteMany({ documentId: documentId?.toString() })
             return;
         }
 
-
-
-
-
+        // Create new tracking document
         let createdImageChangeTrackDocs = await imageChangeTrackModel.create({
             documentId,
             operationType: operation,
@@ -39,16 +33,9 @@ export async function imageChangeTrackDocsCreation(
             cloudinaryPublicId: operation == "delete" && cloudinaryPublicId || null
         })
 
-
-
-
-
-
-
-
-
+        console.log(`[imageChangeTrackDocsCreation] Created tracking document: ${createdImageChangeTrackDocs._id}`);
 
     } catch (error) {
-        console.log(error);
+        console.error("[imageChangeTrackDocsCreation] Error:", error);
     }
 }

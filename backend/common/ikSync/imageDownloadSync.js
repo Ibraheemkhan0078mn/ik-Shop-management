@@ -158,7 +158,7 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
             continue;
           }
 
-          // Full path of image in local, save the image with the help of buffer, take public id of cloudinary with helper function and update the original doc with this new cloudinary id. 
+          // Full path of image in local, save the image with the help of buffer
           if (response?.data) {
             try {
               fs.mkdirSync(localImagePath, { recursive: true });
@@ -166,16 +166,16 @@ export async function imageDownloadSync(modelArray, loggedInUserData) {
               let savePath = path.join(localImagePath, obj.localImageName);
               fs.writeFileSync(savePath, response.data);
 
-              let publicIdFromUrl = getCloudinaryPublicId(downloadUrl);
-
               let updatedDocument = await eachModel.local.findOne(
                 { _id: new mongoose.Types.ObjectId(obj.documentId) }
               );
               if (updatedDocument) {
-                updatedDocument.cloudinaryPublicId = publicIdFromUrl
-                await updatedDocument.save()
-                await changeTrackDocsCreationFunc("update", eachModel.local.modelName, updatedDocument._id)
-                console.log(`[imageDownloadSync] Successfully downloaded and updated: ${obj.localImageName}`);
+                // The cloudinaryPublicId is already correct, just ensure it's set
+                if (!updatedDocument.cloudinaryPublicId) {
+                  updatedDocument.cloudinaryPublicId = obj.cloudinaryPublicId;
+                  await updatedDocument.save();
+                }
+                console.log(`[imageDownloadSync] Successfully downloaded: ${obj.localImageName}`);
               }
             } catch (error) {
               console.error(`[imageDownloadSync] Error saving image ${obj.localImageName}:`, error.message);
