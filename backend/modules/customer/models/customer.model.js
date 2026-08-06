@@ -12,6 +12,9 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+        cloudinaryPublicId: {
+            type: String,
+        },
         phoneNo: {
             type: String,
             trim: true,

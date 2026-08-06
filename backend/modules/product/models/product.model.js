@@ -9,6 +9,7 @@ const productSchema = new mongoose.Schema(
         barcode: { type: String, trim: true },
         description: { type: String, trim: true },
         image: { type: String },
+        cloudinaryPublicId: { type: String },
 
         // ─── Classification ───────────────────────────────────────
         category: { type: mongoose.Schema.Types.ObjectId, ref: "Categories" },

@@ -44,6 +44,9 @@ const staffSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    cloudinaryPublicId: {
+        type: String,
+    },
     notes: {
         type: String,
         trim: true

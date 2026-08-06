@@ -46,6 +46,9 @@ const supplierSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        cloudinaryPublicId: {
+            type: String,
+        },
         // Status to toggle active/inactive suppliers without deleting records
         isActive: {
             type: Boolean,

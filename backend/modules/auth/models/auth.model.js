@@ -33,6 +33,9 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        cloudinaryPublicId: {
+            type: String,
+        },
         language: { type: String, enum: ["en", "ur"], default: "en" },
         uploadSync: {
             type: Boolean,
