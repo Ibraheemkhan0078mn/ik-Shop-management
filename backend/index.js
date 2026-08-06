@@ -1,5 +1,7 @@
 import crypto from 'crypto';
-globalThis.crypto = crypto;
+if (!globalThis.crypto) {
+    globalThis.crypto = crypto;
+}
 import express from "express";
 import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
@@ -7,7 +9,7 @@ import session from "express-session";
 import cors from "cors";
 import dotenv from 'dotenv'
 dotenv.config({
-     quiet: true
+    quiet: true
 })
 import { connectDb } from "./configs/connect.db.js";
 import { connectOnlineDb } from "./configs/onlineConnect.db.js";
@@ -59,8 +61,8 @@ app.use(
 
 // Serve uploaded files (product images etc.) from the shared uploads dir.
 app.use("/uploads", (req, res, next) => {
-  console.log('Static file request:', req.path, 'from uploadDir:', uploadDir);
-  express.static(uploadDir)(req, res, next);
+    console.log('Static file request:', req.path, 'from uploadDir:', uploadDir);
+    express.static(uploadDir)(req, res, next);
 });
 
 app.use("/api/auth", AuthRouter);

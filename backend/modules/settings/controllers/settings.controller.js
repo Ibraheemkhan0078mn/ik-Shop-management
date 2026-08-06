@@ -10,6 +10,7 @@ import {
     updateModuleSettings,
     updatePermissionPasswordSettings,
     updateBackupSettings,
+    updateZoomSettings,
 } from "../services/settings.service.js";
 
 // Get Settings
@@ -174,6 +175,31 @@ export const updateBackupSettingsData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Backup settings updated successfully",
+        data: settings,
+    });
+});
+
+// Update Zoom Settings
+export const updateZoomSettingsData = asyncHandler(async (req, res, next) => {
+    const { userId, zoom } = req.body;
+
+    if (!userId) {
+        return next(new ErrorResponse("User ID is required", 400));
+    }
+    if (zoom === undefined || zoom === null) {
+        return next(new ErrorResponse("Zoom level is required", 400));
+    }
+
+    // Validate zoom range (0.5 to 2.0)
+    if (zoom < 0.5 || zoom > 2.0) {
+        return next(new ErrorResponse("Zoom level must be between 0.5 and 2.0", 400));
+    }
+
+    const settings = await updateZoomSettings(userId, zoom);
+
+    res.status(200).json({
+        success: true,
+        message: "Zoom settings updated successfully",
         data: settings,
     });
 });

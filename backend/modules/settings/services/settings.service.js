@@ -96,3 +96,13 @@ export const updateBackupSettings = async (userId, backupData) => {
     
     return settings;
 };
+
+// Update zoom settings
+export const updateZoomSettings = async (userId, zoomLevel) => {
+    const settings = await findOneAndUpdateSettingsService(
+        { userId },
+        { $set: { zoom: zoomLevel } }
+    );
+    
+    return settings;
+};

@@ -191,6 +191,22 @@ ipcMain.handle('get-app-version', () => {
   return appVersion
 })
 
+// Zoom handlers
+ipcMain.handle('set-zoom', async (_event, zoomLevel: number) => {
+  if (win) {
+    win.webContents.setZoomFactor(zoomLevel)
+    return { success: true, zoomLevel }
+  }
+  return { success: false, error: 'No window available' }
+})
+
+ipcMain.handle('get-zoom', async () => {
+  if (win) {
+    return { success: true, zoomLevel: win.webContents.getZoomFactor() }
+  }
+  return { success: false, error: 'No window available' }
+})
+
 
 
 

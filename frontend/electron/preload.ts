@@ -29,4 +29,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  setZoom: (zoomLevel: number) => ipcRenderer.invoke('set-zoom', zoomLevel),
+  getZoom: () => ipcRenderer.invoke('get-zoom'),
 })

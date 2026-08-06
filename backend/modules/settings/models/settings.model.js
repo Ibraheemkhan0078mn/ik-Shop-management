@@ -93,6 +93,13 @@ const settingsSchema = new mongoose.Schema(
                 default: "./backups/excel",
             },
         },
+        // Zoom Settings
+        zoom: {
+            type: Number,
+            default: 1.0, // default zoom level (100%)
+            min: 0.5, // 50%
+            max: 2.0, // 200%
+        },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null },

@@ -35,6 +35,27 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Apply zoom on app startup
+  useEffect(() => {
+    const applyZoom = (zoomLevel) => {
+      // Try to use Electron's electronAPI if available
+      if (window.electronAPI && window.electronAPI.setZoom) {
+        window.electronAPI.setZoom(zoomLevel);
+      } else {
+        // Fallback to CSS transform for web
+        document.body.style.transform = `scale(${zoomLevel})`;
+        document.body.style.transformOrigin = 'top left';
+        document.body.style.width = `${100 / zoomLevel}%`;
+      }
+    };
+
+    // Load zoom from localStorage first
+    const localZoom = localStorage.getItem('appZoom');
+    if (localZoom) {
+      applyZoom(parseFloat(localZoom));
+    }
+  }, []);
+
   // Auto-sync on app start when user is logged in
   useEffect(() => {
     if (userId) {
