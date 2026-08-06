@@ -7,6 +7,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useBatchesByProduct, useDeleteBatch } from "../../../modules/productPurchases/services/batch.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import Barcode from "react-barcode";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -257,6 +258,18 @@ export default function ProductDetail() {
                                 {product.isActive ? "Active" : "Inactive"}
                             </span>
                         </div>
+                        {product.barcode && (
+                            <div className="sm:col-span-2 lg:col-span-3 flex flex-col items-center justify-center p-4 rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                <label className="text-sm text-[var(--muted)] mb-2">Barcode</label>
+                                <Barcode 
+                                    value={product.barcode} 
+                                    width={2} 
+                                    height={60} 
+                                    fontSize={14} 
+                                    displayValue={true}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

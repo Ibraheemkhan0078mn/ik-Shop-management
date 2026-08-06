@@ -22,7 +22,6 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
 
     const [formData, setFormData] = useState({
         name: "",
-        description: "",
         isActive: true,
     });
 
@@ -33,7 +32,6 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
         if (!isCreate && brandData) {
             setFormData({
                 name: brandData.name || "",
-                description: brandData.description || "",
                 isActive: brandData.isActive !== undefined ? brandData.isActive : true,
             });
         }
@@ -44,7 +42,6 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
         if (isCreate && open) {
             setFormData({
                 name: "",
-                description: "",
                 isActive: true,
             });
             setErrors({});
@@ -145,19 +142,6 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
                             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
                         </div>
 
-                        {/* Description */}
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                                {labels.description}
-                            </label>
-                            <textarea
-                                placeholder={labels.brandDescriptionPlaceholder}
-                                value={formData.description}
-                                onChange={(e) => updateField('description', e.target.value)}
-                                rows={3}
-                                className="w-full px-4 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all resize-none"
-                            />
-                        </div>
 
                         {/* Active Status */}
                         <div>

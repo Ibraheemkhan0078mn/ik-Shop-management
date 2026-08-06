@@ -15,7 +15,6 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import BigViewImage from "../../../shared/components/BigViewImage.jsx";
-import Barcode from "react-barcode";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -99,11 +98,10 @@ export default function Products() {
                 {/* Desktop header */}
                 <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                    <div className="col-span-4">{labels.name}</div>
-                    <div className="col-span-2 truncate">Product Code</div>
-                    <div className="col-span-2 truncate">{labels.barcode}</div>
-                    <div className="col-span-1">{labels.stock}</div>
-                    <div className="col-span-3">{labels.actions}</div>
+                    <div className="col-span-5">{labels.name}</div>
+                    <div className="col-span-3 truncate">Product Code</div>
+                    <div className="col-span-2">{labels.stock}</div>
+                    <div className="col-span-2">{labels.actions}</div>
                 </div>
 
                 {/* Desktop rows */}
@@ -111,7 +109,7 @@ export default function Products() {
                     <div key={item._id}
                         className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
                         style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
-                        <div className="col-span-4 flex items-center gap-3 min-w-0">
+                        <div className="col-span-5 flex items-center gap-3 min-w-0">
                             <div className="relative shrink-0">
                                 {item.image && imageLoadStates[item._id] === true ? (
                                     <div className="relative">
@@ -143,25 +141,9 @@ export default function Products() {
                             </div>
                             <div className="font-semibold text-(--ink) truncate text-sm min-w-0">{item.name}</div>
                         </div>
-                        <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{item.productCode || "—"}</div>
-                        <div className="col-span-2 flex items-center">
-                            {item.barcode ? (
-                                <div className="flex items-center gap-2">
-                                    <Barcode 
-                                        value={item.barcode} 
-                                        width={1} 
-                                        height={20} 
-                                        fontSize={10} 
-                                        displayValue={false}
-                                    />
-                                    <span className="text-xs text-(--muted) font-mono">{item.barcode}</span>
-                                </div>
-                            ) : (
-                                <span className="text-sm text-(--muted)">—</span>
-                            )}
-                        </div>
-                        <div className="col-span-1"><StockBadge qty={item.currentStockLevel} /></div>
-                        <div onClick={e=> e.stopPropagation()} className="col-span-3 flex items-center gap-1.5 flex-wrap">
+                        <div className="col-span-3 text-sm text-(--muted) font-mono truncate">{item.productCode || "—"}</div>
+                        <div className="col-span-2"><StockBadge qty={item.currentStockLevel} /></div>
+                        <div onClick={e=> e.stopPropagation()} className="col-span-2 flex items-center gap-1.5 flex-wrap">
                             <button 
                                 onClick={() => navigate(`/products/${item._id}`)}
                                 id={`products-view-${item._id}`} 
@@ -225,7 +207,6 @@ export default function Products() {
                                     <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.name}</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
                                         {item.productCode && <span className="truncate">Product Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
-                                        {item.barcode && <span className="truncate">{labels.barcode}: <span className="font-mono text-(--ink)">{item.barcode}</span></span>}
                                         <span>{labels.stock}: <StockBadge qty={item.currentStockLevel} /></span>
                                     </div>
                                     {(item.category?.name) && (

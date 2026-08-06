@@ -34,12 +34,50 @@ const getPaginatedPurchases = async (filters = {}) => {
         sort: { createdAt: -1 },
         skip: (page - 1) * limit,
         limit: parseInt(limit),
-        populate: [
-            { path: "supplier", select: "name" },
-            { path: "items.product", select: "name productCode" },
-            { path: "items.batch", select: "batchNumber" },
-        ]
     });
+    
+    // Manually fetch supplier data using findOne
+    const { findOneSupplierService } = await import("../../suppliers/services/supplier.crud.js");
+    const { findOneProductService } = await import("../../product/services/product.crud.js");
+    const { findOneBatchService } = await import("./batch.crud.js");
+    
+    for (const purchase of purchases) {
+        if (purchase.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchase.supplier });
+            if (supplier) {
+                purchase.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+        
+        // Manually fetch product and batch data for items
+        if (purchase.items && Array.isArray(purchase.items)) {
+            for (const item of purchase.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+                if (item.batch) {
+                    const batch = await findOneBatchService({ _id: item.batch });
+                    if (batch) {
+                        item.batch = {
+                            _id: batch._id,
+                            batchNumber: batch.batchNumber
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
     const total = await countPurchaseService(query);
     return {
         data: purchases,

@@ -30,6 +30,7 @@ export default function UserRoleManagement() {
     }, [appPermissions]);
 
     const [modal, setModal] = useState(null);
+    const [showPermissions, setShowPermissions] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         permissions: [],
@@ -162,50 +163,68 @@ export default function UserRoleManagement() {
                             </div>
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, permissions: [] })}
-                                        className="px-3 py-1 text-sm rounded-lg"
-                                        style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
-                                    >
-                                        {labels.clearAll}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm" style={{ color: "var(--muted)" }}>{labels.showPermissions || "Show"}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPermissions(!showPermissions)}
+                                            className={`w-12 h-6 rounded-full transition-all relative ${showPermissions ? 'bg-(--accent-2)' : 'bg-(--border)'}`}
+                                        >
+                                            <div
+                                                className={`w-5 h-5 rounded-full absolute top-0.5 transition-all ${showPermissions ? 'left-6 bg-white' : 'left-0.5 bg-white'}`}
+                                            />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="grid gap-3">
-                                    {permissionGroups.map((group) => (
-                                        <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="font-semibold">{group.label}</p>
-                                                <label className="flex items-center gap-2">
-                                                    <span className="text-sm">{labels.all}</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isGroupAllChecked(group)}
-                                                        onChange={() => handleGroupToggle(group)}
-                                                        className="w-4 h-4"
-                                                    />
-                                                </label>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {group.actions.map(({ key, label }) => {
-                                                    const permission = `${group.module}.${key}`;
-                                                    return (
-                                                        <label key={permission} className="flex items-center gap-2">
+                                {showPermissions && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium" style={{ color: "var(--muted)" }}>{labels.permissions}</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, permissions: [] })}
+                                                className="px-3 py-1 text-sm rounded-lg"
+                                                style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+                                            >
+                                                {labels.clearAll}
+                                            </button>
+                                        </div>
+                                        <div className="grid gap-3">
+                                            {permissionGroups.map((group) => (
+                                                <div key={group.module} className="rounded-xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <p className="font-semibold">{group.label}</p>
+                                                        <label className="flex items-center gap-2">
+                                                            <span className="text-sm">{labels.all}</span>
                                                             <input
                                                                 type="checkbox"
-                                                                checked={(formData.permissions || []).includes(permission)}
-                                                                onChange={() => handlePermissionChange(permission)}
+                                                                checked={isGroupAllChecked(group)}
+                                                                onChange={() => handleGroupToggle(group)}
                                                                 className="w-4 h-4"
                                                             />
-                                                            <span className="text-sm">{label}</span>
                                                         </label>
-                                                    );
-                                                })}
-                                            </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {group.actions.map(({ key, label }) => {
+                                                            const permission = `${group.module}.${key}`;
+                                                            return (
+                                                                <label key={permission} className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={(formData.permissions || []).includes(permission)}
+                                                                        onChange={() => handlePermissionChange(permission)}
+                                                                        className="w-4 h-4"
+                                                                    />
+                                                                    <span className="text-sm">{label}</span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2 justify-end">
                                 <button
