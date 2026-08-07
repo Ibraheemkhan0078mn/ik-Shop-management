@@ -5,12 +5,11 @@ import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
 import { useGetRetailVsWholesaleComparisonQuery } from '../services/dashboard.service.js';
 
-export default function RetailWholesaleComparison() {
+export default function RetailWholesaleComparison({ filter = '30D' }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
   
-  const [filter, setFilter] = React.useState('30D');
   const { data: comparisonData, isLoading } = useGetRetailVsWholesaleComparisonQuery(filter);
 
   const chartData = comparisonData?.map(d => ({
@@ -24,9 +23,7 @@ export default function RetailWholesaleComparison() {
       title={labels.retailVsWholesale}
       loading={isLoading}
       height={300}
-      showFilter
-      defaultFilter="30D"
-      onFilterChange={setFilter}
+      showFilter={false}
       emptyMessage={labels.noDataAvailable}
       isEmpty={chartData.length === 0}
     >

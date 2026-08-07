@@ -10,6 +10,7 @@ import SalesCharts from '../components/SalesCharts.jsx';
 import ProductCategoryCharts from '../components/ProductCategoryCharts.jsx';
 import RetailWholesaleComparison from '../components/RetailWholesaleComparison.jsx';
 import InventoryOverviewCharts from '../components/InventoryOverviewCharts.jsx';
+import TimeRangeFilter from '../components/TimeRangeFilter.jsx';
 import { dashboardApi } from '../services/dashboard.service.js';
 
 export default function Dashboard() {
@@ -17,6 +18,8 @@ export default function Dashboard() {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
+  
+  const [globalDateFilter, setGlobalDateFilter] = React.useState('30D');
 
   const handleRefresh = () => {
     dashboardApi.util.invalidateTags(['Dashboard']);
@@ -30,7 +33,8 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.dashboard}</h1>
           <p className="text-sm text-[var(--muted)]">{labels.businessOverview}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <TimeRangeFilter value={globalDateFilter} onChange={setGlobalDateFilter} size="default" />
           <button
             onClick={() => navigate("/quick-list")}
             className="btn-add"
@@ -51,30 +55,30 @@ export default function Dashboard() {
 
       {/* Section 2: Sales & Revenue KPIs */}
       <div className="mb-8">
-        <SalesRevenueKPIs />
+        <SalesRevenueKPIs filter={globalDateFilter} />
       </div>
 
       {/* Section 3: Inventory Alert KPIs */}
       <div className="mb-8">
-        <InventoryAlertKPIs />
+        <InventoryAlertKPIs filter={globalDateFilter} />
       </div>
 
       {/* Section 4: Sales Charts */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.salesPerformance}</h2>
-        <SalesCharts />
+        <SalesCharts filter={globalDateFilter} />
       </div>
 
       {/* Section 5: Product & Category Charts */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.productsAndCategories}</h2>
-        <ProductCategoryCharts />
+        <ProductCategoryCharts filter={globalDateFilter} />
       </div>
 
       {/* Section 6: Retail vs Wholesale Comparison */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.retailVsWholesale}</h2>
-        <RetailWholesaleComparison />
+        <RetailWholesaleComparison filter={globalDateFilter} />
       </div>
 
       {/* Section 7: Inventory Overview Charts */}

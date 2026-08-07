@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, PackageMinus, PackageX } from 'lucide-react';
+import { AlertTriangle, PackageMinus, PackageX, Package, Box } from 'lucide-react';
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
 import KPICard from './KPICard.jsx';
@@ -7,12 +7,12 @@ import PaginatedTableModal from './PaginatedTableModal.jsx';
 import { useGetInventoryAlertKPIsQuery } from '../services/dashboard.service.js';
 import { useGetExpiryProductsQuery, useGetLowStockProductsQuery, useGetOutOfStockProductsQuery } from '../services/dashboard.service.js';
 
-export default function InventoryAlertKPIs() {
+export default function InventoryAlertKPIs({ filter = '30D' }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
   
-  const { data: alerts, isLoading } = useGetInventoryAlertKPIsQuery();
+  const { data: alerts, isLoading } = useGetInventoryAlertKPIsQuery(filter);
   
   // Modal states
   const [expiryModalOpen, setExpiryModalOpen] = useState(false);
@@ -24,11 +24,8 @@ export default function InventoryAlertKPIs() {
   const [lowStockPage, setLowStockPage] = useState(1);
   const [outOfStockPage, setOutOfStockPage] = useState(1);
   
-  // Filter states
-  const [expiryFilter, setExpiryFilter] = useState('30D');
-
   // Queries for modals
-  const { data: expiryData, isLoading: expiryLoading } = useGetExpiryProductsQuery({ range: expiryFilter, page: expiryPage, limit: 10 });
+  const { data: expiryData, isLoading: expiryLoading } = useGetExpiryProductsQuery({ range: filter, page: expiryPage, limit: 10 });
   const { data: lowStockData, isLoading: lowStockLoading } = useGetLowStockProductsQuery({ page: lowStockPage, limit: 10 });
   const { data: outOfStockData, isLoading: outOfStockLoading } = useGetOutOfStockProductsQuery({ page: outOfStockPage, limit: 10 });
 
@@ -79,9 +76,27 @@ export default function InventoryAlertKPIs() {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.inventoryOverview}</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KPICard
-          label={labels.lowStock}
+          label={labels.totalProducts || "Total Products"}
+          value={alerts?.totalProducts}
+          subLabel={labels.activeProducts || "Active in inventory"}
+          icon={Package}
+          color="bg-blue-500"
+          loading={isLoading}
+        />
+
+        <KPICard
+          label={labels.totalBatches || "Total Batches"}
+          value={alerts?.totalBatches}
+          subLabel={labels.allBatches || "All active batches"}
+          icon={Box}
+          color="bg-purple-500"
+          loading={isLoading}
+        />
+
+        <KPICard
+          label={labels.expiringSoon || "Expiring Soon"}
           value={alerts?.expiringSoon}
           subLabel={labels.batchesExpiring}
           icon={AlertTriangle}
@@ -127,17 +142,8 @@ export default function InventoryAlertKPIs() {
         rowColors={expiryRowColors}
         filterSlot={
           <div className="flex items-center gap-2">
-            <select
-              value={expiryFilter}
-              onChange={(e) => {
-                setExpiryFilter(e.target.value);
-                setExpiryPage(1);
-              }}
-              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--app-bg)]"
-            >
-              <option value="7D">{labels.expiringIn7Days}</option>
-              <option value="30D">{labels.expiringIn30Days}</option>
-            </select>
+            <span className="text-xs text-[var(--muted)]">{labels.dateRange}:</span>
+            <span className="text-xs font-medium text-[var(--ink)]">{filter}</span>
           </div>
         }
       />

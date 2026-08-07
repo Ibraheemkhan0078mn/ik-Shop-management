@@ -7,17 +7,15 @@ import { useGetTopSellingProductsQuery, useGetSalesByCategoryQuery } from '../se
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
-export default function ProductCategoryCharts() {
+export default function ProductCategoryCharts({ filter = '30D' }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
   
-  const [topProductsFilter, setTopProductsFilter] = React.useState('30D');
   const [topProductsMetric, setTopProductsMetric] = React.useState('revenue');
-  const [categoryFilter, setCategoryFilter] = React.useState('30D');
 
-  const { data: topProductsData, isLoading: topProductsLoading } = useGetTopSellingProductsQuery({ range: topProductsFilter, metric: topProductsMetric });
-  const { data: categoryData, isLoading: categoryLoading } = useGetSalesByCategoryQuery(categoryFilter);
+  const { data: topProductsData, isLoading: topProductsLoading } = useGetTopSellingProductsQuery({ range: filter, metric: topProductsMetric });
+  const { data: categoryData, isLoading: categoryLoading } = useGetSalesByCategoryQuery(filter);
 
   const topProductsChartData = topProductsData?.map(d => ({
     name: d.name,
@@ -42,9 +40,7 @@ export default function ProductCategoryCharts() {
         title={labels.topSellingProducts}
         loading={topProductsLoading}
         height={300}
-        showFilter
-        defaultFilter="30D"
-        onFilterChange={setTopProductsFilter}
+        showFilter={false}
         emptyMessage={labels.noDataAvailable}
         isEmpty={topProductsChartData.length === 0}
         filterSlot={
@@ -79,9 +75,7 @@ export default function ProductCategoryCharts() {
         title={labels.salesByCategory}
         loading={categoryLoading}
         height={300}
-        showFilter
-        defaultFilter="30D"
-        onFilterChange={setCategoryFilter}
+        showFilter={false}
         emptyMessage={labels.noDataAvailable}
         isEmpty={categoryChartData.length === 0}
       >

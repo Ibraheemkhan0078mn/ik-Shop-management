@@ -168,11 +168,10 @@ const QuickActions = () => {
 
                 <PermissionGuard execute={() => setIsEditMode(!isEditMode)} permission="quickActions.update" isConfirmation={false}>
                     <button
-                        className={`flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 ${
-                            isEditMode
+                        className={`flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 ${isEditMode
                                 ? "bg-(--accent-2) border-(--accent-2) text-white shadow-[0_10px_20px_rgba(15,118,110,0.25)]"
                                 : "bg-(--surface) border-(--border) text-(--muted) hover:text-(--accent-2) hover:border-(--accent-2) shadow-[0_8px_16px_rgba(64,45,28,0.08)]"
-                        }`}
+                            }`}
                     >
                         {isEditMode ? (
                             <Check size={18} strokeWidth={3} />
@@ -190,172 +189,171 @@ const QuickActions = () => {
                     const CardWrapper = isEditMode ? "div" : Link;
 
                     return (
-            //             <CardWrapper
-            //                 key={item.id}
-            //                 to={!isEditMode ? item.url : undefined}
-            //                 draggable={isEditMode}
-            //                 onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
-            //                 onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
-            //                 onDragEnd={isEditMode ? handleDragEnd : undefined}
-            //                 onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
-            //                 className={`
-            //     relative group flex flex-col p-5 rounded-2xl transition-all duration-300 no-underline overflow-hidden border
-            //     ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
-            //     ${visible ? "shadow-[0_10px_28px_rgba(64,45,28,0.1)]" : "grayscale opacity-50"}
-            //     ${!isEditMode && visible ? "hover:shadow-[0_16px_36px_rgba(64,45,28,0.16)] hover:-translate-y-1" : ""}
-            //     ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 ring-offset-(--app-bg)" : ""}
-            //   `}
-            //                 style={{
-            //                     background: "var(--surface)",
-            //                     borderColor: "var(--border)",
-            //                 }}
-            //             >
-            //                 {isEditMode && (
-            //                     <>
-            //                         <div className="absolute top-3 left-3 text-(--muted) opacity-60">
-            //                             <GripVertical size={14} />
-            //                         </div>
-            //                         <div
-            //                             className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-20 ${
-            //                                 visible
-            //                                     ? "bg-(--accent-2) border-white text-white scale-110"
-            //                                     : "bg-(--surface) border-(--border) text-(--muted)"
-            //                             }`}
-            //                         >
-            //                             {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
-            //                         </div>
-            //                     </>
-            //                 )}
+                        //             <CardWrapper
+                        //                 key={item.id}
+                        //                 to={!isEditMode ? item.url : undefined}
+                        //                 draggable={isEditMode}
+                        //                 onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
+                        //                 onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
+                        //                 onDragEnd={isEditMode ? handleDragEnd : undefined}
+                        //                 onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
+                        //                 className={`
+                        //     relative group flex flex-col p-5 rounded-2xl transition-all duration-300 no-underline overflow-hidden border
+                        //     ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+                        //     ${visible ? "shadow-[0_10px_28px_rgba(64,45,28,0.1)]" : "grayscale opacity-50"}
+                        //     ${!isEditMode && visible ? "hover:shadow-[0_16px_36px_rgba(64,45,28,0.16)] hover:-translate-y-1" : ""}
+                        //     ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 ring-offset-(--app-bg)" : ""}
+                        //   `}
+                        //                 style={{
+                        //                     background: "var(--surface)",
+                        //                     borderColor: "var(--border)",
+                        //                 }}
+                        //             >
+                        //                 {isEditMode && (
+                        //                     <>
+                        //                         <div className="absolute top-3 left-3 text-(--muted) opacity-60">
+                        //                             <GripVertical size={14} />
+                        //                         </div>
+                        //                         <div
+                        //                             className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-20 ${
+                        //                                 visible
+                        //                                     ? "bg-(--accent-2) border-white text-white scale-110"
+                        //                                     : "bg-(--surface) border-(--border) text-(--muted)"
+                        //                             }`}
+                        //                         >
+                        //                             {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
+                        //                         </div>
+                        //                     </>
+                        //                 )}
 
-            //                 {/* Top row: icon + Quick badge */}
-            //                 <div className="flex items-start justify-between mb-4 relative z-10">
-            //                     <div
-            //                         className="flex items-center justify-center w-14 h-14 rounded-2xl transition-transform duration-300 group-hover:scale-105"
-            //                         style={{
-            //                             background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
-            //                             border: `1px solid ${item.color}33`,
-            //                         }}
-            //                     >
-            //                         <Icon size={26} strokeWidth={2.2} style={{ color: item.color }} />
-            //                     </div>
+                        //                 {/* Top row: icon + Quick badge */}
+                        //                 <div className="flex items-start justify-between mb-4 relative z-10">
+                        //                     <div
+                        //                         className="flex items-center justify-center w-14 h-14 rounded-2xl transition-transform duration-300 group-hover:scale-105"
+                        //                         style={{
+                        //                             background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
+                        //                             border: `1px solid ${item.color}33`,
+                        //                         }}
+                        //                     >
+                        //                         <Icon size={26} strokeWidth={2.2} style={{ color: item.color }} />
+                        //                     </div>
 
-            //                     <span
-            //                         className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-            //                         style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
-            //                     >
-            //                         Quick
-            //                     </span>
-            //                 </div>
+                        //                     <span
+                        //                         className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                        //                         style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
+                        //                     >
+                        //                         Quick
+                        //                     </span>
+                        //                 </div>
 
-            //                 {/* Title + subtitle */}
-            //                 <div className="relative z-10 mb-5">
-            //                     <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
-            //                     <p className="text-xs text-(--muted) mt-1 truncate">{item.subtitle}</p>
-            //                 </div>
+                        //                 {/* Title + subtitle */}
+                        //                 <div className="relative z-10 mb-5">
+                        //                     <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
+                        //                     <p className="text-xs text-(--muted) mt-1 truncate">{item.subtitle}</p>
+                        //                 </div>
 
-            //                 {/* Open module footer */}
-            //                 <div
-            //                     className="mt-auto relative z-10 flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold transition-colors duration-300"
-            //                     style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
-            //                 >
-            //                     <span>{labels.openModule || "Open Module"}</span>
-            //                     <ArrowRight
-            //                         size={14}
-            //                         strokeWidth={2.5}
-            //                         className="transition-transform duration-300 group-hover:translate-x-1"
-            //                         style={{ color: "var(--accent-2)" }}
-            //                     />
-            //                 </div>
-            //             </CardWrapper>
+                        //                 {/* Open module footer */}
+                        //                 <div
+                        //                     className="mt-auto relative z-10 flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold transition-colors duration-300"
+                        //                     style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+                        //                 >
+                        //                     <span>{labels.openModule || "Open Module"}</span>
+                        //                     <ArrowRight
+                        //                         size={14}
+                        //                         strokeWidth={2.5}
+                        //                         className="transition-transform duration-300 group-hover:translate-x-1"
+                        //                         style={{ color: "var(--accent-2)" }}
+                        //                     />
+                        //                 </div>
+                        //             </CardWrapper>
 
-            <CardWrapper
-    key={item.id}
-    to={!isEditMode ? item.url : undefined}
-    draggable={isEditMode}
-    onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
-    onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
-    onDragEnd={isEditMode ? handleDragEnd : undefined}
-    onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
-    className={`
+                        <CardWrapper
+                            key={item.id}
+                            to={!isEditMode ? item.url : undefined}
+                            draggable={isEditMode}
+                            onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
+                            onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
+                            onDragEnd={isEditMode ? handleDragEnd : undefined}
+                            onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
+                            className={`
         relative group flex flex-col justify-end h-44 rounded-2xl transition-all duration-300 no-underline overflow-hidden border
         ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
         ${visible ? "shadow-[0_10px_28px_rgba(64,45,28,0.1)]" : "grayscale opacity-50"}
         ${!isEditMode && visible ? "hover:shadow-[0_16px_36px_rgba(64,45,28,0.18)] hover:-translate-y-1" : ""}
         ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 ring-offset-(--app-bg)" : ""}
     `}
-    style={{ background: "var(--surface)", borderColor: "var(--border)" }}
->
-    {/* Big background icon — vertically centered, offset from right edge */}
-    <div
-        className="absolute top-1/2 right-4 -translate-y-1/2 transition-transform duration-300 group-hover:scale-110"
-        style={{ color: item.color, opacity: 0.18 }}
-    >
-        <Icon size={88} strokeWidth={1.5} />
-    </div>
+                            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+                        >
+                            {/* Big background icon — vertically centered, offset from right edge */}
+                            <div
+                                className="absolute top-1/2 right-4 -translate-y-1/2 transition-transform duration-300 group-hover:scale-110"
+                                style={{ color: item.color, opacity: 0.18 }}
+                            >
+                                <Icon size={88} strokeWidth={1.5} />
+                            </div>
 
-    {/* Gradient overlay cutting across the icon, left-to-right */}
-    <div
-        className="absolute inset-0"
-        style={{
-            background: `linear-gradient(90deg, var(--surface) 35%, transparent 55%, transparent 70%, var(--surface) 95%), linear-gradient(180deg, transparent 0%, var(--surface) 85%)`,
-        }}
-    />
+                            {/* Gradient overlay cutting across the icon, left-to-right */}
+                            <div
+                                className="absolute inset-0"
+                                style={{
+                                    background: `linear-gradient(90deg, var(--surface) 35%, transparent 55%, transparent 70%, var(--surface) 95%), linear-gradient(180deg, transparent 0%, var(--surface) 85%)`,
+                                }}
+                            />
 
-    {isEditMode && (
-        <>
-            <div className="absolute top-3 left-3 text-(--muted) opacity-60 z-20">
-                <GripVertical size={14} />
-            </div>
-            <div
-                className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-30 ${
-                    visible
-                        ? "bg-(--accent-2) border-white text-white scale-110"
-                        : "bg-(--surface) border-(--border) text-(--muted)"
-                }`}
-            >
-                {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
-            </div>
-        </>
-    )}
+                            {isEditMode && (
+                                <>
+                                    <div className="absolute top-3 left-3 text-(--muted) opacity-60 z-20">
+                                        <GripVertical size={14} />
+                                    </div>
+                                    <div
+                                        className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-30 ${visible
+                                                ? "bg-(--accent-2) border-white text-white scale-110"
+                                                : "bg-(--surface) border-(--border) text-(--muted)"
+                                            }`}
+                                    >
+                                        {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
+                                    </div>
+                                </>
+                            )}
 
-    {/* Small icon chip + Quick badge */}
-    <div className="absolute top-4 left-5 right-5 z-10 flex items-center justify-between">
-        <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl"
-            style={{
-                background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
-                border: `1px solid ${item.color}33`,
-            }}
-        >
-            <Icon size={20} strokeWidth={2.2} style={{ color: item.color }} />
-        </div>
-        <span
-            className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-            style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
-        >
-            Quick
-        </span>
-    </div>
+                            {/* Small icon chip + Quick badge */}
+                            <div className="absolute top-4 left-5 right-5 z-10 flex items-center justify-between">
+                                <div
+                                    className="flex items-center justify-center w-10 h-10 rounded-xl"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
+                                        border: `1px solid ${item.color}33`,
+                                    }}
+                                >
+                                    <Icon size={20} strokeWidth={2.2} style={{ color: item.color }} />
+                                </div>
+                                <span
+                                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                                    style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
+                                >
+                                    Quick
+                                </span>
+                            </div>
 
-    {/* Title + subtitle + footer */}
-    <div className="relative z-10 px-5 pb-4 pt-2">
-        <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
-        <p className="text-xs text-(--muted) mt-1 truncate mb-3">{item.subtitle}</p>
+                            {/* Title + subtitle + footer */}
+                            <div className="relative z-10 px-5 pb-4 pt-2">
+                                <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
+                                <p className="text-xs text-(--muted) mt-1 truncate mb-3">{item.subtitle}</p>
 
-        <div
-            className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-colors duration-300"
-            style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
-        >
-            <span>{labels.openModule || "Open Module"}</span>
-            <ArrowRight
-                size={14}
-                strokeWidth={2.5}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-                style={{ color: "var(--accent-2)" }}
-            />
-        </div>
-    </div>
-</CardWrapper>
+                                <div
+                                    className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-colors duration-300"
+                                    style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+                                >
+                                    <span>{labels.openModule || "Open Module"}</span>
+                                    <ArrowRight
+                                        size={14}
+                                        strokeWidth={2.5}
+                                        className="transition-transform duration-300 group-hover:translate-x-1"
+                                        style={{ color: "var(--accent-2)" }}
+                                    />
+                                </div>
+                            </div>
+                        </CardWrapper>
                     );
                 })}
             </div>

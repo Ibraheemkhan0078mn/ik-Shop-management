@@ -5,16 +5,13 @@ import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
 import { useGetRevenueOverTimeQuery, useGetOrdersOverTimeQuery } from '../services/dashboard.service.js';
 
-export default function SalesCharts() {
+export default function SalesCharts({ filter = '30D' }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
-  
-  const [revenueFilter, setRevenueFilter] = React.useState('30D');
-  const [ordersFilter, setOrdersFilter] = React.useState('30D');
 
-  const { data: revenueData, isLoading: revenueLoading } = useGetRevenueOverTimeQuery(revenueFilter);
-  const { data: ordersData, isLoading: ordersLoading } = useGetOrdersOverTimeQuery(ordersFilter);
+  const { data: revenueData, isLoading: revenueLoading } = useGetRevenueOverTimeQuery(filter);
+  const { data: ordersData, isLoading: ordersLoading } = useGetOrdersOverTimeQuery(filter);
 
   const revenueChartData = revenueData?.map(d => ({
     date: d.date,
@@ -35,9 +32,7 @@ export default function SalesCharts() {
         title={`${labels.totalRevenue} ${labels.retailVsWholesale}`}
         loading={revenueLoading}
         height={300}
-        showFilter
-        defaultFilter="30D"
-        onFilterChange={setRevenueFilter}
+        showFilter={false}
         emptyMessage={labels.noDataAvailable}
         isEmpty={revenueChartData.length === 0}
       >
@@ -59,9 +54,7 @@ export default function SalesCharts() {
         title={`${labels.totalOrders} ${labels.retailVsWholesale}`}
         loading={ordersLoading}
         height={300}
-        showFilter
-        defaultFilter="30D"
-        onFilterChange={setOrdersFilter}
+        showFilter={false}
         emptyMessage={labels.noDataAvailable}
         isEmpty={ordersChartData.length === 0}
       >

@@ -425,11 +425,16 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
 export const getInventoryAlertKPIs = async (range = '30D') => {
     try {
         const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-        const batches = await BatchModel.find({ isActive: true }).lean();
+        const [batches, totalProducts, totalBatches] = await Promise.all([
+            BatchModel.find({ isActive: true }).lean(),
+            ProductModel.countDocuments({ isActive: true }),
+            BatchModel.countDocuments({ isActive: true }),
+        ]);
 
         const expiringSoon = batches.filter(b => 
             b.expiryDate && 
@@ -456,6 +461,8 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
             lowStock: lowStock.length,
             outOfStock: outOfStock.length,
             hasCriticalExpiry: expiringIn7Days.length > 0,
+            totalProducts,
+            totalBatches,
         };
     } catch (error) {
         console.error('Error fetching inventory alert KPIs:', error);
@@ -465,6 +472,8 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
             lowStock: 0,
             outOfStock: 0,
             hasCriticalExpiry: false,
+            totalProducts: 0,
+            totalBatches: 0,
         };
     }
 };
