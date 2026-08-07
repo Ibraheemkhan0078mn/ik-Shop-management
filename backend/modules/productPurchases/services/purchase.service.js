@@ -104,7 +104,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 batchNumber: item.batchNumber,
                 supplier: purchaseData.supplier,
                 quantity: 0,
-                purchasePrice: item.price,
+                purchasePrice: item.costPrice || item.price,
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
@@ -129,6 +129,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
             batch: batch._id,
             quantity: item.quantity,
             price: item.price,
+            costPrice: item.costPrice || 0,
             discount: item.discount,
             discountType: item.discountType,
             tax: item.tax,
@@ -181,7 +182,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 batchNumber: item.batchNumber,
                 supplier: data.supplier, 
                 quantity: 0,  // Start at 0, adjustStock will increment
-                purchasePrice: item.price, 
+                purchasePrice: item.costPrice || item.price, 
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate, 
                 expiryDate: item.expiryDate,
@@ -190,7 +191,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         } else {
             // Update existing batch (quantity is NOT updated here - adjustStock already handles it)
             await updateBatchService(batch._id, {
-                purchasePrice: item.price,
+                purchasePrice: item.costPrice || item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 supplier: data.supplier,
@@ -202,6 +203,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             batch: batch._id,
             quantity: item.quantity, 
             price: item.price,
+            costPrice: item.costPrice || 0,
             discount: item.discount, 
             discountType: item.discountType,
             tax: item.tax, 

@@ -434,7 +434,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
     const calculateRefund = (item, details) => {
         const returnQty = Number(details.returnQuantity) || 0;
-        const costPrice = Number(item.price) || 0;
+        const costPrice = Number(item.costPrice || item.price) || 0;
         const cut = Number(details.cut) || 0;
 
         // Calculate discounted price based on purchase discount

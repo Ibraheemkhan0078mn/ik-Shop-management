@@ -20,7 +20,7 @@ const makeInvoice = (name, stamp) => `PI-${stamp.slice(-6)}`;
 const getBatchStamp = (bn) => { const m = /^BAT-([^-]+)-/.exec(bn || ""); return m?.[1] || Date.now().toString(); };
 
 const emptyItem = () => ({
-    item: "", name: "", quantity: "", unit: "", perItemPrice: "",
+    item: "", name: "", quantity: "", unit: "", perItemPrice: "", costPrice: "",
     mfgDate: "", expiryDate: "", batchNumber: "", batchMode: "new", batchSelection: "",
     discount: "", discountType: "percentage", tax: "", taxType: "percentage",
 });
@@ -224,7 +224,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setAddedItems((existingPurchase.items ?? []).map(it => ({
             item: it.product?._id ?? it.product ?? "", name: it.product?.name ?? "",
             quantity: it.quantity ?? 0, unit: it.unit ?? "",
-            pricePerUnit: it.price ?? 0, totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.price ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
+            pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
+            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.price ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
             mfgDate: toInputDate(it.mfgDate), expiryDate: toInputDate(it.expiryDate),
             batchNumber: it.batchNumber ?? "", batchMode: it.batchId ? "existing" : "new",
             batchSelection: it.batchId ?? "", batchId: it.batchId ?? "",
@@ -421,6 +422,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             item: itemForm.item, name: prod?.name ?? "Unknown",
             quantity: Number(itemForm.quantity), unit: itemForm.unit,
             pricePerUnit: Number(itemForm.perItemPrice),
+            costPrice: Number(itemForm.costPrice) || 0,
             totalPurchasePrice: calculateItemLineTotal(Number(itemForm.quantity), Number(itemForm.perItemPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
             mfgDate: itemForm.mfgDate, expiryDate: itemForm.expiryDate,
             batchNumber: batchNo, batchMode: itemForm.batchMode,
@@ -445,7 +447,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         const hasExistingBatch = it.batchId && it.batchMode === "existing";
         setItemForm({
             item: it.item, name: it.name, quantity: it.quantity, unit: it.unit,
-            perItemPrice: it.pricePerUnit, mfgDate: it.mfgDate, expiryDate: it.expiryDate,
+            perItemPrice: it.pricePerUnit, costPrice: it.costPrice || "",
+            mfgDate: it.mfgDate, expiryDate: it.expiryDate,
             batchNumber: it.batchNumber, batchMode: hasExistingBatch ? "existing" : "new",
             batchSelection: hasExistingBatch ? it.batchId : "",
             discount: it.discount, discountType: it.discountType,
@@ -468,7 +471,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
             items: addedItems.map(it => ({
                 product: it.item, batchNumber: it.batchNumber,
-                quantity: it.quantity, price: it.pricePerUnit,
+                quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
                 discount: it.discount, discountType: it.discountType,
                 tax: it.tax, taxType: it.taxType,
                 mfgDate: it.mfgDate ? new Date(it.mfgDate).toISOString() : undefined,
@@ -555,14 +558,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field>
-                                        <Label>{labels.quantity} *</Label>
+                                    <Field><Label>{labels.quantity} *</Label>
                                         <div className="flex gap-2 items-center">
                                             <Inp name="quantity" type="number" placeholder="0" value={itemForm.quantity} onChange={handleItemChange} />
                                             <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
                                         </div>
                                     </Field>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field><Label>{labels.perItemPrice} *</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
+                                    <Field><Label>{labels.costPrice || "Cost Price"}</Label><Inp name="costPrice" type="number" placeholder="0.00" value={itemForm.costPrice} onChange={handleItemChange} /></Field>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -617,8 +622,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <table className="w-full text-sm min-w-[480px]">
                                         <thead>
                                             <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                                {[labels.item, labels.batch, labels.qty, labels.price, labels.discount, labels.tax, labels.total, labels.actions].map(h => (
-                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === labels.price || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
+                                                {[labels.item, labels.batch, labels.qty, labels.price, labels.costPrice || "Cost Price", labels.discount, labels.tax, labels.total, labels.actions].map(h => (
+                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === labels.price || h === (labels.costPrice || "Cost Price") || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -629,6 +634,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                     <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber}</td>
                                                     <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity} <span className="text-xs" style={{ color: "var(--muted)" }}>{it.unit}</span></td>
                                                     <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{Number(it.pricePerUnit).toFixed(2)}</td>
+                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{Number(it.costPrice || 0).toFixed(2)}</td>
                                                     <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.discount || 0).toFixed(2)} ${it.discountType === "fixed" ? labels.fixed : labels.percentage}`}</td>
                                                     <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.tax || 0).toFixed(2)} ${it.taxType === "fixed" ? labels.fixed : labels.percentage}`}</td>
                                                     <td className="px-2 sm:px-3 py-3 text-right tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{Number(it.totalPurchasePrice).toFixed(2)}</td>
