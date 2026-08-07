@@ -16,8 +16,8 @@ const getFeatureList = (labels) => [
 ];
 
 const EMPTY_FORM = {
-  name: "", email: "", phoneNo: "",
-  password: "", confirmPassword: "", role: "admin",
+  name: "", email: "",
+  password: "", role: "admin",
 };
 
 export default function AuthPage() {
@@ -108,10 +108,6 @@ export default function AuthPage() {
         const response = await loginUser({ email: formData.email, password: formData.password, role: formData.role });
         console.log(response, "The data");
       } else {
-        if (formData.password !== formData.confirmPassword) {
-          toast.error(labels.passwordsDoNotMatch);
-          return;
-        }
         await signupUser(formData);
       }
     } catch (err) {
@@ -258,16 +254,6 @@ export default function AuthPage() {
               />
             </FormField>
 
-            {!isLoginMode && (
-              <FormField label={labels.phone}>
-                <input
-                  id="auth-phone-input"
-                  className="input-search"
-                  type="tel" placeholder="+1 234 567 890"
-                  value={formData.phoneNo} onChange={updateField("phoneNo")}
-                />
-              </FormField>
-            )}
 
             <FormField label={labels.password}>
               <div className="relative">
@@ -290,22 +276,16 @@ export default function AuthPage() {
               </div>
             </FormField>
 
-            {!isLoginMode && (
-              <FormField label={labels.confirmPassword}>
-                <input
-                  id="auth-confirm-password-input"
-                  className="input-search"
-                  type="password" required placeholder="••••••••"
-                  value={formData.confirmPassword} onChange={updateField("confirmPassword")}
-                />
-              </FormField>
-            )}
 
             <FormField label={labels.role}>
-              <select id="auth-role-select" className="input-search" value={formData.role} onChange={updateField("role")} disabled={!isLoginMode}>
-                <option value="admin">Admin</option>
-                <option value="staff">Staff</option>
-              </select>
+              <div className="input-search flex items-center justify-between bg-(--surface-muted)">
+                <span className="text-sm font-medium">Admin</span>
+                {!isLoginMode && (
+                  <p className="text-xs" style={{ color: "var(--muted)" }}>
+                    (Default role)
+                  </p>
+                )}
+              </div>
               {!isLoginMode && (
                 <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                   Note: Registration is restricted to admin role only. Contact existing admin for account creation.

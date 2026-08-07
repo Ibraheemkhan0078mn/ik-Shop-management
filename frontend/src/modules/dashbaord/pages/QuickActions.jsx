@@ -6,6 +6,7 @@ import {
     Pencil,
     Check,
     Plus,
+    ArrowRight,
     BarChart3,
     Wallet,
     ShoppingCart,
@@ -35,42 +36,42 @@ const QuickActions = () => {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getDashboardLabels(language);
-    
+
     const [searchQuery, setSearchQuery] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
     const dragIdRef = useRef(null);
 
     const ALL_LINKS = [
-        { id: "dashboard", title: labels.dashboard, url: "/dashboard", icon: BarChart3, important: true },
-        { id: "analytics", title: labels.analytics, url: "/dashboard/analytics", icon: TrendingUp, important: false },
-        { id: "products", title: labels.addProducts, url: "/products", icon: Package, important: true },
-        { id: "categories", title: labels.categories, url: "/products/categories", icon: Boxes, important: false },
-        { id: "sub-categories", title: labels.subCategories, url: "/products/sub-categories", icon: Boxes, important: false },
-        { id: "purchases", title: labels.addPurchases, url: "/purchases", icon: CreditCard, important: true },
-        { id: "suppliers", title: labels.suppliers, url: "/suppliers", icon: Truck, important: false },
-        { id: "purchase-returns", title: labels.purchaseReturns, url: "/purchase-returns", icon: RotateCcw, important: false },
-        { id: "product-return", title: labels.productReturns, url: "/product-return", icon: RotateCcw, important: false },
-        { id: "customers", title: labels.customers, url: "/customers", icon: Users, important: true },
-        { id: "wastage", title: labels.wastage, url: "/wastage", icon: Package, important: false },
-        { id: "qarza", title: labels.qarzaAccounts, url: "/qarzaAccount", icon: Wallet, important: false },
-        { id: "expenses", title: labels.expenses, url: "/expenses", icon: DollarSign, important: true },
-        { id: "pos", title: labels.pos, url: "/pos", icon: ShoppingCart, important: true },
-        { id: "order-history", title: labels.orderHistory, url: "/order-history", icon: ClipboardList, important: false },
-        { id: "settings", title: labels.settings, url: "/settings/generals", icon: Settings, important: false },
-        { id: "reports", title: labels.reports, url: "/reports", icon: BarChart3, important: true },
-        { id: "report-inventory", title: labels.inventoryReport, url: "/reports/giant-inventory", icon: Package, important: false },
-        { id: "report-staff", title: labels.staffReport, url: "/reports/staff", icon: Users, important: false },
-        { id: "report-credits", title: labels.creditsDebits, url: "/reports/credits-debits", icon: Wallet, important: false },
-        { id: "report-expenses", title: labels.expenseKpi, url: "/reports/expenses", icon: DollarSign, important: false },
-        { id: "report-sales", title: labels.salesKpi, url: "/reports/sales", icon: TrendingUp, important: false },
-        { id: "report-purchases", title: labels.purchaseKpi, url: "/reports/purchases", icon: CreditCard, important: false },
-        { id: "report-suppliers", title: labels.supplierKpi, url: "/reports/suppliers", icon: Truck, important: false },
-        { id: "report-customers", title: labels.customerKpi, url: "/reports/customers", icon: Users, important: false },
-        { id: "staff", title: labels.staff, url: "/staff", icon: UserCog, important: true },
-        { id: "staff-create", title: labels.addStaff, url: "/staff/create", icon: UserPlus, important: false },
-        { id: "staff-attendance", title: labels.attendance, url: "/staff/attendance", icon: CalendarCheck, important: false },
-        { id: "profile", title: labels.profile, url: "/profile", icon: Users, important: false },
-        { id: "users", title: labels.appUsers, url: "/users", icon: Settings, important: true },
+        { id: "dashboard", title: labels.dashboard, subtitle: "Overview & stats", url: "/dashboard", icon: BarChart3, color: "#0f766e", important: true },
+        { id: "analytics", title: labels.analytics, subtitle: "Trends & insights", url: "/dashboard/analytics", icon: TrendingUp, color: "#0f766e", important: false },
+        { id: "products", title: labels.addProducts, subtitle: "Manage inventory", url: "/products", icon: Package, color: "#a855f7", important: true },
+        { id: "categories", title: labels.categories, subtitle: "Organize products", url: "/products/categories", icon: Boxes, color: "#a855f7", important: false },
+        { id: "sub-categories", title: labels.subCategories, subtitle: "Group categories", url: "/products/sub-categories", icon: Boxes, color: "#a855f7", important: false },
+        { id: "purchases", title: labels.addPurchases, subtitle: "Record purchases", url: "/purchases", icon: CreditCard, color: "#2563eb", important: true },
+        { id: "suppliers", title: labels.suppliers, subtitle: "Manage suppliers", url: "/suppliers", icon: Truck, color: "#2563eb", important: false },
+        { id: "purchase-returns", title: labels.purchaseReturns, subtitle: "Return to supplier", url: "/purchase-returns", icon: RotateCcw, color: "#b45309", important: false },
+        { id: "product-return", title: labels.productReturns, subtitle: "Customer returns", url: "/product-return", icon: RotateCcw, color: "#b45309", important: false },
+        { id: "customers", title: labels.customers, subtitle: "Manage customers", url: "/customers", icon: Users, color: "#0891b2", important: true },
+        { id: "wastage", title: labels.wastage, subtitle: "Track wastage", url: "/wastage", icon: Package, color: "#dc2626", important: false },
+        { id: "qarza", title: labels.qarzaAccounts, subtitle: "Credit accounts", url: "/qarzaAccount", icon: Wallet, color: "#b45309", important: false },
+        { id: "expenses", title: labels.expenses, subtitle: "Track spending", url: "/expenses", icon: DollarSign, important: true, color: "#dc2626" },
+        { id: "pos", title: labels.pos, subtitle: "Create new sales", url: "/pos", icon: ShoppingCart, color: "#2563eb", important: true },
+        { id: "order-history", title: labels.orderHistory, subtitle: "Past orders", url: "/order-history", icon: ClipboardList, color: "#0891b2", important: false },
+        { id: "settings", title: labels.settings, subtitle: "App preferences", url: "/settings/generals", icon: Settings, color: "#6d5d52", important: false },
+        { id: "reports", title: labels.reports, subtitle: "All reports", url: "/reports", icon: BarChart3, color: "#0f766e", important: true },
+        { id: "report-inventory", title: labels.inventoryReport, subtitle: "Stock levels", url: "/reports/giant-inventory", icon: Package, color: "#a855f7", important: false },
+        { id: "report-staff", title: labels.staffReport, subtitle: "Staff performance", url: "/reports/staff", icon: Users, color: "#0891b2", important: false },
+        { id: "report-credits", title: labels.creditsDebits, subtitle: "Credit & debit", url: "/reports/credits-debits", icon: Wallet, color: "#b45309", important: false },
+        { id: "report-expenses", title: labels.expenseKpi, subtitle: "Expense KPIs", url: "/reports/expenses", icon: DollarSign, color: "#dc2626", important: false },
+        { id: "report-sales", title: labels.salesKpi, subtitle: "Sales KPIs", url: "/reports/sales", icon: TrendingUp, color: "#0f766e", important: false },
+        { id: "report-purchases", title: labels.purchaseKpi, subtitle: "Purchase KPIs", url: "/reports/purchases", icon: CreditCard, color: "#2563eb", important: false },
+        { id: "report-suppliers", title: labels.supplierKpi, subtitle: "Supplier KPIs", url: "/reports/suppliers", icon: Truck, color: "#2563eb", important: false },
+        { id: "report-customers", title: labels.customerKpi, subtitle: "Customer KPIs", url: "/reports/customers", icon: Users, color: "#0891b2", important: false },
+        { id: "staff", title: labels.staff, subtitle: "Manage staff", url: "/staff", icon: UserCog, color: "#6d5d52", important: true },
+        { id: "staff-create", title: labels.addStaff, subtitle: "Add new staff", url: "/staff/create", icon: UserPlus, color: "#6d5d52", important: false },
+        { id: "staff-attendance", title: labels.attendance, subtitle: "Mark attendance", url: "/staff/attendance", icon: CalendarCheck, color: "#0f766e", important: false },
+        { id: "profile", title: labels.profile, subtitle: "Your account", url: "/profile", icon: Users, color: "#0891b2", important: false },
+        { id: "users", title: labels.appUsers, subtitle: "App users", url: "/users", icon: Settings, color: "#6d5d52", important: true },
     ];
 
     const LINKS_BY_ID = ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l }), {});
@@ -182,73 +183,179 @@ const QuickActions = () => {
                 </PermissionGuard>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredItems.map((item) => {
                     const Icon = item.icon;
                     const visible = visibility[item.id];
                     const CardWrapper = isEditMode ? "div" : Link;
 
                     return (
-                        <CardWrapper
-                            key={item.id}
-                            to={!isEditMode ? item.url : undefined}
-                            draggable={isEditMode}
-                            onDragStart={
-                                isEditMode
-                                    ? () => handleDragStart(item.id)
-                                    : undefined
-                            }
-                            onDragOver={
-                                isEditMode
-                                    ? (e) => handleDragOver(e, item.id)
-                                    : undefined
-                            }
-                            onDragEnd={isEditMode ? handleDragEnd : undefined}
-                            onClick={
-                                isEditMode
-                                    ? () => toggleVisibility(item.id)
-                                    : undefined
-                            }
-                            className={`
-                relative group flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-300 no-underline
-                ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer hover:shadow-md hover:-translate-y-1"}
-                ${visible ? "bg-(--surface) shadow-[0_10px_24px_rgba(64,45,28,0.10)]" : "bg-(--surface-muted) grayscale opacity-50"}
-                ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 shadow-[0_16px_30px_rgba(15,118,110,0.22)]" : "border border-(--border)"}
-              `}
-                        >
-                            {isEditMode && (
-                                <>
-                                    <div className="absolute top-1 left-1 text-(--muted) opacity-60">
-                                        <GripVertical size={14} />
-                                    </div>
-                                    <div
-                                        className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-md z-20 ${
-                                            visible
-                                                ? "bg-(--accent-2) border-white text-white scale-110"
-                                                : "bg-(--surface) border-(--border) text-(--muted)"
-                                        }`}
-                                    >
-                                        {visible ? (
-                                            <Check size={12} strokeWidth={4} />
-                                        ) : (
-                                            <Plus size={12} strokeWidth={4} />
-                                        )}
-                                    </div>
-                                </>
-                            )}
+            //             <CardWrapper
+            //                 key={item.id}
+            //                 to={!isEditMode ? item.url : undefined}
+            //                 draggable={isEditMode}
+            //                 onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
+            //                 onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
+            //                 onDragEnd={isEditMode ? handleDragEnd : undefined}
+            //                 onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
+            //                 className={`
+            //     relative group flex flex-col p-5 rounded-2xl transition-all duration-300 no-underline overflow-hidden border
+            //     ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+            //     ${visible ? "shadow-[0_10px_28px_rgba(64,45,28,0.1)]" : "grayscale opacity-50"}
+            //     ${!isEditMode && visible ? "hover:shadow-[0_16px_36px_rgba(64,45,28,0.16)] hover:-translate-y-1" : ""}
+            //     ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 ring-offset-(--app-bg)" : ""}
+            //   `}
+            //                 style={{
+            //                     background: "var(--surface)",
+            //                     borderColor: "var(--border)",
+            //                 }}
+            //             >
+            //                 {isEditMode && (
+            //                     <>
+            //                         <div className="absolute top-3 left-3 text-(--muted) opacity-60">
+            //                             <GripVertical size={14} />
+            //                         </div>
+            //                         <div
+            //                             className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-20 ${
+            //                                 visible
+            //                                     ? "bg-(--accent-2) border-white text-white scale-110"
+            //                                     : "bg-(--surface) border-(--border) text-(--muted)"
+            //                             }`}
+            //                         >
+            //                             {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
+            //                         </div>
+            //                     </>
+            //                 )}
 
-                            <div
-                                className={`mb-2 text-(--accent) transition-all duration-300 ${!isEditMode && "group-hover:scale-110"}`}
-                            >
-                                <Icon size={24} />
-                            </div>
+            //                 {/* Top row: icon + Quick badge */}
+            //                 <div className="flex items-start justify-between mb-4 relative z-10">
+            //                     <div
+            //                         className="flex items-center justify-center w-14 h-14 rounded-2xl transition-transform duration-300 group-hover:scale-105"
+            //                         style={{
+            //                             background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
+            //                             border: `1px solid ${item.color}33`,
+            //                         }}
+            //                     >
+            //                         <Icon size={26} strokeWidth={2.2} style={{ color: item.color }} />
+            //                     </div>
 
-                            <span
-                                className={`text-[11px] font-semibold uppercase tracking-wide text-center truncate w-full transition-colors ${visible ? "text-(--ink)" : "text-(--muted)"}`}
-                            >
-                                {item.title}
-                            </span>
-                        </CardWrapper>
+            //                     <span
+            //                         className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+            //                         style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
+            //                     >
+            //                         Quick
+            //                     </span>
+            //                 </div>
+
+            //                 {/* Title + subtitle */}
+            //                 <div className="relative z-10 mb-5">
+            //                     <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
+            //                     <p className="text-xs text-(--muted) mt-1 truncate">{item.subtitle}</p>
+            //                 </div>
+
+            //                 {/* Open module footer */}
+            //                 <div
+            //                     className="mt-auto relative z-10 flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold transition-colors duration-300"
+            //                     style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+            //                 >
+            //                     <span>{labels.openModule || "Open Module"}</span>
+            //                     <ArrowRight
+            //                         size={14}
+            //                         strokeWidth={2.5}
+            //                         className="transition-transform duration-300 group-hover:translate-x-1"
+            //                         style={{ color: "var(--accent-2)" }}
+            //                     />
+            //                 </div>
+            //             </CardWrapper>
+
+            <CardWrapper
+    key={item.id}
+    to={!isEditMode ? item.url : undefined}
+    draggable={isEditMode}
+    onDragStart={isEditMode ? () => handleDragStart(item.id) : undefined}
+    onDragOver={isEditMode ? (e) => handleDragOver(e, item.id) : undefined}
+    onDragEnd={isEditMode ? handleDragEnd : undefined}
+    onClick={isEditMode ? () => toggleVisibility(item.id) : undefined}
+    className={`
+        relative group flex flex-col justify-end h-44 rounded-2xl transition-all duration-300 no-underline overflow-hidden border
+        ${isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+        ${visible ? "shadow-[0_10px_28px_rgba(64,45,28,0.1)]" : "grayscale opacity-50"}
+        ${!isEditMode && visible ? "hover:shadow-[0_16px_36px_rgba(64,45,28,0.18)] hover:-translate-y-1" : ""}
+        ${isEditMode && visible ? "ring-2 ring-(--accent-2) ring-offset-2 ring-offset-(--app-bg)" : ""}
+    `}
+    style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+>
+    {/* Big background icon — vertically centered, offset from right edge */}
+    <div
+        className="absolute top-1/2 right-4 -translate-y-1/2 transition-transform duration-300 group-hover:scale-110"
+        style={{ color: item.color, opacity: 0.18 }}
+    >
+        <Icon size={88} strokeWidth={1.5} />
+    </div>
+
+    {/* Gradient overlay cutting across the icon, left-to-right */}
+    <div
+        className="absolute inset-0"
+        style={{
+            background: `linear-gradient(90deg, var(--surface) 35%, transparent 55%, transparent 70%, var(--surface) 95%), linear-gradient(180deg, transparent 0%, var(--surface) 85%)`,
+        }}
+    />
+
+    {isEditMode && (
+        <>
+            <div className="absolute top-3 left-3 text-(--muted) opacity-60 z-20">
+                <GripVertical size={14} />
+            </div>
+            <div
+                className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl z-30 ${
+                    visible
+                        ? "bg-(--accent-2) border-white text-white scale-110"
+                        : "bg-(--surface) border-(--border) text-(--muted)"
+                }`}
+            >
+                {visible ? <Check size={14} strokeWidth={4} /> : <Plus size={14} strokeWidth={4} />}
+            </div>
+        </>
+    )}
+
+    {/* Small icon chip + Quick badge */}
+    <div className="absolute top-4 left-5 right-5 z-10 flex items-center justify-between">
+        <div
+            className="flex items-center justify-center w-10 h-10 rounded-xl"
+            style={{
+                background: `linear-gradient(135deg, ${item.color}26 0%, ${item.color}12 100%)`,
+                border: `1px solid ${item.color}33`,
+            }}
+        >
+            <Icon size={20} strokeWidth={2.2} style={{ color: item.color }} />
+        </div>
+        <span
+            className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+            style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
+        >
+            Quick
+        </span>
+    </div>
+
+    {/* Title + subtitle + footer */}
+    <div className="relative z-10 px-5 pb-4 pt-2">
+        <h3 className="text-base font-bold text-(--ink) truncate">{item.title}</h3>
+        <p className="text-xs text-(--muted) mt-1 truncate mb-3">{item.subtitle}</p>
+
+        <div
+            className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-colors duration-300"
+            style={{ background: "var(--surface-muted)", color: "var(--ink)" }}
+        >
+            <span>{labels.openModule || "Open Module"}</span>
+            <ArrowRight
+                size={14}
+                strokeWidth={2.5}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+                style={{ color: "var(--accent-2)" }}
+            />
+        </div>
+    </div>
+</CardWrapper>
                     );
                 })}
             </div>
@@ -273,355 +380,3 @@ const QuickActions = () => {
 export default QuickActions;
 
 
-
-
-
-
-
-
-
-// import React, { useState } from "react";
-// import { Link } from "react-router-dom";
-// import {
-//     Search,
-//     Pencil,
-//     Check,
-//     Plus,
-//     BarChart3,
-//     Wallet,
-//     ShoppingCart,
-//     Users,
-//     DollarSign,
-//     CreditCard,
-//     Package,
-//     TrendingUp,
-//     Settings,
-//     Link as LinkIcon,
-//     X,
-//     Trash2,
-// } from "lucide-react";
-
-// const sidebarData = (language = "en") => ({
-//     navMain: [
-//         {
-//             id: "Sale",
-//             title: language === "en" ? "POS" : "سیل",
-//             url: "/pos",
-//             icon: ShoppingCart,
-//         },
-//         {
-//             id: "Stock & Expenses",
-//             title: "Add Products",
-//             url: "/products/add",
-//             icon: Package,
-//         },
-//         {
-//             id: "Purchases",
-//             title: "Add Purchases",
-//             url: "/purchases/add",
-//             icon: CreditCard,
-//         },
-//         {
-//             id: "StaffPos",
-//             title: "Staff POS",
-//             url: "/staff/pos",
-//             icon: Users,
-//         },
-//         {
-//             id: "Settings",
-//             title: "App Users",
-//             url: "/users",
-//             icon: Settings,
-//         },
-//     ],
-// });
-
-// const QuickActions = () => {
-//     const [searchQuery, setSearchQuery] = useState("");
-//     const [isEditMode, setIsEditMode] = useState(false);
-//     const [showAddModal, setShowAddModal] = useState(false);
-
-//     const rawLinks = sidebarData("en").navMain;
-
-//     const [items, setItems] = useState(
-//         rawLinks.map((link) => ({
-//             ...link,
-//             visible: true,
-//             type: "system",
-//         })),
-//     );
-
-//     const [newLink, setNewLink] = useState({
-//         title: "",
-//         url: items[0].url,
-//         iconKey: items[0].id,
-//         color: "text-(--accent-2)",
-//     });
-
-//     const toggleVisibility = (id) => {
-//         setItems(
-//             items.map((item) =>
-//                 item.id === id ? { ...item, visible: !item.visible } : item,
-//             ),
-//         );
-//     };
-
-//     const removeItem = (e, id) => {
-//         e.stopPropagation();
-//         e.preventDefault();
-//         setItems(items.filter((item) => item.id !== id));
-//     };
-
-//     const handleAddCustomLink = (e) => {
-//         e.preventDefault();
-//         if (!newLink.title || !newLink.url) return;
-//         setItems([
-//             ...items,
-//             {
-//                 id: `custom-${Date.now()}`,
-//                 title: newLink.title,
-//                 url: newLink.url,
-//                 icon: LinkIcon,
-//                 color: newLink.color,
-//                 visible: true,
-//                 type: "custom",
-//             },
-//         ]);
-//         setShowAddModal(false);
-//     };
-
-//     const filteredItems = items.filter((item) => {
-//         const matchesSearch = item.title
-//             .toLowerCase()
-//             .includes(searchQuery.toLowerCase());
-//         return matchesSearch && (isEditMode || item.visible);
-//     });
-
-//     return (
-//         <div className="min-h-[calc(100vh-200px)] bg-(--surface) rounded-3xl p-6 border border-(--border) shadow-[0_18px_50px_rgba(64,45,28,0.12)]">
-//             {/* Small Header Bar */}
-//             <div className="mb-6 flex items-center justify-between gap-3">
-//                 <div className="relative flex-1 group">
-//                     <Search
-//                         className="absolute left-3 top-1/2 -translate-y-1/2 text-(--muted) group-focus-within:text-(--accent-2) transition-colors"
-//                         size={16}
-//                     />
-//                     <input
-//                         type="text"
-//                         placeholder="Search modules..."
-//                         className="w-full max-w-sm pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-(--surface-muted) border border-(--border) focus:ring-2 focus:ring-(--accent-2) shadow-[0_8px_20px_rgba(64,45,28,0.08)] transition-all outline-none"
-//                         value={searchQuery}
-//                         onChange={(e) => setSearchQuery(e.target.value)}
-//                     />
-//                 </div>
-
-//                 <button
-//                     onClick={() => setIsEditMode(!isEditMode)}
-//                     className={`flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 ${
-//                         isEditMode
-//                             ? "bg-(--accent-2) border-(--accent-2) text-white shadow-[0_10px_20px_rgba(15,118,110,0.25)]"
-//                             : "bg-(--surface) border-(--border) text-(--muted) hover:text-(--accent-2) hover:border-(--accent-2) shadow-[0_8px_16px_rgba(64,45,28,0.08)]"
-//                     }`}
-//                 >
-//                     {isEditMode ? (
-//                         <Check size={18} strokeWidth={3} />
-//                     ) : (
-//                         <Pencil size={18} />
-//                     )}
-//                 </button>
-//             </div>
-
-//             {/* Small Grid */}
-//             <div>
-//                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-//                     {filteredItems.map((item) => {
-//                         const Icon = item.icon;
-//                         const CardWrapper = isEditMode ? "div" : Link;
-
-//                         return (
-//                             <CardWrapper
-//                                 key={item.id}
-//                                 to={!isEditMode ? item.url : undefined}
-//                                 onClick={
-//                                     isEditMode
-//                                         ? () => toggleVisibility(item.id)
-//                                         : undefined
-//                                 }
-//                                 className={`
-//                   relative group flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-300 no-underline
-//                   ${isEditMode ? "cursor-pointer" : "cursor-pointer hover:shadow-md hover:-translate-y-1"}
-//                   ${item.visible ? "bg-(--surface) shadow-[0_10px_24px_rgba(64,45,28,0.10)]" : "bg-(--surface-muted) grayscale opacity-50"}
-//                   ${isEditMode && item.visible ? "ring-2 ring-(--accent-2) ring-offset-2 shadow-[0_16px_30px_rgba(15,118,110,0.22)]" : "border border-(--border)"}
-//                 `}
-//                             >
-//                                 {isEditMode && (
-//                                     <>
-//                                         <div
-//                                             className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-md z-20 ${
-//                                                 item.visible
-//                                                     ? "bg-(--accent-2) border-white text-white scale-110"
-//                                                     : "bg-(--surface) border-(--border) text-(--muted)"
-//                                             }`}
-//                                         >
-//                                             {item.visible ? (
-//                                                 <Check
-//                                                     size={12}
-//                                                     strokeWidth={4}
-//                                                 />
-//                                             ) : (
-//                                                 <Plus
-//                                                     size={12}
-//                                                     strokeWidth={4}
-//                                                 />
-//                                             )}
-//                                         </div>
-//                                         <button
-//                                             onClick={(e) =>
-//                                                 removeItem(e, item.id)
-//                                             }
-//                                             className="absolute -top-1.5 -left-1.5 w-6 h-6 bg-(--accent) text-white rounded-full flex items-center justify-center border-2 border-white shadow-md hover:bg-[#92400e] transition-colors z-30"
-//                                         >
-//                                             <Trash2 size={12} />
-//                                         </button>
-//                                     </>
-//                                 )}
-
-//                                 <div
-//                                     className={`mb-2 text-(--accent) transition-all duration-300 ${!isEditMode && "group-hover:scale-110"}`}
-//                                 >
-//                                     <Icon size={24} />
-//                                 </div>
-
-//                                 <span
-//                                     className={`text-[11px] font-semibold uppercase tracking-wide text-center truncate w-full transition-colors ${item.visible ? "text-(--ink)" : "text-(--muted)"}`}
-//                                 >
-//                                     {item.title}
-//                                 </span>
-//                             </CardWrapper>
-//                         );
-//                     })}
-
-//                     {isEditMode && (
-//                         <div
-//                             onClick={() => setShowAddModal(true)}
-//                             className="relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-(--border) hover:border-(--accent-2) hover:bg-(--surface-muted) transition-all cursor-pointer group"
-//                         >
-//                             <div className="mb-2 text-(--muted) group-hover:text-(--accent-2) transition-colors">
-//                                 <Plus size={24} />
-//                             </div>
-//                             <span className="text-[10px] font-semibold uppercase tracking-wide text-(--muted) group-hover:text-(--accent-2) text-center">
-//                                 New
-//                             </span>
-//                         </div>
-//                     )}
-//                 </div>
-//             </div>
-
-//             {/* Compact Persistence Bar */}
-//             {isEditMode && !showAddModal && (
-//                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1f1a17]/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.35)] flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 border border-white/10">
-//                     <p className="text-xs font-medium text-[#e7d7c4] whitespace-nowrap">
-//                         Edit Shortcuts
-//                     </p>
-//                     <button
-//                         onClick={() => setIsEditMode(false)}
-//                         className="bg-(--accent-2) text-white hover:bg-[#0b5f59] text-[10px] font-black px-5 py-2 rounded-xl transition-all active:scale-95 uppercase tracking-wider"
-//                     >
-//                         Done
-//                     </button>
-//                 </div>
-//             )}
-
-//             {/* Compact Modal */}
-//             {showAddModal && (
-//                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-//                     <div className="bg-(--surface) w-full max-w-xs rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.25)] overflow-hidden animate-in zoom-in-95 duration-200 border border-(--border)">
-//                         <div className="p-6">
-//                             <div className="flex justify-between items-center mb-4">
-//                                 <h2 className="text-sm font-black uppercase tracking-tight text-(--ink)">
-//                                     Add Link
-//                                 </h2>
-//                                 <button
-//                                     onClick={() => setShowAddModal(false)}
-//                                     className="text-(--muted) hover:text-(--ink) transition-colors"
-//                                 >
-//                                     <X size={20} />
-//                                 </button>
-//                             </div>
-//                             <form
-//                                 onSubmit={handleAddCustomLink}
-//                                 className="space-y-4"
-//                             >
-//                                 <input
-//                                     autoFocus
-//                                     type="text"
-//                                     placeholder="Name"
-//                                     className="w-full bg-(--surface-muted) border border-(--border) rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-(--accent-2) outline-none"
-//                                     value={newLink.title}
-//                                     onChange={(e) =>
-//                                         setNewLink({
-//                                             ...newLink,
-//                                             title: e.target.value,
-//                                         })
-//                                     }
-//                                 />
-//                                 <select
-//                                     className="w-full bg-(--surface-muted) border border-(--border) rounded-2xl px-4 py-3 text-sm appearance-none focus:ring-2 focus:ring-(--accent-2) outline-none cursor-pointer"
-//                                     value={newLink.url}
-//                                     onChange={(e) => {
-//                                         const selected = rawLinks.find(
-//                                             (l) => l.url === e.target.value,
-//                                         );
-//                                         setNewLink({
-//                                             ...newLink,
-//                                             url: e.target.value,
-//                                             title:
-//                                                 newLink.title ||
-//                                                 (selected
-//                                                     ? selected.title
-//                                                     : ""),
-//                                         });
-//                                     }}
-//                                 >
-//                                     {rawLinks.map((link) => (
-//                                         <option key={link.id} value={link.url}>
-//                                             {link.title}
-//                                         </option>
-//                                     ))}
-//                                 </select>
-//                                 <div className="flex justify-between bg-(--surface-muted) p-2 rounded-2xl border border-(--border)">
-//                                     {[
-//                                         "text-(--accent)",
-//                                         "text-(--accent-2)",
-//                                         "text-(--ink)",
-//                                         "text-(--muted)",
-//                                     ].map((c) => (
-//                                         <button
-//                                             key={c}
-//                                             type="button"
-//                                             onClick={() =>
-//                                                 setNewLink({
-//                                                     ...newLink,
-//                                                     color: c,
-//                                                 })
-//                                             }
-//                                             className={`w-8 h-8 rounded-full border-2 border-white ${c.replace("text-", "bg-")} ${newLink.color === c ? "ring-2 ring-[color:var(--accent)]" : ""}`}
-//                                         />
-//                                     ))}
-//                                 </div>
-//                                 <button
-//                                     type="submit"
-//                                     className="w-full bg-(--accent) text-white font-bold text-xs uppercase tracking-widest py-3 rounded-2xl hover:bg-[#92400e] transition-all"
-//                                 >
-//                                     Save
-//                                 </button>
-//                             </form>
-//                         </div>
-//                     </div>
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default QuickActions;
