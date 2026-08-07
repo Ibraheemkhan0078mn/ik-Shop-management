@@ -110,16 +110,8 @@ export const dashboardApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: ['Dashboard'],
     }),
-
-    // Inventory Value by Category
-    getInventoryValueByCategory: build.query({
-      query: () => ({
-        url: '/dashboard/inventory-value-by-category',
-      }),
-      transformResponse: (response) => response.data,
-      providesTags: ['Dashboard'],
-    }),
   }),
+  tagTypes: ['Dashboard'],
 });
 
 export const {
@@ -134,5 +126,4 @@ export const {
   useGetSalesByCategoryQuery,
   useGetRetailVsWholesaleComparisonQuery,
   useGetStockLevelByCategoryQuery,
-  useGetInventoryValueByCategoryQuery,
 } = dashboardApi;

@@ -368,6 +368,7 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
         const OrderModel = getOrderModel();
+        const BatchModel = getBatchModel();
 
         const orders = await OrderModel.find({
             createdAt: { $gte: startDate, $lte: endDate },
@@ -377,17 +378,49 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
         const retailOrders = orders.filter(o => o.orderType === 'retail');
         const wholesaleOrders = orders.filter(o => o.orderType === 'wholesale');
 
-        const totalRevenue = orders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
-        const retailRevenue = retailOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
-        const wholesaleRevenue = wholesaleOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
+        let totalRevenue = 0;
+        let retailRevenue = 0;
+        let wholesaleRevenue = 0;
+        let totalCostOfGoodsSold = 0;
+
+        // Calculate revenue and cost from each order item
+        for (const order of orders) {
+            const orderRevenue = toNumber(order.totalAmount);
+            
+            if (order.orderType === 'retail') {
+                retailRevenue += orderRevenue;
+            } else if (order.orderType === 'wholesale') {
+                wholesaleRevenue += orderRevenue;
+            }
+            
+            totalRevenue += orderRevenue;
+
+            // Calculate cost from items
+            if (order.items && Array.isArray(order.items)) {
+                for (const item of order.items) {
+                    let costPrice = 0;
+                    
+                    // Get cost price from batch
+                    if (item.batchId) {
+                        const batch = await BatchModel.findById(item.batchId).lean();
+                        if (batch && batch.purchasePrice) {
+                            costPrice = toNumber(batch.purchasePrice);
+                        }
+                    }
+                    
+                    // Cost = costPrice × quantity
+                    totalCostOfGoodsSold += costPrice * toNumber(item.quantity);
+                }
+            }
+        }
+
         const totalOrders = orders.length;
         const avgOrderValue = totalOrders > 0 ? toNumber(totalRevenue / totalOrders) : 0;
         const retailAvg = retailOrders.length > 0 ? toNumber(retailRevenue / retailOrders.length) : 0;
         const wholesaleAvg = wholesaleOrders.length > 0 ? toNumber(wholesaleRevenue / wholesaleOrders.length) : 0;
 
-        // Calculate gross profit (revenue - cost of goods sold)
-        // This would need to be calculated from order items and their cost prices
-        const grossProfit = totalRevenue * 0.3; // Simplified - should be calculated from actual costs
+        // Simple profit calculation
+        const grossProfit = totalRevenue - totalCostOfGoodsSold;
         const grossMargin = totalRevenue > 0 ? toNumber((grossProfit / totalRevenue) * 100) : 0;
 
         return {
@@ -402,6 +435,7 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
             wholesaleAvgOrderValue: wholesaleAvg,
             grossProfit,
             grossMargin,
+            totalCostOfGoodsSold,
         };
     } catch (error) {
         console.error('Error fetching sales revenue KPIs:', error);
@@ -417,6 +451,7 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
             wholesaleAvgOrderValue: 0,
             grossProfit: 0,
             grossMargin: 0,
+            totalCostOfGoodsSold: 0,
         };
     }
 };
@@ -927,80 +962,6 @@ export const getStockLevelByCategory = async () => {
         }));
     } catch (error) {
         console.error('Error fetching stock level by category:', error);
-        return [];
-    }
-};
-
-// Inventory Value by Category
-export const getInventoryValueByCategory = async () => {
-    try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
-        const CategoryModel = getCategoryModel();
-
-        const data = await ProductModel.aggregate([
-            { $match: { isActive: true } },
-            {
-                $lookup: {
-                    from: 'batches',
-                    localField: '_id',
-                    foreignField: 'product',
-                    as: 'batches'
-                }
-            },
-            {
-                $project: {
-                    category: 1,
-                    totalValue: {
-                        $sum: {
-                            $map: {
-                                input: '$batches',
-                                as: 'batch',
-                                in: { 
-                                    $cond: [
-                                        { $eq: ['$$batch.isActive', true] },
-                                        { $multiply: ['$$batch.quantity', '$$batch.costPrice'] },
-                                        0
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: '$category',
-                    totalValue: { $sum: '$totalValue' }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    name: { $ifNull: ['$category.name', 'Uncategorized'] },
-                    totalValue: 1
-                }
-            },
-            { $sort: { totalValue: -1 } }
-        ]);
-
-        const totalValue = data.reduce((sum, d) => sum + toNumber(d.totalValue), 0);
-
-        return data.map(d => ({
-            name: d.name,
-            value: toNumber(d.totalValue),
-            percentage: totalValue > 0 ? toNumber((d.totalValue / totalValue) * 100) : 0,
-        }));
-    } catch (error) {
-        console.error('Error fetching inventory value by category:', error);
         return [];
     }
 };

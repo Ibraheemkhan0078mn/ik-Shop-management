@@ -74,6 +74,9 @@ export default function SalesRevenueKPIs({ filter = '30D' }) {
           label={labels.grossProfit}
           value={kpis?.grossProfit}
           subLabel={`${kpis?.grossMargin}% ${labels.margin}`}
+          secondary={{
+            [labels.costOfGoodsSold || "COGS"]: kpis?.totalCostOfGoodsSold,
+          }}
           icon={TrendingUp}
           color="bg-emerald-500"
           loading={isLoading}

@@ -70,7 +70,6 @@ export const dashboardLabels = {
     unitsSold: "Units Sold",
     stockLevel: "Stock Level",
     stockLevelByCategory: "Stock Level by Category",
-    inventoryValueByCategory: "Inventory Value by Category",
     
     // Time filters
     last7Days: "Last 7 Days",
@@ -201,7 +200,6 @@ export const dashboardLabels = {
     unitsSold: "فروخت یونٹس",
     stockLevel: "اسٹاک لیول",
     stockLevelByCategory: "زمرہ کے لحاظ سے اسٹاک لیول",
-    inventoryValueByCategory: "زمرہ کے لحاظ سے انوینٹری ویلیو",
     
     // Time filters
     last7Days: "پچھلے 7 دن",
@@ -334,7 +332,6 @@ export const dashboardLabels = {
     unitsSold: "فروخت یونٹس / Units Sold",
     stockLevel: "اسٹاک لیول / Stock Level",
     stockLevelByCategory: "زمرہ کے لحاظ سے اسٹاک لیول / Stock Level by Category",
-    inventoryValueByCategory: "زمرہ کے لحاظ سے انوینٹری ویلیو / Inventory Value by Category",
     
     // Time filters
     last7Days: "پچھلے 7 دن / Last 7 Days",

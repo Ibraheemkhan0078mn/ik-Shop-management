@@ -53,7 +53,4 @@ router.get("/retail-wholesale", getRetailVsWholesaleComparisonData);
 // Stock Level by Category
 router.get("/stock-by-category", getStockLevelByCategoryData);
 
-// Inventory Value by Category
-router.get("/inventory-value-by-category", getInventoryValueByCategoryData);
-
 export default router;

@@ -12,7 +12,6 @@ import {
     getSalesByCategory,
     getRetailVsWholesaleComparison,
     getStockLevelByCategory,
-    getInventoryValueByCategory,
 } from "./dashboard.service.js";
 
 export const getDashboard = asyncHandler(async (req, res) => {
