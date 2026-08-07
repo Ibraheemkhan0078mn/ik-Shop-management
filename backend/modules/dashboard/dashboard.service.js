@@ -367,13 +367,15 @@ export const getDashboardData = async () => {
 export const getSalesRevenueKPIs = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
-        const BatchModel = getBatchModel();
+        
+        // Import service functions
+        const { findOrderService } = await import('../pos/services/order.crud.js');
+        const { findByIdBatchService } = await import('../productPurchases/services/batch.crud.js');
 
-        const orders = await OrderModel.find({
+        const orders = await findOrderService({
             createdAt: { $gte: startDate, $lte: endDate },
             status: 'completed'
-        });
+        }, { sort: { createdAt: -1 } });
 
         const retailOrders = orders.filter(o => o.orderType === 'retail');
         const wholesaleOrders = orders.filter(o => o.orderType === 'wholesale');
@@ -400,9 +402,9 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
                 for (const item of order.items) {
                     let costPrice = 0;
                     
-                    // Get cost price from batch
+                    // Get cost price from batch using service
                     if (item.batchId) {
-                        const batch = await BatchModel.findById(item.batchId).lean();
+                        const batch = await findByIdBatchService(item.batchId);
                         if (batch && batch.purchasePrice) {
                             costPrice = toNumber(batch.purchasePrice);
                         }
@@ -459,16 +461,19 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
 // Inventory Alert KPIs
 export const getInventoryAlertKPIs = async (range = '30D') => {
     try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
+        // Import service functions
+        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { countProductService } = await import('../product/services/product.crud.js');
+        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
+        
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
         const [batches, totalProducts, totalBatches] = await Promise.all([
-            BatchModel.find({ isActive: true }).lean(),
-            ProductModel.countDocuments({ isActive: true }),
-            BatchModel.countDocuments({ isActive: true }),
+            findBatchService({ isActive: true }),
+            countProductService({ isActive: true }),
+            countBatchService({ isActive: true }),
         ]);
 
         const expiringSoon = batches.filter(b => 
@@ -516,26 +521,28 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
 // Expiry Products (paginated)
 export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => {
     try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
+        // Import service functions
+        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
+        
         const now = new Date();
         const daysRange = range === '7D' ? 7 : 30;
         const expiryDate = new Date(now.getTime() + daysRange * 24 * 60 * 60 * 1000);
 
-        const batches = await BatchModel.find({
+        const query = {
             isActive: true,
             expiryDate: { $gte: now, $lte: expiryDate }
-        })
-        .populate('product')
-        .sort({ expiryDate: 1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+        };
 
-        const total = await BatchModel.countDocuments({
-            isActive: true,
-            expiryDate: { $gte: now, $lte: expiryDate }
-        });
+        const [batches, total] = await Promise.all([
+            findBatchService(query, {
+                populate: ['product'],
+                sort: { expiryDate: 1 },
+                skip: (page - 1) * limit,
+                limit
+            }),
+            countBatchService(query)
+        ]);
 
         const data = batches.map(b => {
             const daysRemaining = Math.ceil((new Date(b.expiryDate) - now) / (1000 * 60 * 60 * 24));
@@ -562,7 +569,12 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
         console.error('Error fetching expiry products:', error);
         return {
             data: [],
-            pagination: { total: 0, page, limit, totalPages: 0 },
+            pagination: {
+                total: 0,
+                page,
+                limit,
+                totalPages: 0,
+            },
         };
     }
 };
@@ -570,24 +582,25 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
 // Low Stock Products (paginated)
 export const getLowStockProducts = async (page = 1, limit = 10) => {
     try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
+        // Import service functions
+        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
 
-        const batches = await BatchModel.find({
+        const batches = await findBatchService({
             isActive: true,
             quantity: { $gt: 0 }
-        })
-        .populate('product')
-        .sort({ quantity: 1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+        }, {
+            populate: ['product'],
+            sort: { quantity: 1 },
+            skip: (page - 1) * limit,
+            limit
+        });
 
         const lowStockBatches = batches.filter(b => 
             toNumber(b.quantity) < toNumber(b.minStock || 5)
         );
 
-        const total = await BatchModel.countDocuments({
+        const total = await countBatchService({
             isActive: true,
             quantity: { $gt: 0, $lt: 5 }
         });
@@ -623,20 +636,21 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
 // Out of Stock Products (paginated)
 export const getOutOfStockProducts = async (page = 1, limit = 10) => {
     try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
+        // Import service functions
+        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
 
-        const batches = await BatchModel.find({
+        const batches = await findBatchService({
             isActive: true,
             quantity: 0
-        })
-        .populate('product')
-        .sort({ updatedAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+        }, {
+            populate: ['product'],
+            sort: { updatedAt: -1 },
+            skip: (page - 1) * limit,
+            limit
+        });
 
-        const total = await BatchModel.countDocuments({
+        const total = await countBatchService({
             isActive: true,
             quantity: 0
         });
@@ -904,62 +918,54 @@ export const getRetailVsWholesaleComparison = async (range = '30D') => {
 // Stock Level by Category
 export const getStockLevelByCategory = async () => {
     try {
-        const BatchModel = getBatchModel();
-        const ProductModel = getProductModel();
-        const CategoryModel = getCategoryModel();
+        // Import service functions
+        const { findProductService } = await import('../product/services/product.crud.js');
+        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { findCategoryService } = await import('../product/services/category.crud.js');
 
-        const data = await ProductModel.aggregate([
-            { $match: { isActive: true } },
-            {
-                $lookup: {
-                    from: 'batches',
-                    localField: '_id',
-                    foreignField: 'product',
-                    as: 'batches'
+        // Get all active products
+        const products = await findProductService({ isActive: true });
+        
+        // Get all active batches
+        const batches = await findBatchService({ isActive: true });
+        
+        // Get all categories
+        const categories = await findCategoryService({});
+        
+        // Group batches by product
+        const batchesByProduct = {};
+        batches.forEach(batch => {
+            if (batch.product) {
+                if (!batchesByProduct[batch.product]) {
+                    batchesByProduct[batch.product] = [];
                 }
-            },
-            {
-                $project: {
-                    category: 1,
-                    totalStock: {
-                        $sum: {
-                            $map: {
-                                input: '$batches',
-                                as: 'batch',
-                                in: { $cond: [{ $eq: ['$$batch.isActive', true] }, '$$batch.quantity', 0] }
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: '$category',
-                    totalStock: { $sum: '$totalStock' }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    name: { $ifNull: ['$category.name', 'Uncategorized'] },
-                    totalStock: 1
-                }
-            },
-            { $sort: { totalStock: -1 } }
-        ]);
+                batchesByProduct[batch.product].push(batch);
+            }
+        });
+        
+        // Calculate stock by category
+        const categoryStock = {};
+        products.forEach(product => {
+            const categoryId = product.category?.toString() || 'uncategorized';
+            const productBatches = batchesByProduct[product._id?.toString()] || [];
+            const totalStock = productBatches.reduce((sum, batch) => sum + toNumber(batch.quantity), 0);
+            
+            if (!categoryStock[categoryId]) {
+                categoryStock[categoryId] = 0;
+            }
+            categoryStock[categoryId] += totalStock;
+        });
+        
+        // Map to category names
+        const data = Object.keys(categoryStock).map(categoryId => {
+            const category = categories.find(c => c._id?.toString() === categoryId);
+            return {
+                name: category?.name || 'Uncategorized',
+                stockLevel: toNumber(categoryStock[categoryId]),
+            };
+        }).sort((a, b) => b.stockLevel - a.stockLevel);
 
-        return data.map(d => ({
-            name: d.name,
-            stockLevel: toNumber(d.totalStock),
-        }));
+        return data;
     } catch (error) {
         console.error('Error fetching stock level by category:', error);
         return [];
