@@ -383,7 +383,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     if (!isOpen) return null;
 
     return (
-        <>
+        <React.Fragment>
             {editingRefund && (
                 <OrderReturnRefundModal
                     orderReturn={editData}
@@ -643,7 +643,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 </div>
             </div>
             </div>
-        </>
+        </React.Fragment>
     );
 };
 

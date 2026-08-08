@@ -67,15 +67,10 @@ export const getUserByIdWithPasswordController = asyncHandler(async (req, res, n
 
 export const createUserByAdminController = asyncHandler(async (req, res, next) => {
     const UserModel = getLocalUserModel();
-    const { email, password, confirmPassword, name } = req.body;
+    const { email, password, name } = req.body;
 
     if (!name || !email || !password) {
         return next(new ErrorResponse("Name, email, and password are required", 400));
-    }
-
-    // Only check password match if confirmPassword is provided
-    if (confirmPassword && password !== confirmPassword) {
-        return next(new ErrorResponse("Passwords do not match", 400));
     }
 
     if (password.length < 6) {
@@ -87,7 +82,7 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
         return next(new ErrorResponse("A user with this email already exists", 400));
     }
 
-    const { confirmPassword: _, ...userData } = req.body;
+    const userData = req.body;
     
     // Encrypt password before storing
     if (userData.password && !isPasswordEncrypted(userData.password)) {

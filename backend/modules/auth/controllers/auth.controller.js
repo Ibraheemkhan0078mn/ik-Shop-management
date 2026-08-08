@@ -206,12 +206,8 @@ async function verifyAndRespond(user, plainPassword, res, next, successMessage, 
 
 export const registerUser = asyncHandler(async (req, res, next) => {
     const validatedData = req.body || {};
-    const { email, password, confirmPassword, role } = validatedData;
+    const { email, password, role } = validatedData;
 
-    if (password !== confirmPassword) { 
-        return next(new ErrorResponse("Passwords do not match", 400));
-    }
- 
     // Check if user already exists locally
     const userExists = await findUserByEmailService(email);
     if (userExists) {
@@ -246,7 +242,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
         // Continue with local registration if online check fails
     }
   
-    const { confirmPassword: _, ...userData } = validatedData;
+    const userData = validatedData;
     // Encrypt password before storing
     userData.password = encryptPassword(userData.password);
     const user = await userCreateService(userData);

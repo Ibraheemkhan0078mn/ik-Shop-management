@@ -11,7 +11,6 @@ export const authLabels = {
     email: "Email Address",
     phone: "Phone Number",
     password: "Password",
-    confirmPassword: "Confirm Password",
     role: "Role",
     
     // Buttons
@@ -23,7 +22,6 @@ export const authLabels = {
     forgotPassword: "Forgot password?",
     
     // Messages
-    passwordsDoNotMatch: "Passwords do not match",
     loginSuccess: "Login successful",
     signupSuccess: "Account created successfully",
     loginFailed: "Login failed",
@@ -47,7 +45,6 @@ export const authLabels = {
     email: "ای میل ایڈریس",
     phone: "فون نمبر",
     password: "پاس ورڈ",
-    confirmPassword: "پاس ورڈ کی تصدیق کریں",
     role: "کردار",
     
     // Buttons
@@ -59,7 +56,6 @@ export const authLabels = {
     forgotPassword: "پاس ورڈ بھول گئے؟",
     
     // Messages
-    passwordsDoNotMatch: "پاس ورڈز مماثل نہیں ہیں",
     loginSuccess: "لاگ ان کامیاب",
     signupSuccess: "اکاؤنٹ کامیابی سے بنایا گیا",
     loginFailed: "لاگ ان ناکام",
@@ -83,7 +79,6 @@ export const authLabels = {
     email: "ای میل ایڈریس / Email Address",
     phone: "فون نمبر / Phone Number",
     password: "پاس ورڈ / Password",
-    confirmPassword: "پاس ورڈ کی تصدیق کریں / Confirm Password",
     role: "کردار / Role",
     
     // Buttons
@@ -95,7 +90,6 @@ export const authLabels = {
     forgotPassword: "پاس ورڈ بھول گئے؟ / Forgot password?",
     
     // Messages
-    passwordsDoNotMatch: "پاس ورڈز مماثل نہیں ہیں / Passwords do not match",
     loginSuccess: "لاگ ان کامیاب / Login successful",
     signupSuccess: "اکاؤنٹ کامیابی سے بنایا گیا / Account created successfully",
     loginFailed: "لاگ ان ناکام / Login failed",

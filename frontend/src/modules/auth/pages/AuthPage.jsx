@@ -6,7 +6,6 @@ import { Eye, EyeOff, BarChart3, Shield, Zap, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthLabels } from "../labels/authLabels.js";
 
-const SAVED_CREDS_KEY = "savedCredentials";
 const LANGUAGE_KEY = "appLanguage";
 
 const getFeatureList = (labels) => [
@@ -39,25 +38,11 @@ export default function AuthPage() {
 
   const [isLoginMode,      setIsLoginMode]      = useState(true);
   const [showPassword,     setShowPassword]      = useState(false);
-  const [rememberMe,       setRememberMe]        = useState(false);
   const [isSubmitting,     setIsSubmitting]      = useState(false);
   const [formData,         setFormData]          = useState(EMPTY_FORM);
   const emailInputRef       = React.useRef(null);
   const nameInputRef       = React.useRef(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SAVED_CREDS_KEY);
-      if (!raw) return;
-      const { email, password, rememberMe: saved } = JSON.parse(raw);
-      if (saved) {
-        setFormData(prev => ({ ...prev, email, password }));
-        setRememberMe(true);
-      }
-    } catch {
-      localStorage.removeItem(SAVED_CREDS_KEY);
-    }
-  }, []);
 
   // Separate useEffect for auto-focus to avoid conflicts
   useEffect(() => {
@@ -102,9 +87,6 @@ export default function AuthPage() {
     setIsSubmitting(true);
     try {
       if (isLoginMode) {
-        rememberMe
-          ? localStorage.setItem(SAVED_CREDS_KEY, JSON.stringify({ email: formData.email, password: formData.password, rememberMe: true }))
-          : localStorage.removeItem(SAVED_CREDS_KEY);
         const response = await loginUser({ email: formData.email, password: formData.password, role: formData.role });
         console.log(response, "The data");
       } else {
@@ -293,23 +275,6 @@ export default function AuthPage() {
               )}
             </FormField>
 
-            {isLoginMode && (
-              <div className="flex items-center justify-between pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    id="auth-remember-me"
-                    type="checkbox" checked={rememberMe}
-                    onChange={e => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                    style={{ accentColor: "var(--accent-2)" }}
-                  />
-                  <span className="text-sm" style={{ color: "var(--muted)" }}>{labels.rememberMe}</span>
-                </label>
-                <button type="button" className="text-sm font-medium hover:underline text-primary">
-                  {labels.forgotPassword}
-                </button>
-              </div>
-            )}
 
             <button
               id="auth-submit-button"
