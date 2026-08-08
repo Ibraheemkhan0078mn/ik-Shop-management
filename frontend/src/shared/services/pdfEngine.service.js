@@ -1,3 +1,6 @@
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+
 /**
  * ============================================================================
  *  pdfEngine.js
@@ -61,31 +64,11 @@ function resolveElement(target) {
 }
 
 /**
- * Locates the html2canvas and jsPDF constructors regardless of whether
- * they were loaded via <script> tag (global window) or npm import.
+ * Locates the html2canvas and jsPDF constructors.
+ * Using ES module imports for offline/local usage.
  */
 function resolveLibs() {
-    const html2canvasFn =
-        typeof html2canvas !== "undefined"
-            ? html2canvas
-            : window.html2canvas;
-
-    const jsPDFCtor =
-        typeof jsPDF !== "undefined"
-            ? jsPDF
-            : window.jspdf && window.jspdf.jsPDF;
-
-    if (!html2canvasFn) {
-        throw new Error(
-            "[pdfEngine] html2canvas not found. Include it via CDN/npm before calling generatePdfFromElement()."
-        );
-    }
-    if (!jsPDFCtor) {
-        throw new Error(
-            "[pdfEngine] jsPDF not found. Include it via CDN/npm before calling generatePdfFromElement()."
-        );
-    }
-    return { html2canvasFn, jsPDFCtor };
+    return { html2canvasFn: html2canvas, jsPDFCtor: jsPDF };
 }
 
 /**

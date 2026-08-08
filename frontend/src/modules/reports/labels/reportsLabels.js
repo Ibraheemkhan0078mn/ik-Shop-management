@@ -135,6 +135,9 @@ export const reportsLabels = {
     ordersHandled: "Orders Handled",
     staffDetails: "Staff Details",
     exportPdf: "Export PDF",
+    previewReport: "Report Preview",
+    viewAndExportReport: "Zoom preview and export this report",
+    exporting: "Exporting...",
     
     // Credits & Debits Report
     creditsDebitsReport: "Credits & Debits Report",
@@ -382,6 +385,9 @@ export const reportsLabels = {
     ordersHandled: "آرڈرز ہینڈل کیے",
     staffDetails: "اسٹاف کی تفصیلات",
     exportPdf: "پی ڈی ایف ایکسپورٹ کریں",
+    previewReport: "رپورٹ کا پیش نظارہ",
+    viewAndExportReport: "اس رپورٹ کو برآمد کرنے سے پہلے زوم کریں اور دیکھیں",
+    exporting: "برآمد ہو رہا ہے...",
     
     // Credits & Debits Report
     creditsDebitsReport: "کریڈٹ اور ڈیبٹ رپورٹ",

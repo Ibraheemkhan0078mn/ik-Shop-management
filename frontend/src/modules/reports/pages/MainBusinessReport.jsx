@@ -1,8 +1,9 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter, ArrowDownRight, ArrowUpRight, HandCoins } from "lucide-react";
 import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
-import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import MainBusinessReportPdfTemplate from "../components/MainBusinessReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
@@ -273,7 +274,6 @@ export default function MainBusinessReport() {
         { value: "custom", label: labels.customRange },
     ], [labels]);
 
-    const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
@@ -406,7 +406,7 @@ export default function MainBusinessReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
-                <div ref={targetRef}>
+                <div>
 
                     {/* ===================== HERO: FINAL BUSINESS RESULT ===================== */}
                     {/* Moved to the top — this is the single number a business owner most
@@ -765,7 +765,31 @@ export default function MainBusinessReport() {
                 </div>
             )}
 
-           
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.mainBusinessReport}.pdf`}
+                labels={labels}
+            >
+                <MainBusinessReportPdfTemplate
+                    summary={summary}
+                    details={details}
+                    breakdowns={breakdowns}
+                    transactions={transactions}
+                    labels={labels}
+                    selectedPeriodLabel={selectedPeriodLabel}
+                    initialExpandedSections={{
+                        sales: true,
+                        purchases: true,
+                        expenses: true,
+                        salaries: true,
+                        purchaseReturns: true,
+                        productReturns: true,
+                        wastages: true,
+                        qarza: true,
+                    }}
+                />
+            </PdfModal>
         </div>
     );
 }    
