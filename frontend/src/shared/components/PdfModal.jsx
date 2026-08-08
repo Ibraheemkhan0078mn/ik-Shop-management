@@ -1,6 +1,167 @@
 import React, { useRef, useState } from "react";
 import { X, ZoomIn, ZoomOut, Download, Loader2 } from "lucide-react";
-import { generatePdfFromElement } from "../services/pdfEngine.service.js";
+import html2canvas from "html2canvas-pro";
+import { jsPDF } from "jspdf";
+
+/**
+ * ============================================================================
+ *  PDF engine (inlined) — converts a DOM element into a pixel-perfect PDF.
+ *  Uses html2canvas-pro (drop-in fork of html2canvas with oklch/oklab/
+ *  color-mix/lab/lch support), so no CSS/color patching is needed anymore.
+ * ============================================================================
+ */
+
+/**
+ * Resolves the target DOM node from an id string, a ref object, or a
+ * direct HTMLElement.
+ */
+function resolveElement(target) {
+    if (target instanceof HTMLElement) return target;
+
+    if (target && typeof target === "object" && "current" in target) {
+        if (!target.current) {
+            throw new Error("[pdfEngine] The ref you passed has no `current` element (is it mounted yet?).");
+        }
+        return target.current;
+    }
+
+    if (typeof target === "string") {
+        const el = document.getElementById(target);
+        if (!el) {
+            throw new Error(`[pdfEngine] No element found with id "${target}".`);
+        }
+        return el;
+    }
+
+    throw new Error("[pdfEngine] Invalid target. Pass an element id, a ref, or an HTMLElement.");
+}
+
+/**
+ * Temporarily strips scroll clipping / transforms that can cause
+ * html2canvas to crop or misalign the captured image, then restores them.
+ */
+function withCleanCapture(el, callback) {
+    const original = {
+        overflow: el.style.overflow,
+        height: el.style.height,
+        maxHeight: el.style.maxHeight,
+        transform: el.style.transform,
+    };
+
+    el.style.overflow = "visible";
+    el.style.maxHeight = "none";
+    el.style.height = "auto";
+    el.style.transform = "none";
+
+    try {
+        return callback();
+    } finally {
+        el.style.overflow = original.overflow;
+        el.style.height = original.height;
+        el.style.maxHeight = original.maxHeight;
+        el.style.transform = original.transform;
+    }
+}
+
+/**
+ * Converts a DOM element into a pixel-perfect, zero-margin PDF and
+ * triggers a download (or returns the PDF instance).
+ */
+async function generatePdfFromElement(target, options = {}) {
+    const {
+        fileName = "document.pdf",
+        scale = 3,
+        backgroundColor = "#ffffff",
+        multiPage = true,
+        download = true,
+    } = options;
+
+    const element = resolveElement(target);
+
+    // 1. Take a high-resolution screenshot of the element exactly as rendered.
+    const canvas = await withCleanCapture(element, () =>
+        html2canvas(element, {
+            scale,
+            useCORS: true,
+            backgroundColor,
+            logging: false,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight,
+        })
+    );
+
+    const canvasWidthPx = canvas.width;
+    const canvasHeightPx = canvas.height;
+
+    const pxToMm = (px) => (px / scale) * (25.4 / 96);
+
+    const pdfWidthMm = pxToMm(canvasWidthPx);
+    const pdfHeightMm = pxToMm(canvasHeightPx);
+
+    const imgData = canvas.toDataURL("image/png", 1.0);
+
+    let pdf;
+
+    if (!multiPage) {
+        pdf = new jsPDF({
+            orientation: pdfWidthMm > pdfHeightMm ? "landscape" : "portrait",
+            unit: "mm",
+            format: [pdfWidthMm, pdfHeightMm],
+        });
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
+    } else {
+        const A4_WIDTH_MM = 210;
+        const A4_HEIGHT_MM = 297;
+
+        const scaledHeightMm = (canvasHeightPx * A4_WIDTH_MM) / canvasWidthPx;
+
+        pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+        });
+
+        if (scaledHeightMm <= A4_HEIGHT_MM) {
+            pdf.addImage(imgData, "PNG", 0, 0, A4_WIDTH_MM, scaledHeightMm, undefined, "FAST");
+        } else {
+            const pageHeightPx = (A4_HEIGHT_MM * canvasWidthPx) / A4_WIDTH_MM;
+            let renderedHeightPx = 0;
+            let pageIndex = 0;
+
+            const sliceCanvas = document.createElement("canvas");
+            const sliceCtx = sliceCanvas.getContext("2d");
+            sliceCanvas.width = canvasWidthPx;
+
+            while (renderedHeightPx < canvasHeightPx) {
+                const remaining = canvasHeightPx - renderedHeightPx;
+                const thisSliceHeightPx = Math.min(pageHeightPx, remaining);
+
+                sliceCanvas.height = thisSliceHeightPx;
+                sliceCtx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                sliceCtx.drawImage(
+                    canvas,
+                    0, renderedHeightPx, canvasWidthPx, thisSliceHeightPx,
+                    0, 0, canvasWidthPx, thisSliceHeightPx
+                );
+
+                const sliceImgData = sliceCanvas.toDataURL("image/png", 1.0);
+                const sliceHeightMm = (thisSliceHeightPx * A4_WIDTH_MM) / canvasWidthPx;
+
+                if (pageIndex > 0) pdf.addPage();
+                pdf.addImage(sliceImgData, "PNG", 0, 0, A4_WIDTH_MM, sliceHeightMm, undefined, "FAST");
+
+                renderedHeightPx += thisSliceHeightPx;
+                pageIndex += 1;
+            }
+        }
+    }
+
+    if (download) {
+        pdf.save(fileName);
+    }
+
+    return pdf;
+}
 
 export default function PdfModal({
     isOpen,
@@ -25,16 +186,14 @@ export default function PdfModal({
 
         setIsExporting(true);
         try {
-            // Reset zoom to 1 for accurate PDF capture
             const originalZoom = zoom;
             setZoom(1);
-            
-            // Wait for zoom to apply
+
             await new Promise(resolve => setTimeout(resolve, 100));
 
             await generatePdfFromElement(previewRef.current, {
                 fileName,
-                scale: 2, // Reduced from 3 for faster generation
+                scale: 2,
                 pdfScale: 0.94,
                 backgroundColor: '#ffffff',
                 multiPage: true,
@@ -44,7 +203,6 @@ export default function PdfModal({
                 ...pdfOptions,
             });
 
-            // Restore zoom
             setZoom(originalZoom);
         } catch (error) {
             console.error("PDF export failed:", error);
