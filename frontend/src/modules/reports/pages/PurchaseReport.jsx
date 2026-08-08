@@ -4,6 +4,8 @@ import { useGetPurchaseReportQuery } from "../services/reports.service.js";
 import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import { useNavigate } from "react-router-dom";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import PurchaseReportPdfTemplate from "../components/PurchaseReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
@@ -14,6 +16,7 @@ export default function PurchaseReport() {
     const labels = getReportsLabels(language);
 
     // ---- UI state ----
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -86,10 +89,19 @@ export default function PurchaseReport() {
                         {labels.purchaseDataFor} <span className="font-medium text-[var(--ink)]">{period === "custom" ? `${fromDate || "?"} → ${toDate || "?"}` : period}</span>
                     </p>
                 </div>
-                <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
-                    <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    {labels.refresh}
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
+                        {labels.refresh}
+                    </button>
+                    <button
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                        style={{ background: 'var(--accent-2)' }}
+                    >
+                        {labels.exportPdf}
+                    </button>
+                </div>
             </div>
 
             {/* Filter bar */}
@@ -393,6 +405,22 @@ export default function PurchaseReport() {
                     </div>
                 </div>
             )}
+
+            {/* PDF Modal */}
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.purchaseReport}.pdf`}
+                labels={labels}
+            >
+                <PurchaseReportPdfTemplate
+                    summary={summary}
+                    supplierBreakdown={supplierBreakdown}
+                    purchases={purchases}
+                    labels={labels}
+                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
+                />
+            </PdfModal>
         </div>
     );
 }

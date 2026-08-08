@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Wallet, RefreshCw, Filter, Eye, ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import CreditsDebitsReportPdfTemplate from "../components/CreditsDebitsReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
@@ -14,6 +16,7 @@ export default function CreditsDebitsReport() {
     const [accountType, setAccountType] = useState("all");
     const [status, setStatus] = useState("all");
     const [search, setSearch] = useState("");
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [showLedger, setShowLedger] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -240,10 +243,19 @@ export default function CreditsDebitsReport() {
                         {labels.creditsDebitsAnalysis}
                     </p>
                 </div>
-                <button onClick={fetchReport} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
-                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                    {labels.refresh}
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={fetchReport} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                        {labels.refresh}
+                    </button>
+                    <button
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                        style={{ background: 'var(--accent-2)' }}
+                    >
+                        {labels.exportPdf}
+                    </button>
+                </div>
             </div>
 
             {/* Filter bar */}
@@ -452,6 +464,20 @@ export default function CreditsDebitsReport() {
                     )}
                 </div>
             )}
+
+            {/* PDF Modal */}
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.creditsDebitsReport}.pdf`}
+                labels={labels}
+            >
+                <CreditsDebitsReportPdfTemplate
+                    reportData={reportData}
+                    labels={labels}
+                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
+                />
+            </PdfModal>
         </div>
     );
 }

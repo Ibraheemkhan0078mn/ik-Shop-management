@@ -1,8 +1,9 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Percent, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useGetExpenseReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
-import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import ExpenseReportPdfTemplate from "../components/ExpenseReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
@@ -162,7 +163,6 @@ export default function ExpenseReport() {
         { value: "custom", label: labels.customRange },
     ], [labels]);
 
-    const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
@@ -292,7 +292,7 @@ export default function ExpenseReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
-                <div ref={targetRef}>
+                <div>
                     {/* KPI Grid Row 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <KpiCard 
@@ -463,13 +463,21 @@ export default function ExpenseReport() {
             )}
 
             {/* PDF Modal */}
-            {isPdfModalOpen && (
-                <PdfPreviewModal
-                    title={labels.expenseReport}
-                    contentRef={targetRef}
-                    onClose={() => setIsPdfModalOpen(false)}
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.expenseReport}.pdf`}
+                labels={labels}
+            >
+                <ExpenseReportPdfTemplate
+                    summary={summary}
+                    details={details}
+                    breakdowns={breakdowns}
+                    transactions={transactions}
+                    labels={labels}
+                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : labels[period] || period}
                 />
-            )}
+            </PdfModal>
         </div>
     );
 }

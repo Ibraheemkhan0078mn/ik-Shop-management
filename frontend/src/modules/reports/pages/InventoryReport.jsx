@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Package, AlertTriangle, TrendingUp, RefreshCw, Filter, Search, ArrowUpDown, Box, Clock, RotateCcw, Zap } from "lucide-react";
 import { useGetInventoryReportQuery } from "../services/reports.service.js";
 import { useGetCategoriesQuery } from "../../productsModule/services/category.service.js";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import InventoryReportPdfTemplate from "../components/InventoryReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
@@ -47,6 +49,7 @@ export default function InventoryReport() {
     const [productCode, setProductCode] = useState("");
     const [tag, setTag] = useState("");
     const [sortBy, setSortBy] = useState("createdAt");
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
     // Calculate date range based on period
     const getDatesFromPeriod = (periodValue) => {
@@ -122,10 +125,19 @@ export default function InventoryReport() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.inventoryReport}</h1>
                     <p className="text-sm text-[var(--muted)]">{labels.inventoryAnalysis}</p>
                 </div>
-                <button onClick={() => refetch()} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
-                    <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
-                    {labels.refresh}
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={() => refetch()} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
+                        {labels.refresh}
+                    </button>
+                    <button
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                        style={{ background: 'var(--accent-2)' }}
+                    >
+                        {labels.exportPdf}
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -401,6 +413,20 @@ export default function InventoryReport() {
                     </div>
                 </div>
             )}
+
+            {/* PDF Modal */}
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.inventoryReport}.pdf`}
+                labels={labels}
+            >
+                <InventoryReportPdfTemplate
+                    reportData={reportData}
+                    labels={labels}
+                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
+                />
+            </PdfModal>
         </div>
     );
 }

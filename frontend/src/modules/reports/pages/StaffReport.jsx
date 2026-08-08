@@ -1,9 +1,10 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Download, RefreshCw, Users, DollarSign, TrendingUp, Clock, Calendar, Filter } from "lucide-react";
 import { useGetStaffReportQuery } from "../services/reports.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
-import PdfPreviewModal from "../../../shared/components/PdfPreviewModal.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import StaffReportPdfTemplate from "../components/StaffReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 import { 
@@ -17,7 +18,6 @@ export default function StaffReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const targetRef = useRef(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
@@ -178,7 +178,7 @@ export default function StaffReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
-                <div ref={targetRef}>
+                <div>
                     {/* KPI Grid Row 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <KpiCard 
@@ -341,13 +341,20 @@ export default function StaffReport() {
             )}
 
             {/* PDF Modal */}
-            {isPdfModalOpen && (
-                <PdfPreviewModal
-                    title={labels.staffReport}
-                    contentRef={targetRef}
-                    onClose={() => setIsPdfModalOpen(false)}
+            <PdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                fileName={`${labels.staffReport}.pdf`}
+                labels={labels}
+            >
+                <StaffReportPdfTemplate
+                    summary={summary}
+                    details={details}
+                    staffMetrics={staffMetrics}
+                    labels={labels}
+                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : labels[period] || period}
                 />
-            )}
+            </PdfModal>
         </div>
     );
 }
