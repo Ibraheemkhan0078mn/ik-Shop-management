@@ -1,9 +1,12 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Package, DollarSign, AlertTriangle, FileText, User } from "lucide-react";
-import { useWastage } from "../services/wastage.service.js";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Calendar, Package, DollarSign, FileText, Download } from "lucide-react";
 import { getWastageLabels } from "../labels/wastageLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
+import { useWastage } from "../services/wastage.service.js";
+import { useState } from "react";
+import WastageDetailPdfTemplate from "../components/WastageDetailPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
 
 const STATUS_STYLE = {
     draft:    { background: "rgba(107,114,128,0.1)", color: "#6b7280", text: "Draft" },
@@ -15,6 +18,7 @@ const STATUS_STYLE = {
 export default function WastageDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [showPdfModal, setShowPdfModal] = useState(false);
     
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -45,20 +49,31 @@ export default function WastageDetail() {
                 >
                     <ArrowLeft size={20} className="text-[var(--ink)]" />
                 </button>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
-                        {labels.wastageDetails || "Wastage Details"}
-                    </h1>
-                    <p className="text-sm text-[var(--muted)]">
-                        {wastage?.wastageNumber || "—"}
-                    </p>
+                <div className="flex-1 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
+                            {labels.wastageDetails || "Wastage Details"}
+                        </h1>
+                        <p className="text-sm text-[var(--muted)]">
+                            {wastage?.wastageNumber || "—"}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowPdfModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                        >
+                            <Download size={16} />
+                            Export Details
+                        </button>
+                        <span 
+                            className="px-4 py-2 rounded-lg text-sm font-semibold"
+                            style={{ background: statusStyle.background, color: statusStyle.color }}
+                        >
+                            {statusStyle.text}
+                        </span>
+                    </div>
                 </div>
-                <span 
-                    className="px-4 py-2 rounded-lg text-sm font-semibold"
-                    style={{ background: statusStyle.background, color: statusStyle.color }}
-                >
-                    {statusStyle.text}
-                </span>
             </div>
 
             {/* Main Content */}
@@ -206,6 +221,16 @@ export default function WastageDetail() {
                     </div>
                 </div>
             </div>
+            {showPdfModal && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => setShowPdfModal(false)}
+                    fileName={`Wastage-${wastage?.wastageNumber || 'details'}.pdf`}
+                    labels={labels}
+                >
+                    <WastageDetailPdfTemplate wastage={wastage} labels={labels} />
+                </PdfModal>
+            )}
         </div>
     );
 }

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Package, DollarSign, FileText, Edit, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Package, DollarSign, FileText, Edit, Trash2, Plus, Download } from "lucide-react";
 import { usePurchase, useGetPurchasePayments, useDeletePurchasePayment } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
+import PurchaseDetailPdfTemplate from "../components/PurchaseDetailPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { usePermissionGuard } from "../../../shared/hooks/usePermissionGuard.js";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
@@ -21,6 +23,7 @@ export default function PurchaseDetail() {
     const { id } = useParams();
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState(null);
+    const [showPdfModal, setShowPdfModal] = useState(false);
     
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -87,20 +90,31 @@ export default function PurchaseDetail() {
                     >
                         <ArrowLeft size={20} className="text-[var(--ink)]" />
                     </button>
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
-                            {labels.purchaseDetails || "Purchase Details"}
-                        </h1>
-                        <p className="text-sm text-[var(--muted)]">
-                            {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
-                        </p>
+                    <div className="flex-1 flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
+                                {labels.purchaseDetails || "Purchase Details"}
+                            </h1>
+                            <p className="text-sm text-[var(--muted)]">
+                                {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setShowPdfModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                            >
+                                <Download size={16} />
+                                {labels.exportDetails || "Export Details"}
+                            </button>
+                            <span 
+                                className="px-4 py-2 rounded-lg text-sm font-semibold"
+                                style={{ background: statusStyle.background, color: statusStyle.color }}
+                            >
+                                {statusStyle.text}
+                            </span>
+                        </div>
                     </div>
-                    <span 
-                        className="px-4 py-2 rounded-lg text-sm font-semibold"
-                        style={{ background: statusStyle.background, color: statusStyle.color }}
-                    >
-                        {statusStyle.text}
-                    </span>
                 </div>
 
                 {/* Summary Section */}
@@ -376,6 +390,16 @@ export default function PurchaseDetail() {
                     }}
                     onSuccess={handlePaymentSuccess}
                 />
+            )}
+            {showPdfModal && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => setShowPdfModal(false)}
+                    fileName={`Purchase-${purchase?.purchaseNumber || purchase?.invoiceNumber || 'details'}.pdf`}
+                    labels={labels}
+                >
+                    <PurchaseDetailPdfTemplate purchase={purchase} payments={payments} labels={labels} />
+                </PdfModal>
             )}
         </>
     );

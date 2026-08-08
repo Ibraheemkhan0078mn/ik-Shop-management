@@ -1,7 +1,7 @@
 // src/modules/qarza/pages/EachQarzaAccountRecords.jsx
 import { useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Download } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
     useAccountPaymentsPaginated,
@@ -9,6 +9,8 @@ import {
     useDeleteQarzaPayment,
 } from "../services/qarza.service.js";
 import QarzaPaymentModal from "../components/QarzaPaymentModal.jsx";
+import QarzaPaymentPdfTemplate from "../components/QarzaPaymentPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -32,6 +34,8 @@ export default function EachQarzaAccountRecords() {
 
     const [modal, setModal] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [showPdfModal, setShowPdfModal] = useState(false);
+    const [selectedPaymentForPdf, setSelectedPaymentForPdf] = useState(null);
 
     const refresh = useCallback(() => { setCurrentPage(1); }, []);
 
@@ -88,6 +92,15 @@ export default function EachQarzaAccountRecords() {
                                 {new Date(item.date).toLocaleDateString()}
                             </div>
                             <div onClick={e => e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
+                                <button
+                                    onClick={() => {
+                                        setSelectedPaymentForPdf(item);
+                                        setShowPdfModal(true);
+                                    }}
+                                    className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                                >
+                                    <Download size={15} />
+                                </button>
                                 {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
                                     <button onClick={() => setModal({ mode: "update", payment: item })}
                                         className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)">
@@ -132,6 +145,16 @@ export default function EachQarzaAccountRecords() {
                                     </div>
                                 </div>
                                 <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedPaymentForPdf(item);
+                                            setShowPdfModal(true);
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
+                                    >
+                                        <Download size={14} />
+                                    </button>
                                     {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.update")) && (
                                         <button onClick={() => setModal({ mode: "update", payment: item })}
                                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
@@ -247,6 +270,24 @@ export default function EachQarzaAccountRecords() {
                     queryArgs={{ qarzaAccountId: id, page: currentPage, limit: 20 }}
                 />
             </div>
+            {showPdfModal && selectedPaymentForPdf && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => {
+                        setShowPdfModal(false);
+                        setSelectedPaymentForPdf(null);
+                    }}
+                    fileName={`Payment-${selectedPaymentForPdf._id}.pdf`}
+                    labels={{}}
+                >
+                    <QarzaPaymentPdfTemplate 
+                        payment={selectedPaymentForPdf} 
+                        account={summary?.account || {}} 
+                        summary={summary || {}} 
+                        labels={{}} 
+                    />
+                </PdfModal>
+            )}
         </div>
     );
 }

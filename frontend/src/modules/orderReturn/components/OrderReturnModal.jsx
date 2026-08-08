@@ -1,6 +1,6 @@
 // ─── components/OrderReturnModal.jsx ──────────────────────────────────────
 import React, { useState, useEffect } from "react";
-import { X, Search, ChevronUp, ChevronDown, Trash2, DollarSign, Plus, Edit2 } from "lucide-react";
+import { X, Search, ChevronUp, ChevronDown, Trash2, DollarSign, Plus, Edit2, Download } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import {
     useGenerateReturnNumberQuery,
@@ -11,6 +11,8 @@ import {
 } from "../api/orderReturn.api.js";
 import { useOrder } from "../../orders/services/orders.service.js";
 import OrderReturnRefundModal from "./OrderReturnRefundModal.jsx";
+import OrderReturnPdfTemplate from "../components/OrderReturnPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
 
 // ─── Constants ────────────────────────────────────────────────
 const RETURN_REASONS = [
@@ -178,6 +180,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const [submitting, setSubmitting] = useState(false);
     const [editingRefund, setEditingRefund] = useState(null);
     const [expandedCalculation, setExpandedCalculation] = useState({});
+    const [showPdfModal, setShowPdfModal] = useState(false);
 
     // RTK Query hooks
     const { data: returnNumberData } = useGenerateReturnNumberQuery(undefined, { skip: isEditMode || isViewMode || !isOpen });
@@ -389,6 +392,16 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     onSuccess={handleRefundSuccess}
                 />
             )}
+            {showPdfModal && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => setShowPdfModal(false)}
+                    fileName={`OrderReturn-${editData?.returnNumber || 'details'}.pdf`}
+                    labels={{}}
+                >
+                    <OrderReturnPdfTemplate orderReturn={editData} refunds={refundsList} labels={{}} />
+                </PdfModal>
+            )}
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-(--surface) rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
 
@@ -396,9 +409,20 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     <h2 className="text-xl font-semibold text-(--ink) font-display">
                         {isViewMode ? "View Order Return" : (isEditMode ? "Edit Order Return" : "Order Return")}
                     </h2>
-                    <button onClick={handleClose} className="p-2 hover:bg-(--app-bg) rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-(--muted)" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {isViewMode && (
+                            <button
+                                onClick={() => setShowPdfModal(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-(--accent-2) text-white rounded-lg hover:bg-(--accent-2)/90 text-sm font-medium"
+                            >
+                                <Download size={14} />
+                                Export
+                            </button>
+                        )}
+                        <button onClick={handleClose} className="p-2 hover:bg-(--app-bg) rounded-lg transition-colors">
+                            <X className="w-5 h-5 text-(--muted)" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -618,7 +642,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     )}
                 </div>
             </div>
-        </div>
+            </div>
         </>
     );
 };

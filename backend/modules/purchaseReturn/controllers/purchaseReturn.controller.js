@@ -214,7 +214,7 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
             throw new Error(`Batch not found: ${item.batchNumber}`);
         }
         if (batch.quantity < item.quantity) {
-            throw new Error(`Insufficient quantity in batch ${item.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}`);
+            throw new Error(`Insufficient quantity in batch ${item.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}. Please check if this batch has already been used or returned.`);
         }
     }
 

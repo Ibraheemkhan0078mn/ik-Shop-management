@@ -1,7 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrder } from "../services/orders.service.js";
-import { Receipt, Package, DollarSign, CreditCard, Percent, FileText, Copy } from "lucide-react";
+import { Receipt, Package, DollarSign, CreditCard, Percent, FileText, Copy, Download } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
+import OrderDetailsPdfTemplate from "../components/OrderDetailsPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import { useState } from "react";
 
 // ── Payment Method Configuration ───────────────────────────────────────
 const PAYMENT_METHODS = {
@@ -30,6 +33,7 @@ export default function OrderDetailsPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { data: order, isLoading, error } = useOrder(id, { skip: !id });
+    const [showPdfModal, setShowPdfModal] = useState(false);
     console.log(order, "The order data")
 
     const handleCopyOrderNumber = () => {
@@ -88,6 +92,15 @@ export default function OrderDetailsPage() {
                                 <Copy size={14} className="text-(--muted)" />
                             </button>
                         </div>
+                    }
+                    rightActions={
+                        <button
+                            onClick={() => setShowPdfModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-(--accent-2) text-white rounded-lg hover:bg-(--accent-2)/90 transition-all"
+                        >
+                            <Download size={16} />
+                            Export Details
+                        </button>
                     }
                 />
             </div>
@@ -352,7 +365,16 @@ export default function OrderDetailsPage() {
                     </div>
                 </div>
             </div>
+            {showPdfModal && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => setShowPdfModal(false)}
+                    fileName={`Order-${order?.orderNumber || 'details'}.pdf`}
+                    labels={{}}
+                >
+                    <OrderDetailsPdfTemplate order={order} labels={{}} />
+                </PdfModal>
+            )}
         </div>
     );
 }
-

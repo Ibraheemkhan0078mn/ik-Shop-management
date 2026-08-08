@@ -3201,7 +3201,12 @@ export const getExpenseReport = async (filters = {}) => {
 
     // Fetch data using service functions
     const [data, total, categoryList] = await Promise.all([
-        findExpenseService(matchQuery).populate("category", "name").sort({ createdAt: -1 }).skip(skip).limit(limit),
+        findExpenseService(matchQuery, { 
+            populate: "category", 
+            sort: { createdAt: -1 }, 
+            skip, 
+            limit 
+        }),
         countExpenseService(matchQuery),
         findExpenseCategoryService({})
     ]);

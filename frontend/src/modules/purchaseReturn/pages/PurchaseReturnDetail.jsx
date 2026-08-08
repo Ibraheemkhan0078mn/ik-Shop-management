@@ -1,12 +1,14 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Package, DollarSign, FileText, Plus, Edit2, Trash2, Receipt, X } from "lucide-react";
+import { ArrowLeft, Calendar, Package, DollarSign, FileText, Plus, Edit2, Trash2, Receipt, X, Download } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
 import { useGetPurchaseReturnPaymentsQuery } from "../services/purchaseReturn.service.js";
 import { useEffect, useState } from "react";
 import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
+import PurchaseReturnDetailPdfTemplate from "../components/PurchaseReturnDetailPdfTemplate.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import ReceiptTemplate from "../../../shared/components/ReceiptTemplate.jsx";
 
@@ -29,6 +31,7 @@ export default function PurchaseReturnDetail() {
     const [isLoading, setIsLoading] = useState(true);
     const [editingPayment, setEditingPayment] = useState(null);
     const [showReceipt, setShowReceipt] = useState(false);
+    const [showPdfModal, setShowPdfModal] = useState(false);
 
     const { data: payments, refetch: refetchPayments, isLoading: paymentsLoading } = useGetPurchaseReturnPaymentsQuery(id);
     const paymentsList = Array.isArray(payments) ? payments : (payments?.data || []);
@@ -136,14 +139,23 @@ export default function PurchaseReturnDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
                         {purchaseReturn.returnNumber}
                     </h1>
-                    <button
-                        onClick={() => setShowReceipt(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        title="Print Receipt"
-                    >
-                        <Receipt size={16} />
-                        Receipt
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowPdfModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-colors"
+                        >
+                            <Download size={16} />
+                            Export Details
+                        </button>
+                        <button
+                            onClick={() => setShowReceipt(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            title="Print Receipt"
+                        >
+                            <Receipt size={16} />
+                            Receipt
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -413,6 +425,16 @@ export default function PurchaseReturnDetail() {
                 </div>
             </div>
         </div>
+        {showPdfModal && (
+            <PdfModal
+                isOpen={showPdfModal}
+                onClose={() => setShowPdfModal(false)}
+                fileName={`PurchaseReturn-${purchaseReturn?.returnNumber || 'details'}.pdf`}
+                labels={labels}
+            >
+                <PurchaseReturnDetailPdfTemplate purchaseReturn={purchaseReturn} payments={paymentsList} labels={labels} />
+            </PdfModal>
+        )}
         </>
     );
 }
