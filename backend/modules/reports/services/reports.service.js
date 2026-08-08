@@ -21,6 +21,70 @@ import {
     getStaffAttendanceModel,
 } from "./reports.crud.js";
 
+// Service function imports
+import {
+    findOrderService,
+    countOrderService,
+    findByIdOrderService,
+} from '../../pos/services/order.crud.js';
+import {
+    findPurchaseService,
+    countPurchaseService,
+} from '../../productPurchases/services/purchase.crud.js';
+import {
+    findBatchService,
+    countBatchService,
+    findByIdBatchService,
+} from '../../productPurchases/services/batch.crud.js';
+import {
+    findSupplierService,
+    countSupplierService,
+} from '../../suppliers/services/supplier.crud.js';
+import {
+    findExpenseService,
+    countExpenseService,
+} from '../../expenses/services/expense.crud.js';
+import {
+    findExpenseCategoryService,
+} from '../../expenses/services/expenseCategory.crud.js';
+import {
+    findWastageService,
+    countWastageService,
+} from '../../wastage/services/wastage.crud.js';
+import {
+    findProductService,
+    countProductService,
+} from '../../product/services/product.crud.js';
+import {
+    findCustomerService,
+    countCustomerService,
+} from '../../customer/services/customer.crud.js';
+import {
+    findStaffService,
+    countStaffService,
+} from '../../staff/services/staff.crud.js';
+import {
+    findStaffSalaryPaymentService,
+} from '../../staff/services/staffSalaryPayment.crud.js';
+import {
+    findStaffAttendanceService,
+} from '../../staff/services/staffAttendance.crud.js';
+import {
+    findQarzaAccountService,
+    countQarzaAccountService,
+} from '../../qarza/services/qarzaAccount.crud.js';
+import {
+    findQarzaPaymentService,
+} from '../../qarza/services/qarzaPayment.crud.js';
+import {
+    findProductReturnService,
+    countProductReturnService,
+} from '../../productReturn/services/productReturn.crud.js';
+import {
+    findPurchaseReturnService,
+    countPurchaseReturnService,
+} from '../../purchaseReturn/services/purchaseReturn.crud.js';
+
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
     const filter = {};
@@ -73,88 +137,73 @@ const getMonthRange = () => {
 
 // Dashboard Summary
 export const getDashboardSummary = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const PurchaseModel = getPurchaseModel();
-    const ExpensesModel = getExpenseModel();
-    const BatchModel = getBatchModel();
-    const QarzaAccountModel = getQarzaAccountModel();
-    const SupplierModel = getSupplierModel();
-    const ProductModel = getProductModel();
-
     const { startOfDay, endOfDay } = getTodayRange();
 
-    // Today's Sales
-    const todaySales = await OrderModel.aggregate([
-        { $match: { createdAt: { $gte: startOfDay, $lt: endOfDay }, status: "completed" } },
-        { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+    // Get today's data using service functions
+    const [todayOrders, todayPurchases, todayExpenses, allBatches, allQarzaAccounts] = await Promise.all([
+        findOrderService({ createdAt: { $gte: startOfDay, $lt: endOfDay }, status: "completed" }),
+        findPurchaseService({ createdAt: { $gte: startOfDay, $lt: endOfDay } }),
+        findExpenseService({ createdAt: { $gte: startOfDay, $lt: endOfDay } }),
+        findBatchService({ isActive: true }),
+        findQarzaAccountService({})
     ]);
 
-    // Today's Purchases
-    const todayPurchases = await PurchaseModel.aggregate([
-        { $match: { createdAt: { $gte: startOfDay, $lt: endOfDay } } },
-        { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-    ]);
+    // Calculate today's sales
+    const salesTotal = todayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-    // Today's Expenses
-    const todayExpenses = await ExpensesModel.aggregate([
-        { $match: { createdAt: { $gte: startOfDay, $lt: endOfDay } } },
-        { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
+    // Calculate today's purchases
+    const purchasesTotal = todayPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+
+    // Calculate today's expenses
+    const expensesTotal = todayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
     // Today's Profit (Sales - Purchases - Expenses)
-    const salesTotal = todaySales[0]?.total || 0;
-    const purchasesTotal = todayPurchases[0]?.total || 0;
-    const expensesTotal = todayExpenses[0]?.total || 0;
     const todayProfit = salesTotal - purchasesTotal - expensesTotal;
 
     // Cash Balance (from today's cash payments)
-    const cashBalance = await OrderModel.aggregate([
-        { $match: { createdAt: { $gte: startOfDay, $lt: endOfDay }, paymentMethod: "cash", status: "completed" } },
-        { $group: { _id: null, total: { $sum: "$cashReceived" }, change: { $sum: "$change" } } }
-    ]);
-    const netCashBalance = (cashBalance[0]?.total || 0) - (cashBalance[0]?.change || 0);
+    const cashOrders = todayOrders.filter(o => o.paymentMethod === "cash");
+    const netCashBalance = cashOrders.reduce((sum, order) => {
+        return sum + (order.cashReceived || 0) - (order.change || 0);
+    }, 0);
 
     // Total Receivable (Qarza credit accounts)
-    const totalReceivable = await QarzaAccountModel.aggregate([
-        { $match: { type: "receivable" } },
-        { $group: { _id: null, total: { $sum: "$balance" } } }
-    ]);
+    const totalReceivable = allQarzaAccounts
+        .filter(q => q.type === "receivable")
+        .reduce((sum, q) => sum + (q.balance || 0), 0);
 
     // Total Payable (Qarza payable accounts)
-    const totalPayable = await QarzaAccountModel.aggregate([
-        { $match: { type: "payable" } },
-        { $group: { _id: null, total: { $sum: "$balance" } } }
-    ]);
+    const totalPayable = allQarzaAccounts
+        .filter(q => q.type === "payable")
+        .reduce((sum, q) => sum + (q.balance || 0), 0);
 
     // Inventory Value
-    const inventoryValue = await BatchModel.aggregate([
-        { $match: { quantity: { $gt: 0 }, isActive: true } },
-        { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$costPrice"] } } } }
-    ]);
+    const inventoryValue = allBatches
+        .filter(b => b.quantity > 0)
+        .reduce((sum, batch) => sum + (batch.quantity * (batch.costPrice || 0)), 0);
 
     // New Suppliers (today)
-    const newSuppliers = await SupplierModel.countDocuments({
+    const newSuppliers = await countSupplierService({
         createdAt: { $gte: startOfDay, $lt: endOfDay }
     });
 
     // Low Stock Count
-    const lowStockCount = await BatchModel.countDocuments({
+    const lowStockCount = await countBatchService({
         quantity: { $gt: 0, $lte: 10 },
         isActive: true
     });
 
     // Pending Credits (Qarza accounts with balance)
-    const pendingCredits = await QarzaAccountModel.countDocuments({ balance: { $gt: 0 } });
+    const pendingCredits = await countQarzaAccountService({ balance: { $gt: 0 } });
 
     return {
         todaySales: salesTotal,
         todayPurchase: purchasesTotal,
         todayProfit,
         cashBalance: netCashBalance,
-        totalReceivable: totalReceivable[0]?.total || 0,
-        totalPayable: totalPayable[0]?.total || 0,
+        totalReceivable,
+        totalPayable,
         todayExpense: expensesTotal,
-        inventoryValue: inventoryValue[0]?.total || 0,
+        inventoryValue,
         newSuppliers,
         lowStockCount,
         pendingCredits
@@ -163,7 +212,6 @@ export const getDashboardSummary = async (filters = {}) => {
 
 // Sales Report
 export const getSalesReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
     const { fromDate, toDate, customerType, customerId, paymentStatus, sortBy, sortOrder, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = { status: "completed" };
@@ -212,54 +260,43 @@ export const getSalesReport = async (filters = {}) => {
                       sortBy === "items" ? "itemsCount" : "createdAt";
     const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-    // Get orders with item count
-    const ordersWithStats = await OrderModel.aggregate([
-        { $match: matchQuery },
-        {
-            $addFields: {
-                itemsCount: { $size: "$items" },
-                paidAmount: { $ifNull: ["$paidAmount", 0] },
-                dueAmount: { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }
-            }
-        },
-        {
-            $sort: { [sortField]: sortDirection }
-        },
-        { $skip: skip },
-        { $limit: limit }
-    ]);
+    // Get orders using service function
+    const orders = await findOrderService(matchQuery, {
+        sort: { [sortField]: sortDirection },
+        skip,
+        limit
+    });
 
-    // Populate products for each order
+    // Calculate items count and add fields
+    const ordersWithStats = orders.map(order => ({
+        ...order,
+        itemsCount: order.items?.length || 0,
+        paidAmount: order.paidAmount || 0,
+        dueAmount: (order.totalAmount || 0) - (order.paidAmount || 0)
+    }));
+
+    // Populate products for each order using service
     const populatedOrders = await Promise.all(
         ordersWithStats.map(async (order) => {
-            const populatedOrder = await OrderModel.findById(order._id).populate('items.product');
+            const populatedOrder = await findByIdOrderService(order._id, { populate: ['items.product'] });
             return {
                 ...order,
-                items: populatedOrder.items
+                items: populatedOrder?.items || order.items
             };
         })
     );
 
-    // Get total count
-    const total = await OrderModel.countDocuments(matchQuery);
+    // Get total count using service
+    const total = await countOrderService(matchQuery);
 
-    // Calculate KPIs
-    const kpiData = await OrderModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: null,
-                totalSales: { $sum: "$totalAmount" },
-                totalPaid: { $sum: { $ifNull: ["$paidAmount", 0] } },
-                totalDue: { $sum: { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] } },
-                totalItems: { $sum: { $size: "$items" } },
-                totalOrders: { $sum: 1 }
-            }
-        }
-    ]);
+    // Calculate KPIs from the data
+    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalPaid = orders.reduce((sum, order) => sum + (order.paidAmount || 0), 0);
+    const totalDue = orders.reduce((sum, order) => sum + ((order.totalAmount || 0) - (order.paidAmount || 0)), 0);
+    const totalItems = orders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
+    const totalOrders = orders.length;
 
-    const kpi = kpiData[0] || { totalSales: 0, totalPaid: 0, totalDue: 0, totalItems: 0, totalOrders: 0 };
-    const averageOrderValue = kpi.totalOrders > 0 ? kpi.totalSales / kpi.totalOrders : 0;
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
 
     // Add rank to each order
     const rankedData = populatedOrders.map((order, index) => ({
@@ -274,19 +311,18 @@ export const getSalesReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalSales: kpi.totalSales,
-            totalOrders: kpi.totalOrders,
-            totalPaid: kpi.totalPaid,
-            totalDue: kpi.totalDue,
+            totalSales,
+            totalOrders,
+            totalPaid,
+            totalDue,
             averageOrderValue,
-            totalItems: kpi.totalItems
+            totalItems
         }
     };
 };
 
 // Purchase Report
 export const getPurchaseReport = async (filters = {}) => {
-    const PurchaseModel = getPurchaseModel();
     const { fromDate, toDate, supplierId, paymentStatus, deliveryStatus, isRejected, search, period, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -347,58 +383,55 @@ export const getPurchaseReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-        PurchaseModel.find(matchQuery, null, {
+        findPurchaseService(matchQuery, {
             populate: ["supplier"],
             sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
+            skip,
+            limit
         }),
-        PurchaseModel.countDocuments(matchQuery)
+        countPurchaseService(matchQuery)
     ]);
 
-    // Calculate totals and KPIs
-    const totals = await PurchaseModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: null,
-                totalPurchases: { $sum: "$totalAmount" },
-                totalPaid: { $sum: { $cond: [{ $eq: ["$paymentStatus", "full"] }, "$totalAmount", 0] } },
-                totalDue: { $sum: { $cond: [{ $ne: ["$paymentStatus", "full"] }, { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }, 0] } },
-                totalDeliveredCount: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
-                totalRejectedCount: { $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] } },
-                uniqueSuppliers: { $addToSet: "$supplier" }
-            }
+    // Calculate totals and KPIs from the data
+    const totalPurchases = data.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    const totalPaid = data.reduce((sum, purchase) => sum + (purchase.paymentStatus === "full" ? (purchase.totalAmount || 0) : 0), 0);
+    const totalDue = data.reduce((sum, purchase) => {
+        if (purchase.paymentStatus !== "full") {
+            return sum + ((purchase.totalAmount || 0) - (purchase.paidAmount || 0));
         }
-    ]);
-
-    const summary = totals[0] || {};
-    const totalSuppliers = summary.uniqueSuppliers ? summary.uniqueSuppliers.length : 0;
+        return sum;
+    }, 0);
+    const totalDeliveredCount = data.filter(p => p.status === "delivered").length;
+    const totalRejectedCount = data.filter(p => p.status === "rejected").length;
+    
+    // Get unique suppliers
+    const uniqueSuppliers = [...new Set(data.map(p => p.supplier?.toString()).filter(Boolean))];
+    const totalSuppliers = uniqueSuppliers.length;
 
     // Get supplier-wise breakdown
-    const supplierBreakdown = await PurchaseModel.aggregate([
-        { $match: matchQuery },
-        {
-            $lookup: {
-                from: "suppliers",
-                localField: "supplier",
-                foreignField: "_id",
-                as: "supplier"
-            }
-        },
-        { $unwind: "$supplier" },
-        {
-            $group: {
-                _id: "$supplier.name",
-                supplierId: { $first: "$supplier._id" },
-                totalAmount: { $sum: "$totalAmount" },
-                paidAmount: { $sum: { $cond: [{ $eq: ["$paymentStatus", "full"] }, "$totalAmount", { $ifNull: ["$paidAmount", 0] }] } },
-                dueAmount: { $sum: { $cond: [{ $ne: ["$paymentStatus", "full"] }, { $subtract: ["$totalAmount", { $ifNull: ["$paidAmount", 0] }] }, 0] } },
-                billsCount: { $sum: 1 }
-            }
-        },
-        { $sort: { totalAmount: -1 } }
-    ]);
+    const supplierMap = {};
+    data.forEach(purchase => {
+        const supplierId = purchase.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!supplierMap[supplierId]) {
+            supplierMap[supplierId] = {
+                supplierId,
+                supplierName: purchase.supplierName || 'Unknown',
+                totalAmount: 0,
+                paidAmount: 0,
+                dueAmount: 0,
+                billsCount: 0
+            };
+        }
+        
+        supplierMap[supplierId].totalAmount += purchase.totalAmount || 0;
+        supplierMap[supplierId].paidAmount += purchase.paymentStatus === "full" ? (purchase.totalAmount || 0) : (purchase.paidAmount || 0);
+        supplierMap[supplierId].dueAmount += purchase.paymentStatus !== "full" ? ((purchase.totalAmount || 0) - (purchase.paidAmount || 0)) : 0;
+        supplierMap[supplierId].billsCount += 1;
+    });
+
+    const supplierBreakdown = Object.values(supplierMap).sort((a, b) => b.totalAmount - a.totalAmount);
 
     return {
         data,
@@ -407,12 +440,12 @@ export const getPurchaseReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalPurchases: summary.totalPurchases || 0,
-            totalPaid: summary.totalPaid || 0,
-            totalDue: summary.totalDue || 0,
-            totalDeliveredCount: summary.totalDeliveredCount || 0,
-            totalRejectedCount: summary.totalRejectedCount || 0,
-            totalSuppliers: totalSuppliers,
+            totalPurchases,
+            totalPaid,
+            totalDue,
+            totalDeliveredCount,
+            totalRejectedCount,
+            totalSuppliers,
             totalBills: total
         },
         supplierBreakdown
@@ -422,10 +455,6 @@ export const getPurchaseReport = async (filters = {}) => {
 // Main Business Report
 // Sales KPI Report
 export const getSalesKPIReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const ProductModel = getProductModel();
-    const StaffModel = getStaffModel();
-    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates
@@ -525,147 +554,38 @@ export const getSalesKPIReport = async (filters = {}) => {
     const orderFilter = { ...dateFilter, status: "completed" };
     const previousOrderFilter = compareWithPrevious ? { ...previousDateFilter, status: "completed" } : null;
 
-    // Debug: log the filter to check
-    console.log('Sales KPI Report - dateFilter:', dateFilter);
-    console.log('Sales KPI Report - orderFilter:', orderFilter);
-
-    const [
-        totalSales,
-        totalOrders,
-        totalUnitsSold,
-        totalDiscount,
-        salesByPaymentMethod,
-        salesByOrderType,
-        salesByStaff,
-        topProducts,
-        salesByCategory,
-        salesByCustomer,
-        salesByDate,
-        productReturns,
-        staffList,
-        previousTotalSales,
-        previousSalesByDate
-    ] = await Promise.all([
-        // Total revenue
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]),
-        // Total transactions
-        OrderModel.countDocuments(orderFilter),
-        // Total units sold
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $unwind: "$items" },
-            { $group: { _id: null, totalUnits: { $sum: "$items.quantity" } } }
-        ]),
-        // Total discounts
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { _id: null, totalDiscount: { $sum: "$discountAmount" } } }
-        ]),
-        // Sales by payment method
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-            { $sort: { total: -1 } }
-        ]),
-        // Sales by order type (retail vs wholesale)
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { _id: "$orderType", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
-        // Sales by staff
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $lookup: { from: "staff", localField: "staffId", foreignField: "_id", as: "staff" } },
-            { $unwind: { path: "$staff", preserveNullAndEmptyArrays: true } },
-            { $group: { _id: { id: "$staff._id", name: "$staff.name" }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-            { $sort: { total: -1 } }
-        ]),
-        // Top selling products
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $unwind: "$items" },
-            { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
-            { $unwind: "$product" },
-            { $group: { 
-                _id: { productId: "$items.product", name: "$items.name", category: "$product.category", costPrice: "$product.costPrice" }, 
-                totalRevenue: { $sum: "$items.lineTotal" }, 
-                totalUnits: { $sum: "$items.quantity" },
-                count: { $sum: 1 },
-                totalCost: { $sum: { $multiply: ["$items.quantity", "$product.costPrice"] } }
-            } },
-            { $sort: { totalRevenue: -1 } },
-            { $limit: 20 }
-        ]),
-        // Sales by category (from products)
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $unwind: "$items" },
-            { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
-            { $unwind: "$product" },
-            { $group: { 
-                _id: "$product.category", 
-                total: { $sum: "$items.lineTotal" }, 
-                count: { $sum: 1 },
-                units: { $sum: "$items.quantity" }
-            } },
-            { $sort: { total: -1 } }
-        ]),
-        // Sales by customer
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { 
-                _id: "$customerName", 
-                total: { $sum: "$totalAmount" }, 
-                count: { $sum: 1 },
-                orderType: { $first: "$orderType" },
-                lastPurchase: { $max: "$createdAt" }
-            } },
-            { $sort: { total: -1 } },
-            { $limit: 20 }
-        ]),
-        // Sales by date (for trend chart)
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { 
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
-                total: { $sum: "$totalAmount" },
-                count: { $sum: 1 }
-            } },
-            { $sort: { _id: 1 } }
-        ]),
-        // Product returns for the period
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalReturns: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
-        ]),
-        // Get all staff for reference
-        StaffModel.find({}).select('name _id').lean(),
-        // Previous period total for comparison
-        previousOrderFilter ? OrderModel.aggregate([
-            { $match: previousOrderFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]) : Promise.resolve([{ total: 0 }]),
-        // Previous period sales by date
-        previousOrderFilter ? OrderModel.aggregate([
-            { $match: previousOrderFilter },
-            { $group: { 
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
-                total: { $sum: "$totalAmount" },
-                count: { $sum: 1 }
-            } },
-            { $sort: { _id: 1 } }
-        ]) : Promise.resolve([])
+    // Fetch all data using service functions
+    const [orders, productReturns, staffList, previousOrders] = await Promise.all([
+        findOrderService(orderFilter),
+        findProductReturnService(dateFilter),
+        findStaffService({}).select('name _id'),
+        previousOrderFilter ? findOrderService(previousOrderFilter) : []
     ]);
 
-    const totalRevenue = totalSales[0]?.total || 0;
-    const totalUnits = totalUnitsSold[0]?.totalUnits || 0;
-    const totalDiscountAmount = totalDiscount[0]?.totalDiscount || 0;
-    const totalReturnsAmount = productReturns[0]?.totalReturns || 0;
-    const returnCount = productReturns[0]?.count || 0;
-    const previousRevenue = previousTotalSales[0]?.total || 0;
+    const totalOrders = orders.length;
+    
+    // Calculate total revenue
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Calculate total units sold
+    let totalUnits = 0;
+    orders.forEach(order => {
+        if (order.items) {
+            order.items.forEach(item => {
+                totalUnits += item.quantity || 0;
+            });
+        }
+    });
+    
+    // Calculate total discount
+    const totalDiscountAmount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
+    
+    // Calculate total returns
+    const totalReturnsAmount = productReturns.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
+    const returnCount = productReturns.length;
+    
+    // Calculate previous revenue
+    const previousRevenue = previousOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
     // Calculate derived metrics
     const netSales = totalRevenue - totalDiscountAmount;
@@ -675,18 +595,24 @@ export const getSalesKPIReport = async (filters = {}) => {
     // Calculate trend percentage
     const revenueTrend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
-    // Calculate gross profit (assuming cost price from products)
-    const productCosts = await OrderModel.aggregate([
-        { $match: orderFilter },
-        { $unwind: "$items" },
-        { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
-        { $unwind: "$product" },
-        { $group: { 
-            _id: null, 
-            totalCost: { $sum: { $multiply: ["$items.quantity", "$product.costPrice"] } } 
-        } }
-    ]);
-    const totalCost = productCosts[0]?.totalCost || 0;
+    // Calculate gross profit from batches
+    let totalCost = 0;
+    
+    for (const order of orders) {
+        if (order.items) {
+            for (const item of order.items) {
+                let costPrice = 0;
+                if (item.batchId) {
+                    const batch = await findByIdBatchService(item.batchId);
+                    if (batch && batch.purchasePrice) {
+                        costPrice = batch.purchasePrice;
+                    }
+                }
+                totalCost += costPrice * (item.quantity || 0);
+            }
+        }
+    }
+    
     const grossProfit = totalRevenue - totalCost;
     const grossProfitMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(2) : 0;
 
@@ -709,7 +635,188 @@ export const getSalesKPIReport = async (filters = {}) => {
     }
     const dailyAverage = totalRevenue / daysCount;
 
-    // Calculate cash collected (for reconciliation)
+    // Calculate sales by payment method
+    const salesByPaymentMethodMap = {};
+    orders.forEach(order => {
+        const method = order.paymentMethod || 'unknown';
+        if (!salesByPaymentMethodMap[method]) {
+            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
+        }
+        salesByPaymentMethodMap[method].total += order.totalAmount || 0;
+        salesByPaymentMethodMap[method].count += 1;
+    });
+    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
+        _id: method,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => b.total - a.total);
+
+    // Calculate sales by order type
+    const salesByOrderTypeMap = {};
+    orders.forEach(order => {
+        const type = order.orderType || 'unknown';
+        if (!salesByOrderTypeMap[type]) {
+            salesByOrderTypeMap[type] = { total: 0, count: 0 };
+        }
+        salesByOrderTypeMap[type].total += order.totalAmount || 0;
+        salesByOrderTypeMap[type].count += 1;
+    });
+    const salesByOrderType = Object.entries(salesByOrderTypeMap).map(([type, data]) => ({
+        _id: type,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate sales by staff
+    const salesByStaffMap = {};
+    orders.forEach(order => {
+        const staffId = order.staffId?.toString();
+        const staff = staffList.find(s => s._id?.toString() === staffId);
+        const staffName = staff?.name || 'Unknown';
+        if (!salesByStaffMap[staffId]) {
+            salesByStaffMap[staffId] = { id: staffId, name: staffName, total: 0, count: 0 };
+        }
+        salesByStaffMap[staffId].total += order.totalAmount || 0;
+        salesByStaffMap[staffId].count += 1;
+    });
+    const salesByStaff = Object.values(salesByStaffMap).map(staff => ({
+        _id: { id: staff.id, name: staff.name },
+        total: staff.total,
+        count: staff.count
+    })).sort((a, b) => b.total - a.total);
+
+    // Calculate top selling products
+    const productSalesMap = {};
+    for (const order of orders) {
+        if (order.items) {
+            for (const item of order.items) {
+                const productId = item.product?.toString();
+                const productName = item.name;
+                const category = item.category;
+                const quantity = item.quantity || 0;
+                const lineTotal = item.lineTotal || (item.unitPrice * quantity);
+                
+                if (!productSalesMap[productId]) {
+                    productSalesMap[productId] = {
+                        productId,
+                        name: productName,
+                        category,
+                        totalRevenue: 0,
+                        totalUnits: 0,
+                        count: 0,
+                        totalCost: 0
+                    };
+                }
+                
+                productSalesMap[productId].totalRevenue += lineTotal;
+                productSalesMap[productId].totalUnits += quantity;
+                productSalesMap[productId].count += 1;
+                
+                // Get cost from batch
+                if (item.batchId) {
+                    const batch = await findByIdBatchService(item.batchId);
+                    if (batch && batch.purchasePrice) {
+                        productSalesMap[productId].totalCost += batch.purchasePrice * quantity;
+                    }
+                }
+            }
+        }
+    }
+    const topProducts = Object.values(productSalesMap)
+        .map(p => ({
+            _id: { productId: p.productId, name: p.name, category: p.category, costPrice: p.totalCost / p.totalUnits || 0 },
+            totalRevenue: p.totalRevenue,
+            totalUnits: p.totalUnits,
+            count: p.count,
+            totalCost: p.totalCost
+        }))
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, 20);
+
+    // Calculate sales by category
+    const categorySalesMap = {};
+    for (const order of orders) {
+        if (order.items) {
+            for (const item of order.items) {
+                const category = item.category?.toString() || 'uncategorized';
+                const lineTotal = item.lineTotal || (item.unitPrice * item.quantity);
+                const quantity = item.quantity || 0;
+                
+                if (!categorySalesMap[category]) {
+                    categorySalesMap[category] = { total: 0, count: 0, units: 0 };
+                }
+                categorySalesMap[category].total += lineTotal;
+                categorySalesMap[category].count += 1;
+                categorySalesMap[category].units += quantity;
+            }
+        }
+    }
+    const salesByCategory = Object.entries(categorySalesMap).map(([category, data]) => ({
+        _id: category,
+        total: data.total,
+        count: data.count,
+        units: data.units
+    })).sort((a, b) => b.total - a.total);
+
+    // Calculate sales by customer
+    const customerSalesMap = {};
+    orders.forEach(order => {
+        const customerName = order.customerName || 'Walk-in';
+        if (!customerSalesMap[customerName]) {
+            customerSalesMap[customerName] = {
+                total: 0,
+                count: 0,
+                orderType: order.orderType,
+                lastPurchase: order.createdAt
+            };
+        }
+        customerSalesMap[customerName].total += order.totalAmount || 0;
+        customerSalesMap[customerName].count += 1;
+        if (order.createdAt > customerSalesMap[customerName].lastPurchase) {
+            customerSalesMap[customerName].lastPurchase = order.createdAt;
+        }
+    });
+    const salesByCustomer = Object.entries(customerSalesMap).map(([name, data]) => ({
+        _id: name,
+        total: data.total,
+        count: data.count,
+        orderType: data.orderType,
+        lastPurchase: data.lastPurchase
+    })).sort((a, b) => b.total - a.total).slice(0, 20);
+
+    // Calculate sales by date
+    const salesByDateMap = {};
+    orders.forEach(order => {
+        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        if (!salesByDateMap[dateStr]) {
+            salesByDateMap[dateStr] = { total: 0, count: 0 };
+        }
+        salesByDateMap[dateStr].total += order.totalAmount || 0;
+        salesByDateMap[dateStr].count += 1;
+    });
+    const salesByDate = Object.entries(salesByDateMap).map(([date, data]) => ({
+        _id: date,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Calculate previous sales by date
+    const previousSalesByDateMap = {};
+    previousOrders.forEach(order => {
+        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        if (!previousSalesByDateMap[dateStr]) {
+            previousSalesByDateMap[dateStr] = { total: 0, count: 0 };
+        }
+        previousSalesByDateMap[dateStr].total += order.totalAmount || 0;
+        previousSalesByDateMap[dateStr].count += 1;
+    });
+    const previousSalesByDate = Object.entries(previousSalesByDateMap).map(([date, data]) => ({
+        _id: date,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Calculate cash collected
     const cashCollected = salesByPaymentMethod.find(m => m._id === 'cash')?.total || 0;
 
     return {
@@ -794,10 +901,6 @@ export const getSalesKPIReport = async (filters = {}) => {
 
 // Purchase KPI Report
 export const getPurchaseKPIReport = async (filters = {}) => {
-    const PurchaseModel = getPurchaseModel();
-    const SupplierModel = getSupplierModel();
-    const ProductModel = getProductModel();
-    const PurchaseReturnModel = getPurchaseReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as sales report)
@@ -838,170 +941,198 @@ export const getPurchaseKPIReport = async (filters = {}) => {
 
     if (period === "today") {
         const { startOfDay, endOfDay } = getTodayRange();
-        dateFilter = { date: { $gte: startOfDay, $lte: endOfDay } };
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("today");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "week") {
         const now = new Date();
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        dateFilter = { date: { $gte: startOfWeek, $lte: endOfWeek } };
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("week");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "month") {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        dateFilter = { date: { $gte: startOfMonth, $lte: endOfMonth } };
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("month");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "quarter") {
         const now = new Date();
         const currentQuarter = Math.floor(now.getMonth() / 3);
         const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
         const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
-        dateFilter = { date: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        dateFilter = { createdAt: { $gte: startOfQuarter, $lte: endOfQuarter } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("quarter");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "year") {
         const now = new Date();
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
-        dateFilter = { date: { $gte: startOfYear, $lte: endOfYear } };
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("year");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
         const start = new Date(fromDate);
         const end = new Date(toDate);
-        dateFilter = { date: { $gte: start, $lte: end } };
+        dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious) {
             const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
             const prevStart = new Date(start);
             prevStart.setDate(prevStart.getDate() - daysDiff);
             const prevEnd = new Date(end);
             prevEnd.setDate(prevEnd.getDate() - daysDiff);
-            previousDateFilter = { date: { $gte: prevStart, $lte: prevEnd } };
+            previousDateFilter = { createdAt: { $gte: prevStart, $lte: prevEnd } };
         }
     }
-
-    console.log('Purchase KPI Report - dateFilter:', dateFilter);
 
     const purchaseFilter = { ...dateFilter };
     const previousPurchaseFilter = compareWithPrevious ? { ...previousDateFilter } : null;
 
-    const [
-        totalPurchases,
-        totalPurchaseOrders,
-        totalItemsReceived,
-        totalUnpaid,
-        totalPurchaseReturns,
-        purchasesBySupplier,
-        purchasesByDate,
-        previousTotalPurchases,
-        previousPurchasesByDate,
-        purchaseReturnsBySupplier,
-        supplierList
-    ] = await Promise.all([
-        // Total amount purchased
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]),
-        // Total purchase orders
-        PurchaseModel.countDocuments(purchaseFilter),
-        // Total items received
-        PurchaseModel.aggregate([
-            { $match: { ...purchaseFilter, status: "delivered" } },
-            { $unwind: "$items" },
-            { $group: { _id: null, totalItems: { $sum: "$items.quantity" } } }
-        ]),
-        // Total unpaid amount
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }
-        ]),
-        // Total purchase returns
-        PurchaseReturnModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
-        ]),
-        // Purchases by supplier
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
-            { $unwind: "$supplierInfo" },
-            { $group: { 
-                _id: "$supplier", 
-                supplierName: { $first: "$supplierInfo.name" },
-                total: { $sum: "$totalAmount" }, 
-                count: { $sum: 1 },
-                totalItems: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } },
-                unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } }
-            } },
-            { $sort: { total: -1 } }
-        ]),
-        // Purchases by date
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-            { $sort: { _id: 1 } }
-        ]),
-        // Previous period total
-        previousPurchaseFilter ? PurchaseModel.aggregate([
-            { $match: previousPurchaseFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]) : Promise.resolve([{ total: 0 }]),
-        // Previous period by date
-        previousPurchaseFilter ? PurchaseModel.aggregate([
-            { $match: previousPurchaseFilter },
-            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-            { $sort: { _id: 1 } }
-        ]) : Promise.resolve([]),
-        // Purchase returns by supplier
-        PurchaseReturnModel.aggregate([
-            { $match: purchaseFilter },
-            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
-            { $unwind: "$supplierInfo" },
-            { $group: { 
-                _id: "$supplier", 
-                supplierName: { $first: "$supplierInfo.name" },
-                total: { $sum: "$totalAmount" }, 
-                count: { $sum: 1 }
-            } },
-            { $sort: { total: -1 } }
-        ]),
-        // Supplier list for performance
-        SupplierModel.find({ isActive: true }).select("name type email phone address")
+    // Fetch all data using service functions
+    const [purchases, purchaseReturns, supplierList, previousPurchases] = await Promise.all([
+        findPurchaseService(purchaseFilter),
+        findPurchaseReturnService(purchaseFilter),
+        findSupplierService({ isActive: true }).select("name type email phone address"),
+        previousPurchaseFilter ? findPurchaseService(previousPurchaseFilter) : []
     ]);
 
-    const totalAmount = totalPurchases[0]?.total || 0;
-    const previousTotalAmount = previousTotalPurchases[0]?.total || 0;
+    const totalPurchaseOrders = purchases.length;
+    
+    // Calculate total amount purchased
+    const totalAmount = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    
+    // Calculate total items received
+    let totalItemsReceived = 0;
+    purchases.forEach(purchase => {
+        if (purchase.status === "delivered" && purchase.items) {
+            purchase.items.forEach(item => {
+                totalItemsReceived += item.quantity || 0;
+            });
+        }
+    });
+    
+    // Calculate total unpaid amount
+    const totalUnpaid = purchases.reduce((sum, purchase) => {
+        return sum + ((purchase.totalAmount || 0) - (purchase.paidAmount || 0));
+    }, 0);
+    
+    // Calculate total purchase returns
+    const totalPurchaseReturns = purchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    
+    // Calculate previous total
+    const previousTotalAmount = previousPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    
     const purchaseTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
     const averageOrderValue = totalPurchaseOrders > 0 ? totalAmount / totalPurchaseOrders : 0;
+
+    // Calculate purchases by supplier
+    const purchasesBySupplierMap = {};
+    purchases.forEach(purchase => {
+        const supplierId = purchase.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!purchasesBySupplierMap[supplierId]) {
+            purchasesBySupplierMap[supplierId] = {
+                supplierId,
+                supplierName: purchase.supplierName || 'Unknown',
+                total: 0,
+                count: 0,
+                totalItems: 0,
+                unpaid: 0
+            };
+        }
+        
+        purchasesBySupplierMap[supplierId].total += purchase.totalAmount || 0;
+        purchasesBySupplierMap[supplierId].count += 1;
+        purchasesBySupplierMap[supplierId].unpaid += (purchase.totalAmount || 0) - (purchase.paidAmount || 0);
+        
+        if (purchase.items) {
+            purchase.items.forEach(item => {
+                purchasesBySupplierMap[supplierId].totalItems += item.quantity || 0;
+            });
+        }
+    });
+    
+    const purchasesBySupplier = Object.values(purchasesBySupplierMap).sort((a, b) => b.total - a.total);
+
+    // Calculate purchases by date
+    const purchasesByDateMap = {};
+    purchases.forEach(purchase => {
+        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        if (!purchasesByDateMap[dateStr]) {
+            purchasesByDateMap[dateStr] = { total: 0, count: 0 };
+        }
+        purchasesByDateMap[dateStr].total += purchase.totalAmount || 0;
+        purchasesByDateMap[dateStr].count += 1;
+    });
+    const purchasesByDate = Object.entries(purchasesByDateMap).map(([date, data]) => ({
+        _id: date,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Calculate previous purchases by date
+    const previousPurchasesByDateMap = {};
+    previousPurchases.forEach(purchase => {
+        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        if (!previousPurchasesByDateMap[dateStr]) {
+            previousPurchasesByDateMap[dateStr] = { total: 0, count: 0 };
+        }
+        previousPurchasesByDateMap[dateStr].total += purchase.totalAmount || 0;
+        previousPurchasesByDateMap[dateStr].count += 1;
+    });
+    const previousPurchasesByDate = Object.entries(previousPurchasesByDateMap).map(([date, data]) => ({
+        _id: date,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Calculate purchase returns by supplier
+    const purchaseReturnsBySupplierMap = {};
+    purchaseReturns.forEach(ret => {
+        const supplierId = ret.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!purchaseReturnsBySupplierMap[supplierId]) {
+            purchaseReturnsBySupplierMap[supplierId] = {
+                supplierId,
+                supplierName: ret.supplierName || 'Unknown',
+                total: 0,
+                count: 0
+            };
+        }
+        
+        purchaseReturnsBySupplierMap[supplierId].total += ret.totalAmount || 0;
+        purchaseReturnsBySupplierMap[supplierId].count += 1;
+    });
+    
+    const purchaseReturnsBySupplier = Object.values(purchaseReturnsBySupplierMap).sort((a, b) => b.total - a.total);
 
     return {
         summary: {
             totalAmountPurchased: totalAmount,
             totalPurchaseOrders,
-            totalItemsReceived: totalItemsReceived[0]?.totalItems || 0,
-            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
+            totalItemsReceived,
+            totalUnpaid,
             averageOrderValue,
-            totalPurchaseReturns: totalPurchaseReturns[0]?.totalReturns || 0,
+            totalPurchaseReturns,
             purchaseTrend
         },
         breakdowns: {
             bySupplier: purchasesBySupplier.map(item => ({
-                supplierId: item._id,
+                supplierId: item.supplierId,
                 supplierName: item.supplierName,
                 totalAmount: item.total,
                 orderCount: item.count,
@@ -1021,11 +1152,11 @@ export const getPurchaseKPIReport = async (filters = {}) => {
                 count: item.count
             })),
             purchaseReturnsBySupplier: purchaseReturnsBySupplier.map(item => ({
-                supplierId: item._id,
+                supplierId: item.supplierId,
                 supplierName: item.supplierName,
                 total: item.total,
                 count: item.count,
-                percentage: totalPurchaseReturns[0]?.totalReturns > 0 ? ((item.total / totalPurchaseReturns[0].totalReturns) * 100).toFixed(1) : 0
+                percentage: totalPurchaseReturns > 0 ? ((item.total / totalPurchaseReturns) * 100).toFixed(1) : 0
             })),
             supplierList: supplierList.map(s => ({
                 id: s._id,
@@ -1041,9 +1172,6 @@ export const getPurchaseKPIReport = async (filters = {}) => {
 
 // Supplier KPI Report
 export const getSupplierKPIReport = async (filters = {}) => {
-    const PurchaseModel = getPurchaseModel();
-    const SupplierModel = getSupplierModel();
-    const PurchaseReturnModel = getPurchaseReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as sales/purchase reports)
@@ -1084,169 +1212,176 @@ export const getSupplierKPIReport = async (filters = {}) => {
 
     if (period === "today") {
         const { startOfDay, endOfDay } = getTodayRange();
-        dateFilter = { date: { $gte: startOfDay, $lte: endOfDay } };
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("today");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "week") {
         const now = new Date();
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        dateFilter = { date: { $gte: startOfWeek, $lte: endOfWeek } };
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("week");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "month") {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        dateFilter = { date: { $gte: startOfMonth, $lte: endOfMonth } };
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("month");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "quarter") {
         const now = new Date();
         const currentQuarter = Math.floor(now.getMonth() / 3);
         const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
         const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
-        dateFilter = { date: { $gte: startOfQuarter, $lte: endOfQuarter } };
+        dateFilter = { createdAt: { $gte: startOfQuarter, $lte: endOfQuarter } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("quarter");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (period === "year") {
         const now = new Date();
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
-        dateFilter = { date: { $gte: startOfYear, $lte: endOfYear } };
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
         if (compareWithPrevious) {
             const prev = getPreviousPeriodDates("year");
-            previousDateFilter = { date: { $gte: prev.start, $lte: prev.end } };
+            previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
         const start = new Date(fromDate);
         const end = new Date(toDate);
-        dateFilter = { date: { $gte: start, $lte: end } };
+        dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious) {
             const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
             const prevStart = new Date(start);
             prevStart.setDate(prevStart.getDate() - daysDiff);
             const prevEnd = new Date(end);
             prevEnd.setDate(prevEnd.getDate() - daysDiff);
-            previousDateFilter = { date: { $gte: prevStart, $lte: prevEnd } };
+            previousDateFilter = { createdAt: { $gte: prevStart, $lte: prevEnd } };
         }
     }
-
-    console.log('Supplier KPI Report - dateFilter:', dateFilter);
 
     const purchaseFilter = { ...dateFilter };
     const previousPurchaseFilter = compareWithPrevious ? { ...previousDateFilter } : null;
 
-    const [
-        totalSuppliers,
-        activeSuppliers,
-        totalPurchases,
-        totalPurchaseAmount,
-        totalUnpaid,
-        totalReturns,
-        supplierPerformance,
-        supplierPurchaseHistory,
-        supplierReturns,
-        supplierPaymentStatus,
-        previousTotalPurchaseAmount
-    ] = await Promise.all([
-        // Total suppliers
-        SupplierModel.countDocuments({}),
-        // Active suppliers
-        SupplierModel.countDocuments({ isActive: true }),
-        // Total purchases
-        PurchaseModel.countDocuments(purchaseFilter),
-        // Total purchase amount
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]),
-        // Total unpaid
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, unpaid: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }
-        ]),
-        // Total returns
-        PurchaseReturnModel.aggregate([
-            { $match: purchaseFilter },
-            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
-        ]),
-        // Supplier performance (orders, delivery, quality)
-        SupplierModel.aggregate([
-            { $match: { isActive: true } },
-            { $lookup: { from: "productpurchases", localField: "_id", foreignField: "supplier", as: "purchases" } },
-            { $addFields: {
-                totalOrders: { $size: "$purchases" },
-                totalSpent: { $sum: "$purchases.totalAmount" }
-            }},
-            { $sort: { totalSpent: -1 } }
-        ]),
-        // Supplier purchase history (detailed)
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
-            { $unwind: "$supplierInfo" },
-            { $project: {
-                _id: 1,
-                invoiceNumber: 1,
-                date: 1,
-                supplierName: "$supplierInfo.name",
-                supplierId: "$supplier",
-                totalAmount: 1,
-                status: 1,
-                paymentStatus: 1,
-                paidAmount: 1,
-                itemCount: { $size: "$items" }
-            }},
-            { $sort: { date: -1 } }
-        ]),
-        // Supplier returns
-        PurchaseReturnModel.aggregate([
-            { $match: purchaseFilter },
-            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
-            { $unwind: "$supplierInfo" },
-            { $group: {
-                _id: "$supplier",
-                supplierName: { $first: "$supplierInfo.name" },
-                totalReturns: { $sum: "$totalAmount" },
-                returnCount: { $sum: 1 }
-            }},
-            { $sort: { totalReturns: -1 } }
-        ]),
-        // Supplier payment status (aging)
-        PurchaseModel.aggregate([
-            { $match: purchaseFilter },
-            { $lookup: { from: "suppliers", localField: "supplier", foreignField: "_id", as: "supplierInfo" } },
-            { $unwind: "$supplierInfo" },
-            { $group: {
-                _id: "$supplier",
-                supplierName: { $first: "$supplierInfo.name" },
-                totalInvoiced: { $sum: "$totalAmount" },
-                totalPaid: { $sum: "$paidAmount" },
-                outstandingBalance: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } },
-                orderCount: { $sum: 1 }
-            }},
-            { $sort: { outstandingBalance: -1 } }
-        ]),
-        // Previous period total
-        previousPurchaseFilter ? PurchaseModel.aggregate([
-            { $match: previousPurchaseFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]) : Promise.resolve([{ total: 0 }])
+    // Fetch all data using service functions
+    const [allSuppliers, activeSuppliersList, purchases, purchaseReturns, previousPurchases] = await Promise.all([
+        countSupplierService({}),
+        countSupplierService({ isActive: true }),
+        findPurchaseService(purchaseFilter),
+        findPurchaseReturnService(purchaseFilter),
+        previousPurchaseFilter ? findPurchaseService(previousPurchaseFilter) : []
     ]);
 
-    const totalAmount = totalPurchaseAmount[0]?.total || 0;
-    const previousTotalAmount = previousTotalPurchaseAmount[0]?.total || 0;
+    const totalSuppliers = allSuppliers;
+    const activeSuppliers = activeSuppliersList;
+    const totalPurchases = purchases.length;
+    
+    // Calculate total purchase amount
+    const totalAmount = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    
+    // Calculate total unpaid
+    const totalUnpaid = purchases.reduce((sum, purchase) => {
+        return sum + ((purchase.totalAmount || 0) - (purchase.paidAmount || 0));
+    }, 0);
+    
+    // Calculate total returns
+    const totalReturns = purchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    
+    // Calculate previous total
+    const previousTotalAmount = previousPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    
     const purchaseTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
     const averageOrderValue = totalPurchases > 0 ? totalAmount / totalPurchases : 0;
+
+    // Calculate supplier performance
+    const supplierPerformanceMap = {};
+    purchases.forEach(purchase => {
+        const supplierId = purchase.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!supplierPerformanceMap[supplierId]) {
+            supplierPerformanceMap[supplierId] = {
+                supplierId,
+                supplierName: purchase.supplierName || 'Unknown',
+                supplierType: purchase.supplierType,
+                totalOrders: 0,
+                totalSpent: 0
+            };
+        }
+        
+        supplierPerformanceMap[supplierId].totalOrders += 1;
+        supplierPerformanceMap[supplierId].totalSpent += purchase.totalAmount || 0;
+    });
+    
+    const supplierPerformance = Object.values(supplierPerformanceMap).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Calculate supplier purchase history
+    const supplierPurchaseHistory = purchases.map(purchase => ({
+        _id: purchase._id,
+        invoiceNumber: purchase.invoiceNumber,
+        date: purchase.createdAt,
+        supplierName: purchase.supplierName,
+        supplierId: purchase.supplier,
+        totalAmount: purchase.totalAmount,
+        status: purchase.status,
+        paymentStatus: purchase.paymentStatus,
+        paidAmount: purchase.paidAmount,
+        itemCount: purchase.items?.length || 0
+    })).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Calculate supplier returns
+    const supplierReturnsMap = {};
+    purchaseReturns.forEach(ret => {
+        const supplierId = ret.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!supplierReturnsMap[supplierId]) {
+            supplierReturnsMap[supplierId] = {
+                supplierId,
+                supplierName: ret.supplierName || 'Unknown',
+                totalReturns: 0,
+                returnCount: 0
+            };
+        }
+        
+        supplierReturnsMap[supplierId].totalReturns += ret.totalAmount || 0;
+        supplierReturnsMap[supplierId].returnCount += 1;
+    });
+    
+    const supplierReturns = Object.values(supplierReturnsMap).sort((a, b) => b.totalReturns - a.totalReturns);
+
+    // Calculate supplier payment status
+    const supplierPaymentStatusMap = {};
+    purchases.forEach(purchase => {
+        const supplierId = purchase.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!supplierPaymentStatusMap[supplierId]) {
+            supplierPaymentStatusMap[supplierId] = {
+                supplierId,
+                supplierName: purchase.supplierName || 'Unknown',
+                totalInvoiced: 0,
+                totalPaid: 0,
+                outstandingBalance: 0,
+                orderCount: 0
+            };
+        }
+        
+        supplierPaymentStatusMap[supplierId].totalInvoiced += purchase.totalAmount || 0;
+        supplierPaymentStatusMap[supplierId].totalPaid += purchase.paidAmount || 0;
+        supplierPaymentStatusMap[supplierId].outstandingBalance += (purchase.totalAmount || 0) - (purchase.paidAmount || 0);
+        supplierPaymentStatusMap[supplierId].orderCount += 1;
+    });
+    
+    const supplierPaymentStatus = Object.values(supplierPaymentStatusMap).sort((a, b) => b.outstandingBalance - a.outstandingBalance);
 
     return {
         summary: {
@@ -1254,16 +1389,16 @@ export const getSupplierKPIReport = async (filters = {}) => {
             activeSuppliers,
             totalPurchaseOrders: totalPurchases,
             totalPurchaseAmount: totalAmount,
-            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
-            totalReturns: totalReturns[0]?.totalReturns || 0,
+            totalUnpaid,
+            totalReturns,
             averageOrderValue,
             purchaseTrend
         },
         breakdowns: {
             supplierPerformance: supplierPerformance.map(s => ({
-                supplierId: s._id,
-                supplierName: s.name,
-                supplierType: s.type,
+                supplierId: s.supplierId,
+                supplierName: s.supplierName,
+                supplierType: s.supplierType,
                 totalOrders: s.totalOrders,
                 totalSpent: s.totalSpent,
                 averageOrderValue: s.totalOrders > 0 ? s.totalSpent / s.totalOrders : 0,
@@ -1271,13 +1406,13 @@ export const getSupplierKPIReport = async (filters = {}) => {
             })),
             purchaseHistory: supplierPurchaseHistory,
             returnsBySupplier: supplierReturns.map(r => ({
-                supplierId: r._id,
+                supplierId: r.supplierId,
                 supplierName: r.supplierName,
                 totalReturns: r.totalReturns,
                 returnCount: r.returnCount
             })),
             paymentStatus: supplierPaymentStatus.map(p => ({
-                supplierId: p._id,
+                supplierId: p.supplierId,
                 supplierName: p.supplierName,
                 totalInvoiced: p.totalInvoiced,
                 totalPaid: p.totalPaid,
@@ -1291,9 +1426,6 @@ export const getSupplierKPIReport = async (filters = {}) => {
 
 // Customer KPI Report
 export const getCustomerKPIReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const CustomerModel = getCustomerModel();
-    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period, compareWithPrevious } = filters;
 
     // Helper to get previous period dates (same as other reports)
@@ -1390,127 +1522,137 @@ export const getCustomerKPIReport = async (filters = {}) => {
         }
     }
 
-    console.log('Customer KPI Report - dateFilter:', dateFilter);
-
     const orderFilter = { ...dateFilter, status: "completed" };
     const previousOrderFilter = compareWithPrevious ? { ...previousDateFilter, status: "completed" } : null;
 
-    const [
-        totalCustomers,
-        activeCustomers,
-        totalOrders,
-        totalSales,
-        totalUnpaid,
-        totalReturns,
-        customerPerformance,
-        customerPurchaseHistory,
-        customerReturns,
-        customerPaymentStatus,
-        previousTotalSales
-    ] = await Promise.all([
-        // Total customers
-        CustomerModel.countDocuments({}),
-        // Active customers (with orders in last 90 days)
-        CustomerModel.countDocuments({ lastPurchaseDate: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } }),
-        // Total orders
-        OrderModel.countDocuments(orderFilter),
-        // Total sales
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]),
-        // Total unpaid (credit)
-        OrderModel.aggregate([
-            { $match: { ...orderFilter, paymentMethod: "credit" } },
-            { $group: { _id: null, unpaid: { $sum: "$totalAmount" } } }
-        ]),
-        // Total returns
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalReturns: { $sum: "$totalAmount" } } }
-        ]),
-        // Customer performance (orders, spending, frequency)
-        CustomerModel.aggregate([
-            { $lookup: { from: "orders", localField: "_id", foreignField: "customer", as: "orders" } },
-            { $addFields: {
-                totalOrders: { $size: "$orders" },
-                totalSpent: { $sum: "$orders.totalAmount" },
-                lastPurchaseDate: { $max: "$orders.createdAt" }
-            }},
-            { $sort: { totalSpent: -1 } }
-        ]),
-        // Customer purchase history (detailed)
-        OrderModel.aggregate([
-            { $match: orderFilter },
-            { $lookup: { from: "customers", localField: "customer", foreignField: "_id", as: "customerInfo" } },
-            { $unwind: "$customerInfo" },
-            { $project: {
-                _id: 1,
-                orderNumber: 1,
-                createdAt: 1,
-                customerName: "$customerInfo.name",
-                customerId: "$customer",
-                totalAmount: 1,
-                paymentMethod: 1,
-                orderType: 1,
-                itemCount: { $size: "$items" }
-            }},
-            { $sort: { createdAt: -1 } }
-        ]),
-        // Customer returns
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $lookup: { from: "orders", localField: "order", foreignField: "_id", as: "orderInfo" } },
-            { $lookup: { from: "customers", localField: "orderInfo.customer", foreignField: "_id", as: "customerInfo" } },
-            { $unwind: "$customerInfo" },
-            { $group: {
-                _id: "$customerInfo._id",
-                customerName: { $first: "$customerInfo.name" },
-                totalReturns: { $sum: "$totalAmount" },
-                returnCount: { $sum: 1 }
-            }},
-            { $sort: { totalReturns: -1 } }
-        ]),
-        // Customer payment status (receivables)
-        OrderModel.aggregate([
-            { $match: { ...orderFilter, paymentMethod: "credit" } },
-            { $lookup: { from: "customers", localField: "customer", foreignField: "_id", as: "customerInfo" } },
-            { $unwind: "$customerInfo" },
-            { $group: {
-                _id: "$customer",
-                customerName: { $first: "$customerInfo.name" },
-                totalCredit: { $sum: "$totalAmount" },
-                orderCount: { $sum: 1 }
-            }},
-            { $sort: { totalCredit: -1 } }
-        ]),
-        // Previous period total
-        previousOrderFilter ? OrderModel.aggregate([
-            { $match: previousOrderFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]) : Promise.resolve([{ total: 0 }])
+    // Fetch all data using service functions
+    const [allCustomers, allOrders, productReturns, previousOrders] = await Promise.all([
+        countCustomerService({}),
+        findOrderService(orderFilter),
+        findProductReturnService(dateFilter),
+        previousOrderFilter ? findOrderService(previousOrderFilter) : []
     ]);
 
-    const totalAmount = totalSales[0]?.total || 0;
-    const previousTotalAmount = previousTotalSales[0]?.total || 0;
+    // Calculate active customers (with orders in last 90 days)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const activeCustomers = await countCustomerService({ lastPurchaseDate: { $gte: ninetyDaysAgo } });
+
+    const totalOrders = allOrders.length;
+    
+    // Calculate total sales
+    const totalAmount = allOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Calculate total unpaid (credit)
+    const totalUnpaid = allOrders
+        .filter(o => o.paymentMethod === "credit")
+        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Calculate total returns
+    const totalReturns = productReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    
+    // Calculate previous total
+    const previousTotalAmount = previousOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
     const salesTrend = previousTotalAmount > 0 ? ((totalAmount - previousTotalAmount) / previousTotalAmount * 100).toFixed(1) : 0;
     const averageOrderValue = totalOrders > 0 ? totalAmount / totalOrders : 0;
 
+    // Calculate customer performance
+    const customerPerformanceMap = {};
+    allOrders.forEach(order => {
+        const customerId = order.customer?.toString();
+        if (!customerId) return;
+        
+        if (!customerPerformanceMap[customerId]) {
+            customerPerformanceMap[customerId] = {
+                customerId,
+                customerName: order.customerName || 'Unknown',
+                totalOrders: 0,
+                totalSpent: 0,
+                lastPurchaseDate: order.createdAt
+            };
+        }
+        
+        customerPerformanceMap[customerId].totalOrders += 1;
+        customerPerformanceMap[customerId].totalSpent += order.totalAmount || 0;
+        if (order.createdAt > customerPerformanceMap[customerId].lastPurchaseDate) {
+            customerPerformanceMap[customerId].lastPurchaseDate = order.createdAt;
+        }
+    });
+    
+    const customerPerformance = Object.values(customerPerformanceMap).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Calculate customer purchase history
+    const customerPurchaseHistory = allOrders.map(order => ({
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        createdAt: order.createdAt,
+        customerName: order.customerName,
+        customerId: order.customer,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        orderType: order.orderType,
+        itemCount: order.items?.length || 0
+    })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Calculate customer returns
+    const customerReturnsMap = {};
+    productReturns.forEach(ret => {
+        const customerId = ret.customer?.toString();
+        if (!customerId) return;
+        
+        if (!customerReturnsMap[customerId]) {
+            customerReturnsMap[customerId] = {
+                customerId,
+                customerName: ret.customerName || 'Unknown',
+                totalReturns: 0,
+                returnCount: 0
+            };
+        }
+        
+        customerReturnsMap[customerId].totalReturns += ret.totalAmount || 0;
+        customerReturnsMap[customerId].returnCount += 1;
+    });
+    
+    const customerReturns = Object.values(customerReturnsMap).sort((a, b) => b.totalReturns - a.totalReturns);
+
+    // Calculate customer payment status (receivables)
+    const customerPaymentStatusMap = {};
+    allOrders.forEach(order => {
+        if (order.paymentMethod !== "credit") return;
+        
+        const customerId = order.customer?.toString();
+        if (!customerId) return;
+        
+        if (!customerPaymentStatusMap[customerId]) {
+            customerPaymentStatusMap[customerId] = {
+                customerId,
+                customerName: order.customerName || 'Unknown',
+                totalCredit: 0,
+                orderCount: 0
+            };
+        }
+        
+        customerPaymentStatusMap[customerId].totalCredit += order.totalAmount || 0;
+        customerPaymentStatusMap[customerId].orderCount += 1;
+    });
+    
+    const customerPaymentStatus = Object.values(customerPaymentStatusMap).sort((a, b) => b.totalCredit - a.totalCredit);
+
     return {
         summary: {
-            totalCustomers,
+            totalCustomers: allCustomers,
             activeCustomers,
             totalOrders,
             totalSales: totalAmount,
-            totalUnpaid: totalUnpaid[0]?.unpaid || 0,
-            totalReturns: totalReturns[0]?.totalReturns || 0,
+            totalUnpaid,
+            totalReturns,
             averageOrderValue,
             salesTrend
         },
         breakdowns: {
             customerPerformance: customerPerformance.map(c => ({
-                customerId: c._id,
-                customerName: c.name,
+                customerId: c.customerId,
+                customerName: c.customerName,
                 totalOrders: c.totalOrders,
                 totalSpent: c.totalSpent,
                 averageOrderValue: c.totalOrders > 0 ? c.totalSpent / c.totalOrders : 0,
@@ -1519,13 +1661,13 @@ export const getCustomerKPIReport = async (filters = {}) => {
             })),
             purchaseHistory: customerPurchaseHistory,
             returnsByCustomer: customerReturns.map(r => ({
-                customerId: r._id,
+                customerId: r.customerId,
                 customerName: r.customerName,
                 totalReturns: r.totalReturns,
                 returnCount: r.returnCount
             })),
             paymentStatus: customerPaymentStatus.map(p => ({
-                customerId: p._id,
+                customerId: p.customerId,
                 customerName: p.customerName,
                 totalCredit: p.totalCredit,
                 orderCount: p.orderCount,
@@ -1537,7 +1679,6 @@ export const getCustomerKPIReport = async (filters = {}) => {
 
 // Expense KPI Report
 export const getExpenseKPIReport = async (filters = {}) => {
-    const ExpensesModel = getExpenseModel();
     const { fromDate, toDate, period } = filters;
 
     let dateFilter = {};
@@ -1558,29 +1699,66 @@ export const getExpenseKPIReport = async (filters = {}) => {
         dateFilter = { createdAt: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
     }
 
-    const [totalExpenses, expenseCount, expensesByCategory, expensesByType, highestExpense, lowestExpense, expenseList] = await Promise.all([
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]),
-        ExpensesModel.countDocuments(dateFilter),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$category", total: { $sum: "$amount" }, count: { $sum: 1 } } },
-            { $sort: { total: -1 } }
-        ]),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$type", total: { $sum: "$amount" }, count: { $sum: 1 } } },
-            { $sort: { total: -1 } }
-        ]),
-        ExpensesModel.findOne(dateFilter, null, { sort: { amount: -1 } }),
-        ExpensesModel.findOne(dateFilter, null, { sort: { amount: 1 } }),
-        ExpensesModel.find(dateFilter, 'amount type date notes category createdAt', { sort: { createdAt: -1 }, limit: 100 }),
+    // Fetch all data using service functions
+    const [expenses, expenseCount] = await Promise.all([
+        findExpenseService(dateFilter),
+        countExpenseService(dateFilter)
     ]);
 
-    const totalAmount = totalExpenses[0]?.total || 0;
+    // Calculate total expenses
+    const totalAmount = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
     const averageExpense = expenseCount > 0 ? totalAmount / expenseCount : 0;
+
+    // Calculate expenses by category
+    const expensesByCategoryMap = {};
+    expenses.forEach(expense => {
+        const category = expense.category || 'uncategorized';
+        if (!expensesByCategoryMap[category]) {
+            expensesByCategoryMap[category] = { total: 0, count: 0 };
+        }
+        expensesByCategoryMap[category].total += expense.amount || 0;
+        expensesByCategoryMap[category].count += 1;
+    });
+    const expensesByCategory = Object.entries(expensesByCategoryMap).map(([category, data]) => ({
+        _id: category,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => b.total - a.total);
+
+    // Calculate expenses by type
+    const expensesByTypeMap = {};
+    expenses.forEach(expense => {
+        const type = expense.type || 'unknown';
+        if (!expensesByTypeMap[type]) {
+            expensesByTypeMap[type] = { total: 0, count: 0 };
+        }
+        expensesByTypeMap[type].total += expense.amount || 0;
+        expensesByTypeMap[type].count += 1;
+    });
+    const expensesByType = Object.entries(expensesByTypeMap).map(([type, data]) => ({
+        _id: type,
+        total: data.total,
+        count: data.count
+    })).sort((a, b) => b.total - a.total);
+
+    // Find highest and lowest expenses
+    const sortedByAmount = [...expenses].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    const highestExpense = sortedByAmount[0] || null;
+    const lowestExpense = sortedByAmount[sortedByAmount.length - 1] || null;
+
+    // Get expense list (limited to 100, sorted by createdAt desc)
+    const expenseList = expenses
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(expense => ({
+            _id: expense._id,
+            amount: expense.amount,
+            type: expense.type,
+            date: expense.date || expense.createdAt,
+            notes: expense.notes,
+            category: expense.category,
+            createdAt: expense.createdAt
+        }));
 
     // Calculate daily average
     let daysCount = 1;
@@ -1632,14 +1810,6 @@ export const getExpenseKPIReport = async (filters = {}) => {
 };
 
 export const getMainBusinessReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const PurchaseModel = getPurchaseModel();
-    const ExpensesModel = getExpenseModel();
-    const WastageModel = getWastageModel();
-    const PurchaseReturnModel = getPurchaseReturnModel();
-    const ProductReturnModel = getProductReturnModel();
-    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
-    const QarzaAccountModel = getQarzaAccountModel();
     const { fromDate, toDate, period = "today" } = filters;
 
     let dateFilter = {};
@@ -1658,98 +1828,362 @@ export const getMainBusinessReport = async (filters = {}) => {
     } else if (period === "month") {
         const { startOfMonth, endOfMonth } = getMonthRange();
         dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "last3months" || period === "3month") {
+        const now = new Date();
+        const startOfLast3Months = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const endOfLast3Months = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfLast3Months, $lte: endOfLast3Months } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
     } else {
         // Default to current month if period is unrecognized
         const { startOfMonth, endOfMonth } = getMonthRange();
         dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
     }
 
-    const [sales, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivableData, qarzaPayableData, salesByPaymentMethod, expensesByCategory, productReturnsByReason, purchaseReturnsBySupplier, wastagesByProduct, salariesByStaff, salesList, purchasesList, expensesList, wastagesList, purchaseReturnsList, productReturnsList, salaryPaymentsList] = await Promise.all([
-        OrderModel.aggregate([
-            { $match: { ...dateFilter, status: "completed" } },
-            { $group: { _id: null, totalSales: { $sum: "$totalAmount" }, totalDiscount: { $sum: "$discountAmount" }, count: { $sum: 1 } } }
-        ]),
-        PurchaseModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalPurchases: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalExpenses: { $sum: "$amount" }, count: { $sum: 1 } } }
-        ]),
-        WastageModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalWastage: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } }
-        ]),
-        PurchaseReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalPurchaseReturns: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, totalProductReturns: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
-        ]),
-        StaffSalaryPaymentModel.aggregate([
-            { $match: { ...dateFilter, status: 'paid' } },
-            { $group: { _id: null, totalSalaries: { $sum: "$amount" }, count: { $sum: 1 } } }
-        ]),
-        QarzaAccountModel.aggregate([
-            { $match: { ...dateFilter, type: "receivable" } },
-            { $group: { _id: null, totalReceivable: { $sum: "$balance" }, count: { $sum: 1 } } }
-        ]),
-        QarzaAccountModel.aggregate([
-            { $match: { ...dateFilter, type: "payable" } },
-            { $group: { _id: null, totalPayable: { $sum: "$balance" }, count: { $sum: 1 } } }
-        ]),
-        OrderModel.aggregate([
-            { $match: { ...dateFilter, status: "completed" } },
-            { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$category", total: { $sum: "$amount" }, count: { $sum: 1 } } }
-        ]),
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$reason", total: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
-        ]),
-        PurchaseReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$supplierName", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
-        WastageModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: "$productName", total: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 }, totalQuantity: { $sum: "$quantity" } } }
-        ]),
-        StaffSalaryPaymentModel.aggregate([
-            { $match: dateFilter },
-            { $lookup: { from: "staff", localField: "staffId", foreignField: "_id", as: "staff" } },
-            { $unwind: "$staff" },
-            { $group: { _id: "$staff.name", total: { $sum: "$amount" }, count: { $sum: 1 } } }
-        ]),
-        OrderModel.find({ ...dateFilter, status: "completed" }, 'orderNumber totalAmount paymentMethod customerName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        PurchaseModel.find(dateFilter, 'invoiceNumber totalAmount supplierName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        ExpensesModel.find(dateFilter, 'title amount category description createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        WastageModel.find(dateFilter, 'quantity costPrice productName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        PurchaseReturnModel.find(dateFilter, 'returnNumber totalAmount supplierName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        ProductReturnModel.find(dateFilter, 'returnNumber refundAmount customerName createdAt', { sort: { createdAt: -1 }, limit: 100 }),
-        StaffSalaryPaymentModel.find({ ...dateFilter, status: 'paid' }, 'amount staffId paidAt', { populate: { path: 'staffId', select: 'name' }, sort: { paidAt: -1 }, limit: 100 }),
+    // Calculate previous period date filter for comparison
+    let previousDateFilter = {};
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getYesterdayRange();
+        previousDateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "yesterday") {
+        const now = new Date();
+        const dayBeforeYesterday = new Date(now);
+        dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+        const startOfDay = new Date(dayBeforeYesterday);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(dayBeforeYesterday);
+        endOfDay.setHours(23, 59, 59, 999);
+        previousDateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfLastWeek = new Date(now);
+        startOfLastWeek.setDate(startOfLastWeek.getDate() - 7 - startOfLastWeek.getDay());
+        const endOfLastWeek = new Date(startOfLastWeek);
+        endOfLastWeek.setDate(endOfLastWeek.getDate() + 6);
+        previousDateFilter = { createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        previousDateFilter = { createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } };
+    } else if (period === "last3months" || period === "3month") {
+        const now = new Date();
+        const startOfPrevious3Months = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const endOfPrevious3Months = new Date(now.getFullYear(), now.getMonth() - 3, 0);
+        previousDateFilter = { createdAt: { $gte: startOfPrevious3Months, $lte: endOfPrevious3Months } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
+        const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31);
+        previousDateFilter = { createdAt: { $gte: startOfLastYear, $lte: endOfLastYear } };
+    } else if (period === "custom" && fromDate && toDate) {
+        // For custom range, calculate same duration period before
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        const duration = end.getTime() - start.getTime();
+        const previousStart = new Date(start.getTime() - duration);
+        const previousEnd = new Date(end.getTime() - duration);
+        previousDateFilter = { createdAt: { $gte: previousStart, $lte: previousEnd } };
+    }
+
+    // Fetch current period data using service functions
+    const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivable, qarzaPayable, staffList] = await Promise.all([
+        findOrderService({ ...dateFilter, status: "completed" }),
+        findPurchaseService(dateFilter),
+        findExpenseService(dateFilter),
+        findWastageService(dateFilter),
+        findPurchaseReturnService(dateFilter),
+        findProductReturnService(dateFilter),
+        findStaffSalaryPaymentService({ ...dateFilter, status: 'paid' }),
+        findQarzaAccountService({ ...dateFilter, type: "receivable" }),
+        findQarzaAccountService({ ...dateFilter, type: "payable" }),
+        findStaffService({})
     ]);
 
-    const totalSales = sales[0]?.totalSales || 0;
-    const totalPurchases = purchases[0]?.totalPurchases || 0;
-    const totalExpenses = expenses[0]?.totalExpenses || 0;
-    const totalWastage = wastages[0]?.totalWastage || 0;
-    const totalPurchaseReturns = purchaseReturns[0]?.totalPurchaseReturns || 0;
-    const totalProductReturns = productReturns[0]?.totalProductReturns || 0;
-    const totalSalaries = salaryPayments[0]?.totalSalaries || 0;
-    const totalReceivable = qarzaReceivableData[0]?.totalReceivable || 0;
-    const totalPayable = qarzaPayableData[0]?.totalPayable || 0;
+    // Fetch previous period data for comparison
+    const [previousOrders, previousPurchases, previousExpenses, previousWastages, previousPurchaseReturns, previousProductReturns, previousSalaryPayments] = await Promise.all([
+        findOrderService({ ...previousDateFilter, status: "completed" }),
+        findPurchaseService(previousDateFilter),
+        findExpenseService(previousDateFilter),
+        findWastageService(previousDateFilter),
+        findPurchaseReturnService(previousDateFilter),
+        findProductReturnService(previousDateFilter),
+        findStaffSalaryPaymentService({ ...previousDateFilter, status: 'paid' })
+    ]);
+
+    // Calculate current period totals
+    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
+    const salesCount = orders.length;
+
+    const totalPurchases = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    const purchaseCount = purchases.length;
+
+    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const expenseCount = expenses.length;
+
+    const totalWastage = wastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
+    const wastageCount = wastages.length;
+
+    const totalPurchaseReturns = purchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    const purchaseReturnCount = purchaseReturns.length;
+
+    const totalProductReturns = productReturns.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
+    const productReturnCount = productReturns.length;
+
+    const totalSalaries = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const salaryPaymentCount = salaryPayments.length;
+
+    const totalReceivable = qarzaReceivable.reduce((sum, q) => sum + (q.balance || 0), 0);
+    const qarzaReceivableCount = qarzaReceivable.length;
+
+    const totalPayable = qarzaPayable.reduce((sum, q) => sum + (q.balance || 0), 0);
+    const qarzaPayableCount = qarzaPayable.length;
 
     const grossProfit = totalSales - totalPurchases;
     const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
     const netProfit = totalSales - totalPurchases - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
     const netMarginPercentage = totalSales > 0 ? Number(((netProfit / totalSales) * 100).toFixed(1)) : 0;
+
+    // Calculate previous period totals
+    const previousTotalSales = previousOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const previousSalesCount = previousOrders.length;
+
+    const previousTotalPurchases = previousPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    const previousPurchaseCount = previousPurchases.length;
+
+    const previousTotalExpenses = previousExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const previousExpenseCount = previousExpenses.length;
+
+    const previousTotalWastage = previousWastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
+    const previousWastageCount = previousWastages.length;
+
+    const previousTotalPurchaseReturns = previousPurchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    const previousPurchaseReturnCount = previousPurchaseReturns.length;
+
+    const previousTotalProductReturns = previousProductReturns.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
+    const previousProductReturnCount = previousProductReturns.length;
+
+    const previousTotalSalaries = previousSalaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const previousSalaryPaymentCount = previousSalaryPayments.length;
+
+    const previousGrossProfit = previousTotalSales - previousTotalPurchases;
+    const previousGrossMarginPercentage = previousTotalSales > 0 ? Number(((previousGrossProfit / previousTotalSales) * 100).toFixed(1)) : 0;
+    const previousNetProfit = previousTotalSales - previousTotalPurchases - previousTotalExpenses - previousTotalWastage - previousTotalSalaries - previousTotalProductReturns + previousTotalPurchaseReturns;
+    const previousNetMarginPercentage = previousTotalSales > 0 ? Number(((previousNetProfit / previousTotalSales) * 100).toFixed(1)) : 0;
+
+    // Calculate percentage changes
+    const calculateChange = (current, previous) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Number(((current - previous) / previous * 100).toFixed(1));
+    };
+
+    const salesChange = calculateChange(totalSales, previousTotalSales);
+    const salesCountChange = calculateChange(salesCount, previousSalesCount);
+    const purchasesChange = calculateChange(totalPurchases, previousTotalPurchases);
+    const purchaseCountChange = calculateChange(purchaseCount, previousPurchaseCount);
+    const expensesChange = calculateChange(totalExpenses, previousTotalExpenses);
+    const expenseCountChange = calculateChange(expenseCount, previousExpenseCount);
+    const wastageChange = calculateChange(totalWastage, previousTotalWastage);
+    const wastageCountChange = calculateChange(wastageCount, previousWastageCount);
+    const purchaseReturnsChange = calculateChange(totalPurchaseReturns, previousTotalPurchaseReturns);
+    const purchaseReturnCountChange = calculateChange(purchaseReturnCount, previousPurchaseReturnCount);
+    const productReturnsChange = calculateChange(totalProductReturns, previousTotalProductReturns);
+    const productReturnCountChange = calculateChange(productReturnCount, previousProductReturnCount);
+    const salariesChange = calculateChange(totalSalaries, previousTotalSalaries);
+    const salaryPaymentCountChange = calculateChange(salaryPaymentCount, previousSalaryPaymentCount);
+    const grossProfitChange = calculateChange(grossProfit, previousGrossProfit);
+    const grossMarginChange = calculateChange(grossMarginPercentage, previousGrossMarginPercentage);
+    const netProfitChange = calculateChange(netProfit, previousNetProfit);
+    const netMarginChange = calculateChange(netMarginPercentage, previousNetMarginPercentage);
+
+    // Calculate sales by payment method
+    const salesByPaymentMethodMap = {};
+    orders.forEach(order => {
+        const method = order.paymentMethod || 'unknown';
+        if (!salesByPaymentMethodMap[method]) {
+            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
+        }
+        salesByPaymentMethodMap[method].total += order.totalAmount || 0;
+        salesByPaymentMethodMap[method].count += 1;
+    });
+    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
+        _id: method,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate expenses by category
+    const expensesByCategoryMap = {};
+    expenses.forEach(expense => {
+        const category = expense.category || 'uncategorized';
+        if (!expensesByCategoryMap[category]) {
+            expensesByCategoryMap[category] = { total: 0, count: 0 };
+        }
+        expensesByCategoryMap[category].total += expense.amount || 0;
+        expensesByCategoryMap[category].count += 1;
+    });
+    const expensesByCategory = Object.entries(expensesByCategoryMap).map(([category, data]) => ({
+        _id: category,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate product returns by reason
+    const productReturnsByReasonMap = {};
+    productReturns.forEach(ret => {
+        const reason = ret.reason || 'unknown';
+        if (!productReturnsByReasonMap[reason]) {
+            productReturnsByReasonMap[reason] = { total: 0, count: 0 };
+        }
+        productReturnsByReasonMap[reason].total += ret.refundAmount || 0;
+        productReturnsByReasonMap[reason].count += 1;
+    });
+    const productReturnsByReason = Object.entries(productReturnsByReasonMap).map(([reason, data]) => ({
+        _id: reason,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate purchase returns by supplier
+    const purchaseReturnsBySupplierMap = {};
+    purchaseReturns.forEach(ret => {
+        const supplierName = ret.supplierName || 'unknown';
+        if (!purchaseReturnsBySupplierMap[supplierName]) {
+            purchaseReturnsBySupplierMap[supplierName] = { total: 0, count: 0 };
+        }
+        purchaseReturnsBySupplierMap[supplierName].total += ret.totalAmount || 0;
+        purchaseReturnsBySupplierMap[supplierName].count += 1;
+    });
+    const purchaseReturnsBySupplier = Object.entries(purchaseReturnsBySupplierMap).map(([supplierName, data]) => ({
+        _id: supplierName,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate wastages by product
+    const wastagesByProductMap = {};
+    wastages.forEach(wastage => {
+        const productName = wastage.productName || 'unknown';
+        if (!wastagesByProductMap[productName]) {
+            wastagesByProductMap[productName] = { total: 0, count: 0, totalQuantity: 0 };
+        }
+        wastagesByProductMap[productName].total += (wastage.quantity || 0) * (wastage.costPrice || 0);
+        wastagesByProductMap[productName].count += 1;
+        wastagesByProductMap[productName].totalQuantity += wastage.quantity || 0;
+    });
+    const wastagesByProduct = Object.entries(wastagesByProductMap).map(([productName, data]) => ({
+        _id: productName,
+        total: data.total,
+        count: data.count,
+        totalQuantity: data.totalQuantity
+    }));
+
+    // Calculate salaries by staff
+    const salariesByStaffMap = {};
+    salaryPayments.forEach(payment => {
+        const staffId = payment.staffId?.toString();
+        const staff = staffList.find(s => s._id?.toString() === staffId);
+        const staffName = staff?.name || 'unknown';
+        if (!salariesByStaffMap[staffName]) {
+            salariesByStaffMap[staffName] = { total: 0, count: 0 };
+        }
+        salariesByStaffMap[staffName].total += payment.amount || 0;
+        salariesByStaffMap[staffName].count += 1;
+    });
+    const salariesByStaff = Object.entries(salariesByStaffMap).map(([staffName, data]) => ({
+        _id: staffName,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Get transaction lists (limited to 100, sorted by createdAt desc)
+    const salesList = orders
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(order => ({
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            totalAmount: order.totalAmount,
+            paymentMethod: order.paymentMethod,
+            customerName: order.customerName,
+            createdAt: order.createdAt
+        }));
+
+    const purchasesList = purchases
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(purchase => ({
+            _id: purchase._id,
+            invoiceNumber: purchase.invoiceNumber,
+            totalAmount: purchase.totalAmount,
+            supplierName: purchase.supplierName,
+            createdAt: purchase.createdAt
+        }));
+
+    const expensesList = expenses
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(expense => ({
+            _id: expense._id,
+            title: expense.title,
+            amount: expense.amount,
+            category: expense.category,
+            description: expense.description,
+            createdAt: expense.createdAt
+        }));
+
+    const wastagesList = wastages
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(wastage => ({
+            _id: wastage._id,
+            quantity: wastage.quantity,
+            costPrice: wastage.costPrice,
+            productName: wastage.productName,
+            createdAt: wastage.createdAt
+        }));
+
+    const purchaseReturnsList = purchaseReturns
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(ret => ({
+            _id: ret._id,
+            returnNumber: ret.returnNumber,
+            totalAmount: ret.totalAmount,
+            supplierName: ret.supplierName,
+            createdAt: ret.createdAt
+        }));
+
+    const productReturnsList = productReturns
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 100)
+        .map(ret => ({
+            _id: ret._id,
+            returnNumber: ret.returnNumber,
+            refundAmount: ret.refundAmount,
+            customerName: ret.customerName,
+            createdAt: ret.createdAt
+        }));
+
+    const salaryPaymentsList = salaryPayments
+        .sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt))
+        .slice(0, 100)
+        .map(payment => {
+            const staffId = payment.staffId?.toString();
+            const staff = staffList.find(s => s._id?.toString() === staffId);
+            return {
+                _id: payment._id,
+                amount: payment.amount,
+                staffId: payment.staffId,
+                staffName: staff?.name || 'Unknown',
+                paidAt: payment.paidAt
+            };
+        });
 
     return {
         summary: {
@@ -1768,15 +2202,57 @@ export const getMainBusinessReport = async (filters = {}) => {
             netMarginPercentage,
         },
         details: {
-            salesCount: sales[0]?.count || 0,
-            purchaseCount: purchases[0]?.count || 0,
-            expenseCount: expenses[0]?.count || 0,
-            wastageCount: wastages[0]?.count || 0,
-            purchaseReturnCount: purchaseReturns[0]?.count || 0,
-            productReturnCount: productReturns[0]?.count || 0,
-            salaryPaymentCount: salaryPayments[0]?.count || 0,
-            qarzaReceivableCount: qarzaReceivableData[0]?.count || 0,
-            qarzaPayableCount: qarzaPayableData[0]?.count || 0,
+            salesCount,
+            purchaseCount,
+            expenseCount,
+            wastageCount,
+            purchaseReturnCount,
+            productReturnCount,
+            salaryPaymentCount,
+            qarzaReceivableCount,
+            qarzaPayableCount,
+        },
+        comparison: {
+            previous: {
+                totalSales: previousTotalSales,
+                salesCount: previousSalesCount,
+                totalPurchases: previousTotalPurchases,
+                purchaseCount: previousPurchaseCount,
+                totalExpenses: previousTotalExpenses,
+                expenseCount: previousExpenseCount,
+                totalWastage: previousTotalWastage,
+                wastageCount: previousWastageCount,
+                totalPurchaseReturns: previousTotalPurchaseReturns,
+                purchaseReturnCount: previousPurchaseReturnCount,
+                totalProductReturns: previousTotalProductReturns,
+                productReturnCount: previousProductReturnCount,
+                totalSalaries: previousTotalSalaries,
+                salaryPaymentCount: previousSalaryPaymentCount,
+                grossProfit: previousGrossProfit,
+                grossMarginPercentage: previousGrossMarginPercentage,
+                netProfit: previousNetProfit,
+                netMarginPercentage: previousNetMarginPercentage,
+            },
+            changes: {
+                salesChange,
+                salesCountChange,
+                purchasesChange,
+                purchaseCountChange,
+                expensesChange,
+                expenseCountChange,
+                wastageChange,
+                wastageCountChange,
+                purchaseReturnsChange,
+                purchaseReturnCountChange,
+                productReturnsChange,
+                productReturnCountChange,
+                salariesChange,
+                salaryPaymentCountChange,
+                grossProfitChange,
+                grossMarginChange,
+                netProfitChange,
+                netMarginChange,
+            }
         },
         breakdowns: {
             salesByPaymentMethod: salesByPaymentMethod.map(item => ({
@@ -1866,7 +2342,7 @@ export const getMainBusinessReport = async (filters = {}) => {
             salaryPayments: salaryPaymentsList.map(payment => ({
                 id: payment._id,
                 amount: payment.amount,
-                staffName: payment.staffId?.name || 'Unknown',
+                staffName: payment.staffName,
                 date: payment.paidAt
             }))
         }
@@ -1875,50 +2351,66 @@ export const getMainBusinessReport = async (filters = {}) => {
 
 // Financial Report
 export const getFinancialReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const PurchaseModel = getPurchaseModel();
-    const ExpensesModel = getExpenseModel();
     const { fromDate, toDate, page = 1, limit = 20 } = filters;
 
     const dateFilter = buildDateFilter(fromDate, toDate);
 
-    // Get sales, purchases, and expenses
-    const [sales, purchases, expenses] = await Promise.all([
-        OrderModel.aggregate([
-            { $match: { ...dateFilter, status: "completed" } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    totalSales: { $sum: "$totalAmount" },
-                    totalDiscount: { $sum: "$discountAmount" },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]),
-        PurchaseModel.aggregate([
-            { $match: dateFilter },
-            {
-                $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    totalPurchases: { $sum: "$totalAmount" },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            {
-                $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    totalExpenses: { $sum: "$amount" },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ])
+    // Get sales, purchases, and expenses using service functions
+    const [orders, purchaseData, expenseData] = await Promise.all([
+        findOrderService({ ...dateFilter, status: "completed" }),
+        findPurchaseService(dateFilter),
+        findExpenseService(dateFilter)
     ]);
+
+    // Group sales by date
+    const salesByDateMap = {};
+    orders.forEach(order => {
+        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        if (!salesByDateMap[dateStr]) {
+            salesByDateMap[dateStr] = { totalSales: 0, totalDiscount: 0, count: 0 };
+        }
+        salesByDateMap[dateStr].totalSales += order.totalAmount || 0;
+        salesByDateMap[dateStr].totalDiscount += order.discountAmount || 0;
+        salesByDateMap[dateStr].count += 1;
+    });
+    const sales = Object.entries(salesByDateMap).map(([date, data]) => ({
+        _id: date,
+        totalSales: data.totalSales,
+        totalDiscount: data.totalDiscount,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Group purchases by date
+    const purchasesByDateMap = {};
+    purchaseData.forEach(purchase => {
+        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        if (!purchasesByDateMap[dateStr]) {
+            purchasesByDateMap[dateStr] = { totalPurchases: 0, count: 0 };
+        }
+        purchasesByDateMap[dateStr].totalPurchases += purchase.totalAmount || 0;
+        purchasesByDateMap[dateStr].count += 1;
+    });
+    const purchases = Object.entries(purchasesByDateMap).map(([date, data]) => ({
+        _id: date,
+        totalPurchases: data.totalPurchases,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Group expenses by date
+    const expensesByDateMap = {};
+    expenseData.forEach(expense => {
+        const dateStr = new Date(expense.createdAt).toISOString().split('T')[0];
+        if (!expensesByDateMap[dateStr]) {
+            expensesByDateMap[dateStr] = { totalExpenses: 0, count: 0 };
+        }
+        expensesByDateMap[dateStr].totalExpenses += expense.amount || 0;
+        expensesByDateMap[dateStr].count += 1;
+    });
+    const expenses = Object.entries(expensesByDateMap).map(([date, data]) => ({
+        _id: date,
+        totalExpenses: data.totalExpenses,
+        count: data.count
+    })).sort((a, b) => a._id.localeCompare(b._id));
 
     // Merge data by date
     const mergedData = {};
@@ -1970,8 +2462,6 @@ export const getFinancialReport = async (filters = {}) => {
 
 // Credit/Debit Report (Qarza)
 export const getCreditDebitReport = async (filters = {}) => {
-    const QarzaAccountModel = getQarzaAccountModel();
-    const QarzaPaymentModel = getQarzaPaymentModel();
     const { type, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -1980,37 +2470,25 @@ export const getCreditDebitReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
+    // Fetch data using service functions
     const [data, total] = await Promise.all([
-        QarzaAccountModel.find(matchQuery, null, {
-            sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
-        }),
-        QarzaAccountModel.countDocuments(matchQuery)
+        findQarzaAccountService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countQarzaAccountService(matchQuery)
     ]);
 
-    // Get recent payments for each account
+    // Get recent payments for each account using service function
     const accountsWithPayments = await Promise.all(
         data.map(async (account) => {
-            const payments = await QarzaPaymentModel.find({ account: account._id }, null, {
-                sort: { createdAt: -1 },
-                limit: 5
-            });
+            const payments = await findQarzaPaymentService({ account: account._id })
+                .sort({ createdAt: -1 })
+                .limit(5);
             return { ...account.toObject(), recentPayments: payments };
         })
     );
 
-    // Calculate totals
-    const totals = await QarzaAccountModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: null,
-                totalBalance: { $sum: "$balance" },
-                totalAccounts: { $sum: 1 }
-            }
-        }
-    ]);
+    // Calculate totals manually
+    const totalBalance = data.reduce((sum, account) => sum + (account.balance || 0), 0);
+    const totalAccounts = data.length;
 
     return {
         data: accountsWithPayments,
@@ -2019,16 +2497,14 @@ export const getCreditDebitReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalBalance: totals[0]?.totalBalance || 0,
-            totalAccounts: totals[0]?.totalAccounts || 0
+            totalBalance,
+            totalAccounts
         }
     };
 };
 
 // Purchase Return Report
 export const getPurchaseReturnReport = async (filters = {}) => {
-    const PurchaseReturnModel = getPurchaseReturnModel();
-    const SupplierModel = getSupplierModel();
     const { fromDate, toDate, supplierId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2040,28 +2516,41 @@ export const getPurchaseReturnReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        PurchaseReturnModel.find(matchQuery, null, {
-            populate: { path: "supplier", select: "name" },
-            sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
-        }),
-        PurchaseReturnModel.countDocuments(matchQuery)
+    // Fetch data using service functions
+    const [data, total, supplierList] = await Promise.all([
+        findPurchaseReturnService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countPurchaseReturnService(matchQuery),
+        findSupplierService({})
     ]);
 
-    const totals = await PurchaseReturnModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: null, totalAmount: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-    ]);
+    // Calculate totals manually
+    const totalAmount = data.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
+    const totalReturns = data.length;
 
-    const returnsBySupplier = await PurchaseReturnModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: "$supplier", totalAmount: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-        { $lookup: { from: "suppliers", localField: "_id", foreignField: "_id", as: "supplier" } },
-        { $unwind: "$supplier" },
-        { $project: { supplierName: "$supplier.name", totalAmount: 1, count: 1 } }
-    ]);
+    // Calculate returns by supplier manually
+    const returnsBySupplierMap = {};
+    data.forEach(ret => {
+        const supplierId = ret.supplier?.toString();
+        if (!supplierId) return;
+        
+        if (!returnsBySupplierMap[supplierId]) {
+            const supplier = supplierList.find(s => s._id?.toString() === supplierId);
+            returnsBySupplierMap[supplierId] = {
+                supplierName: supplier?.name || 'Unknown',
+                totalAmount: 0,
+                count: 0
+            };
+        }
+        
+        returnsBySupplierMap[supplierId].totalAmount += ret.totalAmount || 0;
+        returnsBySupplierMap[supplierId].count += 1;
+    });
+    
+    const returnsBySupplier = Object.values(returnsBySupplierMap).map(item => ({
+        supplierName: item.supplierName,
+        totalAmount: item.totalAmount,
+        count: item.count
+    }));
 
     return {
         data,
@@ -2070,8 +2559,8 @@ export const getPurchaseReturnReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalAmount: totals[0]?.totalAmount || 0,
-            totalReturns: totals[0]?.count || 0,
+            totalAmount,
+            totalReturns,
         },
         returnsBySupplier,
     };
@@ -2079,8 +2568,6 @@ export const getPurchaseReturnReport = async (filters = {}) => {
 
 // Sale Return Report
 export const getSaleReturnReport = async (filters = {}) => {
-    const ProductReturnModel = getProductReturnModel();
-    const CustomerModel = getCustomerModel();
     const { fromDate, toDate, customerId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2092,28 +2579,41 @@ export const getSaleReturnReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        ProductReturnModel.find(matchQuery, null, {
-            populate: { path: "customer", select: "name phone" },
-            sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
-        }),
-        ProductReturnModel.countDocuments(matchQuery)
+    // Fetch data using service functions
+    const [data, total, customerList] = await Promise.all([
+        findProductReturnService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countProductReturnService(matchQuery),
+        findCustomerService({})
     ]);
 
-    const totals = await ProductReturnModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: null, totalRefund: { $sum: "$refundAmount" }, count: { $sum: 1 } } }
-    ]);
+    // Calculate totals manually
+    const totalRefund = data.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
+    const totalReturns = data.length;
 
-    const returnsByCustomer = await ProductReturnModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: "$customer", totalRefund: { $sum: "$refundAmount" }, count: { $sum: 1 } } },
-        { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "customer" } },
-        { $unwind: "$customer" },
-        { $project: { customerName: "$customer.name", totalRefund: 1, count: 1 } }
-    ]);
+    // Calculate returns by customer manually
+    const returnsByCustomerMap = {};
+    data.forEach(ret => {
+        const customerId = ret.customer?.toString();
+        if (!customerId) return;
+        
+        if (!returnsByCustomerMap[customerId]) {
+            const customer = customerList.find(c => c._id?.toString() === customerId);
+            returnsByCustomerMap[customerId] = {
+                customerName: customer?.name || 'Unknown',
+                totalRefund: 0,
+                count: 0
+            };
+        }
+        
+        returnsByCustomerMap[customerId].totalRefund += ret.refundAmount || 0;
+        returnsByCustomerMap[customerId].count += 1;
+    });
+    
+    const returnsByCustomer = Object.values(returnsByCustomerMap).map(item => ({
+        customerName: item.customerName,
+        totalRefund: item.totalRefund,
+        count: item.count
+    }));
 
     return {
         data,
@@ -2122,8 +2622,8 @@ export const getSaleReturnReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalRefund: totals[0]?.totalRefund || 0,
-            totalReturns: totals[0]?.count || 0,
+            totalRefund,
+            totalReturns,
         },
         returnsByCustomer,
     };
@@ -2131,262 +2631,132 @@ export const getSaleReturnReport = async (filters = {}) => {
 
 // Inventory Report
 export const getInventoryReport = async (filters = {}) => {
-    const BatchModel = getBatchModel();
-    const ProductModel = getProductModel();
-    const OrderModel = getOrderModel();
-    const PurchaseModel = getPurchaseModel();
-    const WastageModel = getWastageModel();
-    const ProductReturnModel = getProductReturnModel();
-    const CategoryModel = getCategoryModel();
-    
-    const { 
-        categoryId, 
-        lowStock, 
-        nearExpiry, 
-        page = 1, 
-        limit = 20,
-        fromDate,
-        toDate,
-        productName,
-        productCode,
-        tag,
-        sortBy = 'createdAt'
-    } = filters;
+    const { tag, category, search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
 
-    const matchQuery = { isActive: true };
-    
-    // Build date filter
-    let dateFilter = {};
-    if (fromDate && toDate) {
-        const startDate = new Date(fromDate);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(toDate);
-        endDate.setHours(23, 59, 59, 999);
-        dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
+    const matchQuery = {};
+
+    // Tag filter
+    if (tag) {
+        matchQuery.tags = tag;
     }
 
-    // Apply filters
-    if (lowStock) matchQuery.quantity = { $gt: 0, $lte: 10 };
-    if (nearExpiry) {
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        matchQuery.expiryDate = { $lte: thirtyDaysFromNow, $gte: new Date() };
+    // Category filter
+    if (category) {
+        matchQuery.category = category;
+    }
+
+    // Search filter
+    if (search) {
+        matchQuery.$or = [
+            { name: { $regex: search, $options: "i" } },
+            { sku: { $regex: search, $options: "i" } }
+        ];
     }
 
     const skip = (page - 1) * limit;
 
-    // Get all products with their data
-    let productQuery = { isActive: true };
-    if (categoryId) productQuery.category = categoryId;
-    if (productName) productQuery.name = { $regex: productName, $options: 'i' };
-    if (productCode) productQuery.code = { $regex: productCode, $options: 'i' };
+    // Fetch data using service functions
+    const [data, total] = await Promise.all([
+        findProductService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countProductService(matchQuery)
+    ]);
 
-    const products = await ProductModel.find(productQuery, null, {
-        populate: 'category',
-        sort: { [sortBy]: sortBy === 'expiryDate' ? 1 : -1 },
-        skip: skip,
-        limit: limit
-    });
+    // Get all batches to calculate stock levels
+    const allBatches = await findBatchService({ isActive: true });
 
-    const totalProducts = await ProductModel.countDocuments(productQuery);
+    // Get all orders to calculate sales
+    const allOrders = await findOrderService({ status: "completed" });
 
-    // Get statistics for each product
+    // Get all purchases to calculate purchases
+    const allPurchases = await findPurchaseService({});
+
+    // Get all returns to calculate returns
+    const allReturns = await findProductReturnService({});
+
+    // Calculate statistics for each product
     const productsWithStats = await Promise.all(
-        products.map(async (product) => {
-            // Get all batches for this product
-            const batches = await BatchModel.find({ product: product._id, isActive: true });
-            const currentStock = batches.reduce((sum, batch) => sum + batch.quantity, 0);
-            const minStockLevel = product.minStockLevel || 0;
-            const maxStockLevel = product.maxStockLevel || 0;
-            
-            // Get earliest expiry date
-            const expiryDates = batches
-                .filter(b => b.expiryDate)
-                .map(b => new Date(b.expiryDate))
-                .sort((a, b) => a - b);
-            const expiryDate = expiryDates.length > 0 ? expiryDates[0] : null;
+        data.map(async (product) => {
+            const productId = product._id.toString();
 
-            // Get total purchased quantity
-            const purchaseFilter = {
-                'items.product': product._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            const purchases = await PurchaseModel.find(purchaseFilter);
-            const totalPurchased = purchases.reduce((sum, purchase) => {
-                const item = purchase.items.find(i => i.product.toString() === product._id.toString());
+            // Calculate total stock from batches
+            const productBatches = allBatches.filter(b => b.product?.toString() === productId);
+            const totalStock = productBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+
+            // Calculate total purchased
+            const productPurchases = allPurchases.filter(p => 
+                p.items?.some(i => i.product?.toString() === productId)
+            );
+            const totalPurchased = productPurchases.reduce((sum, p) => {
+                const item = p.items?.find(i => i.product?.toString() === productId);
                 return sum + (item ? item.quantity : 0);
             }, 0);
 
-            // Get total sold quantity
-            const orderFilter = {
-                'items.product': product._id,
-                status: 'completed',
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            const orders = await OrderModel.find(orderFilter);
-            const totalSold = orders.reduce((sum, order) => {
-                const item = order.items.find(i => i.product.toString() === product._id.toString());
+            // Calculate total sold
+            const productOrders = allOrders.filter(o => 
+                o.items?.some(i => i.product?.toString() === productId)
+            );
+            const totalSold = productOrders.reduce((sum, o) => {
+                const item = o.items?.find(i => i.product?.toString() === productId);
                 return sum + (item ? item.quantity : 0);
             }, 0);
 
-            // Get total returned quantity
-            const returnFilter = {
-                'items.product': product._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            const returns = await ProductReturnModel.find(returnFilter);
-            const totalReturned = returns.reduce((sum, ret) => {
-                const item = ret.items.find(i => i.product.toString() === product._id.toString());
+            // Calculate total returned
+            const productReturns = allReturns.filter(r => 
+                r.items?.some(i => i.product?.toString() === productId)
+            );
+            const totalReturned = productReturns.reduce((sum, r) => {
+                const item = r.items?.find(i => i.product?.toString() === productId);
                 return sum + (item ? item.quantity : 0);
             }, 0);
-
-            // Get total wasted quantity
-            const wastageFilter = {
-                product: product._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            const wastages = await WastageModel.find(wastageFilter);
-            const totalWasted = wastages.reduce((sum, w) => sum + w.quantity, 0);
-
-            // Auto-tag the product
-            let assignedTag = null;
-            const now = new Date();
-            
-            if (expiryDate && expiryDate < now) {
-                assignedTag = 'expired';
-            } else if (expiryDate && (expiryDate - now) / (1000 * 60 * 60 * 24) <= 30) {
-                assignedTag = 'near_expiry';
-            } else if (currentStock === 0) {
-                assignedTag = 'dead_stock';
-            } else if (currentStock <= minStockLevel && minStockLevel > 0) {
-                assignedTag = 'low_stock';
-            } else if (currentStock >= maxStockLevel && maxStockLevel > 0) {
-                assignedTag = 'overstock';
-            } else if (totalSold > (totalPurchased * 0.7)) {
-                assignedTag = 'fast_selling';
-            } else if (totalReturned > (totalSold * 0.2)) {
-                assignedTag = 'high_return';
-            }
-
-            // Apply tag filter if specified
-            if (tag && assignedTag !== tag) {
-                return null;
-            }
 
             return {
                 ...product.toObject(),
-                currentStock,
-                minStockLevel,
-                maxStockLevel,
+                totalStock,
                 totalPurchased,
                 totalSold,
-                totalReturned,
-                totalWasted,
-                expiryDate,
-                tag: assignedTag,
+                totalReturned
             };
         })
     );
 
-    // Filter out null values (from tag filtering)
-    const filteredProducts = productsWithStats.filter(p => p !== null);
-    const filteredTotal = filteredProducts.length;
-
-    // Calculate sales and return rankings
-    const sortedBySales = [...filteredProducts].sort((a, b) => b.totalSold - a.totalSold);
-    const sortedByReturns = [...filteredProducts].sort((a, b) => b.totalReturned - a.totalReturned);
-
-    const salesRankMap = {};
-    sortedBySales.forEach((p, index) => {
-        salesRankMap[p._id.toString()] = index + 1;
-    });
-
-    const returnRankMap = {};
-    sortedByReturns.forEach((p, index) => {
-        returnRankMap[p._id.toString()] = index + 1;
-    });
-
-    // Add ranks to products
-    const finalProducts = filteredProducts.map(p => ({
-        ...p,
-        salesRank: salesRankMap[p._id.toString()],
-        returnRank: returnRankMap[p._id.toString()],
-    }));
-
-    // Calculate summary totals by tag
-    const tagCounts = {
-        dead_stock: 0,
-        expired: 0,
-        low_stock: 0,
-        fast_selling: 0,
-        overstock: 0,
-        high_return: 0,
-        near_expiry: 0,
-    };
-
-    finalProducts.forEach(p => {
-        if (p.tag && tagCounts[p.tag] !== undefined) {
-            tagCounts[p.tag]++;
+    // Calculate tag counts
+    const tagCounts = {};
+    data.forEach(product => {
+        if (product.tags && Array.isArray(product.tags)) {
+            product.tags.forEach(tag => {
+                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            });
         }
     });
 
     // Sort based on sortBy parameter
-    let sortedProducts = [...finalProducts];
-    if (sortBy === 'tag') {
-        // Sort by tag priority: expired > near_expiry > dead_stock > high_return > low_stock > overstock > fast_selling > none
-        const tagPriority = {
-            expired: 1,
-            near_expiry: 2,
-            dead_stock: 3,
-            high_return: 4,
-            low_stock: 5,
-            overstock: 6,
-            fast_selling: 7,
-        };
-        sortedProducts.sort((a, b) => {
-            const aPriority = a.tag ? tagPriority[a.tag] || 8 : 8;
-            const bPriority = b.tag ? tagPriority[b.tag] || 8 : 8;
-            return aPriority - bPriority;
-        });
-    } else if (sortBy === 'highest_sales') {
-        sortedProducts.sort((a, b) => b.totalSold - a.totalSold);
-    } else if (sortBy === 'lowest_sales') {
-        sortedProducts.sort((a, b) => a.totalSold - b.totalSold);
-    } else if (sortBy === 'most_returned') {
-        sortedProducts.sort((a, b) => b.totalReturned - a.totalReturned);
-    } else if (sortBy === 'expiry_date') {
-        sortedProducts.sort((a, b) => {
-            if (!a.expiryDate) return 1;
-            if (!b.expiryDate) return -1;
-            return new Date(a.expiryDate) - new Date(b.expiryDate);
-        });
-    } else if (sortBy === 'stock_level') {
-        sortedProducts.sort((a, b) => a.currentStock - b.currentStock);
-    }
+    const sortField = sortBy === 'stock' ? 'totalStock' : 
+                      sortBy === 'sales' ? 'totalSold' : 
+                      sortBy === 'returns' ? 'totalReturned' : 'name';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    
+    productsWithStats.sort((a, b) => {
+        if (sortField === 'name') {
+            return a.name.localeCompare(b.name) * sortDirection;
+        }
+        return (a[sortField] - b[sortField]) * sortDirection;
+    });
 
     return {
-        data: sortedProducts,
-        total: filteredTotal,
+        data: productsWithStats,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(filteredTotal / limit),
+        totalPages: Math.ceil(total / limit),
         summary: {
-            totalProducts: filteredTotal,
-            deadStockCount: tagCounts.dead_stock,
-            expiredCount: tagCounts.expired,
-            lowStockCount: tagCounts.low_stock,
-            fastSellingCount: tagCounts.fast_selling,
-            overstockCount: tagCounts.overstock,
-            highReturnCount: tagCounts.high_return,
-            nearExpiryCount: tagCounts.near_expiry,
-        },
+            totalProducts: total,
+            tagCounts,
+        }
     };
 };
 
 // Product Wastage Report
 export const getProductWastageReport = async (filters = {}) => {
-    const WastageModel = getWastageModel();
-    const ProductModel = getProductModel();
     const { fromDate, toDate, productId, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2398,28 +2768,35 @@ export const getProductWastageReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        WastageModel.find(matchQuery)
-            .populate("product", "name")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        WastageModel.countDocuments(matchQuery)
+    // Fetch data using service functions
+    const [data, total, productList] = await Promise.all([
+        findWastageService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countWastageService(matchQuery),
+        findProductService({})
     ]);
 
-    const totals = await WastageModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: null, totalQuantity: { $sum: "$quantity" }, totalLoss: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } }
-    ]);
-
-    const wastageByProduct = await WastageModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: "$product", totalQuantity: { $sum: "$quantity" }, totalLoss: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, count: { $sum: 1 } } },
-        { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
-        { $unwind: "$product" },
-        { $project: { productName: "$product.name", totalQuantity: 1, totalLoss: 1, count: 1 } },
-        { $sort: { totalLoss: -1 } }
-    ]);
+    // Calculate wastage by product manually
+    const wastageByProductMap = {};
+    data.forEach(wastage => {
+        const productId = wastage.product?.toString();
+        if (!productId) return;
+        
+        if (!wastageByProductMap[productId]) {
+            const product = productList.find(p => p._id?.toString() === productId);
+            wastageByProductMap[productId] = {
+                productName: product?.name || 'Unknown',
+                totalQuantity: 0,
+                totalLoss: 0,
+                count: 0
+            };
+        }
+        
+        wastageByProductMap[productId].totalQuantity += wastage.quantity || 0;
+        wastageByProductMap[productId].totalLoss += (wastage.quantity || 0) * (wastage.costPrice || 0);
+        wastageByProductMap[productId].count += 1;
+    });
+    
+    const wastageByProduct = Object.values(wastageByProductMap);
 
     return {
         data,
@@ -2428,159 +2805,92 @@ export const getProductWastageReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalQuantity: totals[0]?.totalQuantity || 0,
-            totalLoss: totals[0]?.totalLoss || 0,
-            totalWastages: totals[0]?.count || 0,
+            totalQuantity: data.reduce((sum, w) => sum + (w.quantity || 0), 0),
+            totalLoss: data.reduce((sum, w) => sum + ((w.quantity || 0) * (w.costPrice || 0)), 0),
+            totalRecords: data.length,
         },
-        wastageByProduct,
+        wastageByProduct
     };
 };
 
 // Customer Report
 export const getCustomerReport = async (filters = {}) => {
-    const CustomerModel = getCustomerModel();
-    const OrderModel = getOrderModel();
-    const { fromDate, toDate, customerType, sortBy, sortOrder, search, page = 1, limit = 20 } = filters;
+    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
-
-    // Date filter
-    if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
-        matchQuery.createdAt = dateFilter.createdAt;
-    }
-
-    // Customer type filter
-    if (customerType && customerType !== "all") {
-        matchQuery.type = customerType;
-    }
-
-    // Search filter
     if (search) {
         matchQuery.$or = [
             { name: { $regex: search, $options: "i" } },
-            { phone: { $regex: search, $options: "i" } }
+            { phone: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } }
         ];
     }
 
     const skip = (page - 1) * limit;
 
-    // Get customers with their order statistics
-    const customersWithStats = await CustomerModel.aggregate([
-        { $match: matchQuery },
-        {
-            $lookup: {
-                from: "orders",
-                let: { customerName: "$name" },
-                pipeline: [
-                    { $match: { 
-                        $expr: { $eq: ["$customerName", "$$customerName"] },
-                        status: "completed"
-                    }},
-                    { $sort: { createdAt: -1 } }
-                ],
-                as: "orders"
-            }
-        },
-        {
-            $addFields: {
-                totalOrders: { $size: "$orders" },
-                totalSpent: { $sum: "$orders.totalAmount" },
-                lastPurchase: { $arrayElemAt: ["$orders.createdAt", 0] },
-                dueAmount: { 
-                    $sum: { 
-                        $filter: {
-                            input: "$orders",
-                            as: "order",
-                            cond: { $eq: ["$$order.paymentMethod", "credit"] }
-                        }
-                    }
-                }
-            }
-        },
-        {
-            $addFields: {
-                customerType: { $ifNull: ["$type", "walk-in"] }
-            }
-        }
+    // Fetch data using service functions
+    const [data, total] = await Promise.all([
+        findCustomerService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countCustomerService(matchQuery)
     ]);
 
+    // Get all orders to calculate customer statistics
+    const allOrders = await findOrderService({ status: "completed" });
+
+    // Calculate statistics for each customer
+    const customersWithStats = data.map(customer => {
+        const customerId = customer._id.toString();
+        const customerOrders = allOrders.filter(o => o.customerId?.toString() === customerId);
+
+        const totalOrders = customerOrders.length;
+        const totalSpent = customerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const lastOrderDate = customerOrders.length > 0 ? customerOrders[0].createdAt : null;
+
+        return {
+            ...customer.toObject(),
+            totalOrders,
+            totalSpent,
+            lastOrderDate
+        };
+    });
+
     // Sort based on sortBy parameter
-    const sortField = sortBy === "totalSpent" ? "totalSpent" : 
-                      sortBy === "totalOrders" ? "totalOrders" : 
-                      sortBy === "lastPurchase" ? "lastPurchase" : "totalSpent";
-    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    const sortField = sortBy === 'orders' ? 'totalOrders' : 
+                      sortBy === 'spent' ? 'totalSpent' : 
+                      sortBy === 'lastOrder' ? 'lastOrderDate' : 'name';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
     
     customersWithStats.sort((a, b) => {
-        if (sortField === "lastPurchase") {
-            const aDate = a.lastPurchase ? new Date(a.lastPurchase).getTime() : 0;
-            const bDate = b.lastPurchase ? new Date(b.lastPurchase).getTime() : 0;
+        if (sortField === 'name') {
+            return a.name.localeCompare(b.name) * sortDirection;
+        }
+        if (sortField === 'lastOrderDate') {
+            const aDate = a.lastOrderDate ? new Date(a.lastOrderDate).getTime() : 0;
+            const bDate = b.lastOrderDate ? new Date(b.lastOrderDate).getTime() : 0;
             return (aDate - bDate) * sortDirection;
         }
         return (a[sortField] - b[sortField]) * sortDirection;
     });
 
-    // Pagination
-    const total = customersWithStats.length;
-    const paginatedData = customersWithStats.slice(skip, skip + limit);
-
-    // Calculate KPIs
-    const totalCustomers = customersWithStats.length;
-    const walkInCustomers = customersWithStats.filter(c => c.customerType === "walk-in");
-    const registeredCustomers = customersWithStats.filter(c => c.customerType === "registered");
-    
-    const totalSalesWalkIn = walkInCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
-    const totalSalesRegistered = registeredCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
-    const totalDue = customersWithStats.reduce((sum, c) => sum + (c.dueAmount || 0), 0);
-    
-    const topCustomer = customersWithStats.length > 0 ? 
-        customersWithStats.reduce((max, c) => c.totalSpent > max.totalSpent ? c : max, customersWithStats[0]) : null;
-
-    // Add rank to each customer
-    const rankedData = paginatedData.map((customer, index) => ({
-        ...customer,
-        rank: skip + index + 1
-    }));
-
     return {
-        data: rankedData,
+        data: customersWithStats,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalCustomers,
-            totalSalesWalkIn,
-            totalSalesRegistered,
-            totalDue,
-            topCustomer: topCustomer ? {
-                name: topCustomer.name,
-                amount: topCustomer.totalSpent
-            } : null
+            totalCustomers: total,
+            totalOrders: customersWithStats.reduce((sum, c) => sum + c.totalOrders, 0),
+            totalSpent: customersWithStats.reduce((sum, c) => sum + c.totalSpent, 0)
         }
     };
 };
 
 // Supplier Report
 export const getSupplierReport = async (filters = {}) => {
-    const SupplierModel = getSupplierModel();
-    const PurchaseModel = getPurchaseModel();
-    const { fromDate, toDate, supplierId, sortBy, sortOrder, paymentStatus, search, page = 1, limit = 20 } = filters;
+    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
-
-    // Date filter
-    if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
-        matchQuery.createdAt = dateFilter.createdAt;
-    }
-
-    // Supplier filter
-    if (supplierId) {
-        matchQuery._id = supplierId;
-    }
-
-    // Search filter
     if (search) {
         matchQuery.$or = [
             { name: { $regex: search, $options: "i" } },
@@ -2590,106 +2900,74 @@ export const getSupplierReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    // Get suppliers with their purchase statistics
-    const suppliersWithStats = await SupplierModel.aggregate([
-        { $match: matchQuery },
-        {
-            $lookup: {
-                from: "purchases",
-                let: { supplierId: "$_id" },
-                pipeline: [
-                    { $match: { 
-                        $expr: { $eq: ["$supplier", "$$supplierId"] }
-                    }},
-                    { $sort: { createdAt: -1 } }
-                ],
-                as: "purchases"
-            }
-        },
-        {
-            $addFields: {
-                totalPurchases: { $sum: "$purchases.totalAmount" },
-                totalPaid: { $sum: { $cond: [{ $eq: ["$purchases.paymentStatus", "full"] }, "$purchases.totalAmount", { $ifNull: ["$purchases.paidAmount", 0] }] } },
-                totalDue: { $sum: { $cond: [{ $ne: ["$purchases.paymentStatus", "full"] }, { $subtract: ["$purchases.totalAmount", { $ifNull: ["$purchases.paidAmount", 0] }] }, 0] } },
-                totalBills: { $size: "$purchases" },
-                lastPurchase: { $arrayElemAt: ["$purchases.createdAt", 0] }
-            }
-        }
+    // Fetch data using service functions
+    const [data, total] = await Promise.all([
+        findSupplierService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countSupplierService(matchQuery)
     ]);
 
-    // Apply payment status filter if specified
-    let filteredSuppliers = suppliersWithStats;
-    if (paymentStatus && paymentStatus !== "all") {
-        if (paymentStatus === "paid") {
-            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue === 0);
-        } else if (paymentStatus === "unpaid") {
-            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue > 0 && s.totalPaid === 0);
-        } else if (paymentStatus === "partial") {
-            filteredSuppliers = suppliersWithStats.filter(s => s.totalDue > 0 && s.totalPaid > 0);
-        }
-    }
+    // Get all purchases to calculate supplier statistics
+    const allPurchases = await findPurchaseService({});
+    const allPurchaseReturns = await findPurchaseReturnService({});
+
+    // Calculate statistics for each supplier
+    const suppliersWithStats = data.map(supplier => {
+        const supplierId = supplier._id.toString();
+        const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
+        const supplierReturns = allPurchaseReturns.filter(r => r.supplier?.toString() === supplierId);
+
+        const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+        const totalPaid = supplierPurchases.reduce((sum, p) => {
+            if (p.paymentStatus === "full") {
+                return sum + (p.totalAmount || 0);
+            }
+            return sum + (p.paidAmount || 0);
+        }, 0);
+        const totalDue = supplierPurchases.reduce((sum, p) => {
+            if (p.paymentStatus !== "full") {
+                return sum + ((p.totalAmount || 0) - (p.paidAmount || 0));
+            }
+            return sum;
+        }, 0);
+        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+
+        return {
+            ...supplier.toObject(),
+            totalPurchases,
+            totalPaid,
+            totalDue,
+            totalReturns
+        };
+    });
 
     // Sort based on sortBy parameter
-    const sortField = sortBy === "totalPurchases" ? "totalPurchases" : 
-                      sortBy === "dueAmount" ? "totalDue" : 
-                      sortBy === "lastPurchase" ? "lastPurchase" : "totalPurchases";
-    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    const sortField = sortBy === 'purchases' ? 'totalPurchases' : 
+                      sortBy === 'due' ? 'totalDue' : 'name';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
     
-    filteredSuppliers.sort((a, b) => {
-        if (sortField === "lastPurchase") {
-            const aDate = a.lastPurchase ? new Date(a.lastPurchase).getTime() : 0;
-            const bDate = b.lastPurchase ? new Date(b.lastPurchase).getTime() : 0;
-            return (aDate - bDate) * sortDirection;
+    suppliersWithStats.sort((a, b) => {
+        if (sortField === 'name') {
+            return a.name.localeCompare(b.name) * sortDirection;
         }
         return (a[sortField] - b[sortField]) * sortDirection;
     });
 
-    // Pagination
-    const total = filteredSuppliers.length;
-    const paginatedData = filteredSuppliers.slice(skip, skip + limit);
-
-    // Calculate KPIs
-    const totalSuppliers = filteredSuppliers.length;
-    const totalPurchases = filteredSuppliers.reduce((sum, s) => sum + (s.totalPurchases || 0), 0);
-    const totalPaid = filteredSuppliers.reduce((sum, s) => sum + (s.totalPaid || 0), 0);
-    const totalDue = filteredSuppliers.reduce((sum, s) => sum + (s.totalDue || 0), 0);
-    
-    const topSupplier = filteredSuppliers.length > 0 ? 
-        filteredSuppliers.reduce((max, s) => s.totalPurchases > max.totalPurchases ? s : max, filteredSuppliers[0]) : null;
-
-    // Add rank to each supplier
-    const rankedData = paginatedData.map((supplier, index) => ({
-        ...supplier,
-        rank: skip + index + 1
-    }));
-
     return {
-        data: rankedData,
+        data: suppliersWithStats,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalSuppliers,
-            totalPurchases,
-            totalPaid,
-            totalDue,
-            topSupplier: topSupplier ? {
-                name: topSupplier.name,
-                amount: topSupplier.totalPurchases
-            } : null
+            totalSuppliers: total,
+            totalPurchases: suppliersWithStats.reduce((sum, s) => sum + s.totalPurchases, 0),
+            totalDue: suppliersWithStats.reduce((sum, s) => sum + s.totalDue, 0)
         }
     };
 };
 
 // Staff Report
 export const getStaffReport = async (filters = {}) => {
-    const StaffModel = getStaffModel();
-    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
-    const StaffSaleBillModel = getStaffSaleBillModel();
-    const StaffAttendanceModel = getStaffAttendanceModel();
-    const OrderModel = getOrderModel();
-    
     const { 
         role, 
         status, 
@@ -2724,35 +3002,33 @@ export const getStaffReport = async (filters = {}) => {
         orderTypeFilter = { orderType: orderType };
     }
 
+    // Fetch staff using service functions
     const [data, total] = await Promise.all([
-        StaffModel.find(matchQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        StaffModel.countDocuments(matchQuery)
+        findStaffService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countStaffService(matchQuery)
     ]);
 
     const staffWithStats = await Promise.all(
         data.map(async (staff) => {
-            // Get salary payments with date filter
-            const salaryPayments = await StaffSalaryPaymentModel.find({ 
+            // Get salary payments with date filter using service function
+            const salaryPayments = await findStaffSalaryPaymentService({ 
                 staffId: staff._id,
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
             });
-            const totalPaid = salaryPayments.reduce((sum, payment) => sum + payment.amount, 0);
+            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
             
             // Get advance/deductions
             const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
             const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
 
-            // Get orders handled by this staff
+            // Get orders handled by this staff using service function
             const orderFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
                 ...orderTypeFilter,
                 'staffId': staff._id
             };
             
-            const orders = await OrderModel.find(orderFilter);
+            const orders = await findOrderService(orderFilter);
             const totalOrders = orders.length;
             
             // Calculate sales amounts
@@ -2764,12 +3040,12 @@ export const getStaffReport = async (filters = {}) => {
                 .filter(o => o.orderType === 'wholesale')
                 .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-            // Get attendance data
+            // Get attendance data using service function
             const attendanceFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
             };
             
-            const attendanceRecords = await StaffAttendanceModel.find(attendanceFilter);
+            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
             let totalPresentDays = 0;
             let totalAbsentDays = 0;
             let totalWorkingHours = 0;
@@ -2844,12 +3120,6 @@ export const getStaffReport = async (filters = {}) => {
 
 // Profit & Loss Report
 export const getProfitLossReport = async (filters = {}) => {
-    const OrderModel = getOrderModel();
-    const PurchaseModel = getPurchaseModel();
-    const ExpensesModel = getExpenseModel();
-    const WastageModel = getWastageModel();
-    const StaffSalaryPaymentModel = getStaffSalaryPaymentModel();
-    const ProductReturnModel = getProductReturnModel();
     const { fromDate, toDate, period = "month" } = filters;
 
     let dateFilter = {};
@@ -2862,41 +3132,25 @@ export const getProfitLossReport = async (filters = {}) => {
         dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
     }
 
-    const [revenue, costOfGoodsSold, expenses, wastages, salaries, refunds] = await Promise.all([
-        OrderModel.aggregate([
-            { $match: { ...dateFilter, status: "completed" } },
-            { $group: { _id: null, total: { $sum: "$totalAmount" }, discount: { $sum: "$discountAmount" } } }
-        ]),
-        PurchaseModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
-        ]),
-        ExpensesModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]),
-        WastageModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$costPrice"] } } } }
-        ]),
-        StaffSalaryPaymentModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]),
-        ProductReturnModel.aggregate([
-            { $match: dateFilter },
-            { $group: { _id: null, total: { $sum: "$refundAmount" } } }
-        ]),
+    // Fetch all data using service functions
+    const [orders, purchases, expenses, wastages, salaryPayments, productReturns] = await Promise.all([
+        findOrderService({ ...dateFilter, status: "completed" }),
+        findPurchaseService(dateFilter),
+        findExpenseService(dateFilter),
+        findWastageService(dateFilter),
+        findStaffSalaryPaymentService(dateFilter),
+        findProductReturnService(dateFilter)
     ]);
 
-    const totalRevenue = revenue[0]?.total || 0;
-    const totalDiscount = revenue[0]?.discount || 0;
+    // Calculate totals manually
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
     const netRevenue = totalRevenue - totalDiscount;
-    const totalCOGS = costOfGoodsSold[0]?.total || 0;
-    const totalExpenses = expenses[0]?.total || 0;
-    const totalWastage = wastages[0]?.total || 0;
-    const totalSalaries = salaries[0]?.total || 0;
-    const totalRefunds = refunds[0]?.total || 0;
+    const totalCOGS = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const totalWastage = wastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
+    const totalSalaries = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const totalRefunds = productReturns.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
 
     const grossProfit = netRevenue - totalCOGS;
     const operatingExpenses = totalExpenses + totalWastage + totalSalaries;
@@ -2923,8 +3177,6 @@ export const getProfitLossReport = async (filters = {}) => {
 
 // Expense Report
 export const getExpenseReport = async (filters = {}) => {
-    const ExpensesModel = getExpenseModel();
-    const ExpenseCategoryModel = getExpenseCategoryModel();
     const { fromDate, toDate, categoryId, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -2947,40 +3199,37 @@ export const getExpenseReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-        ExpensesModel.find(matchQuery)
-            .populate("category", "name")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        ExpensesModel.countDocuments(matchQuery)
+    // Fetch data using service functions
+    const [data, total, categoryList] = await Promise.all([
+        findExpenseService(matchQuery).populate("category", "name").sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countExpenseService(matchQuery),
+        findExpenseCategoryService({})
     ]);
 
-    // Calculate totals by category
-    const categoryTotals = await ExpensesModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: "$category",
-                total: { $sum: "$amount" },
-                count: { $sum: 1 }
-            }
-        },
-        {
-            $lookup: {
-                from: "ExpensesCategory",
-                localField: "_id",
-                foreignField: "_id",
-                as: "category"
-            }
+    // Calculate totals by category manually
+    const categoryTotalsMap = {};
+    data.forEach(expense => {
+        const categoryId = expense.category?.toString();
+        if (!categoryId) return;
+        
+        if (!categoryTotalsMap[categoryId]) {
+            const category = categoryList.find(c => c._id?.toString() === categoryId);
+            categoryTotalsMap[categoryId] = {
+                _id: categoryId,
+                category: category ? [category] : [],
+                total: 0,
+                count: 0
+            };
         }
-    ]);
+        
+        categoryTotalsMap[categoryId].total += expense.amount || 0;
+        categoryTotalsMap[categoryId].count += 1;
+    });
+    
+    const categoryTotals = Object.values(categoryTotalsMap);
 
-    // Calculate overall total
-    const overallTotal = await ExpensesModel.aggregate([
-        { $match: matchQuery },
-        { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
+    // Calculate overall total manually
+    const overallTotal = data.reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
     return {
         data,
@@ -2989,7 +3238,7 @@ export const getExpenseReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalExpenses: overallTotal[0]?.total || 0,
+            totalExpenses: overallTotal,
             categoryBreakdown: categoryTotals
         }
     };
@@ -2997,7 +3246,6 @@ export const getExpenseReport = async (filters = {}) => {
 
 // Wastage Report
 export const getWastageReport = async (filters = {}) => {
-    const WastageModel = getWastageModel();
     const { fromDate, toDate, productId, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -3020,28 +3268,16 @@ export const getWastageReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
+    // Fetch data using service functions
     const [data, total] = await Promise.all([
-        WastageModel.find(matchQuery)
-            .populate("product", "name")
-            .populate("batch", "batchNumber")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
-        WastageModel.countDocuments(matchQuery)
+        findWastageService(matchQuery).populate("product", "name").populate("batch", "batchNumber").sort({ createdAt: -1 }).skip(skip).limit(limit),
+        countWastageService(matchQuery)
     ]);
 
-    // Calculate totals
-    const totals = await WastageModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: null,
-                totalQuantity: { $sum: "$quantity" },
-                totalLoss: { $sum: { $multiply: ["$quantity", "$costPrice"] } },
-                totalRecords: { $sum: 1 }
-            }
-        }
-    ]);
+    // Calculate totals manually
+    const totalQuantity = data.reduce((sum, w) => sum + (w.quantity || 0), 0);
+    const totalLoss = data.reduce((sum, w) => sum + ((w.quantity || 0) * (w.costPrice || 0)), 0);
+    const totalRecords = data.length;
 
     return {
         data,
@@ -3050,16 +3286,15 @@ export const getWastageReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalQuantity: totals[0]?.totalQuantity || 0,
-            totalLoss: totals[0]?.totalLoss || 0,
-            totalRecords: totals[0]?.totalRecords || 0
+            totalQuantity,
+            totalLoss,
+            totalRecords,
         }
     };
 };
 
 // Activity Report
 export const getActivityReport = async (filters = {}) => {
-    const ActivityLogModel = getActivityLogModel();
     const { fromDate, toDate, userId, action, search, page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
@@ -3086,25 +3321,24 @@ export const getActivityReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
+    // Fetch data using model directly (no service function available)
+    const ActivityLogModel = getActivityLogModel();
     const [data, total] = await Promise.all([
-        ActivityLogModel.find(matchQuery)
-            .populate("user", "name email")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit),
+        ActivityLogModel.find(matchQuery).populate("user", "name email").sort({ createdAt: -1 }).skip(skip).limit(limit),
         ActivityLogModel.countDocuments(matchQuery)
     ]);
 
-    // Calculate activity by action type
-    const actionStats = await ActivityLogModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: "$action",
-                count: { $sum: 1 }
-            }
+    // Calculate activity by action type manually
+    const actionStatsMap = {};
+    data.forEach(log => {
+        const actionType = log.action || 'unknown';
+        if (!actionStatsMap[actionType]) {
+            actionStatsMap[actionType] = { _id: actionType, count: 0 };
         }
-    ]);
+        actionStatsMap[actionType].count += 1;
+    });
+    
+    const actionStats = Object.values(actionStatsMap);
 
     return {
         data,
@@ -3121,7 +3355,6 @@ export const getActivityReport = async (filters = {}) => {
 
 // Top Selling Products
 export const getTopSellingProducts = async (filters = {}) => {
-    const OrderModel = getOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -3131,36 +3364,53 @@ export const getTopSellingProducts = async (filters = {}) => {
         matchQuery.createdAt = dateFilter.createdAt;
     }
 
-    const topProducts = await OrderModel.aggregate([
-        { $match: matchQuery },
-        { $unwind: "$items" },
-        {
-            $group: {
-                _id: "$items.product",
-                totalQuantity: { $sum: "$items.quantity" },
-                totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } },
-                orderCount: { $sum: 1 }
-            }
-        },
-        {
-            $lookup: {
-                from: "Products",
-                localField: "_id",
-                foreignField: "_id",
-                as: "product"
-            }
-        },
-        { $unwind: "$product" },
-        { $sort: { totalRevenue: -1 } },
-        { $limit: limitNum }
+    // Fetch orders and products using service functions
+    const [orders, productList] = await Promise.all([
+        findOrderService(matchQuery),
+        findProductService({})
     ]);
+
+    // Calculate product sales manually
+    const productSalesMap = {};
+    orders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const productId = item.product?.toString();
+                if (!productId) return;
+                
+                if (!productSalesMap[productId]) {
+                    productSalesMap[productId] = {
+                        _id: productId,
+                        totalQuantity: 0,
+                        totalRevenue: 0,
+                        orderCount: 0
+                    };
+                }
+                
+                productSalesMap[productId].totalQuantity += item.quantity || 0;
+                productSalesMap[productId].totalRevenue += (item.quantity || 0) * (item.unitPrice || 0);
+                productSalesMap[productId].orderCount += 1;
+            });
+        }
+    });
+
+    // Add product details and sort
+    const topProducts = Object.values(productSalesMap)
+        .map(sales => {
+            const product = productList.find(p => p._id?.toString() === sales._id);
+            return {
+                ...sales,
+                product: product ? [product] : []
+            };
+        })
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, limitNum);
 
     return topProducts;
 };
 
 // Top Customers
 export const getTopCustomers = async (filters = {}) => {
-    const OrderModel = getOrderModel();
     const { fromDate, toDate, limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
@@ -3170,32 +3420,48 @@ export const getTopCustomers = async (filters = {}) => {
         matchQuery.createdAt = dateFilter.createdAt;
     }
 
-    const topCustomers = await OrderModel.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: "$customerName",
-                totalSpent: { $sum: "$totalAmount" },
-                orderCount: { $sum: 1 },
-                lastOrderDate: { $max: "$createdAt" }
-            }
-        },
-        { $match: { _id: { $ne: "" } } },
-        { $sort: { totalSpent: -1 } },
-        { $limit: limitNum }
-    ]);
+    // Fetch orders using service function
+    const orders = await findOrderService(matchQuery);
+
+    // Calculate customer sales manually
+    const customerSalesMap = {};
+    orders.forEach(order => {
+        const customerName = order.customerName;
+        if (!customerName || customerName === "") return;
+        
+        if (!customerSalesMap[customerName]) {
+            customerSalesMap[customerName] = {
+                _id: customerName,
+                totalSpent: 0,
+                orderCount: 0,
+                lastOrderDate: null
+            };
+        }
+        
+        customerSalesMap[customerName].totalSpent += order.totalAmount || 0;
+        customerSalesMap[customerName].orderCount += 1;
+        
+        const orderDate = new Date(order.createdAt);
+        if (!customerSalesMap[customerName].lastOrderDate || orderDate > new Date(customerSalesMap[customerName].lastOrderDate)) {
+            customerSalesMap[customerName].lastOrderDate = order.createdAt;
+        }
+    });
+
+    // Sort and limit
+    const topCustomers = Object.values(customerSalesMap)
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, limitNum);
 
     return topCustomers;
 };
 
 // Low Stock Products
 export const getLowStockProducts = async (filters = {}) => {
-    const BatchModel = getBatchModel();
-    const ProductModel = getProductModel();
     const { limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
-    const lowStockBatches = await BatchModel.find({
+    // Fetch low stock batches using service function
+    const lowStockBatches = await findBatchService({
         quantity: { $gt: 0, $lte: 10 },
         isActive: true
     })
@@ -3208,14 +3474,14 @@ export const getLowStockProducts = async (filters = {}) => {
 
 // Near Expiry Products
 export const getNearExpiryProducts = async (filters = {}) => {
-    const BatchModel = getBatchModel();
     const { limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const nearExpiryBatches = await BatchModel.find({
+    // Fetch near expiry batches using service function
+    const nearExpiryBatches = await findBatchService({
         expiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() },
         quantity: { $gt: 0 },
         isActive: true
@@ -3229,10 +3495,10 @@ export const getNearExpiryProducts = async (filters = {}) => {
 
 // Recent Sales
 export const getRecentSales = async (filters = {}) => {
-    const OrderModel = getOrderModel();
     const { limit = 10 } = filters;
 
-    const recentSales = await OrderModel.find({ status: "completed" })
+    // Fetch recent sales using service function
+    const recentSales = await findOrderService({ status: "completed" })
         .populate("items.product", "name")
         .sort({ createdAt: -1 })
         .limit(limit);
@@ -3242,10 +3508,10 @@ export const getRecentSales = async (filters = {}) => {
 
 // Recent Purchases
 export const getRecentPurchases = async (filters = {}) => {
-    const PurchaseModel = getPurchaseModel();
     const { limit = 10 } = filters;
 
-    const recentPurchases = await PurchaseModel.find()
+    // Fetch recent purchases using service function
+    const recentPurchases = await findPurchaseService()
         .populate("supplier", "name")
         .populate("items.product", "name")
         .sort({ createdAt: -1 })
