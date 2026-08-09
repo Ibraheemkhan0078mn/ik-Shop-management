@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 import { cwd } from 'node:process'
 import { autoUpdater } from 'electron-updater'
 import { readFileSync } from 'node:fs'
+import http from 'node:http'
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -38,25 +39,36 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 function initAutoUpdater() {
   autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.autoInstallOnAppQuit = false // We'll install automatically when downloaded
 
   autoUpdater.on('update-available', () => {
+    console.log('📦 Update available, downloading automatically...')
     win?.webContents.send('update-status', { status: 'available' })
+    // Auto-download when update is available
+    autoUpdater.downloadUpdate()
   })
 
   autoUpdater.on('update-not-available', () => {
+    console.log('✅ No updates available')
     win?.webContents.send('update-status', { status: 'not-available' })
   })
 
   autoUpdater.on('download-progress', (progress) => {
+    console.log(`⬇️ Downloading update: ${Math.floor(progress.percent)}%`)
     win?.webContents.send('update-status', { status: 'downloading', percent: Math.floor(progress.percent) })
   })
 
   autoUpdater.on('update-downloaded', () => {
+    console.log('✅ Update downloaded, installing automatically...')
     win?.webContents.send('update-status', { status: 'downloaded' })
+    // Auto-install when download is complete
+    setTimeout(() => {
+      autoUpdater.quitAndInstall()
+    }, 2000) // Small delay to allow UI to show status
   })
 
   autoUpdater.on('error', (err) => {
+    console.error('❌ Auto-updater error:', err.message)
     win?.webContents.send('update-status', { status: 'error', message: err.message })
   })
 }
@@ -71,7 +83,27 @@ function initAutoUpdater() {
 
 let win: BrowserWindow | null
 let serverProcess: ReturnType<typeof spawn> | null = null
+let startupRetryInterval: NodeJS.Timeout | null = null
+let healthCheckInterval: NodeJS.Timeout | null = null
+const BACKEND_PORT = 5001
+const BACKEND_URL = `http://localhost:${BACKEND_PORT}`
 
+// Function to check if backend is running
+function isBackendRunning(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(`${BACKEND_URL}/health`, (res) => {
+      resolve(res.statusCode === 200)
+      req.destroy()
+    })
+    req.on('error', () => resolve(false))
+    req.setTimeout(2000, () => {
+      req.destroy()
+      resolve(false)
+    })
+  })
+}
+
+// Function to start backend server with retry logic
 function startBackendServer() {
   if (serverProcess) return
 
@@ -88,12 +120,69 @@ function startBackendServer() {
 
   serverProcess.on("error", (err) => {
     console.error("❌ Failed to start backend:", err.message)
+    serverProcess = null
   })
 
   serverProcess.on("exit", (code) => {
     console.warn("⚠️ Backend exited with code:", code)
     serverProcess = null
   })
+}
+
+// Function to start backend with retry interval
+function startBackendWithRetry() {
+  // Clear any existing retry interval
+  if (startupRetryInterval) {
+    clearInterval(startupRetryInterval)
+    startupRetryInterval = null
+  }
+
+  // Try to start backend immediately
+  startBackendServer()
+
+  // Set up retry interval - check every 10 seconds
+  startupRetryInterval = setInterval(async () => {
+    const running = await isBackendRunning()
+    if (running) {
+      console.log("✅ Backend is running, stopping retry interval")
+      clearInterval(startupRetryInterval!)
+      startupRetryInterval = null
+    } else {
+      console.log("⚠️ Backend not running, attempting to start...")
+      startBackendServer()
+    }
+  }, 10000) // 10 seconds
+}
+
+// Function to start health check interval (every 5 minutes)
+function startHealthCheckInterval() {
+  // Clear any existing health check interval
+  if (healthCheckInterval) {
+    clearInterval(healthCheckInterval)
+    healthCheckInterval = null
+  }
+
+  healthCheckInterval = setInterval(async () => {
+    const running = await isBackendRunning()
+    if (!running) {
+      console.log("⚠️ Health check failed - backend is not running, restarting...")
+      startBackendWithRetry()
+    } else {
+      console.log("� Health check passed - backend is running")
+    }
+  }, 300000) // 5 minutes (300000 ms)
+}
+
+// Function to cleanup intervals
+function cleanupIntervals() {
+  if (startupRetryInterval) {
+    clearInterval(startupRetryInterval)
+    startupRetryInterval = null
+  }
+  if (healthCheckInterval) {
+    clearInterval(healthCheckInterval)
+    healthCheckInterval = null
+  }
 }
 
 function createWindow() {
@@ -124,7 +213,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  startBackendServer() // Disabled - backend is running separately
+  startBackendWithRetry() // Start backend with retry logic
+  startHealthCheckInterval() // Start 5-minute health check interval
   createWindow()
   if (app.isPackaged) {
     initAutoUpdater()
@@ -138,6 +228,7 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  cleanupIntervals()
   if (serverProcess) {
     serverProcess.kill()
     serverProcess = null
@@ -145,6 +236,7 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
+  cleanupIntervals()
   if (serverProcess) {
     serverProcess.kill()
     serverProcess = null
@@ -164,6 +256,11 @@ ipcMain.handle("folder-picker", async () => {
 ipcMain.handle('check-for-updates', async () => {
   try {
     const updateCheckResult = await autoUpdater.checkForUpdates()
+    if (updateCheckResult && updateCheckResult !== null) {
+      // Auto-download when update is found via manual check
+      console.log('📦 Manual check found update, downloading automatically...')
+      autoUpdater.downloadUpdate()
+    }
     return {
       success: true,
       updateAvailable: updateCheckResult !== null,

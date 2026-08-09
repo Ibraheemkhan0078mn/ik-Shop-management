@@ -92,7 +92,12 @@ app.use("/api/staff", StaffRouter)
 app.use("/api/settings", SettingsRouter)
 app.use("/api/payment-methods", PaymentMethodRouter)
 app.use("/api/theme", themeRoutes)
-app.use("/api/backup", BackupRouter)
+app.use("/api/backup", BackupRouter);
+
+// Health check endpoint for Electron app
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 app.use(errorHandler);
 
