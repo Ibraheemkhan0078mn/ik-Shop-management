@@ -48,6 +48,9 @@ const purchasePaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Users",
         },
+        // Sync Fields
+        createdTimeForSync: { type: Date, default: Date.now },
+        updateTimeForSync: { type: Date, default: Date.now },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null },

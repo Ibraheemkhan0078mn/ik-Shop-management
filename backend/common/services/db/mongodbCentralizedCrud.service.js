@@ -9,7 +9,13 @@ const resolveModel = ({ model, modelName }) => {
 
 export const createDoc = async ({ model, modelName, data }) => {
   const Model = resolveModel({ model, modelName });
-  return Model.create(data);
+  // Add sync timestamps for create operations
+  const dataWithSyncTimestamps = {
+    ...data,
+    createdTimeForSync: new Date(),
+    updateTimeForSync: new Date()
+  };
+  return Model.create(dataWithSyncTimestamps);
 };
 
 export const findDocs = async ({ model, modelName, filter = {}, options = {} }) => {
@@ -50,8 +56,14 @@ export const updateDocs = async ({ model, modelName, filter, data, options = {} 
   // Add isDeleted filter unless explicitly requested to include deleted documents
   const finalFilter = includeDeleted ? filter : { ...filter, isDeleted: { $ne: true } };
 
-  if (many) return Model.updateMany(finalFilter, data, { runValidators, upsert });
-  return Model.findOneAndUpdate(finalFilter, data, { new: returnNew, runValidators, upsert });
+  // Add sync timestamp for update operations
+  const dataWithSyncTimestamp = {
+    ...data,
+    updateTimeForSync: new Date()
+  };
+
+  if (many) return Model.updateMany(finalFilter, dataWithSyncTimestamp, { runValidators, upsert });
+  return Model.findOneAndUpdate(finalFilter, dataWithSyncTimestamp, { new: returnNew, runValidators, upsert });
 };
 
 export const deleteDocs = async ({ model, modelName, filter, options = {} }) => {

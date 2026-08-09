@@ -16,6 +16,9 @@ const appThemeSchema = new mongoose.Schema(
       accent2: { type: String, default: null },
       border: { type: String, default: null },
     },
+    // Sync Fields
+    createdTimeForSync: { type: Date, default: Date.now },
+    updateTimeForSync: { type: Date, default: Date.now },
     // Soft Delete Fields
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },

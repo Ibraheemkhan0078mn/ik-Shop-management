@@ -29,6 +29,10 @@ const brandSchema = new mongoose.Schema(
             default: null 
         },
 
+        // Sync Fields
+        createdTimeForSync: { type: Date, default: Date.now },
+        updateTimeForSync: { type: Date, default: Date.now },
+
         created: { 
             type: Date, 
             default: Date.now 

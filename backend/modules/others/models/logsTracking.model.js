@@ -14,6 +14,9 @@ const activityLogSchema = new mongoose.Schema(
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
     changedBy: {type:String, default: "Human"}, // for storing name/email of user who made the change, in case performedBy is null (e.g., for system-generated logs)
     
+    // Sync Fields
+    createdTimeForSync: { type: Date, default: Date.now },
+    updateTimeForSync: { type: Date, default: Date.now },
     // Soft Delete Fields
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null }

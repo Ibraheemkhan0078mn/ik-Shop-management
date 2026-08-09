@@ -76,6 +76,9 @@ const productReturnSchema = new mongoose.Schema(
         notes: {
             type: String,
         },
+        // Sync Fields
+        createdTimeForSync: { type: Date, default: Date.now },
+        updateTimeForSync: { type: Date, default: Date.now },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null },

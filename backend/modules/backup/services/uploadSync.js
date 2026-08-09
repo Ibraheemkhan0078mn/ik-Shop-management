@@ -119,6 +119,7 @@ async function allInsertUpload(modelsArray) {
       // we remove the other change track becuase its total upload and in thsi we does not manage the thigns with the help fo change track so deleting the change track is not neccessary. 
       // but in the future if uplaod this then the data which is already uplaod will be removed from cahnge track which is cleaning fucntion type
 
+      console.log("The all upalod result for model", eachModel.local.modelName, "is: ", allUploadResult, "&*&*&*&*&*&*&*&")
 
       if (
         allUploadResult?.insertedCount +

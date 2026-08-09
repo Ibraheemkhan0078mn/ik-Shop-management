@@ -40,6 +40,9 @@ const wastageSchema = new mongoose.Schema({
     // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     // updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     
+    // Sync Fields
+    createdTimeForSync: { type: Date, default: Date.now },
+    updateTimeForSync: { type: Date, default: Date.now },
     // Soft Delete Fields
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },
