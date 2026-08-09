@@ -6,7 +6,8 @@ import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.j
 import { imageDownloadSync } from "./imageDownloadSync.js";
 import { imgDelete } from "./imgDelete.js";
 import { ImageUpload } from "./imgUpload.js";
-import { onlineDocsUploadSyncInsert, onlineDocsUploadSyncUpdate } from "./uploadSync.js";
+import { onlineDocsUploadSyncInsert } from "./insertSync.js";
+import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 
 
 

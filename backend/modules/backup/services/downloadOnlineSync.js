@@ -3,183 +3,56 @@ import { getLocalChangeTrackModel } from "../../../configs/connect.db.js";
 import { getOnlineChangeTrackModel } from "../../../configs/onlineConnect.db.js";
 import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
 
-export async function downloadOnlineSync(
-  modelsArray,
-  downloadType = "required",
-  loggedInUserData
-) {
+export async function downloadOnlineSync(modelsArray, downloadType = "required", loggedInUserData) {
   try {
-    let changeTrackModel = getLocalChangeTrackModel();
-    let onlineChangeTrackModel = getOnlineChangeTrackModel();
-    let { deviceId } = await deviceIdentityCheckFunction();
+    const onlineChangeTrackModel = getOnlineChangeTrackModel();
+    const { deviceId } = await deviceIdentityCheckFunction();
 
-    if (downloadType == "all") {
-      for (let eachCollectionObject of modelsArray) {
+    if (downloadType === "all") {
+      for (const eachCollectionObject of modelsArray) {
+        if (!isPermitted(eachCollectionObject, loggedInUserData)) continue;
 
-
-        // check if permittted then only running otherwise not intterate on another and again check and so on...
-        let userPermissions = loggedInUserData?.permissions
-        if (userPermissions && userPermissions?.length > 0) {
-          if (!(userPermissions?.includes(eachCollectionObject.permissionString)) && loggedInUserData?.role != "admin") {
-            continue;
-          }
-        }
-
-        let allowedClassedToUser = loggedInUserData?.allowedClases
-
-        let allDocOfCollection = []
-        if (loggedInUserData.role == "admin") {
-          allDocOfCollection = await eachCollectionObject?.online.find().lean();
-        } else {
-
-          if (loggedInUserData && eachCollectionObject?.local?.modelName == "class") {
-            allDocOfCollection = await eachCollectionObject?.online.find({ _id: { $in: allowedClassedToUser } }).lean();
-          }
-          else if (loggedInUserData && eachCollectionObject?.local?.modelName == "student") {
-            allDocOfCollection = await eachCollectionObject?.online.find({ classId: { $in: allowedClassedToUser } }).lean();
-          }
-          else {
-            allDocOfCollection = await eachCollectionObject?.online.find().lean();
-          }
-
-        }
-
-
-
-
-
-
-
-
-
-        let operations = allDocOfCollection.map((eachDoc) => {
-          return {
-            updateOne: {
-              filter: { _id: eachDoc._id }, // find by _id
-              update: { $set: eachDoc }, // update with the new data
-              upsert: true, // insert if not exists
-            },
-          };
-        });
-
-        if (eachCollectionObject?.local && operations?.length > 0) {
-          let bulkWritesResult = await eachCollectionObject?.local?.bulkWrite(
-            operations
-          );
-
-          if (bulkWritesResult) {
-            if (
-              bulkWritesResult.insertedCount +
-              bulkWritesResult.modifiedCount +
-              bulkWritesResult.deletedCount +
-              bulkWritesResult.upsertedCount >=
-              operations?.length
-            ) {
-
-            }
-          }
-        }
+        const docs = await fetchAllowedDocs(eachCollectionObject, loggedInUserData);
+        await upsertToLocal(eachCollectionObject, docs);
       }
     } else {
-      let allChangeTrackDocs = await onlineChangeTrackModel.find();
+      const allChangeTrackDocs = await onlineChangeTrackModel.find();
 
-      for (let eachCollectionObject of modelsArray) {
+      for (const eachCollectionObject of modelsArray) {
+        if (!isPermitted(eachCollectionObject, loggedInUserData)) continue;
 
+        const filteredChangeTrackDocs = allChangeTrackDocs.filter(
+          (doc) =>
+            doc.modelName === eachCollectionObject.local.modelName &&
+            !doc.updatedUsers?.includes(deviceId)
+        );
 
-        // check if permittted then only running otherwise not intterate on another and again check and so on...
-        let userPermissions = loggedInUserData?.permissions
-        if (userPermissions && userPermissions?.length > 0) {
-          if (!(userPermissions?.includes(eachCollectionObject.permissionString)) && loggedInUserData?.role != "admin") {
-            continue;
-          }
-        }
+        if (filteredChangeTrackDocs.length === 0) continue;
 
+        const changedDocsIds = filteredChangeTrackDocs.map(
+          (doc) => new mongoose.Types.ObjectId(doc.documentId)
+        );
 
+        let orgDocs = await eachCollectionObject.online.find({ _id: { $in: changedDocsIds } });
+        orgDocs = filterDocsByAllowedClasses(eachCollectionObject, orgDocs, loggedInUserData);
 
+        const allowedIds = new Set(orgDocs.map((d) => d._id.toString()));
+        const relevantChangeTrackDocs = filteredChangeTrackDocs.filter((doc) =>
+          allowedIds.has(doc.documentId?.toString())
+        );
 
+        const bulkWriteResult = await upsertToLocal(eachCollectionObject, orgDocs);
 
-
-        let filteredChangeTrackDocs = allChangeTrackDocs?.filter((eachDoc) => {
-          if (
-            eachDoc?.modelName == eachCollectionObject?.local?.modelName &&
-            !eachDoc.updatedUsers?.includes(deviceId)
-          ) {
-            return true;
-          }
-        });
-
-        let changedDocsIds = filteredChangeTrackDocs.map((eachDoc) => {
-          return new mongoose.Types.ObjectId(eachDoc.documentId);
-        });
-
-
-
-
-
-        // Filter the docs which are not allowed to current logged in users
-        let allowedClasses = loggedInUserData?.allowedClases || []
-        if (changedDocsIds?.length > 0 && allowedClasses?.length > 0 && loggedInUserData && eachCollectionObject.local.modelName == "class") {
-          changedDocsIds = changedDocsIds.filter(dId => allowedClasses?.includes(dId))
-        } else if (changedDocsIds?.length > 0 && allowedClasses?.length > 0 && loggedInUserData && eachCollectionObject.local.modelName == "student") {
-          changedDocsIds = changedDocsIds.filter(dId => allowedClasses?.includes(dId?.classId))
-        }
-
-
-
-
-        let orgDocs = await eachCollectionObject.online.find({
-          _id: { $in: changedDocsIds }
-        });
-
-
-
-        let operations = orgDocs.map((eachDoc) => {
-          return {
+        if (bulkWriteResult && isBulkWriteComplete(bulkWriteResult, orgDocs.length) && relevantChangeTrackDocs.length > 0) {
+          const changeTrackUpdateOperations = relevantChangeTrackDocs.map((doc) => ({
             updateOne: {
-              filter: { _id: eachDoc._id }, // find by _id
-              update: { $set: eachDoc }, // update with the new data
-              upsert: true, // insert if not exists
+              filter: { _id: doc._id },
+              update: { $set: { ...doc.toObject(), updatedUsers: [...doc.updatedUsers, deviceId] } },
+              upsert: true,
             },
-          };
-        });
+          }));
 
-        if (eachCollectionObject?.local && operations?.length > 0) {
-          let bulkWritesResult = await eachCollectionObject?.local?.bulkWrite(
-            operations
-          );
-
-          if (bulkWritesResult) {
-            // let { insertedCount, modifiedCount, deletedCount, upsertedCount } =
-            //   bulkWritesResult;
-            if (
-              bulkWritesResult.insertedCount +
-              bulkWritesResult.modifiedCount +
-              bulkWritesResult.deletedCount +
-              bulkWritesResult.upsertedCount >=
-              operations?.length
-            ) {
-              let changeTrackUpdateOperation = filteredChangeTrackDocs.map(
-                (eachDoc) => {
-                  return {
-                    updateOne: {
-                      filter: { _id: eachDoc._id }, // find by _id
-                      update: {
-                        $set: {
-                          ...eachDoc?.toObject(),
-                          updatedUsers: [...eachDoc?.updatedUsers, deviceId],
-                        },
-                      }, // update with the new data
-                      upsert: true, // insert if not exists
-                    },
-                  };
-                }
-              );
-
-              await onlineChangeTrackModel?.bulkWrite(
-                changeTrackUpdateOperation
-              );
-            }
-          }
+          await onlineChangeTrackModel.bulkWrite(changeTrackUpdateOperations);
         }
       }
     }
@@ -189,4 +62,82 @@ export async function downloadOnlineSync(
     console.error("❌ Atlas upload sync failed:", error);
     return { result: false, error: error?.message };
   }
+}
+
+/**
+ * Checks permission for a collection based on logged-in user's role/permissions
+ */
+function isPermitted(eachCollectionObject, loggedInUserData) {
+  const userPermissions = loggedInUserData?.permissions;
+  if (userPermissions && userPermissions.length > 0) {
+    if (!userPermissions.includes(eachCollectionObject.permissionString) && loggedInUserData?.role !== "admin") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Fetches docs from online collection scoped to user's allowed classes (for "all" download)
+ */
+async function fetchAllowedDocs(eachCollectionObject, loggedInUserData) {
+  if (loggedInUserData?.role === "admin") {
+    return eachCollectionObject.online.find().lean();
+  }
+
+  const allowedClasses = loggedInUserData?.allowedClases;
+  const modelName = eachCollectionObject.local?.modelName;
+
+  if (modelName === "class") {
+    return eachCollectionObject.online.find({ _id: { $in: allowedClasses } }).lean();
+  }
+  if (modelName === "student") {
+    return eachCollectionObject.online.find({ classId: { $in: allowedClasses } }).lean();
+  }
+  return eachCollectionObject.online.find().lean();
+}
+
+/**
+ * Filters already-fetched docs by allowed classes for the "required" (changeTrack) path
+ */
+function filterDocsByAllowedClasses(eachCollectionObject, docs, loggedInUserData) {
+  const allowedClasses = loggedInUserData?.allowedClases || [];
+  const modelName = eachCollectionObject.local.modelName;
+
+  if (!loggedInUserData || allowedClasses.length === 0) return docs;
+
+  if (modelName === "class") {
+    return docs.filter((doc) => allowedClasses.includes(doc._id.toString()));
+  }
+  if (modelName === "student") {
+    return docs.filter((doc) => allowedClasses.includes(doc.classId?.toString()));
+  }
+  return docs;
+}
+
+/**
+ * Builds upsert bulkWrite ops and writes docs into the local collection
+ */
+async function upsertToLocal(eachCollectionObject, docs) {
+  if (!eachCollectionObject?.local || !docs?.length) return null;
+
+  const operations = docs.map((doc) => ({
+    updateOne: {
+      filter: { _id: doc._id },
+      update: { $set: doc },
+      upsert: true,
+    },
+  }));
+
+  return eachCollectionObject.local.bulkWrite(operations);
+}
+
+function isBulkWriteComplete(bulkWriteResult, expectedCount) {
+  if (!bulkWriteResult) return false;
+  const processedCount =
+    (bulkWriteResult.insertedCount || 0) +
+    (bulkWriteResult.modifiedCount || 0) +
+    (bulkWriteResult.deletedCount || 0) +
+    (bulkWriteResult.upsertedCount || 0);
+  return processedCount >= expectedCount;
 }
