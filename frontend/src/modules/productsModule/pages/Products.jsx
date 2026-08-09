@@ -1,7 +1,7 @@
 // features/products/pages/Products.jsx
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Edit, Trash2, AlertTriangle, PackageX, Filter, Package, Eye } from "lucide-react";
+import { Edit, Trash2, Filter, Package, Eye } from "lucide-react";
 import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
 import { useUser } from "../../auth/services/auth.service.js";
@@ -98,9 +98,10 @@ export default function Products() {
                 {/* Desktop header */}
                 <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                    <div className="col-span-5">{labels.name}</div>
-                    <div className="col-span-3 truncate">Product Code</div>
+                    <div className="col-span-4">{labels.name}</div>
+                    <div className="col-span-2 truncate">Product Code</div>
                     <div className="col-span-2">{labels.stock}</div>
+                    <div className="col-span-2">{labels.rackLocation || "Rack Location"}</div>
                     <div className="col-span-2">{labels.actions}</div>
                 </div>
 
@@ -109,7 +110,7 @@ export default function Products() {
                     <div key={item._id}
                         className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
                         style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
-                        <div className="col-span-5 flex items-center gap-3 min-w-0">
+                        <div className="col-span-4 flex items-center gap-3 min-w-0">
                             <div className="relative shrink-0">
                                 {item.image && imageLoadStates[item._id] === true ? (
                                     <div className="relative">
@@ -141,8 +142,9 @@ export default function Products() {
                             </div>
                             <div className="font-semibold text-(--ink) truncate text-sm min-w-0">{item.name}</div>
                         </div>
-                        <div className="col-span-3 text-sm text-(--muted) font-mono truncate">{item.productCode || "—"}</div>
+                        <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{item.productCode || "—"}</div>
                         <div className="col-span-2"><StockBadge qty={item.currentStockLevel} /></div>
+                        <div className="col-span-2 text-sm text-(--muted) truncate">{item.rackLocation || "—"}</div>
                         <div onClick={e=> e.stopPropagation()} className="col-span-2 flex items-center gap-1.5 flex-wrap">
                             <button 
                                 onClick={() => navigate(`/products/${item._id}`)}
@@ -208,6 +210,7 @@ export default function Products() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
                                         {item.productCode && <span className="truncate">Product Code: <span className="font-mono text-(--ink)">{item.productCode}</span></span>}
                                         <span>{labels.stock}: <StockBadge qty={item.currentStockLevel} /></span>
+                                        {item.rackLocation && <span className="truncate">Rack: <span className="font-mono text-(--ink)">{item.rackLocation}</span></span>}
                                     </div>
                                     {(item.category?.name) && (
                                         <div className="text-xs mt-1.5 px-2 py-0.5 rounded-md inline-block truncate max-w-full"

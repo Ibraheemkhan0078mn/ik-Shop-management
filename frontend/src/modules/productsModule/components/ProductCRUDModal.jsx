@@ -75,6 +75,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [banner, setBanner] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [showMore, setShowMore] = useState(false);
+  const [showTax, setShowTax] = useState(false);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
@@ -495,27 +496,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   placeholder="0.00"
                 />
 
-                {/* Tax Row */}
-                <Field
-                  label={labels.taxPercent}
-                  name="taxPercent"
-                  value={form.taxPercent}
-                  onChange={updateField}
-                  type="number"
-                  placeholder="0"
-                />
-                <SelectField
-                  label={labels.taxType}
-                  name="taxType"
-                  value={form.taxType}
-                  onChange={updateField}
-                  options={[
-                    { label: labels.percentage, value: "percentage" },
-                    { label: labels.fixed, value: "fixed" },
-                  ]}
-                  placeholder={labels.selectTaxType}
-                />
-
                 {/* Stock Row */}
                 <Field
                   label={labels.minStockLevel}
@@ -536,13 +516,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   placeholder="10"
                 />
 
-                {/* Stock Settings Row */}
-                <ToggleField
-                  label={labels.allowNegativeStock}
-                  name="allowNegativeStock"
-                  value={form.allowNegativeStock}
-                  onChange={updateField}
-                />
+                {/* Rack Location */}
                 <Field
                   label={labels.rackLocation}
                   name="rackLocation"
@@ -579,6 +553,39 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                         { label: labels.fixed, value: "fixed" },
                       ]}
                       placeholder={labels.selectDiscountLimitType || "Select Type"}
+                    />
+                  </>
+                )}
+
+                {/* Tax Toggle */}
+                <ToggleField
+                  label={labels.enableTax || "Enable Default Sale Tax"}
+                  name="showTax"
+                  value={showTax}
+                  onChange={(name, value) => setShowTax(value)}
+                />
+
+                {/* Tax Section - Conditionally Visible */}
+                {showTax && (
+                  <>
+                    <Field
+                      label={labels.taxPercent}
+                      name="taxPercent"
+                      value={form.taxPercent}
+                      onChange={updateField}
+                      type="number"
+                      placeholder="0"
+                    />
+                    <SelectField
+                      label={labels.taxType}
+                      name="taxType"
+                      value={form.taxType}
+                      onChange={updateField}
+                      options={[
+                        { label: labels.percentage, value: "percentage" },
+                        { label: labels.fixed, value: "fixed" },
+                      ]}
+                      placeholder={labels.selectTaxType}
                     />
                   </>
                 )}
