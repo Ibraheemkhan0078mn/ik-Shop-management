@@ -321,7 +321,7 @@ export default function PosPage() {
       }
     }
 
-    const basePrice = Number(selectedBatch?.sellingPrice || product.defaultSalePrice) || 0;
+    const basePrice = Number(selectedBatch?.sellingPrice || product.perItemPrice || product.defaultSalePrice) || 0;
     const discountPercent = Number(product.discount) || 0;
     const priceAfterDiscount = basePrice - (basePrice * discountPercent) / 100;
 

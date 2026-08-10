@@ -337,6 +337,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             setItemForm(p => ({
                 ...p,
                 unit: prod.unit ?? "unit",
+                perItemPrice: prod.perItemPrice || prod.defaultSalePrice || "",
                 discountType: prod.discountType ?? "percentage",
                 taxType: prod.taxType ?? "percentage"
             }));
@@ -497,7 +498,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
             items: addedItems.map(it => ({
                 product: it.item, batchNumber: it.batchNumber,
-                quantity: it.quantity, price: it.costPrice, costPrice: it.costPrice || 0,
+                quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
                 discount: it.discount, discountType: it.discountType,
                 tax: it.tax, taxType: it.taxType,
                 mfgDate: it.mfgDate ? new Date(it.mfgDate).toISOString() : undefined,
