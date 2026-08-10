@@ -13,6 +13,16 @@ const orderItemSchema = new mongoose.Schema({
     portionType: { type: String, enum: ["full", "half", "custom"], default: "full" },
     batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null },
     batchNumber: { type: String, default: null },
+    // Tax and discount per item
+    taxPercent: { type: Number, default: 0 },
+    taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+    taxAmount: { type: Number, default: 0 },
+    discountPercent: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+    discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+    maxDiscountPercent: { type: Number, default: 0 },
+    discountLimitType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+    itemTotal: { type: Number, required: true, min: 0 },  // final total including tax and discount
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,6 +35,7 @@ const orderSchema = new mongoose.Schema(
         // Money
         subtotal: { type: Number, required: true, default: 0 },
         discountAmount: { type: Number, default: 0 },
+        totalTaxAmount: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true, default: 0 },
 
         items: [orderItemSchema],

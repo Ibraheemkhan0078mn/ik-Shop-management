@@ -24,10 +24,14 @@ export default function OrderDetailsPdfTemplate({ order = {}, labels = {} }) {
                     <DollarSign size={18} />
                     Financial Summary
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="text-center p-2">
                         <p className="text-xs text-gray-500 uppercase font-bold">Subtotal</p>
                         <p className="font-semibold text-gray-900 mt-1">Rs {(order?.subtotal ?? 0).toLocaleString()}</p>
+                    </div>
+                    <div className="text-center p-2">
+                        <p className="text-xs text-gray-500 uppercase font-bold">Tax</p>
+                        <p className="font-semibold text-gray-900 mt-1">Rs {(order?.totalTaxAmount ?? 0).toLocaleString()}</p>
                     </div>
                     <div className="text-center p-2">
                         <p className="text-xs text-gray-500 uppercase font-bold">Discount</p>
@@ -102,7 +106,9 @@ export default function OrderDetailsPdfTemplate({ order = {}, labels = {} }) {
                             <th className="px-4 py-2 text-center text-xs font-semibold uppercase text-gray-600 border-b">Portion</th>
                             <th className="px-4 py-2 text-center text-xs font-semibold uppercase text-gray-600 border-b">Quantity</th>
                             <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Unit Price</th>
-                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Line Total</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Tax</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Discount</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Item Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -115,7 +121,23 @@ export default function OrderDetailsPdfTemplate({ order = {}, labels = {} }) {
                                 <td className="px-4 py-2 text-center capitalize text-gray-900">{item.portionType || "full"}</td>
                                 <td className="px-4 py-2 text-center font-medium text-gray-900">{item.quantity || 0}</td>
                                 <td className="px-4 py-2 text-right font-medium text-gray-900">Rs {(item.unitPrice || 0).toLocaleString()}</td>
-                                <td className="px-4 py-2 text-right font-semibold text-green-600">Rs {(item.lineTotal || (item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()}</td>
+                                <td className="px-4 py-2 text-right font-medium text-gray-900">
+                                    <div className="text-xs">
+                                        <span className="text-gray-500">{item.taxPercent || 0}%</span>
+                                        {item.taxAmount > 0 && (
+                                            <span className="ml-1">({(item.taxAmount * item.quantity).toFixed(2)})</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-4 py-2 text-right font-medium text-red-600">
+                                    <div className="text-xs">
+                                        <span>{item.discountPercent || 0}%</span>
+                                        {item.discountAmount > 0 && (
+                                            <span className="ml-1">({item.discountAmount.toFixed(2)})</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-4 py-2 text-right font-semibold text-green-600">Rs {((item.unitPrice || 0) * (item.quantity || 0) - (item.discountAmount || 0) + (item.taxAmount || 0) * (item.quantity || 0)).toLocaleString()}</td>
                             </tr>
                         ))}
                     </tbody>

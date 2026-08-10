@@ -168,6 +168,15 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             portionType: item.portionType || "full",
             batchId: item.batchId ?? null,
             batchNumber: item.batchNumber ?? null,
+            taxPercent: item.taxPercent || 0,
+            taxType: item.taxType || "percentage",
+            taxAmount: item.taxAmount || 0,
+            discountPercent: item.discountPercent || 0,
+            discountAmount: item.discountAmount || 0,
+            discountType: item.discountType || "percentage",
+            maxDiscountPercent: item.maxDiscountPercent || 0,
+            discountLimitType: item.discountLimitType || "percentage",
+            itemTotal: item.itemTotal || total,
         };
     });
 

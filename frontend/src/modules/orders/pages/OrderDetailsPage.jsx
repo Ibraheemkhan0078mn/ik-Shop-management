@@ -138,10 +138,14 @@ export default function OrderDetailsPage() {
                             <DollarSign size={20} />
                             Financial Summary
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                             <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
                                 <p className="text-xs text-[var(--muted)] uppercase font-bold">Subtotal</p>
                                 <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.subtotal ?? 0).toLocaleString()}</p>
+                            </div>
+                            <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">Tax</p>
+                                <p className="font-semibold text-[var(--ink)] mt-1">Rs {(order?.totalTaxAmount ?? 0).toLocaleString()}</p>
                             </div>
                             <div className="text-center p-4 rounded-xl bg-[var(--surface-muted)]">
                                 <p className="text-xs text-[var(--muted)] uppercase font-bold">Discount</p>
@@ -229,7 +233,13 @@ export default function OrderDetailsPage() {
                                             Unit Price
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                            Line Total
+                                            Tax
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Discount
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                            Item Total
                                         </th>
                                     </tr>
                                 </thead>
@@ -255,8 +265,24 @@ export default function OrderDetailsPage() {
                                             <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
                                                 Rs {(item.unitPrice || 0).toLocaleString()}
                                             </td>
+                                            <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
+                                                <div className="text-xs">
+                                                    <span className="text-[var(--muted)]">{item.taxPercent || 0}%</span>
+                                                    {item.taxAmount > 0 && (
+                                                        <span className="ml-1">({(item.taxAmount * item.quantity).toFixed(2)})</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-medium text-red-600">
+                                                <div className="text-xs">
+                                                    <span>{item.discountPercent || 0}%</span>
+                                                    {item.discountAmount > 0 && (
+                                                        <span className="ml-1">({item.discountAmount.toFixed(2)})</span>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">
-                                                Rs {(item.lineTotal || (item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()}
+                                                Rs {((item.unitPrice || 0) * (item.quantity || 0) - (item.discountAmount || 0) + (item.taxAmount || 0) * (item.quantity || 0)).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}

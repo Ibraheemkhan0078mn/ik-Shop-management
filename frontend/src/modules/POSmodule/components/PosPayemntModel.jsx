@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus, Check } from "lucide-react";
+import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { FormField, Input } from "../../../shared/components/FormFields.jsx";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
@@ -9,6 +9,7 @@ import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
+import { showError } from "../../../shared/utilities/toastHelpers.js";
 
 const ONLINE_PLATFORMS = (labels) => [
     { value: "easypaisa", label: labels.easypaisa },
@@ -404,6 +405,7 @@ export default function PosPaymentModal({
     initialWaiter = "",
     initialDiscount = 0,
     initialStaffId = "",
+    cartItems = [],
 }) {
     const { settings } = useSettings();
     const currentLanguage = settings?.language || "en";
@@ -434,9 +436,64 @@ export default function PosPaymentModal({
     const [hybridQarzaAccountId, setHybridQarzaAccountId] = useState("");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+    const [itemDiscounts, setItemDiscounts] = useState({});
+    const [itemDiscountTypes, setItemDiscountTypes] = useState({});
+    const [expandedCalculation, setExpandedCalculation] = useState({});
 
     const discountAmt = Math.max(0, Number(orderDiscount) || 0);
-    const total = Math.max(0, subtotal - discountAmt);
+    
+    // Calculate discounted cart items with per-item discounts applied
+    const discountedCartItems = cartItems.map((item, index) => {
+        const itemDiscountValue = Number(itemDiscounts[index]) || 0;
+        const discountType = itemDiscountTypes[index] || 'percentage';
+        const originalItemTotal = (item.unitPrice || 0) * (item.qty || 0);
+        let discountedItemTotal = originalItemTotal;
+        let discountedUnitPrice = item.unitPrice;
+        let discountAmount = 0;
+        let discountPercent = 0;
+        
+        if (itemDiscountValue > 0) {
+            if (discountType === 'percentage') {
+                discountPercent = itemDiscountValue;
+                discountAmount = (item.unitPrice * item.qty * itemDiscountValue) / 100;
+            } else {
+                // Fixed amount discount
+                discountAmount = Math.min(itemDiscountValue, originalItemTotal);
+                discountPercent = (discountAmount / originalItemTotal) * 100;
+            }
+            discountedItemTotal = originalItemTotal - discountAmount;
+            discountedUnitPrice = item.unitPrice - (discountAmount / item.qty);
+        }
+        
+        // Calculate item subtotal including tax (tax applied to discounted unit price)
+        const itemTaxAmount = (discountedUnitPrice * (item.taxPercent || 0)) / 100;
+        const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (itemTaxAmount * item.qty);
+        
+        return {
+            ...item,
+            itemDiscountValue,
+            discountType,
+            discountPercent,
+            discountAmount,
+            discountedUnitPrice,
+            originalItemTotal,
+            discountedItemTotal,
+            itemTaxAmount,
+            itemSubtotalWithTax,
+        };
+    });
+    
+    // Calculate bill subtotal as sum of all item subtotals (each including their tax)
+    const billSubtotal = discountedCartItems.reduce((sum, item) => sum + item.itemSubtotalWithTax, 0);
+    
+    // Calculate total tax from all items
+    const totalTax = discountedCartItems.reduce((sum, item) => sum + item.itemTaxAmount * (item.qty || 0), 0);
+    
+    // Calculate total discount from per-item discounts
+    const itemDiscountTotal = discountedCartItems.reduce((sum, item) => sum + item.discountAmount, 0);
+    
+    const totalDiscount = discountAmt + itemDiscountTotal;
+    const total = Math.max(0, billSubtotal - discountAmt);
     const cashChange = Math.max(0, (Number(cashReceived) || 0) - total);
     const hybridSum = (Number(hybridCash) || 0) + (Number(hybridQarza) || 0);
     const hybridValid = Math.abs(hybridSum - total) < 0.01 && !!hybridQarzaAccountId;
@@ -470,7 +527,7 @@ export default function PosPaymentModal({
         label: pm.name,
     })) || [], [paymentMethodsData]);
 
-    const staffList_ = Array.isArray(staffList?.data) ? staffList.data : [];
+    const staffListFiltered = Array.isArray(staffList?.data) ? staffList.data : [];
 
     // Set first payment method as default when available and not already selected
     useEffect(() => {
@@ -511,6 +568,8 @@ export default function PosPaymentModal({
             hybridCash: activeTab === "hybrid" ? hybridCash : "",
             hybridQarza: activeTab === "hybrid" ? hybridQarza : "",
             hybridQarzaAccountId: activeTab === "hybrid" ? hybridQarzaAccountId : "",
+            itemDiscounts: itemDiscounts,
+            itemDiscountTypes: itemDiscountTypes,
         };
     };
 
@@ -574,7 +633,7 @@ export default function PosPaymentModal({
             style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
         >
             <div
-                className="w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                className="w-full sm:w-[80%] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                 style={{
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
@@ -610,430 +669,605 @@ export default function PosPaymentModal({
 
                 {/* ── Scrollable Body ───────────────────────────────────────────── */}
                 <div className="flex-1 overflow-y-auto">
-
-                    {/* Total banner */}
-                    <div
-                        className="px-5 py-4"
-                        style={{ background: "linear-gradient(135deg, rgba(15,118,110,0.08), rgba(15,118,110,0.04))", borderBottom: "1px solid rgba(15,118,110,0.15)" }}
-                    >
-                        <div className="flex items-end justify-between">
-                            <div>
-                                <p className="text-xs font-medium mb-0.5" style={{ color: "var(--accent-2)" }}>{labels.grandTotal}</p>
-                                <p className="text-3xl font-extrabold" style={{ color: "var(--accent-2)" }}>
-                                    Rs {total.toLocaleString()}
-                                </p>
-                                {discountAmt > 0 && (
-                                    <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                                        Rs {subtotal.toLocaleString()} − Rs {discountAmt.toLocaleString()} {labels.discount}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="px-5 py-4 space-y-4">
-
-                        {/* Row 1: Discount & Staff */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label={labels.discount}>
-                                <Input
-                                    type="number" min={0} placeholder="Rs 0"
-                                    value={orderDiscount}
-                                    onChange={(e) => setOrderDiscount(e.target.value)}
-                                />
-                            </FormField>
-
-                            <FormField label={labels.staffMember}>
-                                <select
-                                    value={selectedStaffId}
-                                    onChange={(e) => setSelectedStaffId(e.target.value)}
-                                    className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                    style={{
-                                        background: "var(--surface)",
-                                        color: selectedStaffId ? "var(--ink)" : "var(--muted)",
-                                        border: "1px solid var(--border)",
-                                    }}
-                                >
-                                    <option value="">{labels.selectStaff}</option>
-                                    {staffList_.map((s) => (
-                                        <option key={s._id} value={s._id}>{s.fullName}</option>
-                                    ))}
-                                </select>
-                            </FormField>
-                        </div>
-
-                        {/* Row 2: Customer Type Toggle & Customer Selection */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.customerType}</p>
-                                <CustomerTypeToggle value={customerType} onChange={setCustomerType} labels={labels} />
+                    {/* First Container: Left (Payment Options) and Right (Items) */}
+                    <div className="flex flex-col lg:flex-row h-full">
+                        {/* Left Panel - Payment Options */}
+                        <div className="flex-1 lg:w-1/2 p-4 border-b lg:border-b-0 lg:border-r border-[var(--border)] overflow-y-auto">
+                            <h3 className="text-sm font-bold mb-3" style={{ color: "var(--ink)" }}>{labels.paymentOptions || "Payment Options"}</h3>
+                            
+                            {/* Total banner */}
+                            <div
+                                className="px-4 py-3 rounded-xl mb-4"
+                                style={{ background: "linear-gradient(135deg, rgba(15,118,110,0.08), rgba(15,118,110,0.04))", border: "1px solid rgba(15,118,110,0.15)" }}
+                            >
+                                <div className="flex items-end justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium mb-0.5" style={{ color: "var(--accent-2)" }}>{labels.grandTotal}</p>
+                                        <p className="text-2xl font-extrabold" style={{ color: "var(--accent-2)" }}>
+                                            Rs {total.toLocaleString()}
+                                        </p>
+                                        {totalDiscount > 0 && (
+                                            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                                                Rs {billSubtotal.toLocaleString()} − Rs {totalDiscount.toLocaleString()} {labels.discount}
+                                            </p>
+                                        )}
+                                        {totalTax > 0 && totalDiscount === 0 && (
+                                            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                                                Rs {billSubtotal.toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
-                            <FormField label={labels.customerName}>
-                                {customerType === "walkin" ? (
-                                    <Input placeholder={labels.optional}
-                                        value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-                                ) : (
+                            {/* Row 1: Discount & Staff */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField label={labels.discount}>
+                                    <Input
+                                        type="number" min={0} placeholder="Rs 0"
+                                        value={orderDiscount}
+                                        onChange={(e) => setOrderDiscount(e.target.value)}
+                                    />
+                                </FormField>
+
+                                <FormField label={labels.staffMember}>
                                     <select
-                                        value={selectedCustomerId}
-                                        onChange={(e) => setSelectedCustomerId(e.target.value)}
+                                        value={selectedStaffId}
+                                        onChange={(e) => setSelectedStaffId(e.target.value)}
                                         className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
                                         style={{
                                             background: "var(--surface)",
-                                            color: selectedCustomerId ? "var(--ink)" : "var(--muted)",
+                                            color: selectedStaffId ? "var(--ink)" : "var(--muted)",
                                             border: "1px solid var(--border)",
                                         }}
                                     >
-                                        <option value="">{labels.selectCustomer}</option>
-                                        {customerOptions.map((c) => (
-                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        <option value="">{labels.selectStaff}</option>
+                                        {staffListFiltered.map((s) => (
+                                            <option key={s._id} value={s._id}>{s.fullName}</option>
                                         ))}
                                     </select>
-                                )}
-                            </FormField>
-                        </div>
+                                </FormField>
+                            </div>
 
-                        {/* Order type toggle */}
-                        <div>
-                            <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.orderType}</p>
-                            <OrderTypeToggle value={orderType} onChange={setOrderType} labels={labels} />
-                        </div>
+                            {/* Row 2: Customer Type Toggle & Customer Selection */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.customerType}</p>
+                                    <CustomerTypeToggle value={customerType} onChange={setCustomerType} labels={labels} />
+                                </div>
 
-                        {/* Divider */}
-                        <div style={{ borderTop: "1px solid var(--border)" }} />
+                                <FormField label={labels.customerName}>
+                                    {customerType === "walkin" ? (
+                                        <Input placeholder={labels.optional}
+                                            value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                                    ) : (
+                                        <select
+                                            value={selectedCustomerId}
+                                            onChange={(e) => setSelectedCustomerId(e.target.value)}
+                                            className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                                            style={{
+                                                background: "var(--surface)",
+                                                color: selectedCustomerId ? "var(--ink)" : "var(--muted)",
+                                                border: "1px solid var(--border)",
+                                            }}
+                                        >
+                                            <option value="">{labels.selectCustomer}</option>
+                                            {customerOptions.map((c) => (
+                                                <option key={c.value} value={c.value}>{c.label}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </FormField>
+                            </div>
 
-                        {/* Payment method row - section method */}
-                        <div className={rowClass}>
-                            <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
-                            <div className={controlWrapClass}>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {paymentTabs.map(({ key, label, icon: Icon }) => {
-                                        const isActive = activeTab === key;
-                                        return (
-                                            <button
-                                                key={key}
-                                                type="button"
-                                                onClick={() => setActiveTab(key)}
-                                                className="flex flex-row sm:flex-col items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all duration-200"
-                                                style={isActive ? {
-                                                    background: 'linear-gradient(135deg, var(--accent-2), #0b5f59)',
-                                                    borderColor: 'var(--accent-2)',
-                                                    color: '#ffffff',
-                                                    boxShadow: '0 8px 20px rgba(15, 118, 110, 0.25)',
+                            {/* Order type toggle */}
+                            <div>
+                                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.orderType}</p>
+                                <OrderTypeToggle value={orderType} onChange={setOrderType} labels={labels} />
+                            </div>
+
+                            {/* Divider */}
+                            <div style={{ borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+
+                            {/* Payment method row */}
+                            <div className={rowClass}>
+                                <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
+                                <div className={controlWrapClass}>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {paymentTabs.map(({ key, label, icon: Icon }) => {
+                                            const isActive = activeTab === key;
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => setActiveTab(key)}
+                                                    className="flex flex-row sm:flex-col items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all duration-200"
+                                                    style={isActive ? {
+                                                        background: 'linear-gradient(135deg, var(--accent-2), #0b5f59)',
+                                                        borderColor: 'var(--accent-2)',
+                                                        color: '#ffffff',
+                                                        boxShadow: '0 8px 20px rgba(15, 118, 110, 0.25)',
+                                                    } : {
+                                                        backgroundColor: 'var(--surface-muted)',
+                                                        borderColor: 'var(--border)',
+                                                        color: 'var(--muted)',
+                                                    }}
+                                                >
+                                                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment method specific fields */}
+                            {activeTab === "cash" && (
+                                <>
+                                    {/* Payment method dropdown for cash */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={selectedPaymentMethodId}
+                                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                                    className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                >
+                                                    <option value="">{labels.selectPaymentMethod}</option>
+                                                    {paymentMethodOptions.map((pm) => (
+                                                        <option key={pm.value} value={pm.value}>{pm.label}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPaymentMethodModal(true)}
+                                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                    title="Create new payment method"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Cash received */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.cashReceived}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="relative">
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
+                                                <input
+                                                    type="number"
+                                                    value={cashReceived}
+                                                    onChange={(e) => setCashReceived(e.target.value)}
+                                                    placeholder={`Min. Rs ${total.toLocaleString()}`}
+                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Change info */}
+                                    {Number(cashReceived) >= total && cashReceived && (
+                                        <div className={rowClass}>
+                                            <span className={labelClass} style={{ color: "var(--muted)" }} />
+                                            <div className={controlWrapClass}>
+                                                <div
+                                                    className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                    style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
+                                                >
+                                                    {labels.changeToReturn}: <span className="font-semibold">Rs {cashChange.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {Number(cashReceived) > 0 && Number(cashReceived) < total && (
+                                        <div className={rowClass}>
+                                            <span className={labelClass} style={{ color: "var(--muted)" }} />
+                                            <div className={controlWrapClass}>
+                                                <div
+                                                    className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                    style={{ backgroundColor: 'rgba(220, 38, 38, 0.06)', borderColor: 'rgba(220, 38, 38, 0.2)', color: '#dc2626' }}
+                                                >
+                                                    {labels.shortBy} <span className="font-semibold">Rs {(total - Number(cashReceived)).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {activeTab === "online" && (
+                                <>
+                                    {/* Platform */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.platform}</label>
+                                        <div className={controlWrapClass}>
+                                            <select
+                                                value={onlinePlatform}
+                                                onChange={(e) => setOnlinePlatform(e.target.value)}
+                                                className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                style={inputStyle}
+                                                {...fieldFocus}
+                                                required
+                                            >
+                                                <option value="">{labels.selectPlatform}</option>
+                                                {onlinePlatforms.map((platform) => (
+                                                    <option key={platform.value} value={platform.value}>{platform.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Amount received */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.amountReceived}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="relative">
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
+                                                <input
+                                                    type="number"
+                                                    value={onlineAmount}
+                                                    onChange={(e) => setOnlineAmount(e.target.value)}
+                                                    placeholder={`Rs ${total.toLocaleString()}`}
+                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className={rowClass}>
+                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
+                                        <div className={controlWrapClass}>
+                                            <div
+                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
+                                            >
+                                                Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be recorded via {onlinePlatform || 'online platform'}.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {activeTab === "credit" && (
+                                <>
+                                    {/* Qarza account */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.ledgerAccount}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={qarzaAccountId}
+                                                    onChange={(e) => setQarzaAccountId(e.target.value)}
+                                                    className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                >
+                                                    <option value="">{labels.searchAccount}</option>
+                                                    {qarzaOptions.map((option) => (
+                                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowQarzaModal(true)}
+                                                    className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
+                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
+                                                    title="Create new account"
+                                                >
+                                                    <Plus size={17} strokeWidth={2.25} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Info */}
+                                    {qarzaAccountId && (
+                                        <div className={rowClass}>
+                                            <span className={labelClass} style={{ color: "var(--muted)" }} />
+                                            <div className={controlWrapClass}>
+                                                <div
+                                                    className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                    style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
+                                                >
+                                                    Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be charged to this qarza account.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {activeTab === "hybrid" && (
+                                <>
+                                    {/* Payment method dropdown */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={selectedPaymentMethodId}
+                                                    onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+                                                    className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                >
+                                                    <option value="">{labels.selectPaymentMethod}</option>
+                                                    {paymentMethodOptions.map((pm) => (
+                                                        <option key={pm.value} value={pm.value}>{pm.label}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPaymentMethodModal(true)}
+                                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                    title="Create new payment method"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Cash amount */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.cashPortion}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="relative">
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
+                                                <input
+                                                    type="number"
+                                                    value={hybridCash}
+                                                    onChange={(e) => setHybridCash(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Qarza account */}
+                                    <div className={rowClass}>
+                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.qarzaPortion}</label>
+                                        <div className={controlWrapClass}>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={hybridQarzaAccountId}
+                                                    onChange={(e) => setHybridQarzaAccountId(e.target.value)}
+                                                    className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
+                                                    style={inputStyle}
+                                                    {...fieldFocus}
+                                                    required
+                                                >
+                                                    <option value="">{labels.selectQarzaAccount}</option>
+                                                    {qarzaOptions.map((option) => (
+                                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowQarzaModal(true)}
+                                                    className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
+                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
+                                                    title="Create new account"
+                                                >
+                                                    <Plus size={17} strokeWidth={2.25} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className={rowClass}>
+                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
+                                        <div className={controlWrapClass}>
+                                            <div
+                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                style={hybridValid ? {
+                                                    backgroundColor: 'rgba(15, 118, 110, 0.08)',
+                                                    borderColor: 'rgba(15, 118, 110, 0.3)',
+                                                    color: 'var(--accent-2)'
                                                 } : {
                                                     backgroundColor: 'var(--surface-muted)',
                                                     borderColor: 'var(--border)',
-                                                    color: 'var(--muted)',
+                                                    color: 'var(--muted)'
                                                 }}
                                             >
-                                                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
-                                                {label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                                {hybridValid
+                                                    ? `✓ ${labels.amountsBalanced}`
+                                                    : `Remaining: Rs ${hybridShortage > 0 ? hybridShortage.toLocaleString() : "—"}`
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        {/* Payment method specific fields - section method */}
-                        {activeTab === "cash" && (
-                            <>
-                                {/* Payment method dropdown for cash */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={selectedPaymentMethodId}
-                                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                                className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            >
-                                                <option value="">{labels.selectPaymentMethod}</option>
-                                                {paymentMethodOptions.map((pm) => (
-                                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPaymentMethodModal(true)}
-                                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                                title="Create new payment method"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Cash received */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.cashReceived}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="relative">
-                                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
-                                            <input
-                                                type="number"
-                                                value={cashReceived}
-                                                onChange={(e) => setCashReceived(e.target.value)}
-                                                placeholder={`Min. Rs ${total.toLocaleString()}`}
-                                                className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Change info */}
-                                {Number(cashReceived) >= total && cashReceived && (
-                                    <div className={rowClass}>
-                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                        <div className={controlWrapClass}>
+                        {/* Right Panel - Items */}
+                        <div className="flex-1 lg:w-1/2 p-4 overflow-y-auto">
+                            <h3 className="text-sm font-bold mb-3" style={{ color: "var(--ink)" }}>{labels.orderItems || "Order Items"}</h3>
+                            
+                            {cartItems.length === 0 ? (
+                                <p className="text-sm text-[var(--muted)] text-center py-8">{labels.noItems || "No items in cart"}</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {discountedCartItems.map((item, index) => (
+                                        <div key={index} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                                            {/* Item header - always visible */}
                                             <div
-                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
+                                                className="flex items-center justify-between px-4 py-3 cursor-pointer transition"
+                                                style={{ background: "var(--surface-muted)" }}
+                                                onClick={() => {
+                                                    setExpandedCalculation(prev => ({
+                                                        ...prev,
+                                                        [index]: !prev[index]
+                                                    }));
+                                                }}
                                             >
-                                                {labels.changeToReturn}: <span className="font-semibold">Rs {cashChange.toLocaleString()}</span>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{item.name}</p>
+                                                    <p className="text-xs text-[var(--muted)]">Qty: {item.qty} × Rs {item.discountedUnitPrice.toLocaleString()}</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="text-sm font-bold" style={{ color: "var(--accent-2)" }}>
+                                                        Rs {item.itemSubtotalWithTax.toFixed(2)}
+                                                    </p>
+                                                    {expandedCalculation[index] ? <ChevronUp size={16} style={{ color: "var(--muted)" }} /> : <ChevronDown size={16} style={{ color: "var(--muted)" }} />}
+                                                </div>
                                             </div>
+
+                                            {/* Expanded details */}
+                                            {expandedCalculation[index] && (
+                                                <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                                                    {/* Tax calculation section */}
+                                                    <div className="mb-3 p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation</p>
+                                                        <div className="text-xs space-y-1">
+                                                            <div className="flex justify-between">
+                                                                <span style={{ color: "var(--ink)" }}>Unit Price:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountedUnitPrice.toFixed(2)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span style={{ color: "var(--ink)" }}>Tax Percent:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{item.taxPercent || 0}%</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.itemTaxAmount.toFixed(2)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
+                                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.discountedUnitPrice + item.itemTaxAmount).toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Discount section */}
+                                                    <div className="mb-3 p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Section</p>
+                                                        <div className="grid grid-cols-2 gap-3 mb-2">
+                                                            <div>
+                                                                <label className="text-xs" style={{ color: "var(--muted)" }}>Max Discount:</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.maxDiscountPercent || 0}
+                                                                    className="w-full px-2 py-1 text-xs rounded border"
+                                                                    style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs" style={{ color: "var(--muted)" }}>Max Amount:</label>
+                                                                <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
+                                                                    Rs {((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <select
+                                                                value={itemDiscountTypes[index] || 'percentage'}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    setItemDiscountTypes(prev => ({
+                                                                        ...prev,
+                                                                        [index]: value
+                                                                    }));
+                                                                }}
+                                                                className="px-2 py-1.5 text-xs rounded-lg border"
+                                                                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                                            >
+                                                                <option value="percentage">%</option>
+                                                                <option value="fixed">Rs</option>
+                                                            </select>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="0"
+                                                                value={itemDiscounts[index] || ""}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    const numValue = Number(value);
+                                                                    
+                                                                    if (item.maxDiscountPercent > 0 && itemDiscountTypes[index] === 'percentage') {
+                                                                        if (numValue > item.maxDiscountPercent) {
+                                                                            alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
+                                                                            return;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    setItemDiscounts(prev => ({
+                                                                        ...prev,
+                                                                        [index]: value
+                                                                    }));
+                                                                }}
+                                                                className="flex-1 px-3 py-1.5 text-xs rounded-lg border"
+                                                                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                                            />
+                                                        </div>
+                                                        <div className="text-xs mt-2 space-y-1">
+                                                            <div className="flex justify-between">
+                                                                <span style={{ color: "var(--ink)" }}>Discount Applied:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountAmount.toFixed(2)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                <span style={{ color: "var(--accent-2)" }}>After Discount (Subtotal):</span>
+                                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.itemSubtotalWithTax.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Second Container: Summary */}
+                    <div className="p-4 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+                        <h4 className="text-xs font-bold mb-2" style={{ color: "var(--muted)" }}>{labels.billSummary || "Bill Summary"}</h4>
+                        <div className="flex justify-between items-center text-sm">
+                            <div className="space-y-1">
+                                <div className="flex justify-between gap-4">
+                                    <span style={{ color: "var(--muted)" }}>{labels.subtotal || "Subtotal"}:</span>
+                                    <span className="font-medium" style={{ color: "var(--ink)" }}>Rs {billSubtotal.toLocaleString()}</span>
+                                </div>
+                                {itemDiscountTotal > 0 && (
+                                    <div className="flex justify-between gap-4">
+                                        <span style={{ color: "var(--muted)" }}>{labels.itemDiscount || "Item Discount"}:</span>
+                                        <span className="font-medium" style={{ color: "var(--ink)" }}>-Rs {itemDiscountTotal.toLocaleString()}</span>
                                     </div>
                                 )}
-                                {Number(cashReceived) > 0 && Number(cashReceived) < total && (
-                                    <div className={rowClass}>
-                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                        <div className={controlWrapClass}>
-                                            <div
-                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                style={{ backgroundColor: 'rgba(220, 38, 38, 0.06)', borderColor: 'rgba(220, 38, 38, 0.2)', color: '#dc2626' }}
-                                            >
-                                                {labels.shortBy} <span className="font-semibold">Rs {(total - Number(cashReceived)).toLocaleString()}</span>
-                                            </div>
-                                        </div>
+                                {discountAmt > 0 && (
+                                    <div className="flex justify-between gap-4">
+                                        <span style={{ color: "var(--muted)" }}>{labels.orderDiscount || "Order Discount"}:</span>
+                                        <span className="font-medium" style={{ color: "var(--ink)" }}>-Rs {discountAmt.toLocaleString()}</span>
                                     </div>
                                 )}
-                            </>
-                        )}
-
-                        {activeTab === "online" && (
-                            <>
-                                {/* Platform */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.platform}</label>
-                                    <div className={controlWrapClass}>
-                                        <select
-                                            value={onlinePlatform}
-                                            onChange={(e) => setOnlinePlatform(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                            style={inputStyle}
-                                            {...fieldFocus}
-                                            required
-                                        >
-                                            <option value="">{labels.selectPlatform}</option>
-                                            {onlinePlatforms.map((platform) => (
-                                                <option key={platform.value} value={platform.value}>{platform.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Amount received */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.amountReceived}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="relative">
-                                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
-                                            <input
-                                                type="number"
-                                                value={onlineAmount}
-                                                onChange={(e) => setOnlineAmount(e.target.value)}
-                                                placeholder={`Rs ${total.toLocaleString()}`}
-                                                className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info */}
-                                <div className={rowClass}>
-                                    <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                    <div className={controlWrapClass}>
-                                        <div
-                                            className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                            style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
-                                        >
-                                            Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be recorded via {onlinePlatform || 'online platform'}.
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {activeTab === "credit" && (
-                            <>
-                                {/* Qarza account */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.ledgerAccount}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={qarzaAccountId}
-                                                onChange={(e) => setQarzaAccountId(e.target.value)}
-                                                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            >
-                                                <option value="">{labels.searchAccount}</option>
-                                                {qarzaOptions.map((option) => (
-                                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowQarzaModal(true)}
-                                                className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
-                                                style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
-                                                title="Create new account"
-                                            >
-                                                <Plus size={17} strokeWidth={2.25} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info */}
-                                {qarzaAccountId && (
-                                    <div className={rowClass}>
-                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                        <div className={controlWrapClass}>
-                                            <div
-                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
-                                            >
-                                                Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be charged to this qarza account.
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        {activeTab === "hybrid" && (
-                            <>
-                                {/* Payment method dropdown */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.paymentMethod}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={selectedPaymentMethodId}
-                                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                                className="flex-1 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            >
-                                                <option value="">{labels.selectPaymentMethod}</option>
-                                                {paymentMethodOptions.map((pm) => (
-                                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPaymentMethodModal(true)}
-                                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                                title="Create new payment method"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Cash amount */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.cashPortion}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="relative">
-                                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
-                                            <input
-                                                type="number"
-                                                value={hybridCash}
-                                                onChange={(e) => setHybridCash(e.target.value)}
-                                                placeholder="0"
-                                                className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Qarza account */}
-                                <div className={rowClass}>
-                                    <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.qarzaPortion}</label>
-                                    <div className={controlWrapClass}>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={hybridQarzaAccountId}
-                                                onChange={(e) => setHybridQarzaAccountId(e.target.value)}
-                                                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            >
-                                                <option value="">{labels.selectQarzaAccount}</option>
-                                                {qarzaOptions.map((option) => (
-                                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowQarzaModal(true)}
-                                                className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
-                                                style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
-                                                title="Create new account"
-                                            >
-                                                <Plus size={17} strokeWidth={2.25} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info */}
-                                <div className={rowClass}>
-                                    <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                    <div className={controlWrapClass}>
-                                        <div
-                                            className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                            style={hybridValid ? {
-                                                backgroundColor: 'rgba(15, 118, 110, 0.08)',
-                                                borderColor: 'rgba(15, 118, 110, 0.3)',
-                                                color: 'var(--accent-2)'
-                                            } : {
-                                                backgroundColor: 'var(--surface-muted)',
-                                                borderColor: 'var(--border)',
-                                                color: 'var(--muted)'
-                                            }}
-                                        >
-                                            {hybridValid
-                                                ? `✓ ${labels.amountsBalanced}`
-                                                : `Remaining: Rs ${hybridShortage > 0 ? hybridShortage.toLocaleString() : "—"}`
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
+                            </div>
+                            <div className="text-right">
+                                <span className="font-bold text-lg" style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

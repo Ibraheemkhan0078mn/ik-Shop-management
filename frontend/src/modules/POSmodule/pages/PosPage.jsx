@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import {
   useQarzaAccounts,
   useCreateQarzaPayment
@@ -27,7 +28,7 @@ import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
-import { ArrowLeft, Filter } from "lucide-react";
+import { ArrowLeft, Filter, ChevronDown } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,51 +49,106 @@ const buildOrderItemsFromCart = (cart) =>
     portionType: cartItem.portionType || "full",
     batchId: cartItem.batchId ?? null,
     batchNumber: cartItem.batchNumber ?? null,
+    // Tax and discount fields
+    taxPercent: cartItem.taxPercent || 0,
+    taxType: cartItem.taxType || "percentage",
+    taxAmount: cartItem.taxAmount || 0,
+    discountPercent: cartItem.discountPercent || 0,
+    discountAmount: cartItem.discountAmount || 0,
+    maxDiscountPercent: cartItem.maxDiscountPercent || 0,
+    discountLimitType: cartItem.discountLimitType || "percentage",
+    itemTotal: cartItem.itemTotal || (cartItem.unitPrice * cartItem.qty),
   }));
 
-// ─── Product Table Row ────────────────────────────────────────────────────────
-
-const ProductTableRow = ({ product, onAddToCart }) => {
+// ─── Product Card ────────────────────────────────────────────────────────────────
+const ProductCard = ({ product, onAddToCart }) => {
   const imageUrl = toImageUrl(product.image);
 
+  const getInitials = (name) => {
+    if (!name) return "N/A";
+    const words = name.trim().split(" ");
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const inStock = (product.currentStockLevel ?? 0) > 0;
+  const lowStock = inStock && product.currentStockLevel <= (product.lowStockThreshold ?? 5);
+
   return (
-    <tr
+    <div
       onClick={onAddToCart}
-      className="border-b border-[var(--border)] hover:bg-[var(--app-bg)] cursor-pointer transition-colors group"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onAddToCart()}
+      className={`rounded-xl overflow-hidden border transition-all duration-200 ${
+        inStock
+          ? "border-[var(--border)] hover:border-[var(--accent-2)] hover:shadow-md cursor-pointer active:scale-[0.98]"
+          : "border-[var(--border)] opacity-60 cursor-not-allowed"
+      }`}
+      style={{ background: "var(--surface)" }}
     >
-      <td className="p-2 w-10">
+      {/* Image */}
+      <div
+        className="w-full aspect-square flex items-center justify-center min-w-0"
+        style={{ background: "linear-gradient(135deg, var(--surface-muted), var(--app-bg))" }}
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={product.name}
-            className="w-9 h-9 object-cover rounded-lg bg-[var(--app-bg)]"
+            className="w-full h-full object-cover"
             onError={(e) => { e.target.style.display = "none"; }}
+            loading="lazy"
           />
         ) : (
-          <div className="w-9 h-9 rounded-lg bg-[var(--app-bg)] flex items-center justify-center text-[var(--muted)] text-[10px]">
-            N/A
-          </div>
+          <span className="text-xl sm:text-2xl font-bold" style={{ color: "var(--accent-2)" }}>
+            {getInitials(product.name)}
+          </span>
         )}
-      </td>
-      <td className="p-2">
-        <p className="text-sm font-semibold text-[var(--ink)] leading-tight">{product.name}</p>
-        {product.productCode && (
-          <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">{product.productCode}</p>
-        )}
-        {product.category?.name && (
-          <p className="text-xs text-[var(--muted)] mt-0.5">{product.category.name}</p>
-        )}
-      </td>
-      <td className="p-2 text-sm font-bold text-[var(--accent-2)] whitespace-nowrap">
-        Rs {(Number(product.price) || 0).toLocaleString()}
-      </td>
-      <td className="p-2 text-sm text-[var(--muted)] text-center">
-        {product.currentStockLevel ?? 0}
-      </td>
-    </tr>
+      </div>
+
+      {/* Info */}
+      <div className="p-2 sm:p-3 min-w-0">
+        <p className="text-xs sm:text-sm font-semibold text-[var(--ink)] truncate leading-tight">
+          {product.name}
+        </p>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 mt-1 min-w-0">
+          {product.productCode && (
+            <span
+              className="text-[10px] sm:text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0"
+              style={{ background: "var(--surface-muted)", color: "var(--muted)" }}
+            >
+              {product.productCode}
+            </span>
+          )}
+          {product.category?.name && (
+            <span className="text-[10px] sm:text-[11px] truncate" style={{ color: "var(--muted)" }}>
+              {product.category.name}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2">
+          <span className="text-[10px] sm:text-[11px] shrink-0" style={{ color: "var(--muted)" }}>Stock:</span>
+          <span
+            className="text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded"
+            style={{
+              background: inStock
+                ? lowStock ? "rgba(217,119,6,0.1)" : "rgba(15,118,110,0.1)"
+                : "rgba(220,38,38,0.1)",
+              color: inStock
+                ? lowStock ? "#d97706" : "var(--accent-2)"
+                : "#dc2626",
+            }}
+          >
+            {inStock ? product.currentStockLevel : "Out"}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 };
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PosPage() {
@@ -163,6 +219,8 @@ export default function PosPage() {
   const { data: fetchedQarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
   const qarzaAccounts = localQarzaAccounts.length ? localQarzaAccounts : fetchedQarzaAccounts;
 
+  const { data: productsData, refetch: refetchProducts } = useProducts();
+
   // ── Filter Handlers ───────────────────────────────────────────────────────
   const handleFiltersChange = useCallback((newFilters) => {
     setActiveFilters(newFilters);
@@ -177,7 +235,11 @@ export default function PosPage() {
 
   // ── Computed Values ───────────────────────────────────────────────────────
   const cartSubtotal = cartItems.reduce(
-    (sum, item) => sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0),
+    (sum, item) => {
+      const taxAmount = (item.unitPrice * (item.taxPercent || 0)) / 100;
+      const afterTaxPrice = item.unitPrice + taxAmount;
+      return sum + afterTaxPrice * (Number(item.qty) || 0);
+    },
     0
   );
 
@@ -247,7 +309,7 @@ export default function PosPage() {
       }
     }
 
-    const basePrice = Number(selectedBatch?.sellingPrice || product.price) || 0;
+    const basePrice = Number(selectedBatch?.sellingPrice || product.defaultSalePrice) || 0;
     const discountPercent = Number(product.discount) || 0;
     const priceAfterDiscount = basePrice - (basePrice * discountPercent) / 100;
 
@@ -257,6 +319,22 @@ export default function PosPage() {
 
     const batchId = selectedBatch?._id || null;
 
+    // Calculate tax amount
+    const taxPercent = Number(product.taxPercent) || 0;
+    const taxType = product.taxType || "percentage";
+    let taxAmount = 0;
+    if (taxType === "percentage") {
+      taxAmount = (finalUnitPrice * taxPercent) / 100;
+    } else {
+      taxAmount = taxPercent;
+    }
+
+    // Calculate discount amount
+    const discountAmount = (basePrice * discountPercent) / 100;
+
+    // Calculate item total (price + tax - discount)
+    const itemTotal = (finalUnitPrice * 1) + taxAmount - discountAmount;
+
     setCartItems((prev) => {
       const existingLine = prev.find((item) =>
         isSameCartLine(item, product._id, portionType, finalUnitPrice, batchId)
@@ -264,7 +342,7 @@ export default function PosPage() {
       if (existingLine) {
         return prev.map((item) =>
           isSameCartLine(item, product._id, portionType, finalUnitPrice, batchId)
-            ? { ...item, qty: item.qty + 1 }
+            ? { ...item, qty: item.qty + 1, itemTotal: itemTotal * (item.qty + 1) }
             : item
         );
       }
@@ -279,6 +357,15 @@ export default function PosPage() {
           portionType,
           batchId,
           batchNumber: selectedBatch?.batchNumber || null,
+          // Tax and discount fields
+          taxPercent,
+          taxType,
+          taxAmount,
+          discountPercent,
+          discountAmount,
+          maxDiscountPercent: Number(product.maxDiscountPercent) || 0,
+          discountLimitType: product.discountLimitType || "percentage",
+          itemTotal,
         },
       ];
     });
@@ -448,6 +535,15 @@ export default function PosPage() {
         portionType: orderItem.portionType || "full",
         batchId: orderItem.batchId ?? null,
         batchNumber: orderItem.batchNumber ?? null,
+        // Tax and discount fields
+        taxPercent: orderItem.taxPercent || 0,
+        taxType: orderItem.taxType || "percentage",
+        taxAmount: orderItem.taxAmount || 0,
+        discountPercent: orderItem.discountPercent || 0,
+        discountAmount: orderItem.discountAmount || 0,
+        maxDiscountPercent: orderItem.maxDiscountPercent || 0,
+        discountLimitType: orderItem.discountLimitType || "percentage",
+        itemTotal: orderItem.itemTotal || (Number(orderItem.unitPrice) * (orderItem.quantity ?? 1)),
       };
     });
 
@@ -494,21 +590,71 @@ export default function PosPage() {
       orderType,
       customerType,
       selectedCustomerId,
+      itemDiscounts = {},
+      itemDiscountTypes = {},
     } = paymentFormData;
 
     try {
       const { data: orderNumberData } = await api.get("/orders/generate-number");
       const discountAmount = Math.max(0, Number(orderDiscount) || 0);
-      const totalAmount = Math.max(0, cartSubtotal - discountAmount);
+      
+      // Apply per-item discounts from payment modal
+      const updatedCartItems = cartItems.map((item, index) => {
+        const itemDiscountValue = Number(itemDiscounts[index]) || 0;
+        const discountType = itemDiscountTypes[index] || 'percentage';
+        
+        if (itemDiscountValue > 0) {
+          let newDiscountAmount = 0;
+          let discountPercent = 0;
+          let discountedUnitPrice = item.unitPrice;
+          
+          if (discountType === 'percentage') {
+            discountPercent = itemDiscountValue;
+            newDiscountAmount = (item.unitPrice * item.qty * itemDiscountValue) / 100;
+            discountedUnitPrice = item.unitPrice - (item.unitPrice * itemDiscountValue / 100);
+          } else {
+            // Fixed amount discount
+            newDiscountAmount = Math.min(itemDiscountValue, item.unitPrice * item.qty);
+            discountPercent = (newDiscountAmount / (item.unitPrice * item.qty)) * 100;
+            discountedUnitPrice = item.unitPrice - (newDiscountAmount / item.qty);
+          }
+          
+          // Calculate tax amount based on discounted unit price
+          const recalculatedTaxAmount = (discountedUnitPrice * item.taxPercent) / 100;
+          
+          // Calculate item subtotal (discounted price * qty + tax * qty)
+          const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (recalculatedTaxAmount * item.qty);
+          
+          return {
+            ...item,
+            discountPercent,
+            discountAmount: newDiscountAmount,
+            discountType,
+            unitPrice: discountedUnitPrice,
+            taxAmount: recalculatedTaxAmount,
+            itemTotal: itemSubtotalWithTax,
+          };
+        }
+        return item;
+      });
+      
+      // Calculate bill subtotal as sum of all item totals (each including their tax)
+      const billSubtotal = updatedCartItems.reduce((sum, item) => sum + (item.itemTotal || (item.unitPrice * item.qty) + (item.taxAmount * item.qty)), 0);
+      
+      // Calculate total tax from updated cart items
+      const totalTaxAmount = updatedCartItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0) * (Number(item.qty) || 0), 0);
+      
+      const totalAmount = Math.max(0, billSubtotal - discountAmount);
       const changeReturned = Math.max(0, (Number(cashReceived) || 0) - totalAmount);
 
       const orderPayload = {
         orderNumber: orderNumberData.orderNumber,
         createdAt: new Date().toISOString(),
-        subtotal: cartSubtotal,
+        subtotal: billSubtotal,
         discountAmount,
+        totalTaxAmount,
         totalAmount,
-        items: buildOrderItemsFromCart(cartItems),
+        items: buildOrderItemsFromCart(updatedCartItems),
         customerName: paymentMethod === "credit" ? "" : customerName,
         customerType,
         customerId: customerType === "regular" ? selectedCustomerId : null,
@@ -669,7 +815,7 @@ export default function PosPage() {
 
         </div>
 
-        {/* Product Table */}
+        {/* Product Grid */}
         <div className="flex-1 overflow-hidden bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)]">
           <PaginatedList
             rtkQuery={useProducts}
@@ -679,26 +825,14 @@ export default function PosPage() {
             className="p-3"
             queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
             renderItems={(products) => (
-              <div className="flex flex-col h-full">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
-                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)] w-10"></th>
-                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">{labels.product}</th>
-                      <th className="p-2 text-left text-xs font-semibold text-[var(--muted)]">{labels.price}</th>
-                      <th className="p-2 text-center text-xs font-semibold text-[var(--muted)]">{labels.stock}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => (
-                      <ProductTableRow
-                        key={product._id}
-                        product={product}
-                        onAddToCart={() => handleProductClick(product)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    onAddToCart={() => handleProductClick(product)}
+                  />
+                ))}
               </div>
             )}
           />
@@ -728,15 +862,15 @@ export default function PosPage() {
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       {openModals.payment && (
         <PosPaymentModal
+          id="pos-payment-modal"
           subtotal={cartSubtotal}
           onCheckout={handleCheckoutConfirmed}
           onClose={() => toggleModal("payment")}
-          onCreateQarza={() => toggleModal("newQarzaAccount")}
-          language={language}
-          initialCustomerName={resumedHoldMeta.customerName}
-          initialWaiter={resumedHoldMeta.waiter}
-          initialDiscount={resumedHoldMeta.discountAmount}
-          initialStaffId={resumedHoldMeta.staffId}
+          initialCustomerName={resumedHoldMeta.customerName || ""}
+          initialWaiter={resumedHoldMeta.waiter || ""}
+          initialDiscount={resumedHoldMeta.discountAmount || 0}
+          initialStaffId={resumedHoldMeta.staffId || ""}
+          cartItems={cartItems}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, Trash2, RotateCcw, Pause, History } from "lucide-react";
+import { ShoppingCart, Trash2, RotateCcw, Pause, History, ChevronUp, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
@@ -297,84 +297,140 @@ export default function PosCartSidebar({
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
 
 function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemove, onQtyChange, onEditPortion, labels }) {
+    const [expanded, setExpanded] = useState(false);
+    
+    // Calculate tax details
+    const taxAmount = (cartItem.unitPrice * (cartItem.taxPercent || 0)) / 100;
+    const afterTaxPrice = cartItem.unitPrice + taxAmount;
+    const totalWithTax = afterTaxPrice * cartItem.qty;
+    
     return (
         <div
-            className="rounded-lg p-2.5 group transition-all"
+            className="rounded-lg overflow-hidden transition-all"
             style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
         >
-            {/* Top row: image + name + remove */}
-            <div className="flex items-center gap-2">
-                {cartItem.image && (
-                    <img
-                        src={cartItem.image}
-                        alt={cartItem.name}
-                        className="w-8 h-8 rounded-md object-cover shrink-0"
-                        onError={(e) => { e.target.style.display = "none"; }}
-                    />
-                )}
-
-                <button
-                    onClick={onEditPortion}
-                    className="flex-1 text-xs font-semibold text-left truncate transition"
-                    style={{ color: "var(--ink)" }}
-                    title="Click to change portion"
-                >
-                    {cartItem.name}
-                    {portionLabel && (
-                        <span className="ml-1 font-normal" style={{ color: "var(--muted)" }}>
-                            {portionLabel}
-                        </span>
+            {/* Item header - always visible */}
+            <div
+                className="p-2.5 cursor-pointer group transition-all"
+                onClick={() => setExpanded(!expanded)}
+            >
+                {/* Top row: image + name + remove */}
+                <div className="flex items-center gap-2">
+                    {cartItem.image && (
+                        <img
+                            src={cartItem.image}
+                            alt={cartItem.name}
+                            className="w-8 h-8 rounded-md object-cover shrink-0"
+                            onError={(e) => { e.target.style.display = "none"; }}
+                        />
                     )}
-                </button>
 
-                <button
-                    onClick={onRemove}
-                    className="opacity-0 group-hover:opacity-100 transition p-1 rounded"
-                    style={{ color: "#f87171" }}
-                >
-                    <Trash2 size={12} />
-                </button>
-            </div>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEditPortion();
+                        }}
+                        className="flex-1 text-xs font-semibold text-left truncate transition"
+                        style={{ color: "var(--ink)" }}
+                        title="Click to change portion"
+                    >
+                        {cartItem.name}
+                        {portionLabel && (
+                            <span className="ml-1 font-normal" style={{ color: "var(--muted)" }}>
+                                {portionLabel}
+                            </span>
+                        )}
+                    </button>
 
-            {/* Bottom row: qty controls + line total */}
-            <div className="flex items-center gap-2 mt-2">
-                <button
-                    onClick={onDecrement}
-                    className="w-6 h-6 rounded-md text-sm font-bold flex items-center justify-center transition shrink-0"
-                    style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
-                >
-                    −
-                </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove();
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition p-1 rounded"
+                        style={{ color: "#f87171" }}
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                </div>
 
-                <input
-                    type="number"
-                    min={1}
-                    value={cartItem.qty}
-                    onChange={(e) => onQtyChange(Number(e.target.value))}
-                    className="w-10 text-center text-xs font-semibold rounded-md py-0.5 outline-none"
-                    style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
-                />
+                {/* Bottom row: qty controls + line total */}
+                <div className="flex items-center gap-2 mt-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDecrement();
+                        }}
+                        className="w-6 h-6 rounded-md text-sm font-bold flex items-center justify-center transition shrink-0"
+                        style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                    >
+                        −
+                    </button>
 
-                <button
-                    onClick={onIncrement}
-                    className="w-6 h-6 rounded-md text-sm font-bold flex items-center justify-center transition shrink-0"
-                    style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
-                >
-                    +
-                </button>
+                    <input
+                        type="number"
+                        min={1}
+                        value={cartItem.qty}
+                        onChange={(e) => onQtyChange(Number(e.target.value))}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-10 text-center text-xs font-semibold rounded-md py-0.5 outline-none"
+                        style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                    />
 
-                <span className="ml-auto text-xs" style={{ color: "var(--muted)" }}>
-                    {cartItem.unitPrice.toLocaleString()} ×{cartItem.qty} ={" "}
-                    <span className="font-semibold" style={{ color: "var(--ink)" }}>
-                        Rs {(cartItem.unitPrice * cartItem.qty).toLocaleString()}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onIncrement();
+                        }}
+                        className="w-6 h-6 rounded-md text-sm font-bold flex items-center justify-center transition shrink-0"
+                        style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                    >
+                        +
+                    </button>
+
+                    <span className="ml-auto text-xs" style={{ color: "var(--muted)" }}>
+                        After Tax ({afterTaxPrice.toFixed(2)}) ×{cartItem.qty} ={" "}
+                        <span className="font-semibold" style={{ color: "var(--ink)" }}>
+                            Rs {totalWithTax.toLocaleString()}
+                        </span>
                     </span>
-                </span>
+                    {expanded ? <ChevronUp size={14} style={{ color: "var(--muted)" }} /> : <ChevronDown size={14} style={{ color: "var(--muted)" }} />}
+                </div>
+
+                {cartItem.batchNumber && (
+                    <p className="text-[10px] mt-1" style={{ color: "var(--muted)" }}>
+                        {labels.batch}: {cartItem.batchNumber}
+                    </p>
+                )}
             </div>
 
-            {cartItem.batchNumber && (
-                <p className="text-[10px] mt-1" style={{ color: "var(--muted)" }}>
-                    {labels.batch}: {cartItem.batchNumber}
-                </p>
+            {/* Expanded tax calculation */}
+            {expanded && (
+                <div className="px-3 py-2 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation</p>
+                    <div className="text-xs space-y-1">
+                        <div className="flex justify-between">
+                            <span style={{ color: "var(--ink)" }}>Unit Price:</span>
+                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cartItem.unitPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span style={{ color: "var(--ink)" }}>Tax Percent:</span>
+                            <span className="font-mono" style={{ color: "var(--ink)" }}>{cartItem.taxPercent || 0}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {taxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                            <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
+                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {afterTaxPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                            <span style={{ color: "var(--accent-2)" }}>Total ({cartItem.qty} items):</span>
+                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalWithTax.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

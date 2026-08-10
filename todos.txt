@@ -5,6 +5,7 @@
 2: remove the description form teh brand
 3: when empty batch dleeted then it do esnot refetch te baches of product. 
 4: make the supplier nad cusotmer detial page data more detailed. like kpi for all. kpi for date filer and also paginaed data in each.
+5: when exiting then fill all the detaisl which is present in this batches means cost, tax etc and lcok it when exitng, when change then he need to be new. 
 
 
 
