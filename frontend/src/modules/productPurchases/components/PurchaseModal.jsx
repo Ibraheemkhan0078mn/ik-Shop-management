@@ -338,10 +338,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     }, [itemForm.item, availableBatches, editingIndex]);
 
     // calculations
-    const calc = useMemo(() => {
-        const itemsBase = addedItems.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.pricePerUnit || 0), 0);
-        const itemsDiscountTotal = addedItems.reduce((s, it) => s + calculateItemDiscountAmount(it.quantity, it.pricePerUnit, it.discount, it.discountType), 0);
-        const itemsTaxTotal = addedItems.reduce((s, it) => s + calculateItemTaxAmount(it.quantity, it.pricePerUnit, it.discount, it.discountType, it.tax, it.taxType), 0);
+    const calculations = useMemo(() => {
+        const itemsBase = addedItems.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.costPrice || 0), 0);
+        const itemsDiscountTotal = addedItems.reduce((s, it) => s + calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType), 0);
+        const itemsTaxTotal = addedItems.reduce((s, it) => s + calculateItemTaxAmount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType), 0);
         const subtotalAfterItems = addedItems.reduce((s, it) => s + (Number(it.totalPurchasePrice) || 0), 0);
         const billDiscount = bill.discountType === "percentage" ? (subtotalAfterItems * Number(bill.discount || 0)) / 100 : Number(bill.discount || 0);
         const afterBillDiscount = subtotalAfterItems - billDiscount;
@@ -361,6 +361,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             total: afterBillTax - shipping 
         };
     }, [addedItems, bill]);
+
+    const calc = calculations;
 
     // frequent items
     const frequentItems = useMemo(() => {
@@ -407,7 +409,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const handleAddItem = () => {
         if (!itemForm.item) return showError(labels.selectItem);
         if (!itemForm.quantity || Number(itemForm.quantity) <= 0) return showError(labels.enterValidQuantity);
-        if (itemForm.perItemPrice === "" || Number(itemForm.perItemPrice) < 0) return showError(labels.enterValidPrice);
+        if (itemForm.costPrice === "" || Number(itemForm.costPrice) < 0) return showError(labels.enterValidPrice);
         if (itemForm.batchMode === "existing" && !itemForm.batchSelection) return showError(labels.selectBatch);
 
         const prod = productsList.find(p => p._id === itemForm.item);
@@ -421,9 +423,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         const row = {
             item: itemForm.item, name: prod?.name ?? "Unknown",
             quantity: Number(itemForm.quantity), unit: itemForm.unit,
-            pricePerUnit: Number(itemForm.perItemPrice),
-            costPrice: Number(itemForm.costPrice) || 0,
-            totalPurchasePrice: calculateItemLineTotal(Number(itemForm.quantity), Number(itemForm.perItemPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
+            pricePerUnit: Number(itemForm.costPrice),
+            costPrice: Number(itemForm.costPrice),
+            totalPurchasePrice: calculateItemLineTotal(Number(itemForm.quantity), Number(itemForm.costPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
             mfgDate: itemForm.mfgDate, expiryDate: itemForm.expiryDate,
             batchNumber: batchNo, batchMode: itemForm.batchMode,
             batchSelection: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
@@ -471,7 +473,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
             items: addedItems.map(it => ({
                 product: it.item, batchNumber: it.batchNumber,
-                quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
+                quantity: it.quantity, price: it.costPrice, costPrice: it.costPrice || 0,
                 discount: it.discount, discountType: it.discountType,
                 tax: it.tax, taxType: it.taxType,
                 mfgDate: it.mfgDate ? new Date(it.mfgDate).toISOString() : undefined,
@@ -559,15 +561,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field><Label>{labels.quantity} *</Label>
-                                        <div className="flex gap-2 items-center">
-                                            <Inp name="quantity" type="number" placeholder="0" value={itemForm.quantity} onChange={handleItemChange} />
-                                            <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
-                                        </div>
+                                        <Inp name="quantity" type="number" placeholder="0" value={itemForm.quantity} onChange={handleItemChange} />
+                                    </Field>
+                                    <Field><Label>{labels.unit}</Label>
+                                        <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl w-full flex items-center justify-center" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
                                     </Field>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field><Label>{labels.perItemPrice} *</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
-                                    <Field><Label>{labels.costPrice || "Cost Price"}</Label><Inp name="costPrice" type="number" placeholder="0.00" value={itemForm.costPrice} onChange={handleItemChange} /></Field>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <Field><Label>{labels.costPrice || "Cost Price"} *</Label><Inp name="costPrice" type="number" placeholder="0.00" value={itemForm.costPrice} onChange={handleItemChange} /></Field>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -595,6 +596,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <Field><Label>{labels.mfgDate}</Label><Inp name="mfgDate" type="date" value={itemForm.mfgDate} onChange={handleItemChange} /></Field>
                                     <Field><Label>{labels.expiryDate}</Label><Inp name="expiryDate" type="date" value={itemForm.expiryDate} onChange={handleItemChange} /></Field>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    <Field><Label>Declare Sale Price</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
                                 </div>
 
                                 {!isUpdate && bill.supplier && frequentItems.length > 0 && (
