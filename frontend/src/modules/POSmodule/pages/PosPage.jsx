@@ -61,7 +61,7 @@ const buildOrderItemsFromCart = (cart) =>
   }));
 
 // ─── Product Card ────────────────────────────────────────────────────────────────
-const ProductCard = ({ product, onAddToCart }) => {
+const ProductCard = ({ product, onAddToCart, onPreviewBatches }) => {
   const imageUrl = toImageUrl(product.image);
 
   const getInitials = (name) => {
@@ -144,6 +144,18 @@ const ProductCard = ({ product, onAddToCart }) => {
           >
             {inStock ? product.currentStockLevel : "Out"}
           </span>
+          {onPreviewBatches && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreviewBatches(product);
+              }}
+              className="text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded font-medium transition hover:opacity-80"
+              style={{ background: "var(--surface-muted)", color: "var(--accent-2)", border: "1px solid var(--border)" }}
+            >
+              Batches
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -402,7 +414,31 @@ export default function PosPage() {
         showError(isUrdu ? "بیچ لوڈ کرنے میں ناکام۔" : "Failed to load batches.");
       }
     },
-    [stickyBatchByProductId, language]
+    [stickyBatchByProductId, addProductToCart, isUrdu, toggleModal]
+  );
+
+  const handlePreviewBatches = useCallback(
+    async (product) => {
+      try {
+        const { data } = await api.get(`/batches/${product._id}`);
+        const availableBatches = data?.data || data || [];
+
+        if (!availableBatches.length) {
+          showError(
+            isUrdu
+              ? "کوئی بیچ دستیاب نہیں۔ پہلے خریداری کریں۔"
+              : "No batches available. Please create a purchase first."
+          );
+          return;
+        }
+
+        setBatchSelectionProduct(product);
+        toggleModal("batchSelection");
+      } catch {
+        showError(isUrdu ? "بیچ لوڈ کرنے میں ناکام۔" : "Failed to load batches.");
+      }
+    },
+    [isUrdu, toggleModal]
   );
 
   const handleBatchSelected = (product, selectedBatch, shouldMakeStickyBatch) => {
@@ -831,6 +867,7 @@ export default function PosPage() {
                     key={product._id}
                     product={product}
                     onAddToCart={() => handleProductClick(product)}
+                    onPreviewBatches={handlePreviewBatches}
                   />
                 ))}
               </div>
