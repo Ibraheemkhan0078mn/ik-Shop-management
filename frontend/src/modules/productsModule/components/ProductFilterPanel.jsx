@@ -10,7 +10,7 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getProductLabels(language);
-  
+
   const { data: categoriesResponse } = useGetCategoriesQuery();
   const categories = categoriesResponse?.data || [];
 
@@ -87,10 +87,10 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
   return (
     <>
       {isBarcodeScannerOpen && (
-        <Scanner 
-          isOpen={isBarcodeScannerOpen} 
-          setIsOpen={setIsBarcodeScannerOpen} 
-          valueSetter={(v) => updateFilter("barcode", v)} 
+        <Scanner
+          isOpen={isBarcodeScannerOpen}
+          setIsOpen={setIsBarcodeScannerOpen}
+          valueSetter={(v) => updateFilter("barcode", v)}
         />
       )}
       {/* Backdrop */}

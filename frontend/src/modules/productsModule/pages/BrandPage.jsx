@@ -1,6 +1,6 @@
 // features/productsModule/pages/BrandPage.jsx
-import { useMemo, useState } from "react";
-import { Plus, Edit, Trash2, Tag } from "lucide-react";
+import { useState } from "react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -54,8 +54,7 @@ export default function BrandPage() {
             <div className="flex flex-col">
                 {/* Desktop Header */}
                 <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-[var(--surface-muted)] rounded-t-xl border-b border-[var(--border)] text-xs font-semibold text-[var(--muted)]">
-                    <div className="col-span-1">{labels.image}</div>
-                    <div className="col-span-5">{labels.name}</div>
+                    <div className="col-span-6">{labels.name}</div>
                     <div className="col-span-3">{labels.status}</div>
                     <div className="col-span-3">{labels.actions}</div>
                 </div>
@@ -63,12 +62,12 @@ export default function BrandPage() {
                 {/* Desktop Rows */}
                 {items.map((item) => (
                     <div key={item._id} className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition-all items-center">
-                        <div className="col-span-1">
-                            <div className="w-10 h-10 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center text-[var(--accent-2)]">
-                                <Tag size={18} />
-                            </div>
+                        <div className="col-span-6 font-medium text-[var(--ink)] truncate flex items-center gap-2">
+                            {item.isActive && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
+                            )}
+                            {item.name}
                         </div>
-                        <div className="col-span-5 font-medium text-[var(--ink)] truncate">{item.name}</div>
                         <div className="col-span-3">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 item.isActive 
@@ -102,11 +101,13 @@ export default function BrandPage() {
                 {items.map((item) => (
                     <div key={`m-${item._id}`} className="md:hidden bg-[var(--surface)] rounded-xl p-4 border border-[var(--border)] mb-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center text-[var(--accent-2)] shrink-0">
-                                <Tag size={18} />
-                            </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-[var(--ink)] truncate">{item.name}</h3>
+                                <h3 className="font-semibold text-[var(--ink)] truncate flex items-center gap-2">
+                                    {item.isActive && (
+                                        <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
+                                    )}
+                                    {item.name}
+                                </h3>
                                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                                     item.isActive 
                                         ? 'bg-green-100 text-green-700' 

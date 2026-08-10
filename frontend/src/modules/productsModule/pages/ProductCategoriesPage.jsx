@@ -1,6 +1,6 @@
 // features/productsModule/pages/ProductCategoriesPage.jsx
-import { useMemo, useState } from "react";
-import { Plus, Edit, Trash2, FolderTree } from "lucide-react";
+import { useState } from "react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -54,21 +54,30 @@ export default function ProductCategoriesPage() {
             <div className="flex flex-col">
                 {/* Desktop Header */}
                 <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface-muted) rounded-t-xl border-b border-(--border) text-xs font-semibold text-(--muted)">
-                    <div className="col-span-1">{labels.image}</div>
-                    <div className="col-span-5">{labels.name}</div>
-                    <div className="col-span-6">{labels.actions}</div>
+                    <div className="col-span-6">{labels.name}</div>
+                    <div className="col-span-2">{labels.status || "Status"}</div>
+                    <div className="col-span-4">{labels.actions}</div>
                 </div>
 
                 {/* Desktop Rows */}
                 {items.map((item) => (
                     <div key={item._id} className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-(--surface) border-b border-(--border) hover:bg-(--surface-muted) transition-all items-center">
-                        <div className="col-span-1">
-                            <div className="w-10 h-10 rounded-lg bg-(--surface-muted) border border-(--border) flex items-center justify-center text-(--accent-2)">
-                                <FolderTree size={18} />
-                            </div>
+                        <div className="col-span-6 font-medium text-(--ink) truncate flex items-center gap-2">
+                            {item.isActive !== false && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
+                            )}
+                            {item.name}
                         </div>
-                        <div className="col-span-5 font-medium text-(--ink) truncate">{item.name}</div>
-                        <div className="col-span-6 flex items-center gap-2">
+                        <div className="col-span-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                item.isActive !== false 
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                                {item.isActive !== false ? (labels.active || 'Active') : (labels.inactive || 'Inactive')}
+                            </span>
+                        </div>
+                        <div className="col-span-4 flex items-center gap-2">
                             <button 
                                 onClick={() => handleEdit(item._id)}
                                 className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) hover:border-(--accent-2) hover:text-(--accent-2) transition-all"
@@ -92,11 +101,20 @@ export default function ProductCategoriesPage() {
                 {items.map((item) => (
                     <div key={`m-${item._id}`} className="md:hidden bg-(--surface) rounded-xl p-4 border border-(--border) mb-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-(--surface-muted) border border-(--border) flex items-center justify-center text-(--accent-2) shrink-0">
-                                <FolderTree size={18} />
-                            </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-(--ink) truncate">{item.name}</h3>
+                                <h3 className="font-semibold text-(--ink) truncate flex items-center gap-2">
+                                    {item.isActive !== false && (
+                                        <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
+                                    )}
+                                    {item.name}
+                                </h3>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                                    item.isActive !== false 
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                }`}>
+                                    {item.isActive !== false ? (labels.active || 'Active') : (labels.inactive || 'Inactive')}
+                                </span>
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-(--border)">
