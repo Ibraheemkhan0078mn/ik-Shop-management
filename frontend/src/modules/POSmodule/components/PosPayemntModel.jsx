@@ -517,7 +517,7 @@ export default function PosPaymentModal({
         label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
     }));
 
-    const customerOptions = customersData?.map((c) => ({
+    const customerOptions = (customersData?.filter(c => c.isActive !== false) || []).map((c) => ({
         value: c._id,
         label: c.name + (c.phoneNo ? ` · ${c.phoneNo}` : ""),
     })) || [];

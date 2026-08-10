@@ -121,17 +121,22 @@ function SupplierRow({ supplier, onEdit, onDelete, onView }) {
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
             <td className="px-4 py-3">
-                {supplier?.image ? (
-                    <BigViewImage 
-                        src={`${IMAGE_BASE}/${supplier.image}`} 
-                        alt={supplier.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                    />
-                ) : (
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
-                        {supplier?.name?.charAt(0).toUpperCase() || "S"}
-                    </div>
-                )}
+                <div className="relative inline-block">
+                    {supplier?.image ? (
+                        <BigViewImage 
+                            src={`${IMAGE_BASE}/${supplier.image}`} 
+                            alt={supplier.name}
+                            className="w-10 h-10 rounded-lg object-cover"
+                        />
+                    ) : (
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
+                            {supplier?.name?.charAt(0).toUpperCase() || "S"}
+                        </div>
+                    )}
+                    {isActive && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2" style={{ background: "#16a34a", borderColor: "var(--surface)" }}></div>
+                    )}
+                </div>
             </td>
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>
                 {supplier?.name ?? "—"}

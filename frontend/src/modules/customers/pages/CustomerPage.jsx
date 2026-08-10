@@ -109,17 +109,22 @@ function CustomerRow({ customer, onEdit, onDelete, onView }) {
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
             <td className="px-4 py-3">
-                {customer?.image ? (
-                    <BigViewImage 
-                        src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} 
-                        alt={customer?.name ?? "Customer"} 
-                        className="h-10 w-10 rounded-full object-cover"
-                    />
-                ) : (
-                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
-                        <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
-                    </div>
-                )}
+                <div className="relative inline-block">
+                    {customer?.image ? (
+                        <BigViewImage 
+                            src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} 
+                            alt={customer?.name ?? "Customer"} 
+                            className="h-10 w-10 rounded-full object-cover"
+                        />
+                    ) : (
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
+                            <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
+                        </div>
+                    )}
+                    {isActive && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2" style={{ background: "#16a34a", borderColor: "var(--surface)" }}></div>
+                    )}
+                </div>
             </td>
             <td className="px-4 py-3 font-semibold" style={{ color: "var(--ink)" }}>{customer?.name ?? "—"}</td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>{customer?.phoneNo ?? "—"}</td>

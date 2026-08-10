@@ -209,11 +209,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const suppliersList = suppliersRaw?.data ?? suppliersRaw ?? [];
     const productsList = productsRaw?.data ?? productsRaw ?? [];
     const previousBills = purchasesRaw?.data ?? purchasesRaw ?? [];
-    const supplierOptions = useMemo(() => suppliersList.map(s => ({
-        label: s.name,
-        value: s._id,
-        disabled: s.isActive === false,
-    })), [suppliersList]);
 
     // state
     const [bill, setBill] = useState(emptyBill());
@@ -225,6 +220,26 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
     const [expandedItems, setExpandedItems] = useState({});
+
+    const supplierOptions = useMemo(() => {
+        if (isUpdate && bill.supplier) {
+            // In update mode, include all suppliers but disable inactive ones except the selected one
+            return suppliersList.map(s => ({
+                label: s.name,
+                value: s._id,
+                disabled: s.isActive === false && s._id !== bill.supplier,
+            }));
+        } else {
+            // In create mode, only show active suppliers
+            return suppliersList
+                .filter(s => s.isActive !== false)
+                .map(s => ({
+                    label: s.name,
+                    value: s._id,
+                    disabled: false,
+                }));
+        }
+    }, [suppliersList, isUpdate, bill.supplier]);
 
     const { data: batchesRaw = [] } = useBatchesByProduct(itemForm.item, { skip: !itemForm.item });
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
