@@ -1,6 +1,6 @@
 // src/modules/productPurchases/components/PurchaseModal.jsx
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
-import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown, Lock, Unlock } from "lucide-react";
+import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown, Lock, Unlock, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
 import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } from "../services/purchases.service";
@@ -33,6 +33,29 @@ const calculateItemDiscountAmount = (quantity, pricePerUnit, discount, discountT
         ? discountValue
         : (baseTotal * discountValue) / 100;
     return Math.min(baseTotal, discountAmount);
+};
+
+const calculateItemTotalPrice = (quantity, costPrice) => {
+    return Number(quantity || 0) * Number(costPrice || 0);
+};
+
+const calculateItemAfterDiscount = (quantity, costPrice, discount, discountType) => {
+    const totalPrice = calculateItemTotalPrice(quantity, costPrice);
+    const discountAmount = calculateItemDiscountAmount(quantity, costPrice, discount, discountType);
+    return Math.max(0, totalPrice - discountAmount);
+};
+
+const calculateItemTaxOnAfterDiscount = (quantity, costPrice, discount, discountType, tax, taxType) => {
+    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
+    const taxValue = Number(tax || 0);
+    if (!taxValue) return 0;
+    return taxType === "fixed" ? taxValue : (afterDiscount * taxValue) / 100;
+};
+
+const calculateItemFinalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType) => {
+    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
+    const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType);
+    return afterDiscount + taxAmount;
 };
 
 const calculateItemTaxAmount = (quantity, pricePerUnit, discount, discountType, tax, taxType) => {
@@ -201,6 +224,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [showProductModal, setShowProductModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
+    const [expandedItems, setExpandedItems] = useState({});
 
     const { data: batchesRaw = [] } = useBatchesByProduct(itemForm.item, { skip: !itemForm.item });
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
@@ -346,7 +370,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         const billDiscount = bill.discountType === "percentage" ? (subtotalAfterItems * Number(bill.discount || 0)) / 100 : Number(bill.discount || 0);
         const afterBillDiscount = subtotalAfterItems - billDiscount;
         const billTax = bill.gstType === "fixed" ? Number(bill.gst || 0) : (afterBillDiscount * Number(bill.gst || 0)) / 100;
-        const afterBillTax = afterBillDiscount - billTax;
+        const afterBillTax = afterBillDiscount + billTax;
         const shipping = Number(bill.shippingCost || 0);
         return { 
             itemsBase, 
@@ -358,7 +382,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             billTax, 
             afterBillTax,
             shipping, 
-            total: afterBillTax - shipping 
+            total: afterBillTax + shipping 
         };
     }, [addedItems, bill]);
 
@@ -423,9 +447,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         const row = {
             item: itemForm.item, name: prod?.name ?? "Unknown",
             quantity: Number(itemForm.quantity), unit: itemForm.unit,
-            pricePerUnit: Number(itemForm.costPrice),
+            pricePerUnit: Number(itemForm.perItemPrice) || 0,
             costPrice: Number(itemForm.costPrice),
-            totalPurchasePrice: calculateItemLineTotal(Number(itemForm.quantity), Number(itemForm.costPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
+            totalPurchasePrice: calculateItemFinalSubtotal(Number(itemForm.quantity), Number(itemForm.costPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
             mfgDate: itemForm.mfgDate, expiryDate: itemForm.expiryDate,
             batchNumber: batchNo, batchMode: itemForm.batchMode,
             batchSelection: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
@@ -627,25 +651,153 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <table className="w-full text-sm min-w-[480px]">
                                         <thead>
                                             <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                                {[labels.item, labels.batch, labels.qty, labels.price, labels.costPrice || "Cost Price", labels.discount, labels.tax, labels.total, labels.actions].map(h => (
-                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === labels.price || h === (labels.costPrice || "Cost Price") || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
+                                                {[labels.item, labels.batch, labels.qty, labels.salePrice || "Sale Price", labels.costPrice || "Cost Price", labels.discount, labels.tax, labels.total, labels.actions].map(h => (
+                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === (labels.salePrice || "Sale Price") || h === (labels.costPrice || "Cost Price") || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {addedItems.map((it, idx) => (
-                                                <tr key={idx} className="transition" style={{ borderBottom: "1px solid var(--border)" }} onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                                    <td className="px-2 sm:px-3 py-3 font-medium" style={{ color: "var(--ink)" }}>{it.name}</td>
-                                                    <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber}</td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity} <span className="text-xs" style={{ color: "var(--muted)" }}>{it.unit}</span></td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{Number(it.pricePerUnit).toFixed(2)}</td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{Number(it.costPrice || 0).toFixed(2)}</td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.discount || 0).toFixed(2)} ${it.discountType === "fixed" ? labels.fixed : labels.percentage}`}</td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.tax || 0).toFixed(2)} ${it.taxType === "fixed" ? labels.fixed : labels.percentage}`}</td>
-                                                    <td className="px-2 sm:px-3 py-3 text-right tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{Number(it.totalPurchasePrice).toFixed(2)}</td>
-                                                    <td className="px-2 sm:px-3 py-3"><div className="flex justify-center gap-1"><Btn variant="ghost" size="sm" onClick={() => handleEditItem(it, idx)}>{labels.edit}</Btn><Btn variant="danger" size="sm" onClick={() => setAddedItems(p => p.filter((_, i) => i !== idx))}>{labels.remove}</Btn></div></td>
-                                                </tr>
-                                            ))}
+                                            {addedItems.map((it, idx) => {
+                                                const totalPrice = calculateItemTotalPrice(it.quantity, it.costPrice);
+                                                const discountAmount = calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType);
+                                                const afterDiscount = calculateItemAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType);
+                                                const taxAmount = calculateItemTaxOnAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType);
+                                                const finalSubtotal = calculateItemFinalSubtotal(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType);
+                                                const isExpanded = expandedItems[idx];
+                                                
+                                                return (
+                                                    <>
+                                                        <tr key={idx} className="transition" style={{ borderBottom: "1px solid var(--border)" }} onMouseEnter={e => e.currentTarget.style.background = "var(--surface-muted)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                            <td className="px-2 sm:px-3 py-3 font-medium" style={{ color: "var(--ink)" }}>{it.name}</td>
+                                                            <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity} <span className="text-xs" style={{ color: "var(--muted)" }}>{it.unit}</span></td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--accent-2)" }}>{Number(it.pricePerUnit || 0).toFixed(2)}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{Number(it.costPrice || 0).toFixed(2)}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.discount || 0).toFixed(2)} ${it.discountType === "fixed" ? labels.fixed : labels.percentage}`}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.tax || 0).toFixed(2)} ${it.taxType === "fixed" ? labels.fixed : labels.percentage}`}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{Number(it.totalPurchasePrice).toFixed(2)}</td>
+                                                            <td className="px-2 sm:px-3 py-3">
+                                                                <div className="flex justify-center gap-1 items-center">
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => setExpandedItems(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                                                        className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                                        style={{ color: "var(--muted)" }}
+                                                                        title={isExpanded ? "Hide calculations" : "Show calculations"}
+                                                                    >
+                                                                        {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                                    </button>
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => handleEditItem(it, idx)}
+                                                                        className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                                        style={{ color: "var(--muted)" }}
+                                                                        title={labels.edit}
+                                                                    >
+                                                                        <Edit size={16} />
+                                                                    </button>
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => setAddedItems(p => p.filter((_, i) => i !== idx))}
+                                                                        className="p-1 rounded hover:bg-[rgba(220,38,38,0.1)] transition"
+                                                                        style={{ color: "#dc2626" }}
+                                                                        title={labels.remove}
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {isExpanded && (
+                                                            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                <td colSpan="9" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                        {/* Total Price Calculation */}
+                                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
+                                                                            <div className="text-xs space-y-1">
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{it.quantity} {it.unit}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Cost Price:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {Number(it.costPrice).toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                                    <span style={{ color: "var(--accent-2)" }}>Total Price:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalPrice.toFixed(2)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Discount Calculation */}
+                                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Calculation</p>
+                                                                            <div className="text-xs space-y-1">
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Discount:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(it.discount).toFixed(2)} {it.discountType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
+                                                                                    <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {discountAmount.toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                                    <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {afterDiscount.toFixed(2)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Tax Calculation */}
+                                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation (on After Discount)</p>
+                                                                            <div className="text-xs space-y-1">
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {afterDiscount.toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Tax:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(it.tax).toFixed(2)} {it.taxType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                                                                    <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {taxAmount.toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                                    <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(afterDiscount + taxAmount).toFixed(2)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Final Subtotal */}
+                                                                        <div className="p-3 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Final Item Subtotal</p>
+                                                                            <div className="text-xs space-y-1">
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>After Discount:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {afterDiscount.toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {taxAmount.toFixed(2)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between font-bold text-sm pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                                    <span style={{ color: "var(--accent-2)" }}>Final Subtotal:</span>
+                                                                                    <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {finalSubtotal.toFixed(2)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -712,114 +864,108 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                     </Card>
 
                     {/* row 3: summary */}
-              <Card title={labels.summary} icon={DollarSign}>
-    <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-            <tbody>
-                {/* Subtotal */}
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="py-3 px-4 font-medium" style={{ color: "var(--ink)" }}>
-                        {labels.subtotal}
-                    </td>
-                    <td className="py-3 px-4 text-right font-semibold tabular-nums" style={{ color: "var(--ink)" }}>
-                        Rs {calc.subtotalAfterItems.toFixed(2)}
-                    </td>
-                </tr>
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pb-3 px-4 text-xs" style={{ color: "var(--muted)" }}>
-                        Calculation
-                    </td>
-                    <td className="pb-3 px-4 text-right text-xs tabular-nums" style={{ color: "var(--muted)" }}>
-                        Rs {calc.subtotalAfterItems.toFixed(2)}
-                    </td>
-                </tr>
+                    <Card title={labels.summary} icon={DollarSign}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Subtotal Card */}
+                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.subtotal}</p>
+                                <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Items Subtotal:</span>
+                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                        <span style={{ color: "var(--accent-2)" }}>Subtotal:</span>
+                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                {/* Bill Discount */}
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pt-4 px-4 font-medium" style={{ color: "var(--ink)" }}>
-                        {labels.discount} ({labels.billDetails})
-                    </td>
-                    <td className="pt-4 px-4 text-right font-semibold tabular-nums" style={{ color: "#dc2626" }}>
-                        − Rs {calc.billDiscount.toFixed(2)}
-                    </td>
-                </tr>
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pb-4 px-4 text-xs" style={{ color: "var(--muted)" }}>
-                        Calculation
-                    </td>
-                    <td className="pb-4 px-4 text-right text-xs tabular-nums" style={{ color: "var(--muted)" }}>
-                        Rs {calc.subtotalAfterItems.toFixed(2)} − Rs {calc.billDiscount.toFixed(2)}
-                        <span className="mx-2">=</span>
-                        <span className="font-semibold">
-                            Rs {(calc.subtotalAfterItems - calc.billDiscount).toFixed(2)}
-                        </span>
-                    </td>
-                </tr>
+                            {/* Bill Discount Card */}
+                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.discount} ({labels.billDetails})</p>
+                                <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Discount:</span>
+                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(bill.discount).toFixed(2)} {bill.discountType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
+                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calc.billDiscount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                        <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
+                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                {/* Bill Tax */}
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pt-4 px-4 font-medium" style={{ color: "var(--ink)" }}>
-                        {labels.taxGst} ({labels.billDetails})
-                    </td>
-                    <td className="pt-4 px-4 text-right font-semibold tabular-nums" style={{ color: "#dc2626" }}>
-                        − Rs {calc.billTax.toFixed(2)}
-                    </td>
-                </tr>
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pb-4 px-4 text-xs" style={{ color: "var(--muted)" }}>
-                        Calculation
-                    </td>
-                    <td className="pb-4 px-4 text-right text-xs tabular-nums" style={{ color: "var(--muted)" }}>
-                        Rs {(calc.subtotalAfterItems - calc.billDiscount).toFixed(2)}
-                        {" × "}
-                        {bill.gst}% =
-                        <span className="ml-2 font-semibold">
-                            Rs {calc.billTax.toFixed(2)}
-                        </span>
-                    </td>
-                </tr>
+                            {/* Bill Tax Card */}
+                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.taxGst} ({labels.billDetails})</p>
+                                <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
+                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Tax:</span>
+                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(bill.gst).toFixed(2)} {bill.gstType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calc.billTax.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                        <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
+                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillTax.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                {/* Shipping */}
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pt-4 px-4 font-medium" style={{ color: "var(--ink)" }}>
-                        {labels.shipping}
-                    </td>
-                    <td className="pt-4 px-4 text-right font-semibold tabular-nums" style={{ color: "#dc2626" }}>
-                        − Rs {calc.shipping.toFixed(2)}
-                    </td>
-                </tr>
-                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                    <td className="pb-4 px-4 text-xs" style={{ color: "var(--muted)" }}>
-                        Calculation
-                    </td>
-                    <td className="pb-4 px-4 text-right text-xs tabular-nums" style={{ color: "var(--muted)" }}>
-                        Rs {(calc.subtotalAfterItems - calc.billDiscount - calc.billTax).toFixed(2)}
-                        {" − "}
-                        Rs {calc.shipping.toFixed(2)}
-                        <span className="mx-2">=</span>
-                        <span className="font-semibold">
-                            Rs {calc.total.toFixed(2)}
-                        </span>
-                    </td>
-                </tr>
-            </tbody>
+                            {/* Shipping Card */}
+                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.shipping}</p>
+                                <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>After Tax Value:</span>
+                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillTax.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
+                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calc.shipping.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                        <span style={{ color: "var(--accent-2)" }}>After Shipping:</span>
+                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-            <tfoot>
-                <tr style={{ background: "var(--surface-2)" }}>
-                    <td className="py-4 px-4 text-base font-bold" style={{ color: "var(--ink)" }}>
-                        {labels.total}
-                    </td>
-                    <td
-                        className="py-4 px-4 text-right text-2xl font-black tabular-nums"
-                        style={{ color: "var(--accent-2)" }}
-                    >
-                        Rs {calc.total.toFixed(2)}
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-</Card>
+                        {/* Final Total Card */}
+                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>{labels.total}</p>
+                            <div className="text-xs space-y-1">
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>After Bill Discount:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.billTax.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.shipping.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                    <span style={{ color: "var(--accent-2)" }}>Grand Total:</span>
+                                    <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
                     {/* row 4: create purchase */}
                     <Btn variant="primary" className="w-full" onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? (isUpdate ? labels.updating : labels.submitting) : (isUpdate ? labels.updateBill : labels.submitBill)}
