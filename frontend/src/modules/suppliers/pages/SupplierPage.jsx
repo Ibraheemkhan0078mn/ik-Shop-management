@@ -126,10 +126,10 @@ function SupplierRow({ supplier, onEdit, onDelete, onView }) {
                         <BigViewImage 
                             src={`${IMAGE_BASE}/${supplier.image}`} 
                             alt={supplier.name}
-                            className="w-10 h-10 rounded-lg object-cover"
+                            className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border)"
                         />
                     ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
                             {supplier?.name?.charAt(0).toUpperCase() || "S"}
                         </div>
                     )}

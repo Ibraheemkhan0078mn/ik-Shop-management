@@ -41,6 +41,12 @@ const supplierSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // Additional notes about the supplier
+        notes: {
+            type: String,
+            trim: true,
+            default: "",
+        },
         // Supplier image/logo
         image: {
             type: String,

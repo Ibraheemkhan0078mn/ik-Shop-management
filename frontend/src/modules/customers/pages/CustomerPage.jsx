@@ -114,10 +114,10 @@ function CustomerRow({ customer, onEdit, onDelete, onView }) {
                         <BigViewImage 
                             src={`${IMAGE_BASE_URL}/uploads/${customer.image}`} 
                             alt={customer?.name ?? "Customer"} 
-                            className="h-10 w-10 rounded-full object-cover"
+                            className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border)"
                         />
                     ) : (
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border" style={{ borderColor: "var(--border)" }}>
+                        <div className="flex w-11 h-11 items-center justify-center overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)" }}>
                             <span className="text-xs" style={{ color: "var(--muted)" }}>No</span>
                         </div>
                     )}

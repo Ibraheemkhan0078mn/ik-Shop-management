@@ -522,7 +522,7 @@ export default function PosPaymentModal({
         label: c.name + (c.phoneNo ? ` · ${c.phoneNo}` : ""),
     })) || [];
 
-    const paymentMethodOptions = useMemo(() => paymentMethodsData?.map((pm) => ({
+    const paymentMethodOptions = useMemo(() => paymentMethodsData?.filter(pm => pm.isActive !== false).map((pm) => ({
         value: pm._id,
         label: pm.name,
     })) || [], [paymentMethodsData]);

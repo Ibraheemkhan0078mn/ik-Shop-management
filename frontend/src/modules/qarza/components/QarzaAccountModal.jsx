@@ -166,7 +166,7 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                         </Field>
                         <Field>
                             <Label>{labels.phone}</Label>
-                            <Inp value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={e => update("phoneNo", e.target.value)} />
+                            <Inp type="text" value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={e => update("phoneNo", e.target.value)} />
                         </Field>
                         <Field>
                             <Label>{labels.address}</Label>

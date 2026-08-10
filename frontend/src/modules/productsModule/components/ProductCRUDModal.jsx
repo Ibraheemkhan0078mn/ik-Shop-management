@@ -463,38 +463,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   />
                 </div>
 
-                {/* Count Format Row */}
-                <div className="sm:col-span-2">
-                  <SelectField
-                    label={labels.countFormat || "Counting Type"}
-                    name="countFormat"
-                    value={form.countFormat}
-                    onChange={updateField}
-                    options={unitOptions}
-                    error={errors.countFormat}
-                    placeholder={labels.selectCountFormat || "Select counting type"}
-                  />
-                </div>
-
-                {/* Price Row - Commented out */}
-                {/* <Field
-                  label={labels.defaultCostPrice}
-                  name="defaultCostPrice"
-                  value={form.defaultCostPrice}
-                  onChange={updateField}
-                  error={errors.defaultCostPrice}
-                  type="number"
-                  placeholder="0.00"
-                />
-                <Field
-                  label={labels.defaultSalePrice}
-                  name="defaultSalePrice"
-                  value={form.defaultSalePrice}
-                  onChange={updateField}
-                  error={errors.defaultSalePrice}
-                  type="number"
-                  placeholder="0.00"
-                /> */}
+                {/* Count Format Row - Commented out */}
 
                 {/* Stock Row */}
                 <Field
@@ -525,7 +494,12 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   placeholder="e.g., A1, B3"
                 />
 
-                {/* Discount Row */}
+                {/* Discount Section */}
+                <div className="col-span-full sm:col-span-2 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>
+                    {labels.discount || "Discount Settings"}
+                  </h4>
+                </div>
                 <ToggleField
                   label={labels.allowDiscount}
                   name="isDiscountAllowed"
@@ -557,15 +531,18 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   </>
                 )}
 
-                {/* Tax Toggle */}
+                {/* Tax Section */}
+                <div className="col-span-full sm:col-span-2 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>
+                    {labels.taxRate || "Tax Settings"}
+                  </h4>
+                </div>
                 <ToggleField
-                  label={labels.enableTax || "Enable Default Sale Tax"}
+                  label={labels.enableTax || "Enable Sale tax in Pos"}
                   name="showTax"
                   value={showTax}
                   onChange={(name, value) => setShowTax(value)}
                 />
-
-                {/* Tax Section - Conditionally Visible */}
                 {showTax && (
                   <>
                     <Field

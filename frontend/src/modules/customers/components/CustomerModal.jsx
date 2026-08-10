@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X, Users, ImagePlus } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -57,6 +57,7 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
     const [nameError, setNameError] = useState(false);
     const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
+    const fileInputRef = useRef(null);
 
     const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -125,16 +126,16 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-3 overflow-y-auto" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 overflow-y-auto" onClick={onClose}>
             <div className="relative w-full max-w-2xl my-4 rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-30" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-(--border) bg-(--surface)">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--accent-2)" }}>
                             <Users className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-base font-bold leading-tight" style={{ color: "var(--ink)" }}>{isUpdate ? labels.updateCustomer : labels.newCustomer}</h2>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>{labels.customerManagementShort}</p>
+                            <h2 className="text-base font-semibold text-(--ink)">{isUpdate ? labels.updateCustomer : labels.newCustomer}</h2>
+                            <p className="text-xs text-(--muted)">{labels.customerManagementShort}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition" style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
@@ -144,41 +145,41 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
 
                 <div className="p-6 space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="sm:col-span-2">
+                            <label className="text-xs font-medium text-(--muted) mb-2 block">{labels.customerImage}</label>
+                            <div
+                                className="flex items-center gap-4 rounded-xl border-2 border-dashed px-4 py-3 cursor-pointer transition-all hover:border-(--accent-2) hover:bg-(--accent-2)/5 bg-(--app-bg)"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Customer preview" className="h-16 w-16 rounded-lg object-cover ring-2 ring-(--accent-2)/30" />
+                                ) : (
+                                    <div className="h-16 w-16 rounded-lg bg-(--surface) flex items-center justify-center text-2xl text-(--muted)">
+                                        📷
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-(--ink)">{imagePreview ? labels.chooseImage : labels.chooseImage}</p>
+                                    <p className="text-xs text-(--muted) mt-1">{selectedImageFile ? selectedImageFile.name : labels.imageFormats}</p>
+                                </div>
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} ref={fileInputRef} />
+                            </div>
+                        </div>
+
                         <Field>
                             <Label required>{labels.name}</Label>
                             <Inp value={form.name} placeholder={labels.namePlaceholder} error={nameError} onChange={(e) => handleNameChange(e.target.value)} />
                             {nameError && <span className="text-xs mt-1" style={{ color: "#dc2626" }}>{labels.nameAlreadyInUse}</span>}
                         </Field>
 
-                        <Field className="sm:col-span-2">
-                            <Label>{labels.customerImage}</Label>
-                            <div className="flex flex-col gap-3 rounded-2xl p-3" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                <div className="flex items-center gap-3">
-                                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--accent-2)", color: "#fff" }}>
-                                        <ImagePlus className="w-4 h-4" />
-                                        {labels.chooseImage}
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                                    </label>
-                                    <span className="text-xs" style={{ color: "var(--muted)" }}>{selectedImageFile ? selectedImageFile.name : labels.imageFormats}</span>
-                                </div>
-                                <div className="flex h-28 items-center justify-center overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)", background: "rgba(15,118,110,0.05)" }}>
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Customer preview" className="h-full w-full object-cover" />
-                                    ) : (
-                                        <span className="text-xs" style={{ color: "var(--muted)" }}>{labels.noImageSelected}</span>
-                                    )}
-                                </div>
-                            </div>
-                        </Field>
-
                         <Field>
                             <Label>{labels.phoneNo}</Label>
-                            <Inp value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={(e) => update("phoneNo", e.target.value)} />
+                            <Inp type="number" value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={(e) => update("phoneNo", e.target.value)} />
                         </Field>
 
                         <Field>
                             <Label>{labels.cnic}</Label>
-                            <Inp value={form.cnic} placeholder={labels.cnicPlaceholder} onChange={(e) => update("cnic", e.target.value)} />
+                            <Inp type="number" value={form.cnic} placeholder={labels.cnicPlaceholder} onChange={(e) => update("cnic", e.target.value)} />
                         </Field>
 
                         <Field className="sm:col-span-2">
@@ -188,19 +189,19 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
 
                         <Field className="sm:col-span-2">
                             <Label>{labels.status}</Label>
-                            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-(--border) bg-(--app-bg)">
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" className="sr-only peer" checked={form.isActive} onChange={(e) => update("isActive", e.target.checked)} />
-                                    <div className="w-10 h-5 rounded-full peer transition-colors" style={{ background: form.isActive ? "var(--accent-2)" : "#d1d5db" }}>
-                                        <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" style={{ transform: form.isActive ? "translateX(20px)" : "translateX(0)" }} />
+                                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${form.isActive ? 'bg-(--accent-2)' : 'bg-(--muted)'}`}>
+                                        <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${form.isActive ? 'translate-x-5' : ''}`} />
                                     </div>
                                 </label>
-                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{form.isActive ? labels.active : labels.inactive}</span>
+                                <span className="text-sm font-medium text-(--ink)">{form.isActive ? labels.active : labels.inactive}</span>
                             </div>
                         </Field>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                    <div className="flex justify-end gap-3 pt-1 border-t border-(--border)">
                         <Btn variant="secondary" onClick={onClose}>{labels.cancel}</Btn>
                         <Btn variant="primary" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? (isUpdate ? labels.updating : labels.creating) : isUpdate ? labels.updateCustomer : labels.createCustomer}</Btn>
                     </div>

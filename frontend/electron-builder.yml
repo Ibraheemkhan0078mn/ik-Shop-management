@@ -1,5 +1,5 @@
-appId: com.yourcompany.Edc-Software
-productName: Edc-Software
+appId: com.yourcompany.Syed-Soft-Shop
+productName: Syed-Soft-Shop
 icon: public/logo.ico
 directories:
   output: release

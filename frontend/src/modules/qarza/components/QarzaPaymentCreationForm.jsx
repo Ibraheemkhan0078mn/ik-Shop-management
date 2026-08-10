@@ -2,13 +2,17 @@ import React, { useEffect, useState } from "react";
 import api from "../../../shared/services/api.js";
 import { toInputDateFormat } from "../../../shared/utilities/date.utility.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 
 export default function QarzaPaymentCreationForm({ getAccountPaymentAndSummary, setQarzaPaymentData, setVisibility, qarzaAccountId }) {
+    const { data: paymentMethods = [] } = usePaymentMethods();
+    
     const [formData, setFormData] = useState({
         amount: "",
         type: "cashin",
         date: toInputDateFormat(new Date()),
         notes: "",
+        paymentMethod: "",
         qarzaAccountId: ''
     });
 
@@ -136,6 +140,22 @@ export default function QarzaPaymentCreationForm({ getAccountPaymentAndSummary, 
                                 className="w-full bg-white px-4 py-4 rounded-2xl border border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all font-bold text-slate-700 cursor-pointer"
                                 required
                             />
+                        </div>
+
+                        {/* Payment Method Input */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-cyan-600 uppercase tracking-widest ml-1">Payment Method</label>
+                            <select
+                                name="paymentMethod"
+                                value={formData.paymentMethod}
+                                onChange={handleChange}
+                                className="w-full bg-white px-4 py-4 rounded-2xl border border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all font-bold text-slate-700 cursor-pointer"
+                            >
+                                <option value="">Select Payment Method</option>
+                                {paymentMethods.filter(pm => pm.isActive).map((pm) => (
+                                    <option key={pm._id} value={pm._id}>{pm.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
