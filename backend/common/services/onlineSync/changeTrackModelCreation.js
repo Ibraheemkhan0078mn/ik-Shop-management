@@ -30,7 +30,10 @@ export async function changeTrackDocsCreationFunc(
 ) {
   try {
 
+    console.log(`[changeTrackDocsCreationFunc] Called with: operation=${operation}, modelName=${modelName}, documentId=${documentId}`);
+
     if (!operation || !modelName || !documentId) {
+      console.log(`[changeTrackDocsCreationFunc] Missing required parameters, returning early`);
       return;
     }
 
@@ -77,31 +80,24 @@ export async function changeTrackDocsCreationFunc(
 
 
     // IF UPDATE OPERATION:
-    // - Agar is document ka "create" CT already exist kare → naya update CT delete karo (create sufficient hai)
-    // - Agar "create" nahi hai → naya update CT rakho, baaki saare purane update CTs delete karo
+    // - Always keep update CT, delete old update CTs to avoid duplicates
+    // - Create CT will be deleted after successful sync
     if (operation == "update") {
-      const existingCreateCT = await ChangeTrackModel.findOne({
+      const allUpdateSimilarDocs = await ChangeTrackModel.find({
         documentId,
         modelName,
-        operationType: "create",
+        operationType: "update",
       });
+      
+      console.log(`[changeTrack] Update operation - existing update CTs count: ${allUpdateSimilarDocs?.length}`);
 
-      if (existingCreateCT) {
-        // Create already mojod hai, update CT ki zaroorat nahi
-        await ChangeTrackModel.deleteOne({ _id: createdChangeTrackDocs._id });
-      } else {
-        // Create nahi hai → naya update rakho, baaki saare purane update delete karo
-        const allUpdateSimilarDocs = await ChangeTrackModel.find({
-          documentId,
-          modelName,
-          operationType: "update",
-        });
-        if (allUpdateSimilarDocs?.length > 1) {
-          const toDeleteCTIds = allUpdateSimilarDocs
-            .filter((d) => !(d?._id?.toString() == createdChangeTrackDocs?._id?.toString()))
-            .map((d) => d._id);
-          await ChangeTrackModel.deleteMany({ _id: { $in: toDeleteCTIds } });
-        }
+      // Delete old update CTs, keep the new one
+      if (allUpdateSimilarDocs?.length > 1) {
+        const toDeleteCTIds = allUpdateSimilarDocs
+          .filter((d) => !(d?._id?.toString() == createdChangeTrackDocs?._id?.toString()))
+          .map((d) => d._id);
+        console.log(`[changeTrack] Deleting ${toDeleteCTIds.length} old update CTs`);
+        await ChangeTrackModel.deleteMany({ _id: { $in: toDeleteCTIds } });
       }
     }
 

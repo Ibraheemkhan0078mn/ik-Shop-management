@@ -862,7 +862,7 @@ export default function PosPage() {
             queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
             renderItems={(products) => (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {products.map((product) => (
+                {products.filter(product => product.isActive !== false).map((product) => (
                   <ProductCard
                     key={product._id}
                     product={product}

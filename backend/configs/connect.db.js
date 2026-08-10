@@ -44,16 +44,29 @@ const addChangeTrackingMiddleware = (schema, modelName) => {
     // Skip tracking for ChangeTrack model itself to avoid infinite loops
     if (modelName === "ChangeTracks") return;
 
-    schema.post('save', function(doc) {
+    schema.post('save', function (doc) {
+        const operation = this.isNew ? 'create' : 'update';
+        console.log(`[changeTrack] ${operation} triggered for ${modelName}, _id: ${doc._id}`);
+        console.log(`[changeTrack] isNew: ${this.isNew}, doc._id: ${doc._id}`);
+        
         // Non-blocking - don't await, let it run in background
-        changeTrackDocsCreationFunc(this.isNew ? 'create' : 'update', modelName, doc._id.toString(), null)
-            .catch(error => console.error(`[changeTrack] Error tracking ${modelName} save:`, error));
+        changeTrackDocsCreationFunc(operation, modelName, doc._id.toString(), null)
+            .then(() => console.log(`[changeTrack] Successfully tracked ${operation} for ${modelName}`))
+            .catch(error => {
+                console.error(`[changeTrack] Error tracking ${modelName} save:`, error);
+                console.error(`[changeTrack] Error details:`, error.message, error.stack);
+            });
     });
 
-    schema.post('deleteOne', function(doc) {
+    schema.post('deleteOne', function (doc) {
+        console.log(`[changeTrack] delete triggered for ${modelName}, _id: ${doc._id}`);
         // Non-blocking - don't await, let it run in background
         changeTrackDocsCreationFunc('delete', modelName, doc._id.toString(), null)
-            .catch(error => console.error(`[changeTrack] Error tracking ${modelName} delete:`, error));
+            .then(() => console.log(`[changeTrack] Successfully tracked delete for ${modelName}`))
+            .catch(error => {
+                console.error(`[changeTrack] Error tracking ${modelName} delete:`, error);
+                console.error(`[changeTrack] Error details:`, error.message, error.stack);
+            });
     });
 };
 
@@ -93,92 +106,92 @@ export const connectDb = async () => {
     try {
         console.log("The local db is running")
         // dns.setServers(['8.8.8.8', '8.8.4.4']);
-    // mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0
+        // mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0
         const LocalConnection = await mongoose
             .createConnection("mongodb://127.0.0.1:27017", { dbName: "IMS-NEW" })
             .asPromise();
 
-            console.log("The db is connected.")
+        console.log("The db is connected.")
         if (LocalConnection.host) {
             console.log(`Server is connected to db host: ${LocalConnection.host}`);
         }
 
-    // Add change tracking middleware to schemas before creating models
-    addChangeTrackingMiddleware(userSchema, "Users");
-    addChangeTrackingMiddleware(userRoleSchema, "UserRoles");
-    addChangeTrackingMiddleware(productSchema, "Products");
-    addChangeTrackingMiddleware(categorySchema, "Categories");
-    addChangeTrackingMiddleware(subCategorySchema, "SubCategories");
-    addChangeTrackingMiddleware(brandSchema, "Brands");
-    addChangeTrackingMiddleware(batchSchema, "Batches");
-    addChangeTrackingMiddleware(supplierSchema, "Suppliers");
-    addChangeTrackingMiddleware(purchaseSchema, "Purchases");
-    addChangeTrackingMiddleware(purchasePaymentSchema, "PurchasePayments");
-    addChangeTrackingMiddleware(orderSchema, "Orders");
-    addChangeTrackingMiddleware(holdOrderSchema, "HoldOrders");
-    addChangeTrackingMiddleware(expenseSchema, "Expenses");
-    addChangeTrackingMiddleware(expenseCatagSchema, "ExpensesCategory");
-    addChangeTrackingMiddleware(activityLogSchema, "ActivityLogs");
-    addChangeTrackingMiddleware(changeTrackSchema, "ChangeTracks");
-    addChangeTrackingMiddleware(imageChangeTrackSchema, "ImageChangeTracks");
-    addChangeTrackingMiddleware(QarzaAccountSchema, "QarzaAccount");
-    addChangeTrackingMiddleware(QarzaPaymentSchema, "QarzaPayment");
-    addChangeTrackingMiddleware(wastageSchema, "Wastages");
-    addChangeTrackingMiddleware(purchaseReturnSchema, "PurchaseReturn");
-    addChangeTrackingMiddleware(productReturnSchema, "ProductReturn");
-    addChangeTrackingMiddleware(customerSchema, "Customers");
-    addChangeTrackingMiddleware(staffSchema, "Staff");
-    addChangeTrackingMiddleware(staffRoleSchema, "StaffRole");
-    addChangeTrackingMiddleware(staffSalaryPaymentSchema, "StaffSalaryPayment");
-    addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
-    addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
-    addChangeTrackingMiddleware(settingsSchema, "Settings");
-    addChangeTrackingMiddleware(paymentMethodSchema, "PaymentMethods");
-    addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
+        // Add change tracking middleware to schemas before creating models
+        addChangeTrackingMiddleware(userSchema, "Users");
+        addChangeTrackingMiddleware(userRoleSchema, "UserRoles");
+        addChangeTrackingMiddleware(productSchema, "Products");
+        addChangeTrackingMiddleware(categorySchema, "Categories");
+        addChangeTrackingMiddleware(subCategorySchema, "SubCategories");
+        addChangeTrackingMiddleware(brandSchema, "Brands");
+        addChangeTrackingMiddleware(batchSchema, "Batches");
+        addChangeTrackingMiddleware(supplierSchema, "Suppliers");
+        addChangeTrackingMiddleware(purchaseSchema, "Purchases");
+        addChangeTrackingMiddleware(purchasePaymentSchema, "PurchasePayments");
+        addChangeTrackingMiddleware(orderSchema, "Orders");
+        addChangeTrackingMiddleware(holdOrderSchema, "HoldOrders");
+        addChangeTrackingMiddleware(expenseSchema, "Expenses");
+        addChangeTrackingMiddleware(expenseCatagSchema, "ExpensesCategory");
+        addChangeTrackingMiddleware(activityLogSchema, "ActivityLogs");
+        addChangeTrackingMiddleware(changeTrackSchema, "ChangeTracks");
+        addChangeTrackingMiddleware(imageChangeTrackSchema, "ImageChangeTracks");
+        addChangeTrackingMiddleware(QarzaAccountSchema, "QarzaAccount");
+        addChangeTrackingMiddleware(QarzaPaymentSchema, "QarzaPayment");
+        addChangeTrackingMiddleware(wastageSchema, "Wastages");
+        addChangeTrackingMiddleware(purchaseReturnSchema, "PurchaseReturn");
+        addChangeTrackingMiddleware(productReturnSchema, "ProductReturn");
+        addChangeTrackingMiddleware(customerSchema, "Customers");
+        addChangeTrackingMiddleware(staffSchema, "Staff");
+        addChangeTrackingMiddleware(staffRoleSchema, "StaffRole");
+        addChangeTrackingMiddleware(staffSalaryPaymentSchema, "StaffSalaryPayment");
+        addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
+        addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
+        addChangeTrackingMiddleware(settingsSchema, "Settings");
+        addChangeTrackingMiddleware(paymentMethodSchema, "PaymentMethods");
+        addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
 
-    UserModel = LocalConnection.model("Users", userSchema);
-    UserRoleModel = LocalConnection.model("UserRoles", userRoleSchema);
-    ProductModel = LocalConnection.model("Products", productSchema);
-    CategoryModel = LocalConnection.model("Categories", categorySchema);
-    SubCategoryModel = LocalConnection.model(
-        "SubCategories",
-        subCategorySchema,
-    );
-    BrandModel = LocalConnection.model("Brands", brandSchema);
-    BatchModel = LocalConnection.model("Batches", batchSchema);
-    SupplierModel = LocalConnection.model("Suppliers", supplierSchema);
-    PurchaseModel = LocalConnection.model("Purchases", purchaseSchema);
-    PurchasePaymentModel = LocalConnection.model("PurchasePayments", purchasePaymentSchema);
-    OrderModel = LocalConnection.model("Orders", orderSchema);
-    HoldOrderModel = LocalConnection.model("HoldOrders", holdOrderSchema);
-    ExpensesModel = LocalConnection.model("Expenses", expenseSchema);
-    ExpenseCategoryModel = LocalConnection.model("ExpensesCategory", expenseCatagSchema)
-    ActivityLogModel = LocalConnection.model("ActivityLogs", activityLogSchema);
-    ChangeTrackModel = LocalConnection.model("ChangeTracks", changeTrackSchema);
-    ImageChangeTrackModel = LocalConnection.model("ImageChangeTracks", imageChangeTrackSchema)
-    QarzaAccountModel = LocalConnection.model("QarzaAccount", QarzaAccountSchema)
-    QarzaPaymentModel = LocalConnection.model("QarzaPayment", QarzaPaymentSchema)
-    WastageModel = LocalConnection.model("Wastages", wastageSchema)
-    PurchaseReturnModel = LocalConnection.model("PurchaseReturn", purchaseReturnSchema)
-    ProductReturnModel = LocalConnection.model("ProductReturn", productReturnSchema)
-    CustomerModel = LocalConnection.model("Customers", customerSchema)
-    StaffModel = LocalConnection.model("Staff", staffSchema)
-    StaffRoleModel = LocalConnection.model("StaffRole", staffRoleSchema)
-    StaffSalaryPaymentModel = LocalConnection.model("StaffSalaryPayment", staffSalaryPaymentSchema)
-    StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
-    StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
-    SettingsModel = LocalConnection.model("Settings", settingsSchema)
-    PaymentMethodModel = LocalConnection.model("PaymentMethods", paymentMethodSchema)
-    AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
+        UserModel = LocalConnection.model("Users", userSchema);
+        UserRoleModel = LocalConnection.model("UserRoles", userRoleSchema);
+        ProductModel = LocalConnection.model("Products", productSchema);
+        CategoryModel = LocalConnection.model("Categories", categorySchema);
+        SubCategoryModel = LocalConnection.model(
+            "SubCategories",
+            subCategorySchema,
+        );
+        BrandModel = LocalConnection.model("Brands", brandSchema);
+        BatchModel = LocalConnection.model("Batches", batchSchema);
+        SupplierModel = LocalConnection.model("Suppliers", supplierSchema);
+        PurchaseModel = LocalConnection.model("Purchases", purchaseSchema);
+        PurchasePaymentModel = LocalConnection.model("PurchasePayments", purchasePaymentSchema);
+        OrderModel = LocalConnection.model("Orders", orderSchema);
+        HoldOrderModel = LocalConnection.model("HoldOrders", holdOrderSchema);
+        ExpensesModel = LocalConnection.model("Expenses", expenseSchema);
+        ExpenseCategoryModel = LocalConnection.model("ExpensesCategory", expenseCatagSchema)
+        ActivityLogModel = LocalConnection.model("ActivityLogs", activityLogSchema);
+        ChangeTrackModel = LocalConnection.model("ChangeTracks", changeTrackSchema);
+        ImageChangeTrackModel = LocalConnection.model("ImageChangeTracks", imageChangeTrackSchema)
+        QarzaAccountModel = LocalConnection.model("QarzaAccount", QarzaAccountSchema)
+        QarzaPaymentModel = LocalConnection.model("QarzaPayment", QarzaPaymentSchema)
+        WastageModel = LocalConnection.model("Wastages", wastageSchema)
+        PurchaseReturnModel = LocalConnection.model("PurchaseReturn", purchaseReturnSchema)
+        ProductReturnModel = LocalConnection.model("ProductReturn", productReturnSchema)
+        CustomerModel = LocalConnection.model("Customers", customerSchema)
+        StaffModel = LocalConnection.model("Staff", staffSchema)
+        StaffRoleModel = LocalConnection.model("StaffRole", staffRoleSchema)
+        StaffSalaryPaymentModel = LocalConnection.model("StaffSalaryPayment", staffSalaryPaymentSchema)
+        StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
+        StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
+        SettingsModel = LocalConnection.model("Settings", settingsSchema)
+        PaymentMethodModel = LocalConnection.model("PaymentMethods", paymentMethodSchema)
+        AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
 
-    console.log("📝 Automatic change tracking enabled for local database models");
+        console.log("📝 Automatic change tracking enabled for local database models");
     } catch (error) {
         console.error("❌ Local database connection failed:", error);
     }
 };
 
 
-export const getLocalAppThemeModel= () => AppThemeModel || null;
+export const getLocalAppThemeModel = () => AppThemeModel || null;
 export const getLocalPurchaseReturnModel = () => PurchaseReturnModel || null;
 export const getLocalProductReturnModel = () => ProductReturnModel || null;
 export const getLocalWastageModel = () => WastageModel || null;

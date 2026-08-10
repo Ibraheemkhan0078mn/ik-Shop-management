@@ -22,6 +22,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
 
     const [formData, setFormData] = useState({
         name: "",
+        isActive: true,
     });
 
     const [errors, setErrors] = useState({});
@@ -31,6 +32,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
         if (!isCreate && categoryData) {
             setFormData({
                 name: categoryData.name || "",
+                isActive: categoryData.isActive !== false,
             });
         }
     }, [isCreate, categoryData]);
@@ -40,6 +42,7 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
         if (isCreate && open) {
             setFormData({
                 name: "",
+                isActive: true,
             });
             setErrors({});
         }
@@ -137,6 +140,23 @@ export default function CategoryCRUDModal({ mode = "create", categoryId = null, 
                                 } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
                             />
                             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                        </div>
+
+                        {/* Active Status Toggle */}
+                        <div>
+                            <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-4 py-2.5 cursor-pointer hover:border-[var(--accent-2)]/50 transition-colors">
+                                <span className="text-sm text-[var(--ink)]">{labels.active || "Active"}</span>
+                                <div className="relative">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.isActive} 
+                                        onChange={(e) => updateField('isActive', e.target.checked)} 
+                                        className="sr-only peer" 
+                                    />
+                                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${formData.isActive ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
+                                    <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${formData.isActive ? 'translate-x-5' : ''}`}></div>
+                                </div>
+                            </label>
                         </div>
                     </div>
 

@@ -21,40 +21,34 @@ export async function onlineDocsUploadSyncUpdate(modelsArray, uploadType = "requ
 async function classifyDocsForSync(eachModel, localDocs) {
   const ids = localDocs.map(d => d._id);
 
-  const [result] = await eachModel.local.aggregate([
-    { $match: { _id: { $in: ids } } },
-    { $project: { _id: 1, updateTimeForSync: 1 } },
-    {
-      $lookup: {
-        from: eachModel.online.collection.collectionName,
-        localField: "_id",
-        foreignField: "_id",
-        as: "onlineMatch",
-      },
-    },
-    {
-      $facet: {
-        toInsert: [
-          { $match: { onlineMatch: { $size: 0 } } },
-          { $project: { _id: 1 } },
-        ],
-        toUpdate: [
-          { $match: { onlineMatch: { $ne: [] } } },
-          {
-            $match: {
-              $expr: { $gt: ["$updateTimeForSync", { $arrayElemAt: ["$onlineMatch.updateTimeForSync", 0] }] },
-            },
-          },
-          { $project: { _id: 1 } },
-        ],
-      },
-    },
-  ]);
+  // Fetch online docs directly from online model
+  const onlineDocs = await eachModel.online.find(
+    { _id: { $in: ids } },
+    { _id: 1, updateTimeForSync: 1 }
+  );
 
-  return {
-    insertIds: result.toInsert.map(d => d._id),
-    updateIds: result.toUpdate.map(d => d._id),
-  };
+  const onlineMap = new Map(
+    onlineDocs.map(doc => [doc._id.toString(), doc.updateTimeForSync])
+  );
+
+  const insertIds = [];
+  const updateIds = [];
+
+  for (const localDoc of localDocs) {
+    const idStr = localDoc._id.toString();
+    const onlineUpdateTime = onlineMap.get(idStr);
+
+    if (onlineUpdateTime === undefined) {
+      // Not present online -> insert
+      insertIds.push(localDoc._id);
+    } else if (localDoc.updateTimeForSync > onlineUpdateTime) {
+      // Present online but local is newer -> update
+      updateIds.push(localDoc._id);
+    }
+  }
+
+  console.log("insertIds:", insertIds.length, "updateIds:", updateIds.length);
+  return { insertIds, updateIds };
 }
 
 /**

@@ -226,7 +226,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
         </div>
 
         {/* Price Range Filter */}
-        <div>
+        {/* <div>
           <button
             onClick={() => toggleSection("price")}
             className="w-full flex items-center justify-between text-xs font-semibold text-[var(--muted)] mb-2"
@@ -253,7 +253,7 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
               />
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Stock Status Filter */}
         <div>

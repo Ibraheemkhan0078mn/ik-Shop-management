@@ -182,7 +182,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     [updateField, labels]
   );
 
-  const categoryOptions = useMemo(() => categories.map((c) => ({ label: c.name, value: c._id })), [categories]);
+  const categoryOptions = useMemo(() => categories.filter(c => c.isActive !== false).map((c) => ({ label: c.name, value: c._id })), [categories]);
   const unitOptions = useMemo(() => UNITS.map((u) => ({ label: u.label, value: u.value })), [UNITS]);
 
   const validateForm = useCallback(() => {
@@ -476,8 +476,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   />
                 </div>
 
-                {/* Price Row */}
-                <Field
+                {/* Price Row - Commented out */}
+                {/* <Field
                   label={labels.defaultCostPrice}
                   name="defaultCostPrice"
                   value={form.defaultCostPrice}
@@ -494,7 +494,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   error={errors.defaultSalePrice}
                   type="number"
                   placeholder="0.00"
-                />
+                /> */}
 
                 {/* Stock Row */}
                 <Field
