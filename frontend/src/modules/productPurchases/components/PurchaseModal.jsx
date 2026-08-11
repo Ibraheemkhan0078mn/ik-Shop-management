@@ -266,8 +266,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
             totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.price ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
             mfgDate: toInputDate(it.mfgDate), expiryDate: toInputDate(it.expiryDate),
-            batchNumber: it.batchNumber ?? "", batchMode: it.batchId ? "existing" : "new",
-            batchSelection: it.batchId ?? "", batchId: it.batchId ?? "",
+            batchNumber: it.batchNumber ?? it.batch?.batchNumber ?? "", batchMode: (it.batchId ?? it.batch?._id) ? "existing" : "new",
+            batchSelection: it.batchId ?? it.batch?._id ?? "", batchId: it.batchId ?? it.batch?._id ?? "",
             discount: it.discount ?? 0, discountType: it.discountType ?? "percentage",
             tax: it.tax ?? 0, taxType: it.taxType ?? "percentage",
         })));
@@ -314,11 +314,11 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setItemForm(p => ({
             ...p,
             batchNumber: selectedBatch.batchNumber ?? p.batchNumber,
-            perItemPrice: selectedBatch.purchasePrice != null ? String(selectedBatch.purchasePrice) : p.perItemPrice,
+            perItemPrice: editingIndex === null && selectedBatch.purchasePrice != null ? String(selectedBatch.purchasePrice) : p.perItemPrice,
             mfgDate: toInputDate(selectedBatch.mfgDate),
             expiryDate: toInputDate(selectedBatch.expiryDate),
         }));
-    }, [selectedBatch, isExistingMode]);
+    }, [selectedBatch, isExistingMode, editingIndex]);
 
     // Ensure existing batch is selected when editing item after batches are loaded
     useEffect(() => {
@@ -336,7 +336,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                     batchMode: "existing",
                     batchSelection: editingItem.batchId,
                     batchNumber: batchExists.batchNumber ?? p.batchNumber,
-                    perItemPrice: batchExists.purchasePrice != null ? String(batchExists.purchasePrice) : p.perItemPrice,
+                    perItemPrice: p.perItemPrice,
                     mfgDate: toInputDate(batchExists.mfgDate),
                     expiryDate: toInputDate(batchExists.expiryDate),
                 }));
