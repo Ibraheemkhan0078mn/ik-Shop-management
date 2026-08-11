@@ -113,14 +113,43 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
         let search = req.query.search || "";
+        let filterType = req.query.filterType || "all";
+        let filterStatus = req.query.filterStatus || "all";
+        let filterBalance = req.query.filterBalance || "all";
 
         let query = {};
         
         if (search) {
             query.name = { $regex: search, $options: "i" };
         }
+        
+        if (filterType && filterType !== "all") {
+            query.type = filterType;
+        }
+        
+        if (filterStatus && filterStatus !== "all") {
+            query.isActive = filterStatus === "active";
+        }
 
         let accounts = await getAllQarzaAccountsService(query);
+        
+        // Filter by balance status on the backend since it requires payment calculation
+        if (filterBalance && filterBalance !== "all") {
+            accounts = await Promise.all(accounts.map(async (acc) => {
+                const payments = await getAllQarzaPaymentsService({ qarzaAccountId: acc._id });
+                const net = payments.reduce((sum, p) =>
+                    p.type === "cashin" ? sum + (p.amount || 0) : sum - (p.amount || 0), 0);
+                return { ...acc, netBalance: net };
+            }));
+            
+            if (filterBalance === "to_pay") {
+                accounts = accounts.filter(acc => acc.netBalance > 0);
+            } else if (filterBalance === "to_receive") {
+                accounts = accounts.filter(acc => acc.netBalance < 0);
+            } else if (filterBalance === "balanced") {
+                accounts = accounts.filter(acc => acc.netBalance === 0);
+            }
+        }
         
         let total = await countQarzaAccountsService(query);
         
@@ -145,14 +174,21 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
-        let { qarzaAccountId, source } = req.query;
+        let { qarzaAccountId, source, type } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
         
         let query = { qarzaAccountId };
-        if (source && source !== 'all') {
+        
+        // Apply type filter
+        if (type && type !== 'all' && type !== 'undefined') {
+            query.type = type;
+        }
+        
+        // Apply source filter
+        if (source && source !== 'all' && source !== 'undefined') {
             query.source = source;
         }
         
@@ -246,7 +282,7 @@ export const qarzaAccountDelete = async (req, res) => {
 
 export const createQarzaPayment = async (req, res) => {
     try {
-        const { qarzaAccountId, amount, type, date, notes, orderId, orderNumber, source } = req.body;
+        const { qarzaAccountId, amount, type, date, notes, orderId, orderNumber, source, paymentMethod } = req.body;
         let QarzaAccountModel = getLocalQarzaAccountModel();
         let QarzaPayment = getLocalQarzaPaymentModel();
 
@@ -264,6 +300,7 @@ export const createQarzaPayment = async (req, res) => {
             orderId: orderId || null,
             orderNumber: orderNumber || "",
             source: source || "manual",
+            paymentMethod: paymentMethod || "",
         });
         if (!createdQarzaPayment) {
             return res.json({ success: false, msg: "The payment is not created" })
@@ -287,7 +324,7 @@ export const createQarzaPayment = async (req, res) => {
 
 export const updateQarzaPayment = async (req, res) => {
     try {
-        const { _id, qarzaAccountId, amount, type, date, notes } = req.body;
+        const { _id, qarzaAccountId, amount, type, date, notes, paymentMethod } = req.body;
         let QarzaPayment = getLocalQarzaPaymentModel()
         let localQarzaAccountModel = getLocalQarzaAccountModel()
 
@@ -301,6 +338,7 @@ export const updateQarzaPayment = async (req, res) => {
             type,
             date: new Date(date),
             notes,
+            paymentMethod,
         });
 
         await changeTrackDocsCreationFunc("update", QarzaPayment.modelName, _id)

@@ -51,6 +51,10 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
   };
 
   const handleCategoryToggle = (categoryId) => {
+    if (categoryId === "all") {
+      updateFilter("category", []);
+      return;
+    }
     const currentCategories = filters.category || [];
     const newCategories = currentCategories.includes(categoryId)
       ? currentCategories.filter((id) => id !== categoryId)
@@ -59,6 +63,10 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
   };
 
   const handleBrandToggle = (brandName) => {
+    if (brandName === "all") {
+      updateFilter("brandName", []);
+      return;
+    }
     const currentBrands = filters.brandName || [];
     const newBrands = currentBrands.includes(brandName)
       ? currentBrands.filter((b) => b !== brandName)
@@ -179,6 +187,17 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
             </button>
             {expandedSections.category && (
               <div className="space-y-1 max-h-48 overflow-y-auto">
+                <label
+                  className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={filters.category?.length === 0}
+                    onChange={() => handleCategoryToggle("all")}
+                    className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
+                  />
+                  <span className="text-sm text-[var(--ink)] font-semibold">All Categories</span>
+                </label>
                 {categories.map((cat) => (
                   <label
                     key={cat._id}
@@ -208,6 +227,17 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
             </button>
             {expandedSections.brand && (
               <div className="space-y-1 max-h-48 overflow-y-auto">
+                <label
+                  className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={filters.brandName?.length === 0}
+                    onChange={() => handleBrandToggle("all")}
+                    className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
+                  />
+                  <span className="text-sm text-[var(--ink)] font-semibold">All Brands</span>
+                </label>
                 {brands.length > 0 ? (
                   brands.map((brand) => (
                     <label

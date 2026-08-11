@@ -1,7 +1,7 @@
 // src/modules/qarza/pages/EachQarzaAccountRecords.jsx
 import { useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Download } from "lucide-react";
+import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Download, Filter, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
     useAccountPaymentsPaginated,
@@ -33,11 +33,22 @@ export default function EachQarzaAccountRecords() {
     const [deletePayment] = useDeleteQarzaPayment();
 
     const [modal, setModal] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [selectedPaymentForPdf, setSelectedPaymentForPdf] = useState(null);
+    
+    // Filter states
+    const [filterType, setFilterType] = useState("all");
+    const [filterSource, setFilterSource] = useState("all");
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-    const refresh = useCallback(() => { setCurrentPage(1); }, []);
+    const refresh = useCallback(() => {}, []);
+
+    const clearFilters = () => {
+        setFilterType("all");
+        setFilterSource("all");
+    };
+
+    const hasActiveFilters = filterType !== "all" || filterSource !== "all";
 
     const handleDelete = async (paymentId) => {
         if (!window.confirm("Delete this payment?")) return;
@@ -208,6 +219,79 @@ export default function EachQarzaAccountRecords() {
                             </PermissionGuard>
                         )
                     }
+                    rightActions={
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                    hasActiveFilters 
+                                        ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                        : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    {language === "en" ? "Filter" : "فلٹر"}
+                                </span>
+                                {hasActiveFilters && (
+                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                )}
+                            </button>
+
+                            {/* Filter Dropdown */}
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                            {language === "en" ? "Filters" : "فلٹرز"}
+                                        </span>
+                                        {hasActiveFilters && (
+                                            <button
+                                                onClick={clearFilters}
+                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                            >
+                                                <X size={12} />
+                                                {language === "en" ? "Clear" : "صاف"}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Type Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Type" : "قسم"}
+                                        </label>
+                                        <select
+                                            value={filterType}
+                                            onChange={(e) => setFilterType(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="all">{language === "en" ? "All Types" : "تمام اقسام"}</option>
+                                            <option value="cashin">{language === "en" ? "Cash In" : "کیش ان"}</option>
+                                            <option value="cashout">{language === "en" ? "Cash Out" : "کیش آؤٹ"}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Source Filter */}
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Source" : "ذریعہ"}
+                                        </label>
+                                        <select
+                                            value={filterSource}
+                                            onChange={(e) => setFilterSource(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="all">{language === "en" ? "All Sources" : "تمام ذرائع"}</option>
+                                            <option value="manual">{language === "en" ? "Manual" : "دستی"}</option>
+                                            <option value="pos">{language === "en" ? "POS" : "POS"}</option>
+                                            <option value="purchaseProducts">{language === "en" ? "Purchase" : "خریداری"}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    }
                 />
             </div>
 
@@ -267,7 +351,11 @@ export default function EachQarzaAccountRecords() {
                     dataKey="data"
                     wrapperClassName="h-full"
                     renderItems={renderItems}
-                    queryArgs={{ qarzaAccountId: id, page: currentPage, limit: 20 }}
+                    filter={{
+                        type: filterType !== "all" ? filterType : undefined,
+                        source: filterSource !== "all" ? filterSource : undefined,
+                    }}
+                    queryArgs={{ qarzaAccountId: id }}
                 />
             </div>
             {showPdfModal && selectedPaymentForPdf && (

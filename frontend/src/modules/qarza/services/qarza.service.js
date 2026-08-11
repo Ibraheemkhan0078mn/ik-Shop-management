@@ -58,9 +58,9 @@ export const qarzaApi = baseApi.injectEndpoints({
         }),
 
         getAccountPaymentsPaginated: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20 } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source } = {}) => ({
                 url: "/qarzaRoutes/payments/pagination",
-                params: { qarzaAccountId, page, limit },
+                params: { qarzaAccountId, page, limit, type, source },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),

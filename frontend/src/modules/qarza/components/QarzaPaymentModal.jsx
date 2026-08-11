@@ -1,13 +1,14 @@
 // src/modules/qarza/components/QarzaPaymentModal.jsx
 // Props: mode "create"|"update", qarzaAccountId, payment (for update), onClose, onSuccess
 import { useState, useEffect } from "react";
-import { X, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { X, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateQarzaPayment, useUpdateQarzaPayment } from "../services/qarza.service.js";
+import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 
 const today = () => new Date().toISOString().split("T")[0];
 
-const emptyForm = () => ({ amount: "", type: "cashin", date: today(), notes: "" });
+const emptyForm = () => ({ amount: "", type: "cashin", date: today(), notes: "", paymentMethod: "" });
 
 // ─── atoms ────────────────────────────────────────────────────────────────────
 const Label = ({ children }) => (
@@ -22,6 +23,10 @@ const Inp = ({ className = "", ...p }) => (
 );
 const Txt = ({ className = "", ...p }) => (
     <textarea {...p} className={`w-full px-3 py-2 text-sm rounded-xl outline-none transition resize-none focus:ring-2 ${className}`}
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }} />
+);
+const Sel = ({ className = "", ...p }) => (
+    <select {...p} className={`w-full px-3 py-2 text-sm rounded-xl outline-none transition ${className}`}
         style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }} />
 );
 const Btn = ({ children, variant = "primary", className = "", ...p }) => {
@@ -39,6 +44,7 @@ const Btn = ({ children, variant = "primary", className = "", ...p }) => {
 
 export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, payment, onClose, onSuccess }) {
     const isUpdate = mode === "update";
+    const { data: paymentMethods = [] } = usePaymentMethods();
 
     const [createPayment, { isLoading: isCreating }] = useCreateQarzaPayment();
     const [updatePayment, { isLoading: isUpdating }] = useUpdateQarzaPayment();
@@ -54,6 +60,7 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
             type:   payment.type   ?? "cashin",
             date:   payment.date   ? new Date(payment.date).toISOString().split("T")[0] : today(),
             notes:  payment.notes  ?? "",
+            paymentMethod: payment.paymentMethod ?? "",
         });
     }, [payment, isUpdate]);
 
@@ -85,21 +92,29 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
                 onClick={e => e.stopPropagation()}>
 
                 {/* header */}
-                <div className="flex items-center justify-between px-5 py-4"
-                    style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)" }}>
-                    <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>
-                        {isUpdate ? "Edit Payment" : "New Payment"}
-                    </h2>
-                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-                        style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+                    style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "var(--accent-2)" }}>
+                            <Wallet className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>
+                                {isUpdate ? "Edit Payment" : "New Payment"}
+                            </h2>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>Credit/Debit Transaction</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition"
+                        style={{ background: "var(--surface-muted)", color: "var(--muted)" }}>
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                <div className="p-5 space-y-4">
+                <div className="p-6 space-y-5">
                     {/* type toggle */}
                     <Field>
-                        <Label>Type</Label>
+                        <Label>Transaction Type</Label>
                         <div className="grid grid-cols-2 gap-3">
                             {[
                                 { val: "cashin",  label: "Cash In",  Icon: ArrowDownLeft,  color: "#10b981" },
@@ -132,6 +147,16 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
                             <Inp type="date" value={form.date} onChange={e => update("date", e.target.value)} />
                         </Field>
                     </div>
+
+                    <Field>
+                        <Label>Payment Method</Label>
+                        <Sel value={form.paymentMethod} onChange={e => update("paymentMethod", e.target.value)}>
+                            <option value="">Select Payment Method</option>
+                            {paymentMethods.filter(pm => pm.isActive !== false).map((pm) => (
+                                <option key={pm._id} value={pm.name}>{pm.name}</option>
+                            ))}
+                        </Sel>
+                    </Field>
 
                     <Field>
                         <Label>Notes</Label>

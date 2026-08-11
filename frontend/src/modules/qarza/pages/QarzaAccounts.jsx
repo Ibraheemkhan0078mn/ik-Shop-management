@@ -1,5 +1,5 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -25,6 +25,19 @@ export default function QarzaAccounts() {
 
     const [deleteAccount] = useDeleteQarzaAccount();
     const [modal, setModal] = useState(null);
+    const [filterType, setFilterType] = useState("all");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [filterBalance, setFilterBalance] = useState("all");
+    const [searchName, setSearchName] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchName);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchName]);
 
     // Helper function to format name to proper case
    const formatName = (name) => {
@@ -82,12 +95,60 @@ export default function QarzaAccounts() {
                         )
                     }
                 />
+                {/* Filters */}
+                <div className="flex gap-3 px-6 py-3 items-center" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)" }}>
+                    <input
+                        type="text"
+                        placeholder="Search by name..."
+                        value={searchName}
+                        onChange={(e) => setSearchName(e.target.value)}
+                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)", minWidth: "200px" }}
+                    />
+                    <select
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                    >
+                        <option value="all">All Types</option>
+                        <option value="personal">Personal</option>
+                        <option value="others">Others</option>
+                    </select>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                    >
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <select
+                        value={filterBalance}
+                        onChange={(e) => setFilterBalance(e.target.value)}
+                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                    >
+                        <option value="all">All Balances</option>
+                        <option value="to_pay">To Pay</option>
+                        <option value="to_receive">To Receive</option>
+                        <option value="balanced">Balanced</option>
+                    </select>
+                </div>
             </div>
 
             <PaginatedList
                 rtkQuery={useQarzaAccountsPaginated}
                 limit={20}
                 dataKey="data"
+                filter={{
+                    search: debouncedSearch,
+                    filterType,
+                    filterStatus,
+                    filterBalance
+                }}
                 wrapperClassName="flex-1 overflow-auto"
                 renderItems={(accounts) => (
                     <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -109,6 +170,11 @@ export default function QarzaAccounts() {
                                     const imageUrl = acc.qarzaProfileImage 
                                         ? toImageUrl(acc.qarzaProfileImage) 
                                         : null;
+                                    
+                                    // Balance status: positive net = need to pay, negative net = need to receive
+                                    const balanceStatus = net > 0 ? "To Pay" : net < 0 ? "To Receive" : "Balanced";
+                                    const balanceColor = net > 0 ? "#dc2626" : net < 0 ? "var(--accent-2)" : "var(--muted)";
+                                    const balanceBg = net > 0 ? "rgba(220,38,38,0.1)" : net < 0 ? "rgba(15,118,110,0.1)" : "rgba(107,114,128,0.1)";
                                     
                                     return (
                                         <tr
@@ -134,15 +200,15 @@ export default function QarzaAccounts() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="font-bold tabular-nums" style={{ color: net >= 0 ? "var(--accent-2)" : "#dc2626" }}>
+                                                    <span className="font-bold tabular-nums" style={{ color: balanceColor }}>
                                                         Rs {Math.abs(net).toLocaleString()}
                                                     </span>
                                                     <span className="text-xs px-2 py-0.5 rounded-md font-semibold"
                                                         style={{
-                                                            background: net >= 0 ? "rgba(15,118,110,0.1)" : "rgba(220,38,38,0.1)",
-                                                            color: net >= 0 ? "var(--accent-2)" : "#dc2626"
+                                                            background: balanceBg,
+                                                            color: balanceColor
                                                         }}>
-                                                        {net >= 0 ? labels.receivable : labels.payable}
+                                                        {balanceStatus}
                                                     </span>
                                                 </div>
                                             </td>
