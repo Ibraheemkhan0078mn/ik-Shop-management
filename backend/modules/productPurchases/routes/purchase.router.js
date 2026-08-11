@@ -11,6 +11,7 @@ import {
     createPurchasePaymentData,
     getPurchasePaymentsData,
     deletePurchasePaymentData,
+    generatePurchaseNumberData,
 } from "../controllers/purchase.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -18,6 +19,7 @@ const router = Router();
  
 router.use(protect);
 
+router.get("/generate-number", generatePurchaseNumberData);
 router.get("/", getPurchasesData);
 router.get("/getPurchaseById/:id", getPurchaseDataById);
 router.post("/getPurchaseByInvoiceNumber", getPurchaseDataByInvoiceNumber);

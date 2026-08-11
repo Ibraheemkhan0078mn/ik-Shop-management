@@ -236,7 +236,7 @@ const deleteProduct = async (id) => {
         throw new Error("Product not found");
     }
 
-    const batchCount = await countBatchService({ product: id });
+    const batchCount = await countBatchService({ product: id, isDeleted: false });
     if (batchCount > 0) {
         const err = new Error("Product has connected batches and cannot be deleted directly.");
         err.code = "PRODUCT_HAS_BATCHES";

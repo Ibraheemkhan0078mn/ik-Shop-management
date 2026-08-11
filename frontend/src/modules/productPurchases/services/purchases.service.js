@@ -98,6 +98,12 @@ export const purchaseApi = baseApi.injectEndpoints({
             transformResponse: (raw) => raw || {},
             providesTags: ["Purchase"],
         }),
+
+        // Generate purchase number
+        generatePurchaseNumber: build.mutation({
+            query: () => ({ url: "/purchases/generate-number", method: "GET" }),
+            transformResponse: (raw) => raw.data || raw,
+        }),
     }),
 });
 
@@ -115,4 +121,5 @@ export const {
     useUpdatePurchasePaymentMutation: useUpdatePurchasePayment,
     useDeletePurchasePaymentMutation: useDeletePurchasePayment,
     useGetPurchasesBySupplierQuery: usePurchasesBySupplier,
+    useGeneratePurchaseNumberMutation: useGeneratePurchaseNumber,
 } = purchaseApi;

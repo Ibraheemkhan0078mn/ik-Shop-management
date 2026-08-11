@@ -12,6 +12,7 @@ import {
     createPurchase,
     updatePurchase,
     deletePurchase,
+    generatePurchaseNumber,
 } from "../services/purchase.service.js";
 import {
     createPurchasePayment,
@@ -409,6 +410,20 @@ export const deletePurchasePaymentData = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const generatePurchaseNumberData = asyncHandler(async (req, res, next) => {
+    try {
+        const invoiceNumber = await generatePurchaseNumber();
+
+        res.status(200).json({
+            success: true,
+            message: "Purchase number generated successfully",
+            data: { invoiceNumber }
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 500));
     }
 });
 

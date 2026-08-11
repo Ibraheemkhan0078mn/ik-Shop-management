@@ -71,8 +71,9 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
-        generatePurchaseReturnNumber: build.query({
-            query: () => "/purchase-returns/generate-number",
+        generatePurchaseReturnNumber: build.mutation({
+            query: () => ({ url: "/purchase-returns/generate-number", method: "GET" }),
+            transformResponse: (raw) => raw.data || raw,
         }),
         addPurchaseReturnPayment: build.mutation({
             query: ({ id, ...data }) => ({
@@ -115,7 +116,7 @@ export const {
     useSubmitPurchaseReturnMutation,
     useApprovePurchaseReturnMutation,
     useRejectPurchaseReturnMutation,
-    useGeneratePurchaseReturnNumberQuery,
+    useGeneratePurchaseReturnNumberMutation,
     useAddPurchaseReturnPaymentMutation,
     useGetPurchaseReturnPaymentsQuery,
     useDeletePurchaseReturnPaymentMutation,

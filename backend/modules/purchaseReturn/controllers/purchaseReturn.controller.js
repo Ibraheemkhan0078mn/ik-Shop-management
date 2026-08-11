@@ -451,49 +451,31 @@ export const getPurchaseDetailsForReturn = asyncHandler(async (req, res) => {
 });
 
 export const generatePurchaseReturnNumberData = asyncHandler(async (req, res) => {
-    // Find all purchase returns with PR-XXXXX format
-    const allReturns = await findPurchaseReturnService({}, {
+    // Find all purchase returns with PR-\d+ format (including soft-deleted)
+    const allReturns = await findPurchaseReturnService({ purchaseReturnNumber: /^PR-\d+$/ }, {
         sort: { purchaseReturnNumber: -1 },
         limit: 1
     });
 
-    let nextNumber = 1; // Start from PR-00001
+    let nextNumber = 1;
 
     if (allReturns && allReturns.length > 0) {
         const latestReturn = allReturns[0];
         const latestNumber = latestReturn.purchaseReturnNumber;
         
-        // Extract the numeric part from PR-XXXXX format
-        const match = latestNumber.match(/^PR-(\d{5})$/);
+        // Extract the numeric part from PR-\d+ format
+        const match = latestNumber.match(/^PR-(\d+)$/);
         if (match) {
             const currentNum = parseInt(match[1], 10);
             nextNumber = currentNum + 1;
         }
     }
 
-    // Check for duplicates and increment until unique
-    let isUnique = false;
-    let attempts = 0;
-    let finalNumber;
-
-    while (!isUnique && attempts < 1000) {
-        finalNumber = `PR-${String(nextNumber).padStart(5, "0")}`;
-        const existing = await findPurchaseReturnService({ purchaseReturnNumber: finalNumber });
-        
-        if (!existing || existing.length === 0) {
-            isUnique = true;
-        } else {
-            nextNumber++;
-            attempts++;
-        }
-    }
-
-    if (!isUnique) {
-        throw new Error("Unable to generate unique purchase return number after multiple attempts");
-    }
+    // Format with leading zeros (e.g., PR-01, PR-02, etc.)
+    const purchaseReturnNumber = `PR-${String(nextNumber).padStart(2, '0')}`;
 
     return ApiResponse(res, 200, "Purchase return number generated successfully", {
-        purchaseReturnNumber: finalNumber
+        purchaseReturnNumber
     });
 });
 

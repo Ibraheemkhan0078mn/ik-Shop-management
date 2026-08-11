@@ -3,7 +3,7 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown, Lock, Unlock, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
-import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } from "../services/purchases.service";
+import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase, useGeneratePurchaseNumber } from "../services/purchases.service";
 import { useProducts } from "../../productsModule/services/product.service";
 import { useBatchesByProduct, useGenerateBatchNumber } from "../services/batch.service";
 import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
@@ -203,6 +203,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const { data: productsRaw, refetch: refetchProducts } = useProducts();
     const { data: purchasesRaw } = useAllPurchases();
     const [generateBatchNumber] = useGenerateBatchNumber();
+    const [generatePurchaseNumber, { data: purchaseNumberData }] = useGeneratePurchaseNumber();
     const [createPurchase, { isLoading: isCreating }] = useCreatePurchase();
     const [updatePurchase, { isLoading: isUpdating }] = useUpdatePurchase();
     const isSubmitting = isCreating || isUpdating;
@@ -218,6 +219,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [editingIndex, setEditingIndex] = useState(null);
     const [batchStamp, setBatchStamp] = useState(() => Date.now().toString());
     const [generatedBatchNumber, setGeneratedBatchNumber] = useState(null);
+    const [generatedInvoiceNumber, setGeneratedInvoiceNumber] = useState(null);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
@@ -289,19 +291,35 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     // auto-invoice
     useEffect(() => {
         if (isUpdate || !bill.supplier) return;
-        const inv = makeInvoice(selectedSupplierName, Date.now().toString());
-        setBill(p => p.invoiceNumber === inv ? p : { ...p, invoiceNumber: inv });
-    }, [bill.supplier, selectedSupplierName, isUpdate]);
+        
+        // Call API only once when supplier is selected
+        if (!generatedInvoiceNumber) {
+            generatePurchaseNumber().then((result) => {
+                if (result?.data?.invoiceNumber) {
+                    setGeneratedInvoiceNumber(result.data.invoiceNumber);
+                }
+            });
+        }
+    }, [bill.supplier, isUpdate, generatedInvoiceNumber, generatePurchaseNumber]);
+
+    // Update invoice number in form when generated
+    useEffect(() => {
+        if (isUpdate || !generatedInvoiceNumber) return;
+        setBill(p => p.invoiceNumber === generatedInvoiceNumber ? p : { ...p, invoiceNumber: generatedInvoiceNumber });
+    }, [generatedInvoiceNumber, isUpdate]);
 
     // check for duplicate invoice and regenerate if needed
     useEffect(() => {
         if (isUpdate || !bill.invoiceNumber) return;
         const isDuplicate = previousBills.some(b => b.invoiceNumber === bill.invoiceNumber);
         if (isDuplicate) {
-            const newInv = makeInvoice(selectedSupplierName, Date.now().toString());
-            setBill(p => ({ ...p, invoiceNumber: newInv }));
+            generatePurchaseNumber().then((result) => {
+                if (result?.data?.invoiceNumber) {
+                    setGeneratedInvoiceNumber(result.data.invoiceNumber);
+                }
+            });
         }
-    }, [bill.invoiceNumber, previousBills, isUpdate, selectedSupplierName]);
+    }, [bill.invoiceNumber, previousBills, isUpdate, generatePurchaseNumber]);
 
     // batch number (new mode)
     useEffect(() => {

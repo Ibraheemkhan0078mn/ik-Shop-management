@@ -2,6 +2,24 @@ import { createPurchaseService, findPurchaseService, findOnePurchaseService, fin
 import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 
+const generatePurchaseNumber = async () => {
+    const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
+        sort: { invoiceNumber: -1 },
+        limit: 1
+    });
+
+    let nextNumber = 1;
+    if (allPurchases && allPurchases.length > 0) {
+        const lastPurchase = allPurchases[0];
+        const match = lastPurchase.invoiceNumber.match(/^PI-(\d+)$/);
+        if (match) {
+            nextNumber = parseInt(match[1]) + 1;
+        }
+    }
+
+    return `PI-${String(nextNumber).padStart(2, '0')}`;
+};
+
 const getPurchases = async () => {
     return await findPurchaseService({}, {
         populate: [
@@ -268,12 +286,4 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
     return await deleteOnePurchaseService(id);
 };
 
-export {
-    getPurchases,
-    getPurchaseById,
-    getPurchaseByInvoiceNumber,
-    getPaginatedPurchases,
-    createPurchase,
-    updatePurchase,
-    deletePurchase,
-};
+export { getPurchases, getPurchaseById, getPurchaseByInvoiceNumber, getPaginatedPurchases, createPurchase, updatePurchase, deletePurchase, generatePurchaseNumber };
