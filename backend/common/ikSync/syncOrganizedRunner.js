@@ -30,6 +30,7 @@ import {
     getLocalSettingsModel,
     getLocalPaymentMethodModel,
     getLocalAppThemeModel,
+    getLocalTransactionModel,
 } from "../../configs/connect.db.js";
 import {
     getOnlineUserModel,
@@ -63,6 +64,7 @@ import {
     getOnlineSettingsModel,
     getOnlinePaymentMethodModel,
     getOnlineAppThemeModel,
+    getOnlineTransactionModel,
 } from '../../configs/onlineConnect.db.js';
 import { deleteOnlineSync } from "./deleteOnlineSync.js";
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
@@ -132,6 +134,9 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
             { local: getLocalSettingsModel(), online: getOnlineSettingsModel(), permissionString: ["settings-view"] },
             { local: getLocalPaymentMethodModel(), online: getOnlinePaymentMethodModel(), permissionString: ["payment-methods-view"] },
             { local: getLocalAppThemeModel(), online: getOnlineAppThemeModel(), permissionString: ["app-theme-view"] },
+            
+            // Transactions
+            { local: getLocalTransactionModel(), online: getOnlineTransactionModel(), permissionString: ["transactions-view"] },
             
             // Activity & Change Tracking
             { local: getLocalActivityLogModel(), online: getOnlineActivityLogModel(), permissionString: ["activityLogs-view"] },

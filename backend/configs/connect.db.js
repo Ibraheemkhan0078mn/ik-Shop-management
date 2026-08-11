@@ -33,6 +33,7 @@ import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.
 import { MONGODB_URI } from "../common/constants/constants.js";
 import { changeTrackDocsCreationFunc } from "../common/services/onlineSync/changeTrackModelCreation.js";
 import appThemeSchema from "../modules/settings/models/appTheme.model.js";
+import transactionSchema from "../modules/transactions/models/transaction.model.js";
 
 
 
@@ -101,6 +102,7 @@ let StaffAttendanceModel = null;
 let SettingsModel = null;
 let PaymentMethodModel = null;
 let AppThemeModel = null;
+let TransactionModel = null;
 
 export const connectDb = async () => {
     try {
@@ -148,6 +150,7 @@ export const connectDb = async () => {
         addChangeTrackingMiddleware(settingsSchema, "Settings");
         addChangeTrackingMiddleware(paymentMethodSchema, "PaymentMethods");
         addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
+        addChangeTrackingMiddleware(transactionSchema, "Transactions");
 
         UserModel = LocalConnection.model("Users", userSchema);
         UserRoleModel = LocalConnection.model("UserRoles", userRoleSchema);
@@ -183,6 +186,7 @@ export const connectDb = async () => {
         SettingsModel = LocalConnection.model("Settings", settingsSchema)
         PaymentMethodModel = LocalConnection.model("PaymentMethods", paymentMethodSchema)
         AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
+        TransactionModel = LocalConnection.model("Transactions", transactionSchema)
 
         console.log("📝 Automatic change tracking enabled for local database models");
     } catch (error) {
@@ -222,4 +226,5 @@ export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
 export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;
 export const getLocalSettingsModel = () => SettingsModel || null;
 export const getLocalPaymentMethodModel = () => PaymentMethodModel || null;
+export const getLocalTransactionModel = () => TransactionModel || null;
 export const getLocalDeviceIdentityModel = () => null;

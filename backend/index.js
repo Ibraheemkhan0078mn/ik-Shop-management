@@ -45,6 +45,7 @@ import SettingsRouter from './modules/settings/routes/settings.route.js'
 import PaymentMethodRouter from './modules/settings/routes/paymentMethod.router.js'
 import themeRoutes from './modules/settings/routes/appTheme.route.js'
 import BackupRouter from './modules/backup/routes/backup.route.js'
+import TransactionRouter from './modules/transactions/routes/transaction.router.js'
 dontenv.config();
 const app = express();
 app.use(express.json());
@@ -89,10 +90,11 @@ app.use("/api/product-returns", ProductReturnRouter)
 app.use("/api/customers", CustomerRouter)
 app.use("/api/dashboard", DashboardRouter)
 app.use("/api/staff", StaffRouter)
-app.use("/api/settings", SettingsRouter)
-app.use("/api/payment-methods", PaymentMethodRouter)
-app.use("/api/theme", themeRoutes)
+app.use("/api/settings", SettingsRouter);
+app.use("/api/payment-methods", PaymentMethodRouter);
+app.use("/api/theme", themeRoutes);
 app.use("/api/backup", BackupRouter);
+app.use("/api/transactions", TransactionRouter);
 
 // Health check endpoint for Electron app
 app.get("/health", (req, res) => {

@@ -24,7 +24,8 @@ import {
     getLocalStaffSalaryPaymentModel, 
     getLocalStaffSaleBillModel, 
     getLocalStaffAttendanceModel, 
-    getLocalSettingsModel 
+    getLocalSettingsModel,
+    getLocalTransactionModel
 } from "../../../configs/connect.db.js";
 
 import { 
@@ -53,7 +54,8 @@ import {
     getOnlineStaffSalaryPaymentModel, 
     getOnlineStaffSaleBillModel, 
     getOnlineStaffAttendanceModel, 
-    getOnlineSettingsModel 
+    getOnlineSettingsModel,
+    getOnlineTransactionModel
 } from '../../../configs/onlineConnect.db.js';
 
 import { deleteOnlineSync } from "./deleteOnlineSync.js";
@@ -95,6 +97,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
             { local: getLocalStaffSaleBillModel(), online: getOnlineStaffSaleBillModel(), permissionString: ["staff-sale-bill-view"] },
             { local: getLocalStaffAttendanceModel(), online: getOnlineStaffAttendanceModel(), permissionString: ["staff-attendance-view"] },
             { local: getLocalSettingsModel(), online: getOnlineSettingsModel(), permissionString: ["settings-view"] },
+            { local: getLocalTransactionModel(), online: getOnlineTransactionModel(), permissionString: ["transaction-view"] },
         ];
 
         console.time("dublicateCleaning")

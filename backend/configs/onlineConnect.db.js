@@ -31,6 +31,7 @@ import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model
 import settingsSchema from "../modules/settings/models/settings.model.js";
 import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import appThemeSchema from "../modules/settings/models/appTheme.model.js";
+import transactionSchema from "../modules/transactions/models/transaction.model.js";
 import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
@@ -64,6 +65,7 @@ let OnlineSettingsModel = null;
 let OnlinePaymentMethodModel = null;
 let OnlineAppThemeModel = null;
 let OnlineStaffRoleModel=null
+let OnlineTransactionModel = null
 
 // Store the connection instance for export
 let OnlineConnectionInstance = null;
@@ -120,6 +122,7 @@ export const connectOnlineDb = async () => {
     OnlineSettingsModel = OnlineConnectionInstance.model("Settings", settingsSchema)
     OnlinePaymentMethodModel = OnlineConnectionInstance.model("PaymentMethods", paymentMethodSchema)
     OnlineAppThemeModel = OnlineConnectionInstance.model("AppThemes", appThemeSchema)
+    OnlineTransactionModel = OnlineConnectionInstance.model("Transactions", transactionSchema)
 
     // Change stream tracking disabled - using local database tracking instead
     // startChangeStreamTracking(OnlineConnection)
@@ -159,3 +162,4 @@ export const getOnlineStaffAttendanceModel = () => OnlineStaffAttendanceModel ||
 export const getOnlineSettingsModel = () => OnlineSettingsModel || null;
 export const getOnlinePaymentMethodModel = () => OnlinePaymentMethodModel || null;
 export const getOnlineAppThemeModel = () => OnlineAppThemeModel || null;
+export const getOnlineTransactionModel = () => OnlineTransactionModel || null;
