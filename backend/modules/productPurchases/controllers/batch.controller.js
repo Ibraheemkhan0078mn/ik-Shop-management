@@ -8,6 +8,7 @@ import {
     createBatch,
     updateBatch,
     deleteBatch,
+    generateBatchNumber,
 } from "../services/batch.service.js";
 
 export const getBatchesData = asyncHandler(async (req, res, next) => {
@@ -68,5 +69,19 @@ export const deleteBatchData = asyncHandler(async (req, res, next) => {
         });
     } catch (error) {
         return next(new ErrorResponse(error.message, 404));
+    }
+});
+
+export const generateBatchNumberData = asyncHandler(async (req, res, next) => {
+    try {
+        const batchNumber = await generateBatchNumber();
+
+        res.status(200).json({
+            success: true,
+            message: "Batch number generated successfully",
+            data: { batchNumber }
+        });
+    } catch (error) {
+        return next(new ErrorResponse(error.message, 500));
     }
 });

@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
 import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase } from "../services/purchases.service";
 import { useProducts } from "../../productsModule/services/product.service";
-import { useBatchesByProduct } from "../services/batch.service";
+import { useBatchesByProduct, useGenerateBatchNumber } from "../services/batch.service";
 import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
 import ProductCRUDModal from "../../productsModule/components/ProductCRUDModal.jsx";
 import SupplierModal from "../../suppliers/components/SupplierModal.jsx";
@@ -202,6 +202,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const { data: suppliersRaw, refetch: refetchSuppliers } = useAllSuppliers();
     const { data: productsRaw, refetch: refetchProducts } = useProducts();
     const { data: purchasesRaw } = useAllPurchases();
+    const [generateBatchNumber] = useGenerateBatchNumber();
     const [createPurchase, { isLoading: isCreating }] = useCreatePurchase();
     const [updatePurchase, { isLoading: isUpdating }] = useUpdatePurchase();
     const isSubmitting = isCreating || isUpdating;
@@ -216,6 +217,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [itemForm, setItemForm] = useState(emptyItem());
     const [editingIndex, setEditingIndex] = useState(null);
     const [batchStamp, setBatchStamp] = useState(() => Date.now().toString());
+    const [generatedBatchNumber, setGeneratedBatchNumber] = useState(null);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
@@ -304,9 +306,23 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     // batch number (new mode)
     useEffect(() => {
         if (itemForm.batchMode !== "new") return;
-        const bn = makeBatch(batchStamp);
+        
+        // Call API only once when switching to new mode
+        if (!generatedBatchNumber) {
+            generateBatchNumber().then((result) => {
+                if (result?.data?.batchNumber) {
+                    setGeneratedBatchNumber(result.data.batchNumber);
+                }
+            });
+        }
+    }, [itemForm.batchMode, generatedBatchNumber, generateBatchNumber]);
+
+    // Update batch number in form when generated
+    useEffect(() => {
+        if (itemForm.batchMode !== "new") return;
+        const bn = generatedBatchNumber || makeBatch(batchStamp);
         setItemForm(p => p.batchNumber === bn ? p : { ...p, batchNumber: bn, batchSelection: "" });
-    }, [itemForm.batchMode, batchStamp]);
+    }, [itemForm.batchMode, batchStamp, generatedBatchNumber]);
 
     // autofill from existing batch
     useEffect(() => {

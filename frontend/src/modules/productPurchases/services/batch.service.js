@@ -51,6 +51,12 @@ export const batchApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/batches/${id}`, method: "DELETE" }),
             invalidatesTags: ["Batch"],
         }),
+
+        // Generate batch number
+        generateBatchNumber: build.mutation({
+            query: () => ({ url: "/batches/generate-number", method: "GET" }),
+            transformResponse: (raw) => raw.data || raw,
+        }),
     }),
 });
 
@@ -62,4 +68,5 @@ export const {
     useCreateBatchMutation:      useCreateBatch,
     useUpdateBatchMutation:      useUpdateBatch,
     useDeleteBatchMutation:      useDeleteBatch,
+    useGenerateBatchNumberMutation: useGenerateBatchNumber,
 } = batchApi;

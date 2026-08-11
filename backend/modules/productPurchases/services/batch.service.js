@@ -75,4 +75,22 @@ const deleteBatch = async (id, ProductModel) => {
     return await deleteOneBatchService(id);
 };
 
-export { getBatches, createBatch, updateBatch, deleteBatch };
+const generateBatchNumber = async () => {
+    const allBatches = await findBatchService({ batchNumber: /^PB-\d+$/ }, {
+        sort: { batchNumber: -1 },
+        limit: 1
+    });
+
+    let nextNumber = 1;
+    if (allBatches && allBatches.length > 0) {
+        const lastBatch = allBatches[0];
+        const match = lastBatch.batchNumber.match(/^PB-(\d+)$/);
+        if (match) {
+            nextNumber = parseInt(match[1]) + 1;
+        }
+    }
+
+    return `PB-${String(nextNumber).padStart(3, '0')}`;
+};
+
+export { getBatches, createBatch, updateBatch, deleteBatch, generateBatchNumber };
