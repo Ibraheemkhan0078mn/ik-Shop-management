@@ -86,29 +86,29 @@ export default function PurchaseDetail() {
                 <div className="flex items-center gap-4 mb-6">
                     <button
                         onClick={() => navigate("/purchases")}
-                        className="p-2 hover:bg-[var(--hover)] rounded-md transition-all"
+                        className="p-2 hover:bg-[var(--hover)] rounded-lg transition-all"
                     >
                         <ArrowLeft size={20} className="text-[var(--ink)]" />
                     </button>
                     <div className="flex-1 flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
+                            <h1 className="text-3xl font-bold text-[var(--ink)] font-display">
                                 {labels.purchaseDetails || "Purchase Details"}
                             </h1>
-                            <p className="text-sm text-[var(--muted)]">
+                            <p className="text-sm text-[var(--muted)] mt-1">
                                 {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setShowPdfModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-2)] text-white rounded-xl hover:bg-[var(--accent-2)]/90 transition-all shadow-lg shadow-[var(--accent-2)]/20"
                             >
                                 <Download size={16} />
                                 {labels.exportDetails || "Export Details"}
                             </button>
                             <span 
-                                className="px-4 py-2 rounded-lg text-sm font-semibold"
+                                className="px-4 py-2 rounded-xl text-sm font-semibold shadow-sm"
                                 style={{ background: statusStyle.background, color: statusStyle.color }}
                             >
                                 {statusStyle.text}
@@ -118,75 +118,75 @@ export default function PurchaseDetail() {
                 </div>
 
                 {/* Summary Section */}
-                <div className="card p-6 mb-6">
+                <div className="card p-6 mb-6 shadow-lg border border-[var(--border)]">
                     <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <DollarSign size={20} />
+                        <DollarSign size={20} className="text-[var(--accent-2)]" />
                         {labels.summary || "Summary"}
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.subtotal || "Subtotal"}</p>
-                            <p className="font-semibold text-[var(--ink)] mt-1">Rs {(purchase?.subtotal ?? 0).toLocaleString()}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="bg-gradient-to-br from-[var(--surface-muted)] to-[var(--surface)] p-4 rounded-xl text-center border border-[var(--border)]">
+                            <p className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">{labels.subtotal || "Subtotal"}</p>
+                            <p className="font-bold text-[var(--ink)] text-lg mt-2">Rs {(purchase?.subtotal ?? 0).toLocaleString()}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDiscount || "Discount"}</p>
-                            <p className="font-semibold text-red-600 mt-1">Rs {(purchase?.discount ?? 0).toLocaleString()}</p>
+                        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl text-center border border-red-200 dark:border-red-800">
+                            <p className="text-xs text-red-600 dark:text-red-400 uppercase font-bold tracking-wider">{labels.totalDiscount || "Discount"}</p>
+                            <p className="font-bold text-red-600 text-lg mt-2">Rs {(purchase?.discount ?? 0).toLocaleString()}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalTax || "Tax"}</p>
-                            <p className="font-semibold text-green-600 mt-1">Rs {(purchase?.gst ?? 0).toLocaleString()}</p>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl text-center border border-green-200 dark:border-green-800">
+                            <p className="text-xs text-green-600 dark:text-green-400 uppercase font-bold tracking-wider">{labels.totalTax || "Tax"}</p>
+                            <p className="font-bold text-green-600 text-lg mt-2">Rs {(purchase?.gst ?? 0).toLocaleString()}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalAmount || "Total"}</p>
-                            <p className="font-bold text-green-600 text-lg mt-1">Rs {(purchase?.totalAmount ?? 0).toLocaleString()}</p>
+                        <div className="bg-gradient-to-br from-[var(--accent-2)] to-[var(--accent-2)]/80 p-4 rounded-xl text-center shadow-lg shadow-[var(--accent-2)]/30">
+                            <p className="text-xs text-white/80 uppercase font-bold tracking-wider">{labels.totalAmount || "Total"}</p>
+                            <p className="font-bold text-white text-xl mt-2">Rs {(purchase?.totalAmount ?? 0).toLocaleString()}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.amountPaid || "Paid"}</p>
-                            <p className="font-semibold text-[var(--ink)] mt-1">Rs {totalPaid.toLocaleString()}</p>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl text-center border border-blue-200 dark:border-blue-800">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 uppercase font-bold tracking-wider">{labels.amountPaid || "Paid"}</p>
+                            <p className="font-bold text-blue-600 text-lg mt-2">Rs {totalPaid.toLocaleString()}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.remainingAmount || "Remaining"}</p>
-                            <p className="font-bold text-red-600 text-lg mt-1">Rs {remainingAmount.toLocaleString()}</p>
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-xl text-center border border-orange-200 dark:border-orange-800">
+                            <p className="text-xs text-orange-600 dark:text-orange-400 uppercase font-bold tracking-wider">{labels.remainingAmount || "Remaining"}</p>
+                            <p className="font-bold text-orange-600 text-lg mt-2">Rs {remainingAmount.toLocaleString()}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Purchase Information Section */}
-                <div className="card p-6 mb-6">
+                <div className="card p-6 mb-6 shadow-lg border border-[var(--border)]">
                     <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <FileText size={20} />
+                        <FileText size={20} className="text-[var(--accent-2)]" />
                         {labels.purchaseInformation || "Purchase Information"}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
+                        <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-[var(--border)]">
+                            <label className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">
                                 {labels.purchaseNumber || "Purchase #"}
                             </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
+                            <p className="font-semibold text-[var(--ink)] mt-2 text-lg">
                                 {purchase?.purchaseNumber || purchase?.invoiceNumber || "—"}
                             </p>
                         </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
+                        <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-[var(--border)]">
+                            <label className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">
                                 {labels.supplier || "Supplier"}
                             </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
+                            <p className="font-semibold text-[var(--ink)] mt-2 text-lg">
                                 {purchase?.supplier?.name || purchase?.supplierName || "—"}
                             </p>
                         </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
+                        <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-[var(--border)]">
+                            <label className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">
                                 {labels.purchaseDate || "Purchase Date"}
                             </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">{date}</p>
+                            <p className="font-semibold text-[var(--ink)] mt-2 text-lg">{date}</p>
                         </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
+                        <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-[var(--border)]">
+                            <label className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">
                                 {labels.status || "Status"}
                             </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
+                            <p className="font-semibold mt-2">
                                 <span 
-                                    className="px-3 py-1 rounded-lg text-xs font-semibold"
+                                    className="px-4 py-2 rounded-xl text-sm font-semibold shadow-sm"
                                     style={{ background: statusStyle.background, color: statusStyle.color }}
                                 >
                                     {statusStyle.text}
@@ -194,42 +194,45 @@ export default function PurchaseDetail() {
                             </p>
                         </div>
                         {purchase?.notes && (
-                            <div className="md:col-span-2">
-                                <label className="text-xs text-[var(--muted)] uppercase font-bold">
+                            <div className="md:col-span-2 bg-[var(--surface-muted)] p-4 rounded-xl border border-[var(--border)]">
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold tracking-wider">
                                     {labels.notes || "Notes"}
                                 </label>
-                                <p className="text-[var(--ink)] mt-1">{purchase.notes}</p>
+                                <p className="text-[var(--ink)] mt-2">{purchase.notes}</p>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Items Section */}
-                <div className="card p-6 mb-6">
+                <div className="card p-6 mb-6 shadow-lg border border-[var(--border)]">
                     <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <Package size={20} />
+                        <Package size={20} className="text-[var(--accent-2)]" />
                         {labels.items || "Items"}
+                        <span className="ml-auto text-xs bg-[var(--accent-2)]/10 text-[var(--accent-2)] px-3 py-1 rounded-full font-semibold">
+                            {purchase?.items?.length || 0} items
+                        </span>
                     </h3>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
                         <table className="w-full">
                             <thead style={{ background: "var(--surface-muted)" }}>
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-left text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.productName || "Product"}
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.quantity || "Quantity"}
                                     </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-right text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.costPrice || "Cost Price"}
                                     </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-right text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.discount || "Discount"}
                                     </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-right text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.tax || "Tax"}
                                     </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                    <th className="px-4 py-4 text-right text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                         {labels.subtotal || "Subtotal"}
                                     </th>
                                 </tr>
@@ -249,29 +252,29 @@ export default function PurchaseDetail() {
                                     
                                     return (
                                         <tr key={index} className="hover:bg-[var(--surface-muted)] transition-all">
-                                            <td className="px-4 py-3">
-                                                <p className="font-medium text-[var(--ink)]">
+                                            <td className="px-4 py-4">
+                                                <p className="font-semibold text-[var(--ink)]">
                                                     {item.name || item.product?.name || item.productName || "—"}
                                                 </p>
                                                 {item.variant && (
-                                                    <p className="text-xs text-[var(--muted)]">{item.variant}</p>
+                                                    <p className="text-xs text-[var(--muted)] mt-1">{item.variant}</p>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-center font-medium text-[var(--ink)]">
-                                                {quantity}
+                                            <td className="px-4 py-4 text-center font-semibold text-[var(--ink)]">
+                                                <span className="bg-[var(--surface-muted)] px-3 py-1 rounded-lg">{quantity}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--ink)]">
                                                 Rs {price.toLocaleString()}
                                             </td>
-                                            <td className="px-4 py-3 text-right font-medium text-red-600">
+                                            <td className="px-4 py-4 text-right font-semibold text-red-600">
                                                 {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
-                                                <span className="text-xs text-[var(--muted)]"> ({discountAmount.toLocaleString()})</span>
+                                                <span className="text-xs text-[var(--muted)] block"> ({discountAmount.toLocaleString()})</span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-medium text-green-600">
+                                            <td className="px-4 py-4 text-right font-semibold text-green-600">
                                                 {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
-                                                <span className="text-xs text-[var(--muted)]"> ({taxAmount.toLocaleString()})</span>
+                                                <span className="text-xs text-[var(--muted)] block"> ({taxAmount.toLocaleString()})</span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-semibold text-[var(--ink)]">
+                                            <td className="px-4 py-4 text-right font-bold text-[var(--accent-2)] text-lg">
                                                 Rs {subtotal.toLocaleString()}
                                             </td>
                                         </tr>
@@ -283,19 +286,22 @@ export default function PurchaseDetail() {
                 </div>
 
                 {/* Payments Section */}
-                <div className="card p-6">
+                <div className="card p-6 shadow-lg border border-[var(--border)]">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[var(--ink)] flex items-center gap-2">
-                            <DollarSign size={20} />
+                            <DollarSign size={20} className="text-[var(--accent-2)]" />
                             {labels.payments || "Payments"}
+                            <span className="ml-auto text-xs bg-[var(--surface-muted)] text-[var(--muted)] px-3 py-1 rounded-full font-semibold">
+                                {payments.length} payments
+                            </span>
                         </h3>
-                        {hasPermission('purchases:create') && (
+                        {hasPermission('purchases:create') && remainingAmount > 0 && (
                             <button
                                 onClick={() => {
                                     setEditingPayment(null);
                                     setShowPaymentModal(true);
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-2)] text-white rounded-xl hover:bg-[var(--accent-2)]/90 transition-all shadow-lg shadow-[var(--accent-2)]/20"
                             >
                                 <Plus size={16} />
                                 {labels.addPayment || "Add Payment"}
@@ -304,23 +310,23 @@ export default function PurchaseDetail() {
                     </div>
 
                     {payments.length > 0 ? (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
                             <table className="w-full">
                                 <thead style={{ background: "var(--surface-muted)" }}>
                                     <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                             {labels.date || "Date"}
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                             {labels.method || "Method"}
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
+                                        <th className="px-4 py-4 text-right text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                             {labels.amount || "Amount"}
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                             {labels.notes || "Notes"}
                                         </th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
+                                        <th className="px-4 py-4 text-center text-xs font-semibold uppercase text-[var(--muted)] tracking-wider">
                                             {labels.actions || "Actions"}
                                         </th>
                                     </tr>
@@ -328,19 +334,25 @@ export default function PurchaseDetail() {
                                 <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
                                     {payments.map((payment, index) => (
                                         <tr key={index} className="hover:bg-[var(--surface-muted)] transition-all">
-                                            <td className="px-4 py-3 text-sm text-[var(--ink)]">
+                                            <td className="px-4 py-4 text-sm text-[var(--ink)] font-medium">
                                                 {new Date(payment.paymentDate).toLocaleDateString()}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-[var(--ink)] capitalize">
-                                                {payment.paymentMethodName || payment.paymentMethod || "—"}
+                                            <td className="px-4 py-4">
+                                                <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                                                    payment.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
+                                                    payment.paymentMethod === 'credit' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-purple-100 text-purple-800'
+                                                }`}>
+                                                    {payment.paymentMethodName || payment.paymentMethod || "—"}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">
+                                            <td className="px-4 py-4 text-right font-bold text-[var(--accent-2)] text-lg">
                                                 Rs {(payment.amount || 0).toLocaleString()}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                            <td className="px-4 py-4 text-sm text-[var(--muted)]">
                                                 {payment.notes || "—"}
                                             </td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     {canEditPayments && (
                                                         <button
@@ -372,8 +384,9 @@ export default function PurchaseDetail() {
                             </table>
                         </div>
                     ) : (
-                        <div className="p-12 text-center">
-                            <p className="text-sm text-[var(--muted)]">
+                        <div className="p-12 text-center bg-[var(--surface-muted)] rounded-xl border border-dashed border-[var(--border)]">
+                            <DollarSign size={48} className="text-[var(--muted)] mx-auto mb-4" />
+                            <p className="text-sm text-[var(--muted)] font-medium">
                                 {labels.noPayments || "No payments recorded yet"}
                             </p>
                         </div>

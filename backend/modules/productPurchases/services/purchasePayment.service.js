@@ -81,7 +81,7 @@ export const createPurchasePayment = async (paymentData) => {
             const creditPaymentAmount = paymentData.creditAmount || paymentData.amount;
             
             // Create qarza payment for credit portion
-            await createQarzaPaymentService({
+            const qarzaPayment = await createQarzaPaymentService({
                 qarzaAccountId: paymentData.creditAccount,
                 amount: creditPaymentAmount,
                 type: 'cashin', // We're receiving credit, so it's cashin
@@ -93,6 +93,13 @@ export const createPurchasePayment = async (paymentData) => {
             // Update credit account balance (increase balance since we owe them)
             await updateQarzaAccountService(creditAccount._id, {
                 balance: creditAccount.balance + creditPaymentAmount
+            });
+
+            // Store qarza account and payment references in purchase
+            const qarzaPayments = purchase.qarzaPayments || [];
+            await updatePurchaseService(purchase._id, {
+                qarzaAccount: paymentData.creditAccount,
+                qarzaPayments: [...qarzaPayments, qarzaPayment._id]
             });
         }
     }
@@ -108,7 +115,7 @@ export const createPurchasePayment = async (paymentData) => {
             const excessAmount = Math.abs(remainingAmount);
             
             // Create qarza payment for excess
-            await createQarzaPaymentService({
+            const qarzaPayment = await createQarzaPaymentService({
                 qarzaAccountId: paymentData.creditAccount,
                 amount: excessAmount,
                 type: 'debit', // They owe us, so it's debit
@@ -120,6 +127,13 @@ export const createPurchasePayment = async (paymentData) => {
             // Update credit account balance (decrease since they owe us)
             await updateQarzaAccountService(creditAccount._id, {
                 balance: creditAccount.balance - excessAmount
+            });
+
+            // Store qarza account and payment references in purchase
+            const qarzaPayments = purchase.qarzaPayments || [];
+            await updatePurchaseService(purchase._id, {
+                qarzaAccount: paymentData.creditAccount,
+                qarzaPayments: [...qarzaPayments, qarzaPayment._id]
             });
         }
     }

@@ -113,6 +113,14 @@ const purchaseSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        qarzaAccount: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "QarzaAccounts",
+        },
+        qarzaPayments: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "QarzaPayments",
+        }],
         // Sync Fields
         createdTimeForSync: { type: Date, default: Date.now },
         updateTimeForSync: { type: Date, default: Date.now },

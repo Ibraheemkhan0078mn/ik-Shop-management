@@ -47,14 +47,18 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
             purchase: purchase._id,
             paymentDate,
             paymentMethod,
-            paymentMethodId: selectedPaymentMethodId,
-            paymentMethodName: selectedPaymentMethodId 
-                ? (paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "")
-                : (payment?.paymentMethodName || ""),
             creditAccount: null,
             cashAmount: 0,
             creditAmount: 0,
         };
+
+        // Only include paymentMethodId if it's not empty (credit payments don't need it)
+        if (selectedPaymentMethodId) {
+            paymentData.paymentMethodId = selectedPaymentMethodId;
+            paymentData.paymentMethodName = paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "";
+        } else {
+            paymentData.paymentMethodName = payment?.paymentMethodName || "";
+        }
 
         if (paymentMethod === 'cash') {
             // Cash mode: full payment automatically
