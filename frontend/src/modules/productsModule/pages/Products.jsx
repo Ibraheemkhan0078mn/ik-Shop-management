@@ -265,20 +265,20 @@ export default function Products() {
                     heading={labels.productManagement}
                     subheading={labels.manageProducts}
                     leftActions={
-                        <>
-                            <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
-                                <ScreenTabButton lucideIcon={Filter} text="Filter" />
+                        <PermissionGuard 
+                            execute={() => { setModalMode("create"); setIsModalOpen(true); }} 
+                            permission="products.create" 
+                            isConfirmation={false}
+                        >
+                            <div id="products-add-button">
+                                <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
                             </div>
-                            <PermissionGuard 
-                                execute={() => { setModalMode("create"); setIsModalOpen(true); }} 
-                                permission="products.create" 
-                                isConfirmation={false}
-                            >
-                                <div id="products-add-button">
-                                    <ScreenTabButton lucideIcon={Package} text={labels.addProduct} />
-                                </div>
-                            </PermissionGuard>
-                        </>
+                        </PermissionGuard>
+                    }
+                    rightActions={
+                        <div id="products-filter-button" onClick={() => setFilterPanelOpen(true)}>
+                            <ScreenTabButton lucideIcon={Filter} text="Filter" />
+                        </div>
                     }
                 />
             </div>

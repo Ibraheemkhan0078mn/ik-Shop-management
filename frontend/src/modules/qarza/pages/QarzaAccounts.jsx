@@ -1,7 +1,7 @@
 // src/modules/qarza/pages/QarzaAccounts.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit2, Trash2, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, Filter, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getQarzaLabels } from "../labels/qarzaLabels.js";
@@ -30,6 +30,16 @@ export default function QarzaAccounts() {
     const [filterBalance, setFilterBalance] = useState("all");
     const [searchName, setSearchName] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+    const hasActiveFilters = filterType !== "all" || filterStatus !== "all" || filterBalance !== "all" || searchName !== "";
+
+    const clearFilters = () => {
+        setFilterType("all");
+        setFilterStatus("all");
+        setFilterBalance("all");
+        setSearchName("");
+    };
 
     // Debounce search input
     useEffect(() => {
@@ -94,49 +104,110 @@ export default function QarzaAccounts() {
                             </div>
                         )
                     }
+                    rightActions={
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                    hasActiveFilters 
+                                        ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                        : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    {language === "en" ? "Filter" : "فلٹر"}
+                                </span>
+                                {hasActiveFilters && (
+                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                )}
+                            </button>
+
+                            {/* Filter Dropdown */}
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                            {language === "en" ? "Filters" : "فلٹرز"}
+                                        </span>
+                                        {hasActiveFilters && (
+                                            <button
+                                                onClick={clearFilters}
+                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                            >
+                                                <X size={12} />
+                                                {language === "en" ? "Clear" : "صاف"}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Search */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Search" : "تلاش"}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name..."
+                                            value={searchName}
+                                            onChange={(e) => setSearchName(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Type Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Type" : "قسم"}
+                                        </label>
+                                        <select
+                                            value={filterType}
+                                            onChange={(e) => setFilterType(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="all">{language === "en" ? "All Types" : "تمام اقسام"}</option>
+                                            <option value="personal">{language === "en" ? "Personal" : "ذاتی"}</option>
+                                            <option value="others">{language === "en" ? "Others" : "دیگر"}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Status Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Status" : "حیثیت"}
+                                        </label>
+                                        <select
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="all">{language === "en" ? "All Status" : "تمام حیثیت"}</option>
+                                            <option value="active">{language === "en" ? "Active" : "فعال"}</option>
+                                            <option value="inactive">{language === "en" ? "Inactive" : "غیر فعال"}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Balance Filter */}
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Balance" : "بیلنس"}
+                                        </label>
+                                        <select
+                                            value={filterBalance}
+                                            onChange={(e) => setFilterBalance(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="all">{language === "en" ? "All Balances" : "تمام بیلنس"}</option>
+                                            <option value="to_pay">{language === "en" ? "To Pay" : "ادا کرنا ہے"}</option>
+                                            <option value="to_receive">{language === "en" ? "To Receive" : "وصول کرنا ہے"}</option>
+                                            <option value="balanced">{language === "en" ? "Balanced" : "متوازن"}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    }
                 />
-                {/* Filters */}
-                <div className="flex gap-3 px-6 py-3 items-center" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)" }}>
-                    <input
-                        type="text"
-                        placeholder="Search by name..."
-                        value={searchName}
-                        onChange={(e) => setSearchName(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)", minWidth: "200px" }}
-                    />
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                    >
-                        <option value="all">All Types</option>
-                        <option value="personal">Personal</option>
-                        <option value="others">Others</option>
-                    </select>
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                    >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                    <select
-                        value={filterBalance}
-                        onChange={(e) => setFilterBalance(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-lg outline-none transition-all focus:ring-2 cursor-pointer"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                    >
-                        <option value="all">All Balances</option>
-                        <option value="to_pay">To Pay</option>
-                        <option value="to_receive">To Receive</option>
-                        <option value="balanced">Balanced</option>
-                    </select>
-                </div>
             </div>
 
             <PaginatedList
