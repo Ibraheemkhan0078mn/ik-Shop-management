@@ -12,6 +12,7 @@ import { X, Search, Pencil, Calendar, Lock, Unlock, Eye, EyeOff } from "lucide-r
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
+import { backendBaseUrl } from "../../../shared/constants/constants.js";
 import {
     createPurchaseReturnApi,
     updatePurchaseReturnApi,
@@ -48,7 +49,7 @@ const Label = ({ children }) => (
     </label>
 );
 
-const Field = ({ children, className = "" }) => <div className={`flex flex-col ${className}`}>{children}</div>;
+const Field = ({ children, className = "" }) => <div className={`flex flex-col overflow-visible ${className}`}>{children}</div>;
 
 const Inp = ({ className = "", ...p }) => (
     <input
@@ -152,7 +153,7 @@ const Btn = ({ children, variant = "primary", size = "md", className = "", ...p 
 
 const Card = ({ title, children, className = "" }) => (
     <div
-        className={`rounded-2xl overflow-hidden ${className}`}
+        className={`rounded-2xl ${className}`}
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
         {title && (
@@ -213,7 +214,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     const batchId = item.batch?._id || item.batch;
                     if (batchId && !stocks[batchId]) {
                         try {
-                            const response = await fetch(`${import.meta.env.VITE_API_URL}/batches/${batchId}`, {
+                            const response = await fetch(`${backendBaseUrl}/batches/${batchId}`, {
                                 headers: {
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 }
@@ -390,7 +391,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     ...prev,
                     [batchId]: {
                         returnQuantity: item.quantity,
-                        returnReason: "",
+                        returnReason: localizedReasons[0]?.value || "damaged",
                         condition: "good",
                         cut: 0,
                         notes: "",
@@ -498,7 +499,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         // Validate purchase return number for duplicates (only in create mode)
         if (!isUpdate && purchaseReturnNumber) {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/purchase-returns/validate-number`, {
+                const response = await fetch(`${backendBaseUrl}/purchase-returns/validate-number`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -654,7 +655,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col"
                 style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -793,7 +794,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                     const refund = isSelected ? calculateRefund(item, details) : 0;
 
                                     return (
-                                        <div key={batchId || idx} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                                        <div key={batchId || idx} className="border rounded-xl" style={{ borderColor: "var(--border)" }}>
                                             {/* Item header with checkbox */}
                                             <div
                                                 className="flex items-center gap-3 px-4 py-3 cursor-pointer transition"
@@ -834,7 +835,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
 
                                             {/* Inline form for selected item */}
                                             {isSelected && (
-                                                <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+                                                <div className="px-4 py-3 border-t overflow-visible" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
                                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                         <Field>
                                                             <Label>{labels.returnQuantity} *</Label>
@@ -856,7 +857,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                                 value={details.returnReason}
                                                                 onChange={(v) => handleItemDetailChange(batchId, "returnReason", v)}
                                                                 placeholder={labels.returnReason + "…"}
-                                                                zIndex={100}
+                                                                zIndex={9999}
                                                             />
                                                         </Field>
                                                         <Field>
