@@ -8,14 +8,9 @@ import {
     qarzaAccountUpdate as qarzaAccountUpdateService,
     qarzaAccountDelete as qarzaAccountDeleteService,
     countQarzaAccounts as countQarzaAccountsService,
-    qarzaPaymentCreate as qarzaPaymentCreateService,
-    getAllQarzaPayments as getAllQarzaPaymentsService,
-    getPaginatedQarzaPayments as getPaginatedQarzaPaymentsService,
-    countQarzaPayments as countQarzaPaymentsService,
-    qarzaPaymentUpdate as qarzaPaymentUpdateService,
-    qarzaPaymentDelete as qarzaPaymentDeleteService,
 } from "../services/qarza.service.js";
-import { getLocalQarzaAccountModel, getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
+import { getLocalQarzaAccountModel } from "../../../configs/connect.db.js";
+import { createTransaction, getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
 
 
 
@@ -133,12 +128,12 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
 
         let accounts = await getAllQarzaAccountsService(query);
         
-        // Filter by balance status on the backend since it requires payment calculation
+        // Filter by balance status on the backend since it requires transaction calculation
         if (filterBalance && filterBalance !== "all") {
             accounts = await Promise.all(accounts.map(async (acc) => {
-                const payments = await getAllQarzaPaymentsService({ qarzaAccountId: acc._id });
-                const net = payments.reduce((sum, p) =>
-                    p.type === "cashin" ? sum + (p.amount || 0) : sum - (p.amount || 0), 0);
+                const transactions = await getTransactions({ sourceType: 'qarza', sourceId: acc._id });
+                const net = transactions.reduce((sum, t) =>
+                    t.creditType === "cashin" ? sum + (t.amount || 0) : sum - (t.amount || 0), 0);
                 return { ...acc, netBalance: net };
             }));
             
@@ -173,32 +168,34 @@ export const getPaginatedQarzaPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let skip = (page - 1) * limit;
         let { qarzaAccountId, source, type } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
         
-        let query = { qarzaAccountId };
+        let query = { sourceType: 'qarza', sourceId: qarzaAccountId };
         
-        // Apply type filter
+        // Apply type filter (map to creditType)
         if (type && type !== 'all' && type !== 'undefined') {
-            query.type = type;
+            if (type === 'cashin') {
+                query.creditType = 'cashin';
+            } else if (type === 'cashout' || type === 'debit') {
+                query.creditType = 'cashout';
+            }
         }
         
-        // Apply source filter
-        if (source && source !== 'all' && source !== 'undefined') {
-            query.source = source;
-        }
+        // Get all transactions for this account
+        let transactions = await getTransactions(query);
         
-        let payments = await getPaginatedQarzaPaymentsService(query, skip, limit);
-
-        let total = await countQarzaPaymentsService(query);
+        // Apply pagination manually since getTransactions doesn't support skip/limit
+        let total = transactions.length;
+        let skip = (page - 1) * limit;
+        let paginatedTransactions = transactions.slice(skip, skip + limit);
 
         return res.json({ 
             success: true, 
-            data: payments,
+            data: paginatedTransactions,
             page,
             limit,
             total,
@@ -284,39 +281,47 @@ export const createQarzaPayment = async (req, res) => {
     try {
         const { qarzaAccountId, amount, type, date, notes, orderId, orderNumber, source, paymentMethod } = req.body;
         let QarzaAccountModel = getLocalQarzaAccountModel();
-        let QarzaPayment = getLocalQarzaPaymentModel();
 
         let existingQarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
         if (!existingQarzaAccount) {
             return res.json({ success: false, msg: "The qarza account is not found" })
         }
 
-        let createdQarzaPayment = await qarzaPaymentCreateService({
-            qarzaAccountId,
-            amount,
-            type,
-            date: new Date(date),
-            notes,
-            orderId: orderId || null,
-            orderNumber: orderNumber || "",
-            source: source || "manual",
-            paymentMethod: paymentMethod || "",
+        // Map qarza payment type to transaction creditType
+        // cashin = we receive money (cashin), cashout/debit = we give money (cashout)
+        const creditType = type === 'cashin' ? 'cashin' : 'cashout';
+
+        // Handle date - use provided date or current date
+        const transactionDate = date ? new Date(date) : new Date();
+        if (isNaN(transactionDate.getTime())) {
+            return res.json({ success: false, msg: "Invalid date provided" });
+        }
+
+        // Create transaction instead of qarza payment
+        const createdTransaction = await createTransaction({
+            sourceType: 'qarza',
+            sourceId: qarzaAccountId,
+            method: type === 'cashin' ? 'credit' : 'credit', // Both are credit transactions for qarza
+            amount: amount,
+            cashAmount: type === 'cashin' ? amount : 0,
+            creditAmount: type === 'cashout' ? amount : amount,
+            creditAccount: qarzaAccountId,
+            creditType: creditType,
+            transactionDate: transactionDate,
+            notes: notes || `Qarza payment: ${type}`,
+            createdBy: req.user?._id,
         });
-        if (!createdQarzaPayment) {
+
+        if (!createdTransaction) {
             return res.json({ success: false, msg: "The payment is not created" })
         }
 
-        // Use update service instead of .save() since findQarzaAccountByIdService returns plain object
-        await qarzaAccountUpdateService(qarzaAccountId, {
-            payments: [...(existingQarzaAccount.payments || []), createdQarzaPayment?._id]
-        });
-
         await changeTrackDocsCreationFunc("update", QarzaAccountModel.modelName, existingQarzaAccount._id)
-        await changeTrackDocsCreationFunc("create", QarzaPayment.modelName, createdQarzaPayment?._id)
 
-        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
+        // Get all transactions for this qarza account
+        const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
 
-        return res.json({ success: true, qarzaPaymentData: allPayments });
+        return res.json({ success: true, qarzaPaymentData: allTransactions });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -325,27 +330,41 @@ export const createQarzaPayment = async (req, res) => {
 export const updateQarzaPayment = async (req, res) => {
     try {
         const { _id, qarzaAccountId, amount, type, date, notes, paymentMethod } = req.body;
-        let QarzaPayment = getLocalQarzaPaymentModel()
         let localQarzaAccountModel = getLocalQarzaAccountModel()
 
         let existingQarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
         if (!existingQarzaAccount) {
-            return res.json({ success: false, msg: "THe qarza account is not found" })
+            return res.json({ success: false, msg: "The qarza account is not found" })
         }
 
-        await qarzaPaymentUpdateService(_id, {
-            amount,
-            type,
-            date: new Date(date),
-            notes,
-            paymentMethod,
-        });
+        // Map qarza payment type to transaction creditType
+        const creditType = type === 'cashin' ? 'cashin' : 'cashout';
 
-        await changeTrackDocsCreationFunc("update", QarzaPayment.modelName, _id)
+        // Handle date - use provided date or keep existing
+        const transactionDate = date ? new Date(date) : undefined;
+        if (date && isNaN(transactionDate.getTime())) {
+            return res.json({ success: false, msg: "Invalid date provided" });
+        }
 
-        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
+        // Update transaction instead of qarza payment
+        const { updateTransaction } = await import("../../transactions/services/transaction.service.js");
+        const updateData = {
+            amount: amount,
+            creditAmount: type === 'cashout' ? amount : amount,
+            creditType: creditType,
+            notes: notes || `Qarza payment: ${type}`,
+        };
+        if (transactionDate) {
+            updateData.transactionDate = transactionDate;
+        }
+        await updateTransaction(_id, updateData);
 
-        return res.json({ success: true, qarzaPaymentData: allPayments });
+        await changeTrackDocsCreationFunc("update", localQarzaAccountModel.modelName, existingQarzaAccount._id)
+
+        // Get all transactions for this qarza account
+        const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
+
+        return res.json({ success: true, qarzaPaymentData: allTransactions });
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error updating payment" });
@@ -355,7 +374,6 @@ export const updateQarzaPayment = async (req, res) => {
 export const deleteQarzaPayment = async (req, res) => {
     try {
         const { paymentId, qarzaAccountId } = req.body;
-        let QarzaPayment = getLocalQarzaPaymentModel()
         let localQarzaAccountModel = getLocalQarzaAccountModel()
 
         let existingQarzaAccount = await findQarzaAccountByIdService(qarzaAccountId)
@@ -363,19 +381,14 @@ export const deleteQarzaPayment = async (req, res) => {
             return res.json({ success: false, msg: "The qarza account is not found" })
         }
 
-        await qarzaPaymentDeleteService(paymentId);
+        await deleteTransaction(paymentId);
 
-        // Use update service instead of .save() since findQarzaAccountByIdService returns plain object
-        await qarzaAccountUpdateService(qarzaAccountId, {
-            payments: existingQarzaAccount.payments.filter(id => id.toString() !== paymentId)
-        });
-
-        await changeTrackDocsCreationFunc("delete", QarzaPayment.modelName, paymentId)
         await changeTrackDocsCreationFunc("update", localQarzaAccountModel.modelName, existingQarzaAccount._id)
 
-        const allPayments = await getAllQarzaPaymentsService({ qarzaAccountId: qarzaAccountId });
+        // Get all transactions for this qarza account
+        const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
 
-        return res.json({ success: true, qarzaPaymentData: allPayments });
+        return res.json({ success: true, qarzaPaymentData: allTransactions });
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error deleting payment" });
@@ -385,8 +398,8 @@ export const deleteQarzaPayment = async (req, res) => {
 export const getQarzaAccountRelatedPayments = async (req, res) => {
     try {
         let { qarzaAccountId } = req.body;
-        let payments = await getAllQarzaPaymentsService({ qarzaAccountId });
-        return res.json({ success: true, data: payments });
+        let transactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
+        return res.json({ success: true, data: transactions });
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error getting payments" });
@@ -401,41 +414,39 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
             return res.json({ success: false, msg: "Account ID is required" });
         }
         
-        const payments = await getAllQarzaPaymentsService({ qarzaAccountId });
+        const account = await getQarzaAccountByIdService(qarzaAccountId);
+        const transactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
         
-        // Calculate manual cashin and cashout
-        const manualCashIn = payments
-            .filter(p => p.source === 'manual' && p.type === 'cashin')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        console.log("Transactions for summary:", transactions);
         
-        const manualCashOut = payments
-            .filter(p => p.source === 'manual' && p.type === 'cashout')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        // Calculate cashin and cashout based on creditType
+        const cashIn = transactions
+            .filter(t => t.creditType === 'cashin')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
         
-        // Calculate POS (treated as cashout)
-        const posAmount = payments
-            .filter(p => p.source === 'pos')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        const cashOut = transactions
+            .filter(t => t.creditType === 'cashout')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
         
-        // Calculate Purchase (treated as cashin)
-        const purchaseAmount = payments
-            .filter(p => p.source === 'purchaseProducts')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-        
-        // Overall calculation: (Manual Cash In + Purchase) - (Manual Cash Out + POS)
-        const totalIn = manualCashIn + purchaseAmount;
-        const totalOut = manualCashOut + posAmount;
-        const overall = totalIn - totalOut;
+        // Overall calculation: Cash In - Cash Out
+        const overall = cashIn - cashOut;
+
+        console.log("Summary calculation:", { cashIn, cashOut, overall, transactionCount: transactions.length });
 
         return res.json({ 
             success: true, 
             data: {
-                manualCashIn,
-                manualCashOut,
-                posAmount,
-                purchaseAmount,
+                account: {
+                    _id: account?._id,
+                    name: account?.name,
+                    type: account?.type,
+                    phoneNo: account?.phoneNo,
+                    address: account?.address
+                },
+                cashIn,
+                cashOut,
                 overall,
-                totalPayments: payments.length
+                totalTransactions: transactions.length
             }
         });
     } catch (err) {
@@ -463,47 +474,37 @@ export const getCreditsDebitsReport = async (req, res) => {
 
         const QarzaAccountModel = getLocalQarzaAccountModel();
 
-        // Build payment filter based on date range
-        let paymentFilter = {};
+        // Build transaction filter based on date range
+        let transactionFilter = { sourceType: 'qarza' };
         if (startDate || endDate) {
-            paymentFilter.date = {};
-            if (startDate) paymentFilter.date.$gte = new Date(startDate);
-            if (endDate) paymentFilter.date.$lte = new Date(endDate);
-        }
-        if (source && source !== 'all') {
-            paymentFilter.source = source;
-        }
-        if (transactionType) {
-            if (transactionType === 'cash') {
-                paymentFilter.$or = [
-                    { source: 'manual' },
-                    { notes: /cash/i }
-                ];
-            } else if (transactionType === 'credit') {
-                paymentFilter.$or = [
-                    { source: 'purchaseProducts' },
-                    { notes: /credit/i }
-                ];
-            } else if (transactionType === 'hybrid') {
-                paymentFilter.notes = /hybrid/i;
+            transactionFilter.transactionDate = {};
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                transactionFilter.transactionDate.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                transactionFilter.transactionDate.$lte = end;
             }
         }
         if (direction) {
             if (direction === 'incoming') {
-                paymentFilter.type = 'cashin';
+                transactionFilter.creditType = 'cashin';
             } else if (direction === 'outgoing') {
-                paymentFilter.type = 'debit';
+                transactionFilter.creditType = 'cashout';
             }
         }
 
-        console.log(paymentFilter)
+        console.log(transactionFilter)
 
-        // Get all payments matching filters
-        const payments = await getAllQarzaPaymentsService(paymentFilter);
+        // Get all transactions matching filters
+        const transactions = await getTransactions(transactionFilter);
 
-        console.log(payments, "the payemnt in qarza report")
-        // Get unique account IDs from payments
-        const accountIdsFromPayments = [...new Set(payments.map(p => p.qarzaAccountId.toString()))];
+        console.log(transactions, "the transactions in qarza report")
+        // Get unique account IDs from transactions
+        const accountIdsFromTransactions = [...new Set(transactions.map(t => t.sourceId.toString()))];
 
         // Build account filter
         let accountFilter = {};
@@ -511,7 +512,7 @@ export const getCreditsDebitsReport = async (req, res) => {
             accountFilter._id = accountId;
         } else if (startDate || endDate) {
             // If date filter is applied, only show accounts with transactions in that period
-            accountFilter._id = { $in: accountIdsFromPayments };
+            accountFilter._id = { $in: accountIdsFromTransactions };
         }
         if (accountType) {
             accountFilter.type = accountType;
@@ -520,18 +521,18 @@ export const getCreditsDebitsReport = async (req, res) => {
         // Get accounts
         const accounts = await getAllQarzaAccountsService(accountFilter);
 
-        // Calculate summary for each account based on actual payments
+        // Calculate summary for each account based on actual transactions
         const accountSummaries = accounts.map(account => {
-            const accountPayments = payments.filter(p => p.qarzaAccountId.toString() === account._id.toString());
+            const accountTransactions = transactions.filter(t => t.sourceId.toString() === account._id.toString());
             
-            // Calculate from actual payments
-            const totalPaid = accountPayments.filter(p => p.type === 'cashin').reduce((sum, p) => sum + p.amount, 0);
-            const totalToPay = accountPayments.filter(p => p.type === 'debit').reduce((sum, p) => sum + p.amount, 0);
+            // Calculate from actual transactions
+            const totalPaid = accountTransactions.filter(t => t.creditType === 'cashin').reduce((sum, t) => sum + (t.amount || 0), 0);
+            const totalToPay = accountTransactions.filter(t => t.creditType === 'cashout').reduce((sum, t) => sum + (t.amount || 0), 0);
             const remainingBalance = totalToPay - totalPaid; // Positive = need to pay, Negative = they owe us
             
-            const lastTransaction = accountPayments.length > 0 ? accountPayments[0].date : null;
+            const lastTransaction = accountTransactions.length > 0 ? accountTransactions[0].transactionDate : null;
 
-            // Determine status based on actual payment calculation
+            // Determine status based on actual transaction calculation
             let accountStatus = 'cleared';
             if (remainingBalance > 0) {
                 accountStatus = 'to_pay'; // We need to pay them
@@ -560,10 +561,10 @@ export const getCreditsDebitsReport = async (req, res) => {
                 totalPaid,
                 totalToPay,
                 remainingBalance,
-                lastTransaction,
+                lastTransaction: lastTransaction ? new Date(lastTransaction).toISOString() : null,
                 tag,
                 accountStatus,
-                transactionCount: accountPayments.length
+                transactionCount: accountTransactions.length
             };
         });
 
@@ -625,32 +626,40 @@ export const getAccountLedger = async (req, res) => {
             return res.json({ success: false, msg: "Account not found" });
         }
 
-        let paymentFilter = { qarzaAccountId: accountId };
+        let transactionFilter = { sourceType: 'qarza', sourceId: accountId };
         if (startDate || endDate) {
-            paymentFilter.date = {};
-            if (startDate) paymentFilter.date.$gte = new Date(startDate);
-            if (endDate) paymentFilter.date.$lte = new Date(endDate);
+            transactionFilter.transactionDate = {};
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                transactionFilter.transactionDate.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                transactionFilter.transactionDate.$lte = end;
+            }
         }
 
-        const payments = await getAllQarzaPaymentsService(paymentFilter);
+        const transactions = await getTransactions(transactionFilter);
 
         // Calculate running balance
         let runningBalance = 0;
-        const ledger = payments.map(payment => {
-            const amount = payment.type === 'cashin' ? payment.amount : -payment.amount;
+        const ledger = transactions.map(transaction => {
+            const amount = transaction.creditType === 'cashin' ? (transaction.amount || 0) : -(transaction.amount || 0);
             runningBalance += amount;
             
             return {
-                date: payment.date,
-                description: payment.notes || '',
-                source: payment.source,
-                transactionType: payment.source === 'manual' ? 'cash' : (payment.source === 'purchase' ? 'credit' : 'hybrid'),
-                direction: payment.type === 'cashin' ? 'incoming' : 'outgoing',
-                debitAmount: payment.type === 'debit' ? payment.amount : 0,
-                creditAmount: payment.type === 'cashin' ? payment.amount : 0,
+                date: transaction.transactionDate ? new Date(transaction.transactionDate).toISOString() : null,
+                description: transaction.notes || '',
+                source: 'qarza',
+                transactionType: 'credit',
+                direction: transaction.creditType === 'cashin' ? 'incoming' : 'outgoing',
+                debitAmount: transaction.creditType === 'cashout' ? (transaction.amount || 0) : 0,
+                creditAmount: transaction.creditType === 'cashin' ? (transaction.amount || 0) : 0,
                 runningBalance,
-                orderNumber: payment.orderNumber || '',
-                orderId: payment.orderId || null
+                orderNumber: '',
+                orderId: null
             };
         });
 
@@ -681,22 +690,23 @@ export const getPaginatedQarzaPaymentsWithoutAccount = async (req, res) => {
         let skip = (page - 1) * limit;
         let search = req.query.search || "";
         
-        let query = { qarzaAccountId: { $exists: false } };
+        let query = { sourceType: 'qarza', sourceId: { $exists: false } };
         
         if (search) {
             query.$or = [
-                { name: { $regex: search, $options: "i" } },
                 { notes: { $regex: search, $options: "i" } }
             ];
         }
         
-        let payments = await getPaginatedQarzaPaymentsService(query, skip, limit);
-
-        let total = await countQarzaPaymentsService(query);
+        let transactions = await getTransactions(query);
+        
+        // Apply pagination manually
+        let total = transactions.length;
+        let paginatedTransactions = transactions.slice(skip, skip + limit);
 
         return res.json({ 
             success: true, 
-            data: payments,
+            data: paginatedTransactions,
             page,
             limit,
             total,

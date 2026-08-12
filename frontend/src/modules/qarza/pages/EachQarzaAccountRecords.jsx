@@ -23,6 +23,11 @@ const STATUS_COLOR = {
     cashout: { bg: "rgba(239,68,68,0.1)", text: "#ef4444", Icon: ArrowUpRight },
 };
 
+const getPaymentType = (item) => {
+    // Use creditType for transactions, fallback to type for old qarza payments
+    return item.creditType || item.type || 'cashin';
+};
+
 export default function EachQarzaAccountRecords() {
     const { id } = useParams();
     console.log("the account id", id)
@@ -31,6 +36,7 @@ export default function EachQarzaAccountRecords() {
 
     const { data: summary } = useAccountPaymentsSummary(id);
     const [deletePayment] = useDeleteQarzaPayment();
+    const accountName = summary?.account?.name || "";
 
     const [modal, setModal] = useState(null);
     const [showPdfModal, setShowPdfModal] = useState(false);
@@ -38,17 +44,15 @@ export default function EachQarzaAccountRecords() {
     
     // Filter states
     const [filterType, setFilterType] = useState("all");
-    const [filterSource, setFilterSource] = useState("all");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     const refresh = useCallback(() => {}, []);
 
     const clearFilters = () => {
         setFilterType("all");
-        setFilterSource("all");
     };
 
-    const hasActiveFilters = filterType !== "all" || filterSource !== "all";
+    const hasActiveFilters = filterType !== "all";
 
     const handleDelete = async (paymentId) => {
         if (!window.confirm("Delete this payment?")) return;
@@ -78,7 +82,8 @@ export default function EachQarzaAccountRecords() {
 
                 {/* Desktop rows */}
                 {items.map((item) => {
-                    const { bg, text, Icon } = STATUS_COLOR[item.type] ?? STATUS_COLOR.cashin;
+                    const paymentType = getPaymentType(item);
+                    const { bg, text, Icon } = STATUS_COLOR[paymentType] ?? STATUS_COLOR.cashin;
                     return (
                         <div key={item._id}
                             className="hidden lg:grid lg:grid-cols-6 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
@@ -87,7 +92,7 @@ export default function EachQarzaAccountRecords() {
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
                                     <Icon className="w-4 h-4" style={{ color: text }} />
                                 </div>
-                                <span className="text-xs font-semibold uppercase" style={{ color: text }}>{item.type}</span>
+                                <span className="text-xs font-semibold uppercase" style={{ color: text }}>{paymentType}</span>
                             </div>
                             <div className="col-span-1">
                                 <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
@@ -100,7 +105,7 @@ export default function EachQarzaAccountRecords() {
                                 </p>
                             </div>
                             <div className="col-span-1 text-sm" style={{ color: "var(--muted)" }}>
-                                {new Date(item.date).toLocaleDateString()}
+                                {new Date(item.transactionDate || item.date).toLocaleDateString()}
                             </div>
                             <div onClick={e => e.stopPropagation()} className="col-span-1 flex items-center gap-1.5">
                                 <button
@@ -132,7 +137,8 @@ export default function EachQarzaAccountRecords() {
                 {/* Mobile / Tablet cards */}
                 <div className="lg:hidden flex flex-col gap-3 pt-1">
                     {items.map((item) => {
-                        const { bg, text, Icon } = STATUS_COLOR[item.type] ?? STATUS_COLOR.cashin;
+                        const paymentType = getPaymentType(item);
+                        const { bg, text, Icon } = STATUS_COLOR[paymentType] ?? STATUS_COLOR.cashin;
                         return (
                             <div key={`m-${item._id}`} className="rounded-2xl p-4 border transition-all duration-150 hover:shadow-md"
                                 style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 2px 12px rgba(64,45,28,0.07)" }}>
@@ -142,7 +148,7 @@ export default function EachQarzaAccountRecords() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-xs font-semibold uppercase" style={{ color: text }}>{item.type}</span>
+                                            <span className="text-xs font-semibold uppercase" style={{ color: text }}>{paymentType}</span>
                                             <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
                                                 Rs {(item.amount || 0).toLocaleString()}
                                             </p>
@@ -151,7 +157,7 @@ export default function EachQarzaAccountRecords() {
                                             {item.notes || "-"}
                                         </p>
                                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                                            {new Date(item.date).toLocaleDateString()}
+                                            {new Date(item.transactionDate || item.date).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
@@ -204,7 +210,7 @@ export default function EachQarzaAccountRecords() {
             {/* Page Heading */}
             <div className="flex-none mb-6">
                 <PageHeading
-                    heading={language === "en" ? "Account Payments" : "اکاؤنٹ ادائیگیاں"}
+                    heading={`${language === "en" ? "Account Payments" : "اکاؤنٹ ادائیگیاں"} ${accountName ? `(${accountName})` : ''}`}
                     subheading={language === "en" ? "View and manage payment records" : "ادائیگی ریکارڈز دیکھیں اور انتظام کریں"}
                     leftActions={
                         (role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
@@ -257,7 +263,7 @@ export default function EachQarzaAccountRecords() {
                                     </div>
 
                                     {/* Type Filter */}
-                                    <div className="mb-3">
+                                    <div>
                                         <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
                                             {language === "en" ? "Type" : "قسم"}
                                         </label>
@@ -271,23 +277,6 @@ export default function EachQarzaAccountRecords() {
                                             <option value="cashout">{language === "en" ? "Cash Out" : "کیش آؤٹ"}</option>
                                         </select>
                                     </div>
-
-                                    {/* Source Filter */}
-                                    <div>
-                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                            {language === "en" ? "Source" : "ذریعہ"}
-                                        </label>
-                                        <select
-                                            value={filterSource}
-                                            onChange={(e) => setFilterSource(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
-                                        >
-                                            <option value="all">{language === "en" ? "All Sources" : "تمام ذرائع"}</option>
-                                            <option value="manual">{language === "en" ? "Manual" : "دستی"}</option>
-                                            <option value="pos">{language === "en" ? "POS" : "POS"}</option>
-                                            <option value="purchaseProducts">{language === "en" ? "Purchase" : "خریداری"}</option>
-                                        </select>
-                                    </div>
                                 </div>
                             )}
                         </div>
@@ -297,31 +286,19 @@ export default function EachQarzaAccountRecords() {
 
             {/* summary cards */}
             {summary && (
-                <div className="grid grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-4 mb-6">
                     {[
                         { 
-                            label: "Manual Cash In", 
-                            value: summary.manualCashIn || 0, 
+                            label: "Cash In", 
+                            value: summary.cashIn || 0, 
                             color: "#10b981", 
                             bg: "rgba(16,185,129,0.08)" 
                         },
                         { 
-                            label: "Manual Cash Out", 
-                            value: summary.manualCashOut || 0, 
+                            label: "Cash Out", 
+                            value: summary.cashOut || 0, 
                             color: "#ef4444", 
                             bg: "rgba(239,68,68,0.08)" 
-                        },
-                        { 
-                            label: "POS", 
-                            value: summary.posAmount || 0, 
-                            color: "#f59e0b", 
-                            bg: "rgba(245,158,11,0.08)" 
-                        },
-                        { 
-                            label: "Purchase", 
-                            value: summary.purchaseAmount || 0, 
-                            color: "#8b5cf6", 
-                            bg: "rgba(139,92,246,0.08)" 
                         },
                         { 
                             label: "Overall", 
@@ -353,7 +330,6 @@ export default function EachQarzaAccountRecords() {
                     renderItems={renderItems}
                     filter={{
                         type: filterType !== "all" ? filterType : undefined,
-                        source: filterSource !== "all" ? filterSource : undefined,
                     }}
                     queryArgs={{ qarzaAccountId: id }}
                 />
