@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, Plus, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, Download, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { usePurchase, useGetPurchasePayments, useDeletePurchasePayment, useGetPurchasePaymentStatus, useRecalculatePurchasePaidAmount } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -24,6 +24,8 @@ export default function PurchaseDetail() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState(null);
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [expandedItems, setExpandedItems] = useState({});
+    const [expandedPayments, setExpandedPayments] = useState({});
 
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -216,6 +218,7 @@ export default function PurchaseDetail() {
                                         <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Discount</th>
                                         <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Tax</th>
                                         <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Subtotal</th>
+                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
@@ -231,26 +234,106 @@ export default function PurchaseDetail() {
                                             : (item.tax || 0);
                                         const subtotal = baseTotal - discountAmount + taxAmount;
 
+                                        const isExpanded = expandedItems[index];
+
                                         return (
-                                            <tr key={index}>
-                                                <td className="py-3">
-                                                    <p className="font-medium text-[var(--ink)]">
-                                                        {item.name || item.product?.name || item.productName || "—"}
-                                                    </p>
-                                                    {item.product?.productCode && (
-                                                        <p className="text-xs text-[var(--muted)]">{item.product.productCode}</p>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 text-center text-[var(--ink)]">{quantity}</td>
-                                                <td className="py-3 text-right text-[var(--ink)]">Rs {price.toLocaleString()}</td>
-                                                <td className="py-3 text-right text-red-600">
-                                                    {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
-                                                </td>
-                                                <td className="py-3 text-right text-green-600">
-                                                    {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
-                                                </td>
-                                                <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {subtotal.toLocaleString()}</td>
-                                            </tr>
+                                            <React.Fragment key={index}>
+                                                <tr>
+                                                    <td className="py-3">
+                                                        <p className="font-medium text-[var(--ink)]">
+                                                            {item.name || item.product?.name || item.productName || "—"}
+                                                        </p>
+                                                        {item.product?.productCode && (
+                                                            <p className="text-xs text-[var(--muted)]">{item.product.productCode}</p>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 text-center text-[var(--ink)]">{quantity}</td>
+                                                    <td className="py-3 text-right text-[var(--ink)]">Rs {price.toLocaleString()}</td>
+                                                    <td className="py-3 text-right text-red-600">
+                                                        {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
+                                                    </td>
+                                                    <td className="py-3 text-right text-green-600">
+                                                        {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
+                                                    </td>
+                                                    <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {subtotal.toLocaleString()}</td>
+                                                    <td className="py-3 text-center">
+                                                        <button
+                                                            onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                            className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                            style={{ color: "var(--muted)" }}
+                                                            title={isExpanded ? "Hide calculations" : "Show calculations"}
+                                                        >
+                                                            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr>
+                                                        <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                {/* Total Price Calculation */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Cost Price:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {price.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {baseTotal.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Discount Calculation */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Calculation</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Discount:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toFixed(2)}`}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Discount Amount:</span>
+                                                                            <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {discountAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Tax Calculation */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation (on After Discount)</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(baseTotal - discountAmount).toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Tax:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toFixed(2)}`}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Tax Amount:</span>
+                                                                            <span className="font-mono text-green-600" style={{ color: "var(--accent-2)" }}>+Rs {taxAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Final Subtotal:</span>
+                                                                    <span className="text-lg font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {subtotal.toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>
@@ -291,52 +374,114 @@ export default function PurchaseDetail() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border)]">
-                                        {payments.map((payment, index) => (
-                                            <tr key={index}>
-                                                <td className="py-3 text-sm text-[var(--ink)]">
-                                                    {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
-                                                </td>
-                                                <td className="py-3">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                                        payment.method === 'cash' ? 'bg-green-100 text-green-800' :
-                                                        payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-purple-100 text-purple-800'
-                                                    }`}>
-                                                        {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
-                                                         payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
-                                                         payment.method || "—"}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
-                                                <td className="py-3 text-sm text-[var(--muted)]">{payment.notes || "—"}</td>
-                                                <td className="py-3">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {canEditPayments && (
-                                                            <button
-                                                                onClick={() => handleEditPayment(payment)}
-                                                                className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg"
-                                                                title="Edit payment"
-                                                            >
-                                                                <Edit size={15} />
-                                                            </button>
-                                                        )}
-                                                        {canDeletePayments && (
-                                                            <ConfirmDialog
-                                                                onConfirm={() => handleDeletePayment(payment._id)}
-                                                                message="Are you sure you want to delete this payment?"
-                                                            >
+                                        {payments.map((payment, index) => {
+                                            const isPaymentExpanded = expandedPayments[index];
+                                            return (
+                                                <React.Fragment key={index}>
+                                                    <tr>
+                                                        <td className="py-3 text-sm text-[var(--ink)]">
+                                                            {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="py-3">
+                                                            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                                                payment.method === 'cash' ? 'bg-green-100 text-green-800' :
+                                                                payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-purple-100 text-purple-800'
+                                                            }`}>
+                                                                {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
+                                                                 payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
+                                                                 payment.method || "—"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
+                                                        <td className="py-3 text-sm text-[var(--muted)]">{payment.notes || "—"}</td>
+                                                        <td className="py-3">
+                                                            <div className="flex items-center justify-center gap-1">
                                                                 <button
-                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
-                                                                    title="Delete payment"
+                                                                    onClick={() => setExpandedPayments(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                                    className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
+                                                                    title={isPaymentExpanded ? "Hide details" : "Show details"}
                                                                 >
-                                                                    <Trash2 size={15} />
+                                                                    {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
                                                                 </button>
-                                                            </ConfirmDialog>
-                                                        )}
+                                                                {canEditPayments && (
+                                                                    <button
+                                                                        onClick={() => handleEditPayment(payment)}
+                                                                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg"
+                                                                        title="Edit payment"
+                                                                    >
+                                                                        <Edit size={15} />
+                                                                    </button>
+                                                                )}
+                                                                {canDeletePayments && (
+                                                                    <ConfirmDialog
+                                                                        onConfirm={() => handleDeletePayment(payment._id)}
+                                                                        message="Are you sure you want to delete this payment?"
+                                                                    >
+                                                                        <button
+                                                                            className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
+                                                                            title="Delete payment"
+                                                                        >
+                                                                            <Trash2 size={15} />
+                                                                        </button>
+                                                                    </ConfirmDialog>
+                                                                )}
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            {isPaymentExpanded && (
+                                                <tr>
+                                                    <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Payment Details</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Payment ID:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{payment._id || "—"}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Transaction Date:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{new Date(payment.transactionDate || payment.paymentDate).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Payment Method:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.method || "—"}</span>
+                                                                    </div>
+                                                                    {payment.creditAccount && (
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Credit Account:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.creditAccount.name || "—"}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Amount Information</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Amount:</span>
+                                                                        <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>Rs {(payment.amount || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Notes:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.notes || "—"}</span>
+                                                                    </div>
+                                                                    {payment.paymentMethodName && (
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Payment Method Name:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.paymentMethodName}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                        );
+                                    })}
                                     </tbody>
                                 </table>
                             </div>

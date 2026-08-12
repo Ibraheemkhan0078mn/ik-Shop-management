@@ -12,6 +12,7 @@ const INITIAL_FILTERS = {
   isActive: '',
   searchText: '',
   productCode: '',
+  barcode: '',
 };
 
 export const useProductFilters = () => {
@@ -92,6 +93,9 @@ export const useProductFilters = () => {
     }
     if (debouncedFilters.productCode) {
       params.productCode = debouncedFilters.productCode;
+    }
+    if (debouncedFilters.barcode) {
+      params.barcode = debouncedFilters.barcode;
     }
 
     return params;

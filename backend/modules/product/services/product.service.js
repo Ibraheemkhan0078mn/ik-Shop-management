@@ -151,6 +151,12 @@ const getPaginationProduct = async (filters = {}) => {
         query.productCode = codeRegex;
     }
 
+    // Barcode filter (exact match or partial match)
+    if (filterParams.barcode) {
+        const barcodeRegex = new RegExp(filterParams.barcode, 'i');
+        query.barcode = barcodeRegex;
+    }
+
     const products = await findProductService(query, {
         sort: { createdAt: -1 },
         skip: skip,

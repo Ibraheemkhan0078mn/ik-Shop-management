@@ -1,15 +1,18 @@
-export const paginateModel = async ({ model, page = 1, limit = 20, populate = [], sort = { createdAt: -1 } }) => {
+export const paginateModel = async ({ model, page = 1, limit = 20, populate = [], sort = { createdAt: -1 }, includeDeleted = false }) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    let query = model.find().sort(sort).skip(skip).limit(limitNum);
+    // Filter out deleted documents unless explicitly requested
+    const filter = includeDeleted ? {} : { isDeleted: { $ne: true } };
+
+    let query = model.find(filter).sort(sort).skip(skip).limit(limitNum);
 
     populate.forEach(p => { query = query.populate(p); });
 
     const [data, total] = await Promise.all([
         query,
-        model.countDocuments()
+        model.countDocuments(filter)
     ]);
 
     return {
