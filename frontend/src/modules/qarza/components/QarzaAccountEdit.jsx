@@ -14,7 +14,7 @@ const QarzaAccountEdit = ({ getqarzaAccounts, currentToUpdateAccount, setVisibil
         qarzaProfileImage: "",
         _id: "",
         name: "",
-        type: "personal",
+        type: "general",
         phoneNo: "",
         address: "",
         notes: "",
@@ -224,38 +224,20 @@ const QarzaAccountEdit = ({ getqarzaAccounts, currentToUpdateAccount, setVisibil
 
                     <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar px-8 lg:px-12 pb-12 space-y-8">
 
-                        {/* Section: Name & Type */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex flex-col gap-2 group">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Account Holder Name</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        required
-                                        placeholder="Full name"
-                                        className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-cyan-600 focus:bg-white transition-all font-bold text-slate-700 placeholder:text-slate-300 shadow-inner"
-                                    />
-                                    <i className="ri-user-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cyan-600 text-xl transition-colors"></i>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Profile Category</label>
-                                <div className="relative">
-                                    <select
-                                        name="type"
-                                        value={formData.type}
-                                        onChange={handleChange}
-                                        className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 outline-none focus:border-cyan-600 focus:bg-white transition-all font-bold text-slate-700 appearance-none cursor-pointer shadow-inner"
-                                    >
-                                        <option value="personal">Personal</option>
-                                        <option value="others">Others</option>
-                                    </select>
-                                    <i className="ri-arrow-down-s-line absolute right-4 top-1/2 -translate-y-1/2 text-cyan-600 font-bold pointer-events-none"></i>
-                                </div>
+                        {/* Section: Name */}
+                        <div className="flex flex-col gap-2 group">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Account Holder Name</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="Full name"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-cyan-600 focus:bg-white transition-all font-bold text-slate-700 placeholder:text-slate-300 shadow-inner"
+                                />
+                                <i className="ri-user-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cyan-600 text-xl transition-colors"></i>
                             </div>
                         </div>
 
@@ -265,7 +247,7 @@ const QarzaAccountEdit = ({ getqarzaAccounts, currentToUpdateAccount, setVisibil
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Phone Number</label>
                                 <div className="relative">
                                     <input
-                                        type="text"
+                                        type="number"
                                         name="phoneNo"
                                         value={formData.phoneNo}
                                         onChange={handleChange}

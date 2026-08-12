@@ -5,6 +5,7 @@ import {
     getAllQarzaAccounts as getAllQarzaAccountsService,
     getQarzaAccountById as getQarzaAccountByIdService,
     findQarzaAccountById as findQarzaAccountByIdService,
+    findQarzaAccountByTypeAndName as findQarzaAccountByTypeAndNameService,
     qarzaAccountUpdate as qarzaAccountUpdateService,
     qarzaAccountDelete as qarzaAccountDeleteService,
     countQarzaAccounts as countQarzaAccountsService,
@@ -413,14 +414,20 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
     try {
         let { qarzaAccountId } = req.query;
 
-        if (!qarzaAccountId) {
-            return res.json({ success: false, msg: "Account ID is required" });
-        }
-        
+        // First verify the account exists
         const account = await getQarzaAccountByIdService(qarzaAccountId);
-        const transactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
         
-        console.log("Transactions for summary:", transactions);
+        if (!account) {
+            return res.json({ 
+                success: false, 
+                msg: "Qarza account not found",
+                accountExists: false 
+            });
+        }
+
+        // Get transactions for this account
+        const transactionFilter = { sourceType: 'qarza', sourceId: qarzaAccountId };
+        const transactions = await getTransactions(transactionFilter);
         
         // Calculate cashin and cashout based on creditType
         const cashIn = transactions
@@ -438,6 +445,7 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
 
         return res.json({ 
             success: true, 
+            accountExists: true,
             data: {
                 account: {
                     _id: account?._id,
@@ -454,7 +462,11 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
         });
     } catch (err) {
         console.log(err);
-        return res.json({ success: false, msg: "Error getting payment summary" });
+        return res.json({ 
+            success: false, 
+            msg: "Error getting payment summary",
+            accountExists: false 
+        });
     }
 };
 

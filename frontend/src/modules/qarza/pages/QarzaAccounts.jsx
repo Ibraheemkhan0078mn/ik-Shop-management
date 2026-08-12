@@ -25,17 +25,15 @@ export default function QarzaAccounts() {
 
     const [deleteAccount] = useDeleteQarzaAccount();
     const [modal, setModal] = useState(null);
-    const [filterType, setFilterType] = useState("all");
     const [filterStatus, setFilterStatus] = useState("all");
     const [filterBalance, setFilterBalance] = useState("all");
     const [searchName, setSearchName] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-    const hasActiveFilters = filterType !== "all" || filterStatus !== "all" || filterBalance !== "all" || searchName !== "";
+    const hasActiveFilters = filterStatus !== "all" || filterBalance !== "all" || searchName !== "";
 
     const clearFilters = () => {
-        setFilterType("all");
         setFilterStatus("all");
         setFilterBalance("all");
         setSearchName("");
@@ -155,22 +153,6 @@ export default function QarzaAccounts() {
                                         />
                                     </div>
 
-                                    {/* Type Filter */}
-                                    <div className="mb-3">
-                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                            {language === "en" ? "Type" : "قسم"}
-                                        </label>
-                                        <select
-                                            value={filterType}
-                                            onChange={(e) => setFilterType(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
-                                        >
-                                            <option value="all">{language === "en" ? "All Types" : "تمام اقسام"}</option>
-                                            <option value="personal">{language === "en" ? "Personal" : "ذاتی"}</option>
-                                            <option value="others">{language === "en" ? "Others" : "دیگر"}</option>
-                                        </select>
-                                    </div>
-
                                     {/* Status Filter */}
                                     <div className="mb-3">
                                         <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
@@ -216,7 +198,6 @@ export default function QarzaAccounts() {
                 dataKey="data"
                 filter={{
                     search: debouncedSearch,
-                    filterType,
                     filterStatus,
                     filterBalance
                 }}

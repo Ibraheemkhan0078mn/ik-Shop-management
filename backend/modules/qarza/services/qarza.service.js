@@ -17,6 +17,10 @@ const findQarzaAccountById = async (id) => {
     return await findOneQarzaAccountService({ _id: id });
 };
 
+const findQarzaAccountByTypeAndName = async (type, name) => {
+    return await findOneQarzaAccountService({ type, name });
+};
+
 const qarzaAccountUpdate = async (id, data) => {
     return await updateQarzaAccountService(id, data);
 };
@@ -58,6 +62,7 @@ export {
     getAllQarzaAccounts,
     getQarzaAccountById,
     findQarzaAccountById,
+    findQarzaAccountByTypeAndName,
     qarzaAccountUpdate,
     qarzaAccountDelete,
     countQarzaAccounts,

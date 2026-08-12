@@ -1,12 +1,15 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Package, Plus } from "lucide-react";
+import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy } from "lucide-react";
 import { useCustomer } from "../services/customers.service.js";
-import { useOrdersByCustomer } from "../../orders/services/orders.service.js";
+import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
+import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
+import { useUpdateCustomer } from "../services/customers.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useAccountPaymentsSummary, useAccountPaymentsPaginated, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
+import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 
@@ -22,6 +25,7 @@ export default function CustomerDetail() {
     
     const [activeTab, setActiveTab] = useState("details");
     const [modal, setModal] = useState(null);
+    const [returnModalOrderId, setReturnModalOrderId] = useState(null);
     const [startDate, setStartDate] = useState(() => {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -29,7 +33,7 @@ export default function CustomerDetail() {
     });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     
-    const { data: customerData, isLoading } = useCustomer(id);
+    const { data: customerData, isLoading, refetch: refetchCustomer } = useCustomer(id);
     const { data: ordersData } = useOrdersByCustomer({ 
         customerId: id, 
         startDate, 
@@ -41,7 +45,12 @@ export default function CustomerDetail() {
     
     const qarzaAccountId = customer?.qarzaAccountId;
     const { data: summary } = useAccountPaymentsSummary(qarzaAccountId);
+    const accountExists = summary?.accountExists !== false;
     const [deletePayment] = useDeleteQarzaPayment();
+    const [deleteOrder] = useDeleteOrder();
+    const [createQarzaAccount] = useCreateQarzaAccount();
+    const [updateCustomer] = useUpdateCustomer();
+    const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
     const refresh = useCallback(() => {}, []);
 
@@ -53,6 +62,49 @@ export default function CustomerDetail() {
             refresh();
         } catch (e) {
             showError(e?.data?.message ?? "Delete failed");
+        }
+    };
+
+    const handleDeleteOrder = async (orderId) => {
+        if (window.confirm("Delete this order?")) {
+            try {
+                await deleteOrder(orderId).unwrap();
+                showSuccess("Order deleted");
+            } catch (error) {
+                showError(error?.data?.message || "Failed to delete order");
+            }
+        }
+    };
+
+    const handleCreateQarzaAccount = async () => {
+        if (!customer) return;
+        setIsCreatingAccount(true);
+        try {
+            const formData = new FormData();
+            formData.append("name", customer.name || "");
+            formData.append("type", "customer");
+            formData.append("phoneNo", customer.phoneNo || "");
+            formData.append("address", customer.address || "");
+            formData.append("notes", `Auto-created for customer: ${customer.name}`);
+            formData.append("isActive", "true");
+
+            const result = await createQarzaAccount(formData).unwrap();
+            
+            if (result.success && result.accounts) {
+                const newAccount = result.accounts.find(acc => acc.name === customer.name && acc.type === 'customer');
+                if (newAccount) {
+                    await updateCustomer({ 
+                        id: customer._id, 
+                        qarzaAccountId: newAccount._id 
+                    }).unwrap();
+                    showSuccess("Qarza account created and linked successfully");
+                    await refetchCustomer();
+                }
+            }
+        } catch (error) {
+            showError(error?.data?.message || "Failed to create qarza account");
+        } finally {
+            setIsCreatingAccount(false);
         }
     };
 
@@ -73,6 +125,17 @@ export default function CustomerDetail() {
                     payment={modal.payment}
                     onClose={() => setModal(null)}
                     onSuccess={refresh}
+                />
+            )}
+            {returnModalOrderId && (
+                <OrderReturnModal
+                    isOpen={!!returnModalOrderId}
+                    orderId={returnModalOrderId}
+                    onClose={() => setReturnModalOrderId(null)}
+                    onSuccess={() => {
+                        setReturnModalOrderId(null);
+                        refresh();
+                    }}
                 />
             )}
 
@@ -158,7 +221,7 @@ export default function CustomerDetail() {
             )}
 
             {/* Credits & Debits Tab */}
-            {activeTab === "credits" && customer.qarzaAccountId && (
+            {activeTab === "credits" && qarzaAccountId && accountExists && (
                 <div className="space-y-6">
                     {/* Summary Cards */}
                     {summary && (
@@ -261,10 +324,21 @@ export default function CustomerDetail() {
             )}
 
             {/* Credits & Debits Tab - No Account */}
-            {activeTab === "credits" && !customer.qarzaAccountId && (
+            {activeTab === "credits" && (!qarzaAccountId || !accountExists) && (
                 <div className="card p-6">
                     <div className="text-center py-8">
-                        <p className="text-[var(--muted)]">No credits/debits account associated with this customer</p>
+                        <p className="text-[var(--muted)] mb-4">
+                            {qarzaAccountId && !accountExists 
+                                ? "Qarza account has been deleted. Please create a new account." 
+                                : "No credits/debits account associated with this customer"}
+                        </p>
+                        <button
+                            onClick={handleCreateQarzaAccount}
+                            disabled={isCreatingAccount}
+                            className="btn-add"
+                        >
+                            <Plus size={16} /> {isCreatingAccount ? "Creating..." : "Create Account"}
+                        </button>
                     </div>
                 </div>
             )}
@@ -289,39 +363,108 @@ export default function CustomerDetail() {
                             />
                         </div>
                     </div>
+                    
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Orders</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{orders.length}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Amount</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Paid Amount</p>
+                            <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {orders.reduce((sum, o) => sum + (o.paid || 0), 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
+                            <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {orders.reduce((sum, o) => sum + (o.remainingAmount || 0), 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+
                     {orders.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead style={{ background: "var(--surface-muted)" }}>
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Order #</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Payment</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Status</th>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)" }}>
+                                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Order #</th>
+                                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Date & Time</th>
+                                        <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-[var(--muted)] hidden md:table-cell">Items</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Paid</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Remaining</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Total</th>
+                                        <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
-                                    {orders.map((order) => (
-                                        <tr key={order._id} className="hover:bg-[var(--surface-muted)]">
-                                            <td className="px-4 py-3 text-sm font-medium text-[var(--ink)]">{order.orderNumber}</td>
-                                            <td className="px-4 py-3 text-sm text-[var(--muted)]">
-                                                {new Date(order.createdAt).toLocaleDateString()}
+                                <tbody>
+                                    {orders.map((order, index) => (
+                                        <tr key={order._id || order.id}
+                                            className="transition-all duration-150 hover:bg-(--surface-muted)"
+                                            style={{ background: index % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-(--ink) whitespace-nowrap">{order.orderNumber || "—"}</span>
+                                                    <button
+                                                        onClick={() => navigator.clipboard.writeText(order.orderNumber)}
+                                                        className="p-1 rounded hover:bg-(--surface-muted) transition-all"
+                                                        title="Copy order number"
+                                                    >
+                                                        <Copy size={12} className="text-(--muted)" />
+                                                    </button>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-right text-[var(--accent-2)]">
-                                                Rs {order.totalAmount?.toLocaleString() || 0}
+                                            <td className="px-5 py-3.5">
+                                                <p className="font-medium text-(--ink) whitespace-nowrap">
+                                                    {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </p>
+                                                <p className="text-xs text-(--muted) whitespace-nowrap">
+                                                    {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-[var(--muted)] capitalize">
-                                                {order.paymentMethod}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`px-2 py-1 text-xs rounded-full ${
-                                                    order.status === 'completed' 
-                                                        ? 'bg-green-100 text-green-700' 
-                                                        : 'bg-red-100 text-red-700'
-                                                }`}>
-                                                    {order.status}
+                                            <td className="px-5 py-3.5 text-center hidden md:table-cell">
+                                                <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(15,118,110,0.12)", color: "var(--accent-2)" }}>
+                                                    {order.items?.length || 0}
                                                 </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right">
+                                                <span className="font-semibold text-green-600 whitespace-nowrap">
+                                                    Rs {(order.paid ?? 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right">
+                                                <span className="font-semibold text-orange-600 whitespace-nowrap">
+                                                    Rs {(order.remainingAmount ?? 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right">
+                                                <span className="font-bold text-(--accent-2) whitespace-nowrap">
+                                                    Rs {(order.totalAmount || 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex gap-1.5 justify-center">
+                                                    <button
+                                                        onClick={() => navigate(`/order-history/${order._id}`)}
+                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setReturnModalOrderId(order._id)}
+                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-orange-400 hover:text-orange-500"
+                                                        title="Return Order"
+                                                    >
+                                                        <RotateCcw size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteOrder(order._id)}
+                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

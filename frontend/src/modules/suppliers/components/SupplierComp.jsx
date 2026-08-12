@@ -5,6 +5,7 @@ import SupplierModal from "../components/SupplierModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { Edit, Trash2, Truck } from "lucide-react";
+import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -25,6 +26,7 @@ export default function SupplierComp({ setVisibility }) {
     const [deleteSupplier] = useDeleteSupplier();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [imageLoadStates, setImageLoadStates] = useState({});
 
     const language = userQuery?.data?.language || userQuery?.language || "en";
 
@@ -40,6 +42,14 @@ export default function SupplierComp({ setVisibility }) {
 
     const handleEdit = (row) => {
         setEditId(row._id);
+    };
+
+    const handleImageLoad = (itemId) => {
+        setImageLoadStates(prev => ({ ...prev, [itemId]: true }));
+    };
+
+    const handleImageError = (itemId) => {
+        setImageLoadStates(prev => ({ ...prev, [itemId]: false }));
     };
 
     const renderItems = (items) => {
@@ -63,19 +73,33 @@ export default function SupplierComp({ setVisibility }) {
                         style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
                         <div className="col-span-4 flex items-center gap-3 min-w-0">
                             <div className="relative shrink-0">
-                                {item.image
-                                    ? (
-                                        <div className="relative">
-                                            <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" />
-                                            {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
-                                        </div>
-                                    )
-                                    : (
-                                        <div className="relative">
+                                {item.image && imageLoadStates[item._id] === true ? (
+                                    <div className="relative">
+                                        <BigViewImage 
+                                            src={`${IMAGE_BASE}/${item.image}`} 
+                                            alt={item.name} 
+                                            className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" 
+                                            onLoad={() => handleImageLoad(item._id)}
+                                            onError={() => handleImageError(item._id)}
+                                        />
+                                        {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        {item.image && imageLoadStates[item._id] === undefined ? (
+                                            <BigViewImage 
+                                                src={`${IMAGE_BASE}/${item.image}`} 
+                                                alt={item.name} 
+                                                className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border) group-hover:ring-(--accent-2) transition-all" 
+                                                onLoad={() => handleImageLoad(item._id)}
+                                                onError={() => handleImageError(item._id)}
+                                            />
+                                        ) : (
                                             <PlaceholderImg size={11} name={item.name} />
-                                            {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
-                                        </div>
-                                    )}
+                                        )}
+                                        {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                    </div>
+                                )}
                             </div>
                             <div className="font-semibold text-(--ink) truncate text-sm min-w-0">{item.name}</div>
                         </div>
@@ -106,9 +130,29 @@ export default function SupplierComp({ setVisibility }) {
                             style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 2px 12px rgba(64,45,28,0.07)" }}>
                             <div className="flex items-start gap-3">
                                 <div className="relative shrink-0">
-                                    {item.image
-                                        ? <img src={`${IMAGE_BASE}/${item.image}`} alt={item.name} className="w-16 h-16 rounded-xl object-cover ring-1 ring-(--border)" />
-                                        : <PlaceholderImg size={16} name={item.name} />}
+                                    {item.image && imageLoadStates[item._id] === true ? (
+                                        <BigViewImage 
+                                            src={`${IMAGE_BASE}/${item.image}`} 
+                                            alt={item.name} 
+                                            className="w-16 h-16 rounded-xl object-cover ring-1 ring-(--border)" 
+                                            onLoad={() => handleImageLoad(item._id)}
+                                            onError={() => handleImageError(item._id)}
+                                        />
+                                    ) : (
+                                        <>
+                                            {item.image && imageLoadStates[item._id] === undefined ? (
+                                                <BigViewImage 
+                                                    src={`${IMAGE_BASE}/${item.image}`} 
+                                                    alt={item.name} 
+                                                    className="w-16 h-16 rounded-xl object-cover ring-1 ring-(--border)" 
+                                                    onLoad={() => handleImageLoad(item._id)}
+                                                    onError={() => handleImageError(item._id)}
+                                                />
+                                            ) : (
+                                                <PlaceholderImg size={16} name={item.name} />
+                                            )}
+                                        </>
+                                    )}
                                     {item.isActive && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
                                 </div>
                                 <div className="flex-1 min-w-0">

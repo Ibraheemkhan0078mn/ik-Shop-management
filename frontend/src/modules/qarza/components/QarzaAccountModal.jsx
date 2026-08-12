@@ -13,7 +13,7 @@ const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp
 
 const EMPTY_FORM = {
     name: "",
-    type: "personal",
+    type: "general",
     phoneNo: "",
     address: "",
     notes: "",
@@ -277,25 +277,13 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                             placeholder="e.g., John Doe"
                         />
 
-                        {/* Type */}
-                        <SelectField
-                            label={labels.type}
-                            name="type"
-                            value={form.type}
-                            onChange={updateField}
-                            options={[
-                                { label: labels.personal, value: "personal" },
-                                { label: labels.others, value: "others" },
-                            ]}
-                            placeholder="Select Type"
-                        />
-
                         {/* Phone */}
                         <Field
                             label={labels.phone}
                             name="phoneNo"
                             value={form.phoneNo}
                             onChange={updateField}
+                            type="number"
                             placeholder="e.g., 0300-1234567"
                         />
 
