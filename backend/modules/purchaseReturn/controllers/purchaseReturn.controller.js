@@ -46,8 +46,18 @@ export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
         sort: { createdAt: -1 }
     });
 
-    // Manually fetch supplier and product data using findOne
+    // Manually fetch supplier, purchase, and product data using findOne
     for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.purchase) {
+            const purchase = await findByIdPurchaseService(purchaseReturn.purchase);
+            if (purchase) {
+                purchaseReturn.purchase = {
+                    _id: purchase._id,
+                    invoiceNumber: purchase.invoiceNumber
+                };
+            }
+        }
+
         if (purchaseReturn.supplier) {
             const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
             if (supplier) {
@@ -89,8 +99,18 @@ export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => 
         limit: parseInt(limit)
     });
 
-    // Manually fetch supplier and product data using findOne
+    // Manually fetch supplier, purchase, and product data using findOne
     for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.purchase) {
+            const purchase = await findByIdPurchaseService(purchaseReturn.purchase);
+            if (purchase) {
+                purchaseReturn.purchase = {
+                    _id: purchase._id,
+                    invoiceNumber: purchase.invoiceNumber
+                };
+            }
+        }
+
         if (purchaseReturn.supplier) {
             const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
             if (supplier) {
@@ -134,6 +154,17 @@ export const getPurchaseReturnDataById = asyncHandler(async (req, res) => {
     const purchaseReturn = await findByIdPurchaseReturnService(id);
     if (!purchaseReturn) {
         throw new Error("Purchase return not found");
+    }
+
+    // Manually fetch purchase data using findOne
+    if (purchaseReturn.purchase) {
+        const purchase = await findByIdPurchaseService(purchaseReturn.purchase);
+        if (purchase) {
+            purchaseReturn.purchase = {
+                _id: purchase._id,
+                purchaseNumber: purchase.purchaseNumber
+            };
+        }
     }
 
     // Manually fetch supplier data using findOne

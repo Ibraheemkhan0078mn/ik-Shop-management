@@ -112,18 +112,13 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
         let limit = parseInt(req.query.limit) || 20;
         let skip = (page - 1) * limit;
         let search = req.query.search || "";
-        let filterType = req.query.filterType || "all";
         let filterStatus = req.query.filterStatus || "all";
         let filterBalance = req.query.filterBalance || "all";
 
-        let query = {};
+        let query = { type: "general" };
         
         if (search) {
             query.name = { $regex: search, $options: "i" };
-        }
-        
-        if (filterType && filterType !== "all") {
-            query.type = filterType;
         }
         
         if (filterStatus && filterStatus !== "all") {
