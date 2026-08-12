@@ -1,7 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef } from "react";
-import { Plus, Check, X, DollarSign, Eye, Copy, RotateCcw } from "lucide-react";
-import { useSelector } from "react-redux";
+import { Plus, Check, X, DollarSign, Eye, Copy, RotateCcw, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
@@ -113,6 +112,8 @@ export default function ProductPurchasePage() {
                                     <th className="px-4 py-3 font-semibold">{labels.invoice}</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
                                     <th className="px-4 py-3 font-semibold text-right">{labels.total}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">{labels.paid || "Paid"}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">{labels.remaining || "Remaining"}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.date}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.status}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.payment}</th>
@@ -147,7 +148,6 @@ export default function ProductPurchasePage() {
 }
 
 function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, onReturn, onView }) {
-    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseLabels(language);
@@ -157,6 +157,11 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, on
     const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
     const status = purchase?.status ?? 'ordered';
     const paymentStatus = purchase?.paymentStatus ?? 'pending';
+    
+    // Calculate paid and remaining from purchase data
+    const totalAmount = purchase?.totalAmount ?? 0;
+    const paidAmount = purchase?.paidAmount ?? 0;
+    const remainingAmount = totalAmount - paidAmount;
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -229,6 +234,12 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, on
             <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
                 Rs {(purchase?.totalAmount ?? 0).toLocaleString()}
             </td>
+            <td className="px-4 py-3 text-right font-semibold tabular-nums text-green-600">
+                Rs {paidAmount.toLocaleString()}
+            </td>
+            <td className="px-4 py-3 text-right font-semibold tabular-nums text-orange-600">
+                Rs {remainingAmount.toLocaleString()}
+            </td>
             <td className="px-4 py-3 text-ink-muted">{date}</td>
             <td className="px-4 py-3">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}>
@@ -253,46 +264,56 @@ function PurchaseRow({ purchase, onEdit, onDelete, onStatusUpdate, onPayment, on
                         <>
                             <PermissionGuard execute={() => onStatusUpdate(purchaseId, 'delivered')} permission="purchases.update" isConfirmation={true}>
                                 <button 
-                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1">
+                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
+                                    title={labels.delivered}
+                                >
                                     <Check className="w-3 h-3" />
-                                    {labels.delivered}
                                 </button>
                             </PermissionGuard>
                             <PermissionGuard execute={() => onStatusUpdate(purchaseId, 'rejected')} permission="purchases.update" isConfirmation={true}>
                                 <button 
-                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1">
+                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1"
+                                    title={labels.rejected}
+                                >
                                     <X className="w-3 h-3" />
-                                    {labels.rejected}
                                 </button>
                             </PermissionGuard>
                         </>
                     )}
-                    {status === 'delivered' && paymentStatus !== 'full' && (
+                    {status === 'delivered' && remainingAmount > 0 && (
                         <PermissionGuard execute={() => onPayment?.()} permission="purchases.payment" isConfirmation={true}>
                             <button 
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                                title={labels.pay}
+                            >
                                 <DollarSign className="w-3 h-3" />
-                                {labels.pay}
                             </button>
                         </PermissionGuard>
                     )}
                     {status === 'delivered' && (
                         <PermissionGuard execute={() => onReturn?.()} permission="purchases.return" isConfirmation={false}>
                             <button 
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 flex items-center gap-1">
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 flex items-center gap-1"
+                                title={labels.return || "Return"}
+                            >
                                 <RotateCcw className="w-3 h-3" />
-                                {labels.return || "Return"}
                             </button>
                         </PermissionGuard>
                     )}
                     <PermissionGuard execute={onEdit} permission="purchases.update" isConfirmation={true}>
-                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80">
-                            {labels.edit}
+                        <button 
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80"
+                            title={labels.edit}
+                        >
+                            <Edit className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                     <PermissionGuard execute={onDelete} permission="purchases.delete" isConfirmation={true}>
-                        <button className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100">
-                            {labels.delete}
+                        <button 
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
+                            title={labels.delete}
+                        >
+                            <Trash2 className="w-3 h-3" />
                         </button>
                     </PermissionGuard>
                 </div>

@@ -71,10 +71,13 @@ const getTransactions = async (filter = {}) => {
         }
     }
     
-    return await findTransactionService(query, {
+    const result = await findTransactionService(query, {
         populate: ['creditAccount', 'paymentMethod', 'createdBy'],
         sort: { transactionDate: -1 }
     });
+    
+    // Return array directly, unwrapping if result has data property
+    return Array.isArray(result) ? result : (result?.data || []);
 };
 
 const getTransactionById = async (id) => {
@@ -105,6 +108,99 @@ const deleteTransaction = async (id) => {
     return await deleteOneTransactionService(id);
 };
 
+/**
+ * Create transaction(s) for a purchase payment
+ * - Cash: creates 1 transaction
+ * - Credit: creates 1 transaction with credit account
+ * - Hybrid: creates 2 transactions (1 cash, 1 credit)
+ */
+const createPurchaseTransaction = async (paymentData) => {
+    const { 
+        purchase, 
+        paymentMethod, 
+        amount, 
+        cashAmount, 
+        creditAmount, 
+        creditAccount, 
+        paymentMethodId, 
+        paymentMethodName, 
+        paymentDate, 
+        notes, 
+        createdBy 
+    } = paymentData;
+
+    const transactions = [];
+
+    if (paymentMethod === 'cash') {
+        // Single cash transaction
+        const cashTransaction = await createTransactionService({
+            sourceType: 'purchase',
+            sourceId: purchase,
+            method: 'cash',
+            amount: amount,
+            cashAmount: cashAmount || amount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes || `Cash payment for purchase`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+    } else if (paymentMethod === 'credit') {
+        // Single credit transaction
+        const creditTransaction = await createTransactionService({
+            sourceType: 'purchase',
+            sourceId: purchase,
+            method: 'credit',
+            amount: amount,
+            cashAmount: 0,
+            creditAmount: creditAmount || amount,
+            creditAccount: creditAccount,
+            creditType: 'cashin', // We're receiving credit, so it's cashin
+            transactionDate: paymentDate,
+            notes: notes || `Credit payment for purchase`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+
+    } else if (paymentMethod === 'hybrid') {
+        // Two transactions: one cash, one credit
+        const cashTransaction = await createTransactionService({
+            sourceType: 'purchase',
+            sourceId: purchase,
+            method: 'cash',
+            amount: cashAmount,
+            cashAmount: cashAmount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (cash portion)` : `Cash portion of hybrid payment for purchase`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+        const creditTransaction = await createTransactionService({
+            sourceType: 'purchase',
+            sourceId: purchase,
+            method: 'credit',
+            amount: creditAmount,
+            cashAmount: 0,
+            creditAmount: creditAmount,
+            creditAccount: creditAccount,
+            creditType: 'cashin', // We're receiving credit, so it's cashin
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (credit portion)` : `Credit portion of hybrid payment for purchase`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+    }
+
+    return transactions;
+};
+
 export { 
     createTransactionService, 
     findTransactionService, 
@@ -118,5 +214,6 @@ export {
     getTransactionsBySource,
     createTransaction,
     updateTransaction,
-    deleteTransaction
+    deleteTransaction,
+    createPurchaseTransaction
 };

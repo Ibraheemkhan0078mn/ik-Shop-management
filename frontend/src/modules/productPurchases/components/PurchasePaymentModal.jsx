@@ -6,7 +6,7 @@ import { usePaymentMethods } from "../../settings/services/paymentMethod.service
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 
-export default function PurchasePaymentModal({ purchase, payment, onClose, onSuccess }) {
+export default function PurchasePaymentModal({ purchase, payment, paymentStatus, onClose, onSuccess }) {
     const isEditing = Boolean(payment);
     const [paymentDate, setPaymentDate] = useState(payment?.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     const [paymentMethod, setPaymentMethod] = useState(payment?.paymentMethod || "cash");
@@ -19,7 +19,11 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    const remainingAmount = purchase?.totalAmount - (purchase?.paidAmount || 0);
+    // Use live payment status from API if available, otherwise fall back to purchase data
+    const totalPaid = paymentStatus?.totalPaid || purchase?.paidAmount || 0;
+    const remainingAmount = paymentStatus?.remainingAmount !== undefined 
+        ? paymentStatus.remainingAmount 
+        : (purchase?.totalAmount - totalPaid);
     const editingAmount = payment?.amount || remainingAmount;
 
     // Auto-set cash amount based on payment method
@@ -297,11 +301,21 @@ export default function PurchasePaymentModal({ purchase, payment, onClose, onSuc
                                 <input
                                     type="number"
                                     value={cashAmount}
-                                    onChange={(e) => setCashAmount(e.target.value)}
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        if (value <= remainingAmount) {
+                                            setCashAmount(e.target.value);
+                                        }
+                                    }}
                                     placeholder="Enter cash amount"
+                                    max={remainingAmount}
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                                     required
                                 />
+                                <p className="text-xs text-[var(--muted)] mt-1">
+                                    Maximum: Rs {remainingAmount.toLocaleString()} | 
+                                    Credit: Rs {(remainingAmount - (parseFloat(cashAmount) || 0)).toLocaleString()}
+                                </p>
                             </div>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>

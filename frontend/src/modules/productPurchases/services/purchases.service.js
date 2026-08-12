@@ -28,7 +28,7 @@ export const purchaseApi = baseApi.injectEndpoints({
 
 
         getPurchaseByInvoiceNumber: build.query({
-            query: (id, ...body) => ({ url: `/purchases/getPurchaseByInvoiceNumber`, method: "POST", body: {invoiceNumber: id} }),
+            query: (id) => ({ url: `/purchases/getPurchaseByInvoiceNumber`, method: "POST", body: {invoiceNumber: id} }),
             transformResponse: (raw) => raw.data || raw,
             providesTags: (result, error, id) => [{ type: "Purchase", id }],
         }),
@@ -70,6 +70,13 @@ export const purchaseApi = baseApi.injectEndpoints({
             providesTags: (result, error, purchaseId) => [{ type: "Purchase", id: `payments-${purchaseId}` }],
         }),
 
+        // Get Purchase Payment Status
+        getPurchasePaymentStatus: build.query({
+            query: (purchaseId) => ({ url: `/purchases/${purchaseId}/payment-status` }),
+            transformResponse: (raw) => raw.data || raw,
+            providesTags: (result, error, purchaseId) => [{ type: "Purchase", id: `payment-status-${purchaseId}` }],
+        }),
+
         // Update Payment
         updatePurchasePayment: build.mutation({
             query: ({ paymentId, ...body }) => ({ 
@@ -104,6 +111,13 @@ export const purchaseApi = baseApi.injectEndpoints({
             query: () => ({ url: "/purchases/generate-number", method: "GET" }),
             transformResponse: (raw) => raw.data || raw,
         }),
+
+        // Recalculate Purchase Paid Amount
+        recalculatePurchasePaidAmount: build.mutation({
+            query: (id) => ({ url: `/purchases/${id}/recalculate-payment`, method: "POST" }),
+            transformResponse: (raw) => raw.data || raw,
+            invalidatesTags: (result, error, id) => ["Purchase", { type: "Purchase", id }, { type: "Purchase", id: `payments-${id}` }, { type: "Purchase", id: `payment-status-${id}` }],
+        }),
     }),
 });
 
@@ -118,8 +132,10 @@ export const {
     useUpdatePurchaseStatusMutation: useUpdatePurchaseStatus,
     useCreatePurchasePaymentMutation: useCreatePurchasePayment,
     useGetPurchasePaymentsQuery: useGetPurchasePayments,
+    useGetPurchasePaymentStatusQuery: useGetPurchasePaymentStatus,
     useUpdatePurchasePaymentMutation: useUpdatePurchasePayment,
     useDeletePurchasePaymentMutation: useDeletePurchasePayment,
     useGetPurchasesBySupplierQuery: usePurchasesBySupplier,
     useGeneratePurchaseNumberMutation: useGeneratePurchaseNumber,
+    useRecalculatePurchasePaidAmountMutation: useRecalculatePurchasePaidAmount,
 } = purchaseApi;

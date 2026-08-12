@@ -10,7 +10,9 @@ import {
     updatePurchaseStatus,
     createPurchasePaymentData,
     getPurchasePaymentsData,
+    getPurchasePaymentStatusData,
     deletePurchasePaymentData,
+    recalculatePurchasePaidAmountData,
     generatePurchaseNumberData,
 } from "../controllers/purchase.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
@@ -29,6 +31,8 @@ router.put("/updatePurchase/:id", authorize("admin"), updatePurchaseData);
 router.put("/:id/status", authorize("admin"), updatePurchaseStatus);
 router.post("/:id/payments", authorize("admin"), createPurchasePaymentData);
 router.get("/:id/payments", getPurchasePaymentsData);
+router.get("/:id/payment-status", getPurchasePaymentStatusData);
+router.post("/:id/recalculate-payment", authorize("admin"), recalculatePurchasePaidAmountData);
 router.delete("/payments/:paymentId", authorize("admin"), deletePurchasePaymentData);
 router.delete("/:id", authorize("admin"), deletePurchaseData);
 export default router;

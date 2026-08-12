@@ -13,13 +13,11 @@ import {
     updatePurchase,
     deletePurchase,
     generatePurchaseNumber,
+    calculatePurchasePaymentStatus,
+    recalculatePurchasePaidAmount,
 } from "../services/purchase.service.js";
-import {
-    createPurchasePayment,
-    getPurchasePayments,
-    getPurchasePaymentById,
-    deletePurchasePayment,
-} from "../services/purchasePayment.service.js";
+import { createPurchasePayment } from "../services/purchasePayment.service.js";
+import { getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
 import { findOneProductService } from "../../product/services/product.crud.js";
 
@@ -375,7 +373,6 @@ export const createPurchasePaymentData = asyncHandler(async (req, res) => {
             createdBy: req.user?._id,
         };
 
-        console.log(paymentData, "The payment data is here &&&")
         const payment = await createPurchasePayment(paymentData);
         res.status(201).json({
             success: true,
@@ -389,7 +386,7 @@ export const createPurchasePaymentData = asyncHandler(async (req, res) => {
 
 export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
     try {
-        const payments = await getPurchasePayments(req.params.id);
+        const payments = await getTransactions({ sourceType: 'purchase', sourceId: req.params.id });
         res.status(200).json({
             success: true,
             message: "Purchase payments retrieved successfully",
@@ -400,13 +397,45 @@ export const getPurchasePaymentsData = asyncHandler(async (req, res) => {
     }
 });
 
-export const deletePurchasePaymentData = asyncHandler(async (req, res) => {
+export const getPurchasePaymentStatusData = asyncHandler(async (req, res) => {
     try {
-        const result = await deletePurchasePayment(req.params.paymentId);
+        const purchase = await getPurchaseById(req.params.id);
+        if (!purchase) {
+            return res.status(404).json({ success: false, message: "Purchase not found" });
+        }
+
+        const paymentStatus = await calculatePurchasePaymentStatus(purchase._id, purchase.totalAmount);
         res.status(200).json({
             success: true,
-            message: result.message,
+            message: "Purchase payment status retrieved successfully",
+            data: paymentStatus,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const deletePurchasePaymentData = asyncHandler(async (req, res) => {
+    try {
+        const result = await deleteTransaction(req.params.paymentId);
+        res.status(200).json({
+            success: true,
+            message: "Payment deleted successfully",
             data: result,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+export const recalculatePurchasePaidAmountData = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        const paymentStatus = await recalculatePurchasePaidAmount(id);
+        res.status(200).json({
+            success: true,
+            message: "Purchase paid amount recalculated successfully",
+            data: paymentStatus,
         });
     } catch (error) {
         return res.status(400).json({ success: false, message: error.message });

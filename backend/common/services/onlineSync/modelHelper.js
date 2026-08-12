@@ -18,6 +18,7 @@ import {
     getLocalSupplierModel,
     getLocalPurchaseModel,
     getLocalPurchasePaymentModel,
+    getLocalTransactionModel,
     getLocalOrderModel,
     getLocalHoldOrderModel,
     getLocalStaffModel,
@@ -47,6 +48,7 @@ import {
     getOnlineSupplierModel,
     getOnlinePurchaseModel,
     getOnlinePurchasePaymentModel,
+    getOnlineTransactionModel,
     getOnlineOrderModel,
     getOnlineHoldOrderModel,
     getOnlineStaffModel,
@@ -64,6 +66,7 @@ const localModelMap = {
     customer: getLocalCustomerModel,
     qarzaAccount: getLocalQarzaAccountModel,
     qarzaPayment: getLocalQarzaPaymentModel,
+    QarzaPayment: getLocalQarzaPaymentModel,
     imageChangeTrack: getLocalImageChangeTrackModel,
     expense: getLocalExpensesModel,
     expenseCategory: getLocalExpenseCategoryModel,
@@ -77,6 +80,8 @@ const localModelMap = {
     supplier: getLocalSupplierModel,
     purchase: getLocalPurchaseModel,
     purchasePayment: getLocalPurchasePaymentModel,
+    transaction: getLocalTransactionModel,
+    transactions: getLocalTransactionModel,
     order: getLocalOrderModel,
     holdOrder: getLocalHoldOrderModel,
     staff: getLocalStaffModel,
@@ -94,6 +99,7 @@ const onlineModelMap = {
     customer: getOnlineCustomerModel,
     qarzaAccount: getOnlineQarzaAccountModel,
     qarzaPayment: getOnlineQarzaPaymentModel,
+    QarzaPayment: getOnlineQarzaPaymentModel,
     imageChangeTrack: getOnlineImageChangeTrackModel,
     expense: getOnlineExpensesModel,
     expenseCategory: getOnlineExpenseCategoryModel,
@@ -107,6 +113,8 @@ const onlineModelMap = {
     supplier: getOnlineSupplierModel,
     purchase: getOnlinePurchaseModel,
     purchasePayment: getOnlinePurchasePaymentModel,
+    transaction: getOnlineTransactionModel,
+    transactions: getOnlineTransactionModel,
     order: getOnlineOrderModel,
     holdOrder: getOnlineHoldOrderModel,
     staff: getOnlineStaffModel,
@@ -117,7 +125,9 @@ const onlineModelMap = {
 };
 
 export function getLocalModelByName(modelName) {
-    const modelGetter = localModelMap[modelName];
+    // Handle case-insensitive model name lookup
+    const normalizedName = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+    const modelGetter = localModelMap[normalizedName] || localModelMap[modelName];
     if (!modelGetter) {
         console.warn(`[modelHelper] Local model not found for: ${modelName}`);
         return null;
@@ -126,7 +136,9 @@ export function getLocalModelByName(modelName) {
 }
 
 export function getOnlineModelByName(modelName) {
-    const modelGetter = onlineModelMap[modelName];
+    // Handle case-insensitive model name lookup
+    const normalizedName = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+    const modelGetter = onlineModelMap[normalizedName] || onlineModelMap[modelName];
     if (!modelGetter) {
         console.warn(`[modelHelper] Online model not found for: ${modelName}`);
         return null;
@@ -155,6 +167,7 @@ const permissionStringMap = {
     supplier: ["supplier-view"],
     purchase: ["purchase-view"],
     purchasePayment: ["purchase-payment-view"],
+    transaction: ["transaction-view"],
     order: ["order-view"],
     holdOrder: ["hold-order-view"],
     staff: ["staff-view"],

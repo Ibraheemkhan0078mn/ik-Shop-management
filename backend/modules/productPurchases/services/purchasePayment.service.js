@@ -1,10 +1,4 @@
 import { 
-    createPurchasePaymentService, 
-    findPurchasePaymentService, 
-    findByIdPurchasePaymentService, 
-    deleteOnePurchasePaymentService 
-} from "./purchasePayment.crud.js";
-import { 
     findByIdPurchaseService, 
     updatePurchaseService 
 } from "./purchase.crud.js";
@@ -18,6 +12,12 @@ import {
 import { 
     findByIdPaymentMethodService 
 } from "../../settings/services/paymentMethod.crud.js";
+import { 
+    createPurchaseTransaction,
+    getTransactions,
+    deleteTransaction
+} from "../../transactions/services/transaction.service.js";
+import { recalculatePurchasePaidAmount } from "./purchase.service.js";
 
 export const createPurchasePayment = async (paymentData) => {
     const purchase = await findByIdPurchaseService(paymentData.purchase);
@@ -29,17 +29,6 @@ export const createPurchasePayment = async (paymentData) => {
         throw new Error("Cannot make payment for purchase that is not delivered");
     }
 
-    const totalPaid = purchase.paidAmount + paymentData.amount;
-    const remainingAmount = purchase.totalAmount - totalPaid;
-
-    // Update payment status
-    let paymentStatus = purchase.paymentStatus;
-    if (remainingAmount <= 0) {
-        paymentStatus = 'full';
-    } else if (totalPaid > 0) {
-        paymentStatus = 'partial';
-    }
-
     // Get payment method name if paymentMethodId is provided
     let paymentMethodName = paymentData.paymentMethodName || "";
     if (paymentData.paymentMethodId) {
@@ -49,28 +38,25 @@ export const createPurchasePayment = async (paymentData) => {
         }
     }
     
-    // Create purchase payment using CRUD service
-    const purchasePayment = await createPurchasePaymentService({
+    // Create transactions using the new transaction system
+    const transactions = await createPurchaseTransaction({
         purchase: paymentData.purchase,
-        amount: paymentData.amount,
-        paymentDate: paymentData.paymentDate,
         paymentMethod: paymentData.paymentMethod,
-        paymentMethodId: paymentData.paymentMethodId,
-        paymentMethodName: paymentMethodName,
-        creditAccount: paymentData.creditAccount,
+        amount: paymentData.amount,
         cashAmount: paymentData.cashAmount || 0,
         creditAmount: paymentData.creditAmount || 0,
+        creditAccount: paymentData.creditAccount,
+        paymentMethodId: paymentData.paymentMethodId,
+        paymentMethodName: paymentMethodName,
+        paymentDate: paymentData.paymentDate,
         notes: paymentData.notes,
         createdBy: paymentData.createdBy,
     });
 
-    // Update purchase
-    await updatePurchaseService(purchase._id, {
-        paidAmount: totalPaid,
-        paymentStatus: paymentStatus
-    });
+    // Recalculate and update purchase paidAmount from all transactions
+    await recalculatePurchasePaidAmount(purchase._id);
 
-    // Handle credit account payments
+    // Handle credit account payments (qarza account balance updates only)
     if (paymentData.paymentMethod === 'credit' || paymentData.paymentMethod === 'hybrid') {
         if (paymentData.creditAccount) {
             const creditAccount = await findByIdQarzaAccountService(paymentData.creditAccount);
@@ -94,85 +80,34 @@ export const createPurchasePayment = async (paymentData) => {
             await updateQarzaAccountService(creditAccount._id, {
                 balance: creditAccount.balance + creditPaymentAmount
             });
-
-            // Store qarza account and payment references in purchase
-            const qarzaPayments = purchase.qarzaPayments || [];
-            await updatePurchaseService(purchase._id, {
-                qarzaAccount: paymentData.creditAccount,
-                qarzaPayments: [...qarzaPayments, qarzaPayment._id]
-            });
         }
     }
 
-    // If payment is full and there's excess payment (only for cash payments), adjust to credit account
-    if (paymentStatus === 'full' && remainingAmount < 0 && paymentData.paymentMethod === 'cash') {
-        if (paymentData.creditAccount) {
-            const creditAccount = await findByIdQarzaAccountService(paymentData.creditAccount);
-            if (!creditAccount) {
-                throw new Error("Credit account not found");
-            }
-
-            const excessAmount = Math.abs(remainingAmount);
-            
-            // Create qarza payment for excess
-            const qarzaPayment = await createQarzaPaymentService({
-                qarzaAccountId: paymentData.creditAccount,
-                amount: excessAmount,
-                type: 'debit', // They owe us, so it's debit
-                date: paymentData.paymentDate,
-                notes: `Excess payment from purchase: ${purchase.invoiceNumber}`,
-                source: 'purchaseProducts',
-            });
-
-            // Update credit account balance (decrease since they owe us)
-            await updateQarzaAccountService(creditAccount._id, {
-                balance: creditAccount.balance - excessAmount
-            });
-
-            // Store qarza account and payment references in purchase
-            const qarzaPayments = purchase.qarzaPayments || [];
-            await updatePurchaseService(purchase._id, {
-                qarzaAccount: paymentData.creditAccount,
-                qarzaPayments: [...qarzaPayments, qarzaPayment._id]
-            });
-        }
-    }
-
-    return purchasePayment;
+    return transactions;
 };
 
 export const getPurchasePayments = async (purchaseId) => {
-    return await findPurchasePaymentService(
-        { purchase: purchaseId },
-        { 
-            populate: 'creditAccount', 
-            sort: { paymentDate: -1 } 
-        }
-    );
-};
-
-export const getPurchasePaymentById = async (id) => {
-    return await findByIdPurchasePaymentService(id, {
-        populate: ['purchase', 'creditAccount']
-    });
+    return await getTransactions({ sourceType: 'purchase', sourceId: purchaseId });
 };
 
 export const deletePurchasePayment = async (paymentId) => {
-    const payment = await findByIdPurchasePaymentService(paymentId);
-    if (!payment) {
+    // Get the transaction to delete
+    const transactions = await getTransactions({ _id: paymentId });
+    if (!transactions || transactions.length === 0) {
         throw new Error("Payment not found");
     }
 
-    const purchase = await findByIdPurchaseService(payment.purchase);
+    const transaction = transactions[0];
+    const purchase = await findByIdPurchaseService(transaction.sourceId);
     if (!purchase) {
         throw new Error("Purchase not found");
     }
 
     // Reverse the credit account balance change if this was a credit payment
-    if (payment.creditAccount && (payment.paymentMethod === 'credit' || payment.paymentMethod === 'hybrid')) {
-        const creditAccount = await findByIdQarzaAccountService(payment.creditAccount);
+    if (transaction.creditAccount && (transaction.method === 'credit' || transaction.method === 'hybrid')) {
+        const creditAccount = await findByIdQarzaAccountService(transaction.creditAccount);
         if (creditAccount) {
-            const creditAmount = payment.creditAmount || payment.amount;
+            const creditAmount = transaction.creditAmount || transaction.amount;
             // Reverse the balance change (decrease since we're reversing a cashin)
             await updateQarzaAccountService(creditAccount._id, {
                 balance: creditAccount.balance - creditAmount
@@ -180,25 +115,11 @@ export const deletePurchasePayment = async (paymentId) => {
         }
     }
 
-    // Delete the payment using CRUD service
-    await deleteOnePurchasePaymentService(paymentId);
+    // Delete the transaction
+    await deleteTransaction(paymentId);
 
-    // Recalculate purchase paid amount and payment status
-    const allPayments = await findPurchasePaymentService({ purchase: purchase._id });
-    const totalPaid = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const remainingAmount = purchase.totalAmount - totalPaid;
+    // Recalculate and update purchase paidAmount from all transactions
+    const paymentStatus = await recalculatePurchasePaidAmount(purchase._id);
 
-    let paymentStatus = 'pending';
-    if (remainingAmount <= 0) {
-        paymentStatus = 'full';
-    } else if (totalPaid > 0) {
-        paymentStatus = 'partial';
-    }
-
-    await updatePurchaseService(purchase._id, {
-        paidAmount: totalPaid,
-        paymentStatus: paymentStatus
-    });
-
-    return { message: "Payment deleted successfully", recalculatedStatus: paymentStatus };
+    return { message: "Payment deleted successfully", recalculatedStatus: paymentStatus.paymentStatus };
 };

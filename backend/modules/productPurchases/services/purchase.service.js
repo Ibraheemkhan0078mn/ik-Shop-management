@@ -1,6 +1,7 @@
 import { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService } from "./purchase.crud.js";
 import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
+import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 const generatePurchaseNumber = async () => {
     const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
@@ -32,13 +33,15 @@ const getPurchases = async () => {
 };
 
 const getPurchaseById = async (id) => {
-    return await findByIdPurchaseService(id, {
+    const result = await findByIdPurchaseService(id, {
         populate: [
             { path: "supplier", select: "name" },
             { path: "items.product", select: "name productCode" },
             { path: "items.batch", select: "batchNumber" }
         ]
     });
+    // Return the purchase data directly, unwrapping if result has data property
+    return result?.data || result;
 };
 
 const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
@@ -286,4 +289,63 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
     return await deleteOnePurchaseService(id);
 };
 
-export { getPurchases, getPurchaseById, getPurchaseByInvoiceNumber, getPaginatedPurchases, createPurchase, updatePurchase, deletePurchase, generatePurchaseNumber };
+/**
+ * Calculate payment status for a purchase based on transactions
+ * Returns object with totalPaid, remainingAmount, paymentStatus, and transaction details
+ */
+const calculatePurchasePaymentStatus = async (purchaseId, totalAmount) => {
+    const transactions = await getTransactions({ sourceType: 'purchase', sourceId: purchaseId });
+    
+    const totalPaid = transactions.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const remainingAmount = totalAmount - totalPaid;
+    
+    let paymentStatus = 'pending';
+    if (remainingAmount <= 0) {
+        paymentStatus = 'full';
+    } else if (totalPaid > 0) {
+        paymentStatus = 'partial';
+    }
+    
+    // Calculate cash and credit breakdowns
+    const totalCash = transactions.reduce((sum, t) => sum + (t.cashAmount || 0), 0) || 0;
+    const totalCredit = transactions.reduce((sum, t) => sum + (t.creditAmount || 0), 0) || 0;
+    
+    return {
+        totalPaid,
+        remainingAmount,
+        paymentStatus,
+        totalCash,
+        totalCredit,
+        transactionCount: transactions.length,
+        transactions
+    };
+};
+
+/**
+ * Recalculate and update purchase paidAmount from all related transactions
+ * This function syncs the purchase document's paidAmount with the actual transaction totals
+ */
+const recalculatePurchasePaidAmount = async (purchaseId) => {
+    const purchase = await getPurchaseById(purchaseId);
+    if (!purchase) {
+        throw new Error("Purchase not found");
+    }
+
+    // Handle both direct purchase object and wrapped response
+    const totalAmount = purchase?.totalAmount || purchase?.data?.totalAmount;
+    if (!totalAmount && totalAmount !== 0) {
+        throw new Error("Purchase total amount not found");
+    }
+
+    const paymentStatus = await calculatePurchasePaymentStatus(purchaseId, totalAmount);
+
+    // Update purchase with recalculated values using direct service to avoid items iteration
+    await updatePurchaseService(purchaseId, {
+        paidAmount: paymentStatus.totalPaid,
+        paymentStatus: paymentStatus.paymentStatus
+    });
+
+    return paymentStatus;
+};
+
+export { getPurchases, getPurchaseById, getPurchaseByInvoiceNumber, getPaginatedPurchases, createPurchase, updatePurchase, deletePurchase, generatePurchaseNumber, calculatePurchasePaymentStatus, recalculatePurchasePaidAmount };
