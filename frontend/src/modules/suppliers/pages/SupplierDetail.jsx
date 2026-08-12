@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, ShoppingCart, Phone, Mail, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Edit, ShoppingCart, Phone, Mail, MapPin, Building2, Plus } from "lucide-react";
 import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { usePurchasesBySupplier } from "../../productPurchases/services/purchases.service.js";
+import { useAccountPaymentsSummary, useAccountPaymentsPaginated, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
 import BigViewImage from "../../../shared/components/BigViewImage.jsx";
+import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -18,6 +22,7 @@ export default function SupplierDetail() {
     const labels = getSupplierLabels(language);
     
     const [activeTab, setActiveTab] = useState("details");
+    const [modal, setModal] = useState(null);
     const [startDate, setStartDate] = useState(() => {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -34,6 +39,23 @@ export default function SupplierDetail() {
 
     const supplier = supplierData;
     const purchases = purchasesData?.data || [];
+    
+    const qarzaAccountId = supplier?.qarzaAccountId;
+    const { data: summary } = useAccountPaymentsSummary(qarzaAccountId);
+    const [deletePayment] = useDeleteQarzaPayment();
+
+    const refresh = useCallback(() => {}, []);
+
+    const handleDelete = async (paymentId) => {
+        if (!window.confirm("Delete this payment?")) return;
+        try {
+            await deletePayment({ paymentId, qarzaAccountId }).unwrap();
+            showSuccess("Payment deleted");
+            refresh();
+        } catch (e) {
+            showError(e?.data?.message ?? "Delete failed");
+        }
+    };
 
     if (isLoading) {
         return <div className="p-6 text-center">{labels.loading || "Loading..."}</div>;
@@ -45,6 +67,16 @@ export default function SupplierDetail() {
 
     return (
         <div className="p-6 bg-[var(--app-bg)] min-h-screen">
+            {modal && (
+                <QarzaPaymentModal
+                    mode={modal.mode}
+                    qarzaAccountId={qarzaAccountId}
+                    payment={modal.payment}
+                    onClose={() => setModal(null)}
+                    onSuccess={refresh}
+                />
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
                 <button
@@ -67,7 +99,7 @@ export default function SupplierDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["details", "purchases"].map((tab) => (
+                {["details", "purchases", "credits"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -77,7 +109,9 @@ export default function SupplierDetail() {
                                 : "text-[var(--muted)] hover:text-[var(--ink)]"
                         }`}
                     >
-                        {tab === "details" ? labels.details || "Details" : labels.purchases || "Purchases"}
+                        {tab === "details" ? labels.details || "Details" : 
+                         tab === "purchases" ? labels.purchases || "Purchases" : 
+                         "Credits & Debits"}
                     </button>
                 ))}
             </div>
@@ -154,6 +188,118 @@ export default function SupplierDetail() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Credits & Debits Tab */}
+            {activeTab === "credits" && supplier.qarzaAccountId && (
+                <div className="space-y-6">
+                    {/* Summary Cards */}
+                    {summary && (
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Cash In</p>
+                                <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {(summary.cashIn || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Cash Out</p>
+                                <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {(summary.cashOut || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="card p-4" style={{ background: (summary.overall || 0) >= 0 ? "rgba(15,118,110,0.08)" : "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Overall</p>
+                                <p className="text-xl font-black tabular-nums" style={{ color: (summary.overall || 0) >= 0 ? "var(--accent-2)" : "#ef4444" }}>
+                                    Rs {Math.abs(summary.overall || 0).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Payment List */}
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
+                            <button
+                                onClick={() => setModal({ mode: "create" })}
+                                className="btn-add"
+                            >
+                                <Plus size={16} /> Add Payment
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            <PaginatedList
+                                rtkQuery={useAccountPaymentsPaginated}
+                                limit={20}
+                                dataKey="data"
+                                wrapperClassName="h-full"
+                                renderItems={(items) => {
+                                    if (!items?.length) return null;
+                                    return (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead style={{ background: "var(--surface-muted)" }}>
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
+                                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Notes</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
+                                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
+                                                    {items.map((item) => {
+                                                        const paymentType = item.creditType || item.type || 'cashin';
+                                                        const color = paymentType === 'cashin' ? '#10b981' : '#ef4444';
+                                                        return (
+                                                            <tr key={item._id} className="hover:bg-[var(--surface-muted)]">
+                                                                <td className="px-4 py-3">
+                                                                    <span className="text-xs font-semibold uppercase" style={{ color }}>
+                                                                        {paymentType}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right font-semibold" style={{ color }}>
+                                                                    Rs {(item.amount || 0).toLocaleString()}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                                                    {item.notes || "-"}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                                                    {new Date(item.transactionDate || item.date).toLocaleDateString()}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-center">
+                                                                    <button
+                                                                        onClick={() => setModal({ mode: "update", payment: item })}
+                                                                        className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                                    >
+                                                                        <Edit size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(item._id)}
+                                                                        className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
+                                                                    >
+                                                                        <ShoppingCart size={14} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                }}
+                                queryArgs={{ qarzaAccountId }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Credits & Debits Tab - No Account */}
+            {activeTab === "credits" && !supplier.qarzaAccountId && (
+                <div className="card p-6">
+                    <div className="text-center py-8">
+                        <p className="text-[var(--muted)]">No credits/debits account associated with this supplier</p>
                     </div>
                 </div>
             )}

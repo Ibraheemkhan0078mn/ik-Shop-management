@@ -5,7 +5,11 @@ const QarzaAccountSchema = new mongoose.Schema(
     cloudinaryPublicId: {type: String},
     qarzaProfileImage:{type:String},
     name: { type: String, required: true },
-    type: { type: String },
+    type: { 
+      type: String, 
+      enum: ['supplier', 'customer', 'general'],
+      default: 'general'
+    },
     phoneNo: { type: String },
     address: { type: String },
     notes: { type: String },

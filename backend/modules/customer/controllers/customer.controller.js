@@ -12,6 +12,7 @@ import {
 } from "../services/customer.service.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { qarzaAccountCreate as qarzaAccountCreateService } from "../../qarza/services/qarza.service.js";
 
 const coerceCustomerBody = (body = {}) => {
     const coerced = { ...body };
@@ -77,7 +78,7 @@ export const createCustomer = asyncHandler(async (req, res, next) => {
     const CustomerModel = getLocalCustomerModel();
     const validatedData = buildCustomerPayload(req.body || {}, req.file?.filename);
 
-    const { phoneNo, cnic } = validatedData;
+    const { phoneNo, cnic, name, address } = validatedData;
     const duplicate = await findCustomerByPhoneOrCnicService({ $or: [{ phoneNo }, { cnic }] });
 
     if (duplicate) {
@@ -85,6 +86,25 @@ export const createCustomer = asyncHandler(async (req, res, next) => {
     }
 
     const customer = await customerCreateService(validatedData);
+    
+    // Auto-create qarza account for customer
+    try {
+        const qarzaAccount = await qarzaAccountCreateService({
+            name: name,
+            type: 'customer',
+            phoneNo: phoneNo || '',
+            address: address || '',
+            notes: `Auto-created for customer: ${name}`,
+            isActive: true
+        });
+        
+        // Update customer with qarza account ID
+        await customerUpdateService(customer._id, { qarzaAccountId: qarzaAccount._id });
+        customer.qarzaAccountId = qarzaAccount._id;
+    } catch (qarzaError) {
+        console.error("Failed to create qarza account for customer:", qarzaError);
+        // Continue with customer creation even if qarza account creation fails
+    }
     
     // Track image creation if image was uploaded
     if (req.file?.filename) {

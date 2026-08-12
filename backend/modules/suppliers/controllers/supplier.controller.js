@@ -14,6 +14,7 @@ import {
 import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { qarzaAccountCreate as qarzaAccountCreateService } from "../../qarza/services/qarza.service.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
     const suppliers = await getAllSuppliersService();
@@ -77,7 +78,7 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
         supplierData.image = req.file.filename;
     }
 
-    const { name } = supplierData;
+    const { name, phone, address, notes } = supplierData;
 
     const supplierExists = await findSupplierByNameService(name);
 
@@ -88,6 +89,25 @@ export const createSupplier = asyncHandler(async (req, res, next) => {
     }
 
     const supplier = await supplierCreateService(supplierData);
+    
+    // Auto-create qarza account for supplier
+    try {
+        const qarzaAccount = await qarzaAccountCreateService({
+            name: name,
+            type: 'supplier',
+            phoneNo: phone || '',
+            address: address || '',
+            notes: notes || `Auto-created for supplier: ${name}`,
+            isActive: true
+        });
+        
+        // Update supplier with qarza account ID
+        await supplierUpdateService(supplier._id, { qarzaAccountId: qarzaAccount._id });
+        supplier.qarzaAccountId = qarzaAccount._id;
+    } catch (qarzaError) {
+        console.error("Failed to create qarza account for supplier:", qarzaError);
+        // Continue with supplier creation even if qarza account creation fails
+    }
     
     // Track image creation if image was uploaded
     if (req.file?.filename) {

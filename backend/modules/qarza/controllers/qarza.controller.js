@@ -35,11 +35,14 @@ export const qarzaAccountCreate = async (req, res) => {
             return res.json({ success: false, msg: "Name is required" });
         }
 
+        // Default type to 'general' if not provided
+        const accountType = type || 'general';
+
         let createdAccount = await qarzaAccountCreateService({
             qarzaProfileImage: file,
             cloudinaryPublicId,
             name,
-            type,
+            type: accountType,
             phoneNo,
             address,
             notes
@@ -55,7 +58,7 @@ export const qarzaAccountCreate = async (req, res) => {
         console.log(err);
         return res.json({ success: false, msg: "Error creating account" });
     }
-}
+};
 
 
 

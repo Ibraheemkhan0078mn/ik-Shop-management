@@ -36,6 +36,11 @@ const customerSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Associated qarza account for credits/debits
+        qarzaAccountId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "QarzaAccount",
+        },
         // Sync Fields
         createdTimeForSync: { type: Date, default: Date.now },
         updateTimeForSync: { type: Date, default: Date.now },
