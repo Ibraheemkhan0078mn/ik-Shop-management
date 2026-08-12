@@ -17,8 +17,8 @@ import {
 } from "../services/holdOrder.crud.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.js";
-import { findByIdQarzaAccountService, updateQarzaAccountService } from "../../qarza/services/qarzaAccount.crud.js";
-import { createQarzaPaymentService } from "../../qarza/services/qarzaPayment.crud.js";
+import { createOrderPayment, getOrderPayments, calculateOrderPaymentStatus, recalculateOrderPaidAmount } from "../services/orderPayment.service.js";
+import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
@@ -231,45 +231,51 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         await adjustStock(item.product, item.batchId, 'decr', item.quantity);
     }
 
-    // Create qarza payment for credit/hybrid payments
+    // Create payment transaction using the new transaction system
     const paymentMethod = validatedData.paymentMethod;
-    if (paymentMethod === 'credit' && validatedData.qarzaAccount) {
-        const creditAccount = await findByIdQarzaAccountService(validatedData.qarzaAccount);
-        if (creditAccount) {
-            await createQarzaPaymentService({
-                qarzaAccountId: validatedData.qarzaAccount,
-                amount: validatedData.totalAmount,
-                type: 'debit', // They owe us, so it's debit
-                date: new Date(),
-                notes: `POS Order: ${validatedData.orderNumber}`,
-                source: 'pos',
-                orderId: order._id,
-                orderNumber: validatedData.orderNumber
-            });
-            // Update credit account balance
-            await updateQarzaAccountService(creditAccount._id, {
-                balance: creditAccount.balance + validatedData.totalAmount
-            });
+    let paymentData = {
+        order: order._id,
+        paymentMethod: paymentMethod,
+        amount: validatedData.totalAmount,
+        paymentDate: new Date(),
+        notes: `POS Order: ${validatedData.orderNumber}`,
+        createdBy: req.user?._id,
+    };
+
+    if (paymentMethod === 'cash') {
+        // Cash payment: auto-select cash, full amount in cash
+        paymentData.cashAmount = validatedData.totalAmount;
+        paymentData.creditAmount = 0;
+        paymentData.paymentMethodId = validatedData.paymentMethodId;
+        paymentData.paymentMethodName = validatedData.paymentMethodName;
+    } else if (paymentMethod === 'credit') {
+        // Credit payment: select account, full amount in credit
+        if (!validatedData.creditAccount) {
+            return next(new ErrorResponse("Credit account is required for credit payment", 400));
         }
-    } else if (paymentMethod === 'hybrid' && validatedData.hybridQarzaAccount && validatedData.hybridQarza > 0) {
-        const creditAccount = await findByIdQarzaAccountService(validatedData.hybridQarzaAccount);
-        if (creditAccount) {
-            await createQarzaPaymentService({
-                qarzaAccountId: validatedData.hybridQarzaAccount,
-                amount: validatedData.hybridQarza,
-                type: 'debit', // They owe us, so it's debit
-                date: new Date(),
-                notes: `POS Order (Hybrid): ${validatedData.orderNumber}`,
-                source: 'pos',
-                orderId: order._id,
-                orderNumber: validatedData.orderNumber
-            });
-            // Update credit account balance
-            await updateQarzaAccountService(creditAccount._id, {
-                balance: creditAccount.balance + validatedData.hybridQarza
-            });
+        paymentData.cashAmount = 0;
+        paymentData.creditAmount = validatedData.totalAmount;
+        paymentData.creditAccount = validatedData.creditAccount;
+    } else if (paymentMethod === 'hybrid') {
+        // Hybrid payment: part cash, part credit with cash limit
+        if (!validatedData.creditAccount) {
+            return next(new ErrorResponse("Credit account is required for hybrid payment", 400));
         }
+        if (!validatedData.cashAmount || validatedData.cashAmount <= 0) {
+            return next(new ErrorResponse("Cash amount is required for hybrid payment", 400));
+        }
+        if (validatedData.cashAmount >= validatedData.totalAmount) {
+            return next(new ErrorResponse("Cash amount must be less than total amount for hybrid payment", 400));
+        }
+        paymentData.cashAmount = validatedData.cashAmount;
+        paymentData.creditAmount = validatedData.totalAmount - validatedData.cashAmount;
+        paymentData.creditAccount = validatedData.creditAccount;
+        paymentData.paymentMethodId = validatedData.paymentMethodId;
+        paymentData.paymentMethodName = validatedData.paymentMethodName;
     }
+
+    // Create the payment transaction
+    await createOrderPayment(paymentData);
 
     // No longer creating separate staff sale bills - POS orders will be rendered in staff section
     // if (validatedData.staffId) {
@@ -300,4 +306,61 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
     await orderDeleteService(req.params.id);
 
     res.status(200).json({ success: true, message: "Order deleted successfully", data: {} });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/:id/payments
+//  Returns all transactions/payments for a specific order
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrderPaymentsData = asyncHandler(async (req, res) => {
+    try {
+        const payments = await getTransactions({ sourceType: 'sale', sourceId: req.params.id });
+        res.status(200).json({
+            success: true,
+            message: "Order payments retrieved successfully",
+            data: payments,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/:id/payment-status
+//  Returns payment status for a specific order
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrderPaymentStatusData = asyncHandler(async (req, res) => {
+    try {
+        const order = await getOrderByIdService(req.params.id);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+        res.status(200).json({
+            success: true,
+            message: "Order payment status retrieved successfully",
+            data: paymentStatus,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  POST /orders/:id/recalculate-payment
+//  Recalculates the paid amount for an order based on transactions
+// ─────────────────────────────────────────────────────────────────────────────
+export const recalculateOrderPaidAmountData = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        const paymentStatus = await recalculateOrderPaidAmount(id);
+        res.status(200).json({
+            success: true,
+            message: "Order paid amount recalculated successfully",
+            data: paymentStatus,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
 });

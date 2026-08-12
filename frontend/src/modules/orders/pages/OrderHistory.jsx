@@ -448,7 +448,8 @@ export default function OrderHistory() {
                                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-(--muted)">Customer</th>
                                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-(--muted) hidden sm:table-cell">Date & Time</th>
                                         <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-(--muted) hidden md:table-cell">Items</th>
-                                        <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-(--muted)">Payment</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Paid</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Remaining</th>
                                         <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Total</th>
                                         <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-(--muted)">Actions</th>
                                     </tr>
@@ -487,10 +488,15 @@ export default function OrderHistory() {
                                             <td className="px-5 py-3.5 text-center hidden md:table-cell">
                                                 <StockBadgeLike qty={order.items?.length || 0} />
                                             </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <div className="flex justify-center">
-                                                    <PaymentBadge method={order.paymentMethod} />
-                                                </div>
+                                            <td className="px-5 py-3.5 text-right">
+                                                <span className="font-semibold text-green-600 whitespace-nowrap">
+                                                    Rs {(order.paid ?? 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right">
+                                                <span className="font-semibold text-orange-600 whitespace-nowrap">
+                                                    Rs {(order.remainingAmount ?? 0).toLocaleString()}
+                                                </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 <span className="font-bold text-(--accent-2) whitespace-nowrap">

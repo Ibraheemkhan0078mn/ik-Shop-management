@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { X, CreditCard, Wallet, Smartphone, Layers, ChevronRight, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { X, CreditCard, Wallet, Layers, ChevronRight, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { FormField, Input } from "../../../shared/components/FormFields.jsx";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
@@ -11,64 +11,13 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 
-const ONLINE_PLATFORMS = (labels) => [
-    { value: "easypaisa", label: labels.easypaisa },
-    { value: "jazzcash", label: labels.jazzcash },
-    { value: "bank_transfer", label: labels.bankTransfer },
-    { value: "raast", label: labels.raast },
-    { value: "sadapay", label: labels.sadapay },
-    { value: "nayapay", label: labels.nayapay },
-];
-
 const PAYMENT_TABS = (labels) => [
     { key: "cash", label: labels.cash, icon: Wallet },
-    { key: "online", label: labels.online, icon: Smartphone },
     { key: "credit", label: labels.qarza, icon: CreditCard },
     { key: "hybrid", label: labels.hybrid, icon: Layers },
 ];
 
 // ─── Design Atoms ─────────────────────────────────────────────────────────────
-
-const InfoStrip = ({ label, value, valid = true }) => (
-    <div
-        className="rounded-xl px-4 py-3 flex justify-between items-center"
-        style={{
-            background: valid ? "rgba(15,118,110,0.08)" : "var(--surface-muted)",
-            border: valid ? "1px solid rgba(15,118,110,0.25)" : "1px solid var(--border)",
-        }}
-    >
-        <span className="text-sm font-medium" style={{ color: valid ? "var(--accent-2)" : "var(--muted)" }}>
-            {label}
-        </span>
-        <span className="text-sm font-bold" style={{ color: valid ? "var(--accent-2)" : "var(--ink)" }}>
-            {value}
-        </span>
-    </div>
-);
-
-const FillButton = ({ onClick, labels }) => (
-    <button
-        onClick={onClick}
-        className="h-9 px-3 text-xs rounded-lg font-semibold transition-all whitespace-nowrap shrink-0 hover:shadow-sm"
-        style={{
-            background: "rgba(15,118,110,0.1)",
-            color: "var(--accent-2)",
-            border: "1px solid rgba(15,118,110,0.25)",
-        }}
-    >
-        {labels.fillRest}
-    </button>
-);
-
-const CreateQarzaLink = ({ onClick, labels }) => (
-    <button
-        onClick={onClick}
-        className="flex items-center gap-1.5 text-xs font-semibold hover:underline"
-        style={{ color: "var(--accent-2)" }}
-    >
-        <Plus size={12} /> {labels.newQarzaAccount}
-    </button>
-);
 
 const OrderTypeToggle = ({ value, onChange, labels }) => (
     <div
@@ -118,289 +67,11 @@ const CustomerTypeToggle = ({ value, onChange, labels }) => (
     </div>
 );
 
-// ─── Tab Panels ───────────────────────────────────────────────────────────────
-
-function CashTab({ cashReceived, setCashReceived, total, cashChange, labels, showPaymentMethod = true, selectedPaymentMethodId, setSelectedPaymentMethodId, paymentMethodOptions, onOpenPaymentMethodModal }) {
-    const received = Number(cashReceived) || 0;
-    const isShort = received > 0 && received < total;
-    const isSufficient = received >= total && cashReceived;
-
-    const quickAmounts = [
-        total,
-        Math.ceil(total / 500) * 500,
-        Math.ceil(total / 1000) * 1000,
-    ].filter((v, i, arr) => arr.indexOf(v) === i && v >= total).slice(0, 4);
-
-    return (
-        <div className="space-y-3">
-            {showPaymentMethod && (
-                <>
-                    <FormField label={labels.paymentMethod}>
-                        <div className="flex gap-2">
-                            <select
-                                value={selectedPaymentMethodId}
-                                onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                                className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                style={{
-                                    background: "var(--surface)",
-                                    color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
-                                    border: "1px solid var(--border)",
-                                }}
-                            >
-                                <option value="">{labels.selectPaymentMethod}</option>
-                                {paymentMethodOptions.map((pm) => (
-                                    <option key={pm.value} value={pm.value}>{pm.label}</option>
-                                ))}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={onOpenPaymentMethodModal}
-                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                title="Create new payment method"
-                            >
-                                <Plus size={16} />
-                            </button>
-                        </div>
-                    </FormField>
-                    <FormField label={labels.cashReceived}>
-                        <Input
-                            type="number" min={0} autoFocus
-                            placeholder={`Min. Rs ${total.toLocaleString()}`}
-                            value={cashReceived}
-                            onChange={(e) => setCashReceived(e.target.value)}
-                        />
-                    </FormField>
-                </>
-            )}
-
-            {showPaymentMethod && (
-                <>
-                    {/* Quick amount chips */}
-                    <div className="flex gap-2 flex-wrap">
-                        {quickAmounts.map((amt) => (
-                            <button
-                                key={amt}
-                                onClick={() => setCashReceived(String(amt))}
-                                className="px-3 py-1.5 text-xs rounded-lg font-semibold transition-all hover:shadow-sm"
-                                style={{
-                                    background: String(amt) === cashReceived
-                                        ? "rgba(15,118,110,0.12)"
-                                        : "var(--surface-muted)",
-                                    color: String(amt) === cashReceived
-                                        ? "var(--accent-2)"
-                                        : "var(--ink)",
-                                    border: String(amt) === cashReceived
-                                        ? "1px solid rgba(15,118,110,0.3)"
-                                        : "1px solid var(--border)",
-                                }}
-                            >
-                                Rs {amt.toLocaleString()}
-                            </button>
-                        ))}
-                    </div>
-
-                    {isSufficient && <InfoStrip label={labels.changeToReturn} value={`Rs ${cashChange.toLocaleString()}`} />}
-                    {isShort && (
-                        <div
-                            className="rounded-xl px-4 py-2.5"
-                            style={{ background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)" }}
-                        >
-                            <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
-                                {labels.shortBy} Rs {(total - received).toLocaleString()}
-                            </p>
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
-}
-
-function OnlineTab({ onlinePlatform, setOnlinePlatform, onlineAmount, setOnlineAmount, total, labels, onlinePlatforms }) {
-    return (
-        <div className="space-y-3">
-            <FormField label={labels.platform}>
-                <select
-                    value={onlinePlatform}
-                    onChange={(e) => setOnlinePlatform(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl outline-none transition"
-                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                >
-                    <option value="">{labels.selectPlatform}</option>
-                    {onlinePlatforms.map((platform) => (
-                        <option key={platform.value} value={platform.value}>
-                            {platform.label}
-                        </option>
-                    ))}
-                </select>
-            </FormField>
-            <FormField label={labels.amountReceived}>
-                <div className="flex gap-2">
-                    <Input type="number" min={0} placeholder={`Rs ${total.toLocaleString()}`}
-                        value={onlineAmount} onChange={(e) => setOnlineAmount(e.target.value)} />
-                    <FillButton onClick={() => setOnlineAmount(String(total))} labels={labels} />
-                </div>
-            </FormField>
-        </div>
-    );
-}
-
-function CreditTabWithModal({ qarzaOptions, qarzaAccountId, setQarzaAccountId, total, onOpenQarzaModal, labels }) {
-    return (
-        <div className="space-y-3">
-            <FormField label={labels.ledgerAccount}>
-                <div className="flex gap-2">
-                    <select
-                        className="flex-1 px-3 py-2 text-sm rounded-xl outline-none transition"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                        value={qarzaAccountId}
-                        onChange={(e) => setQarzaAccountId(e.target.value)}
-                    >
-                        <option value="">{labels.searchAccount}</option>
-                        {qarzaOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        type="button"
-                        onClick={onOpenQarzaModal}
-                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                        title="Create new account"
-                    >
-                        <Plus size={16} />
-                    </button>
-                </div>
-            </FormField>
-            {qarzaAccountId && <InfoStrip label={labels.amountOnCredit} value={`Rs ${total.toLocaleString()}`} />}
-        </div>
-    );
-}
-
-function HybridTab({
-    hybridCash, setHybridCash,
-    hybridQarza, setHybridQarza,
-    hybridQarzaAccountId, setHybridQarzaAccountId,
-    qarzaOptions, onOpenQarzaModal,
-    total, hybridSum, hybridValid, hybridShortage,
-    fillHybridCash, fillHybridQarza,
-    labels,
-    showPaymentMethod = true,
-    selectedPaymentMethodId, setSelectedPaymentMethodId, paymentMethodOptions,
-    onOpenPaymentMethodModal,
-}) {
-    return (
-        <div className="space-y-3">
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
-                {labels.cashQarzaTotal} <strong style={{ color: "var(--ink)" }}>Rs {total.toLocaleString()}</strong>.
-            </p>
-
-            {showPaymentMethod && (
-                <FormField label={labels.paymentMethod}>
-                    <div className="flex gap-2">
-                        <select
-                            value={selectedPaymentMethodId}
-                            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-                            className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                            style={{
-                                background: "var(--surface)",
-                                color: selectedPaymentMethodId ? "var(--ink)" : "var(--muted)",
-                                border: "1px solid var(--border)",
-                            }}
-                        >
-                            <option value="">{labels.selectPaymentMethod}</option>
-                            {paymentMethodOptions.map((pm) => (
-                                <option key={pm.value} value={pm.value}>{pm.label}</option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={onOpenPaymentMethodModal}
-                            className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                            title="Create new payment method"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                </FormField>
-            )}
-
-            {showPaymentMethod && (
-                <div
-                    className="rounded-xl p-4 space-y-3"
-                    style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
-                >
-                    {/* Cash row */}
-                    <div>
-                        <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
-                            <Wallet size={11} /> {labels.cashPortion}
-                        </p>
-                        <div className="flex gap-2">
-                            <Input type="number" min={0} placeholder="0"
-                                value={hybridCash} onChange={(e) => setHybridCash(e.target.value)} />
-                            <FillButton onClick={fillHybridCash} labels={labels} />
-                        </div>
-                    </div>
-
-                    <div style={{ borderTop: "1px solid var(--border)" }} />
-
-                    {/* Qarza row */}
-                    <div>
-                        <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
-                            <CreditCard size={11} /> {labels.qarzaPortion}
-                        </p>
-                        <div className="flex gap-2 mb-2">
-                            <Input type="number" min={0} placeholder="0"
-                                value={hybridQarza} onChange={(e) => setHybridQarza(e.target.value)} />
-                            <FillButton onClick={fillHybridQarza} labels={labels} />
-                        </div>
-                        <div className="flex gap-2">
-                            <select
-                                className="flex-1 px-3 py-2 text-sm rounded-xl outline-none transition"
-                                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}
-                                value={hybridQarzaAccountId}
-                                onChange={(e) => setHybridQarzaAccountId(e.target.value)}
-                            >
-                                <option value="">{labels.selectQarzaAccount}</option>
-                                {qarzaOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={onOpenQarzaModal}
-                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                title="Create new account"
-                            >
-                                <Plus size={16} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <InfoStrip
-                valid={hybridValid}
-                label={hybridValid
-                    ? `✓ ${labels.amountsBalanced}`
-                    : `Remaining: Rs ${hybridShortage > 0 ? hybridShortage.toLocaleString() : "—"}`}
-                value={`${hybridSum.toLocaleString()} / ${total.toLocaleString()}`}
-            />
-        </div>
-    );
-}
-
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function PosPaymentModal({
-    subtotal = 0,
     onCheckout,
     onClose,
-    onCreateQarza,
-    language = "en",
     initialCustomerName = "",
     initialWaiter = "",
     initialDiscount = 0,
@@ -416,7 +87,6 @@ export default function PosPaymentModal({
     const { data: customersData = [] } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    const onlinePlatforms = ONLINE_PLATFORMS(labels);
     const paymentTabs = PAYMENT_TABS(labels);
 
     const [activeTab, setActiveTab] = useState("cash");
@@ -428,11 +98,8 @@ export default function PosPaymentModal({
     const [orderType, setOrderType] = useState("retail");
     const [selectedStaffId, setSelectedStaffId] = useState(initialStaffId);
     const [cashReceived, setCashReceived] = useState("");
-    const [onlinePlatform, setOnlinePlatform] = useState("");
-    const [onlineAmount, setOnlineAmount] = useState("");
     const [qarzaAccountId, setQarzaAccountId] = useState("");
     const [hybridCash, setHybridCash] = useState("");
-    const [hybridQarza, setHybridQarza] = useState("");
     const [hybridQarzaAccountId, setHybridQarzaAccountId] = useState("");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
@@ -495,9 +162,8 @@ export default function PosPaymentModal({
     const totalDiscount = discountAmt + itemDiscountTotal;
     const total = Math.max(0, billSubtotal - discountAmt);
     const cashChange = Math.max(0, (Number(cashReceived) || 0) - total);
-    const hybridSum = (Number(hybridCash) || 0) + (Number(hybridQarza) || 0);
-    const hybridValid = Math.abs(hybridSum - total) < 0.01 && !!hybridQarzaAccountId;
-    const hybridShortage = total - hybridSum;
+    const hybridQarza = total - (Number(hybridCash) || 0);
+    const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
 
     useEffect(() => {
         if (total > 0) setCashReceived(String(total.toFixed(0)));
@@ -542,14 +208,13 @@ export default function PosPaymentModal({
         if (customerType === "regular" && !selectedCustomerId) return false;
         switch (activeTab) {
             case "cash": return Number(cashReceived) >= total && !!selectedPaymentMethodId;
-            case "online": return !!onlinePlatform && Number(onlineAmount) >= total;
             case "credit": return !!qarzaAccountId;
-            case "hybrid": return hybridValid && !!selectedPaymentMethodId;
+            case "hybrid": return hybridValid && !!selectedPaymentMethodId && !!hybridQarzaAccountId;
             default: return false;
         }
-    }, [activeTab, cashReceived, total, onlinePlatform, onlineAmount, qarzaAccountId, hybridValid, selectedPaymentMethodId, customerType, selectedCustomerId]);
+    }, [activeTab, cashReceived, total, qarzaAccountId, hybridValid, selectedPaymentMethodId, customerType, selectedCustomerId, hybridQarzaAccountId]);
 
-    const buildPayload = () => {
+    const buildPayload = useCallback(() => {
         const selectedCustomer = customersData?.find(c => c._id === selectedCustomerId);
         return {
             customerName: customerType === "walkin" ? customerName : (selectedCustomer?.name || ""),
@@ -559,35 +224,25 @@ export default function PosPaymentModal({
             selectedStaffId,
             orderDiscount: discountAmt,
             paymentMethod: activeTab,
+            paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
             orderType,
-            cashReceived: activeTab === "cash" ? cashReceived : "",
-            onlinePlatform: activeTab === "online" ? onlinePlatform : "",
-            onlineAmount: activeTab === "online" ? onlineAmount : "",
-            selectedQarzaAccountId: activeTab === "credit" ? qarzaAccountId : "",
-            hybridCash: activeTab === "hybrid" ? hybridCash : "",
-            hybridQarza: activeTab === "hybrid" ? hybridQarza : "",
-            hybridQarzaAccountId: activeTab === "hybrid" ? hybridQarzaAccountId : "",
+            cashAmount: activeTab === "cash" ? cashReceived : (activeTab === "hybrid" ? hybridCash : 0),
+            creditAccount: activeTab === "credit" ? qarzaAccountId : (activeTab === "hybrid" ? hybridQarzaAccountId : null),
             itemDiscounts: itemDiscounts,
             itemDiscountTypes: itemDiscountTypes,
         };
-    };
+    }, [customerName, customerType, selectedCustomerId, initialWaiter, selectedStaffId, discountAmt, activeTab, selectedPaymentMethodId, paymentMethodsData, orderType, cashReceived, hybridCash, qarzaAccountId, hybridQarzaAccountId, itemDiscounts, itemDiscountTypes, customersData]);
 
-    const handleCheckout = useCallback(() => { if (canCheckout) onCheckout(buildPayload()); }, [canCheckout, buildPayload]);
-    const fillHybridQarza = () => { const r = total - (Number(hybridCash) || 0); if (r > 0) setHybridQarza(String(r.toFixed(0))); };
-    const fillHybridCash = () => { const r = total - (Number(hybridQarza) || 0); if (r > 0) setHybridCash(String(r.toFixed(0))); };
+    const handleCheckout = useCallback(() => { if (canCheckout) onCheckout(buildPayload()); }, [canCheckout, buildPayload, onCheckout]);
 
-    const getValidationError = () => {
+    const getValidationError = useCallback(() => {
         if (total === 0) return null;
         if (customerType === "regular" && !selectedCustomerId) return labels.selectCustomer;
         switch (activeTab) {
             case "cash":
                 if (!selectedPaymentMethodId) return labels.selectPaymentMethod;
                 if (Number(cashReceived) < total) return labels.insufficientCash;
-                return null;
-            case "online":
-                if (!onlinePlatform) return labels.selectPlatform;
-                if (Number(onlineAmount) < total) return labels.insufficientAmount;
                 return null;
             case "credit":
                 if (!qarzaAccountId) return labels.selectQarzaAccount;
@@ -599,7 +254,7 @@ export default function PosPaymentModal({
                 return null;
             default: return null;
         }
-    };
+    }, [total, customerType, selectedCustomerId, labels, activeTab, selectedPaymentMethodId, cashReceived, qarzaAccountId, hybridQarzaAccountId, hybridValid]);
 
     // Submit on Enter
     useEffect(() => {
@@ -615,7 +270,7 @@ export default function PosPaymentModal({
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [canCheckout, handleCheckout, activeTab, cashReceived, total, onlinePlatform, onlineAmount, qarzaAccountId, hybridValid, selectedPaymentMethodId, hybridQarzaAccountId]);
+    }, [canCheckout, handleCheckout, getValidationError]);
 
     // Shared field-row classes: label + control, stacked on mobile, aligned on larger screens
     const rowClass = "flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4 py-3 px-4 sm:px-5 first:pt-4 last:pb-4";
@@ -885,63 +540,6 @@ export default function PosPaymentModal({
                                 </>
                             )}
 
-                            {activeTab === "online" && (
-                                <>
-                                    {/* Platform */}
-                                    <div className={rowClass}>
-                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.platform}</label>
-                                        <div className={controlWrapClass}>
-                                            <select
-                                                value={onlinePlatform}
-                                                onChange={(e) => setOnlinePlatform(e.target.value)}
-                                                className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                style={inputStyle}
-                                                {...fieldFocus}
-                                                required
-                                            >
-                                                <option value="">{labels.selectPlatform}</option>
-                                                {onlinePlatforms.map((platform) => (
-                                                    <option key={platform.value} value={platform.value}>{platform.label}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Amount received */}
-                                    <div className={rowClass}>
-                                        <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.amountReceived}</label>
-                                        <div className={controlWrapClass}>
-                                            <div className="relative">
-                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
-                                                <input
-                                                    type="number"
-                                                    value={onlineAmount}
-                                                    onChange={(e) => setOnlineAmount(e.target.value)}
-                                                    placeholder={`Rs ${total.toLocaleString()}`}
-                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
-                                                    style={inputStyle}
-                                                    {...fieldFocus}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className={rowClass}>
-                                        <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                        <div className={controlWrapClass}>
-                                            <div
-                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
-                                            >
-                                                Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be recorded via {onlinePlatform || 'online platform'}.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
                             {activeTab === "credit" && (
                                 <>
                                     {/* Qarza account */}
@@ -1075,13 +673,13 @@ export default function PosPaymentModal({
                                         </div>
                                     </div>
 
-                                    {/* Info */}
+                                    {/* Info showing calculated qarza amount */}
                                     <div className={rowClass}>
                                         <span className={labelClass} style={{ color: "var(--muted)" }} />
                                         <div className={controlWrapClass}>
                                             <div
                                                 className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                style={hybridValid ? {
+                                                style={hybridCash > 0 && hybridCash < total ? {
                                                     backgroundColor: 'rgba(15, 118, 110, 0.08)',
                                                     borderColor: 'rgba(15, 118, 110, 0.3)',
                                                     color: 'var(--accent-2)'
@@ -1091,9 +689,11 @@ export default function PosPaymentModal({
                                                     color: 'var(--muted)'
                                                 }}
                                             >
-                                                {hybridValid
-                                                    ? `✓ ${labels.amountsBalanced}`
-                                                    : `Remaining: Rs ${hybridShortage > 0 ? hybridShortage.toLocaleString() : "—"}`
+                                                {hybridCash > 0 && hybridCash < total
+                                                    ? `Credit: Rs ${hybridQarza.toLocaleString()}`
+                                                    : hybridCash >= total
+                                                    ? "Cash amount must be less than total"
+                                                    : "Enter cash amount"
                                                 }
                                             </div>
                                         </div>

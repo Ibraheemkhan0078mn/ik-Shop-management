@@ -1,11 +1,27 @@
 import { createOrderService, findOrderService, findOneOrderService, findByIdOrderService, deleteOneOrderService, countOrderService } from "./order.crud.js";
+import { calculateOrderPaymentStatus } from "./orderPayment.service.js";
+import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 const orderCreate = async (data) => {
     return await createOrderService(data);
 };
 
 const getAllOrders = async (query = {}) => {
-    return await findOrderService(query, { sort: { createdAt: -1 } });
+    const orders = await findOrderService(query, { sort: { createdAt: -1 } });
+    
+    // Calculate payment status for each order
+    const ordersWithPaymentStatus = await Promise.all(
+        orders.map(async (order) => {
+            const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+            return {
+                ...order.toObject ? order.toObject() : order,
+                paidAmount: paymentStatus.totalPaid,
+                remainingAmount: paymentStatus.remainingAmount
+            };
+        })
+    );
+    
+    return ordersWithPaymentStatus;
 };
 
 const getOrderById = async (id) => {
@@ -34,10 +50,22 @@ const getPaginatedOrders = async (filters = {}) => {
         skip
     });
     
+    // Calculate payment status for each order
+    const ordersWithPaymentStatus = await Promise.all(
+        orders.map(async (order) => {
+            const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+            return {
+                ...order.toObject ? order.toObject() : order,
+                paidAmount: paymentStatus.totalPaid,
+                remainingAmount: paymentStatus.remainingAmount
+            };
+        })
+    );
+    
     const total = await countOrderService({});
     
     return {
-        data: orders,
+        data: ordersWithPaymentStatus,
         page: parseInt(page),
         limit: parseInt(limit),
         total,
@@ -61,7 +89,21 @@ const getOrdersByCustomer = async (filters = {}) => {
         }
     }
 
-    return await findOrderService(filter, { sort: { createdAt: -1 } });
+    const orders = await findOrderService(filter, { sort: { createdAt: -1 } });
+    
+    // Calculate payment status for each order
+    const ordersWithPaymentStatus = await Promise.all(
+        orders.map(async (order) => {
+            const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+            return {
+                ...order.toObject ? order.toObject() : order,
+                paidAmount: paymentStatus.totalPaid,
+                remainingAmount: paymentStatus.remainingAmount
+            };
+        })
+    );
+    
+    return ordersWithPaymentStatus;
 };
 
 export {

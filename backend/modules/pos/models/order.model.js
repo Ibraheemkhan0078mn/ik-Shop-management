@@ -37,6 +37,8 @@ const orderSchema = new mongoose.Schema(
         discountAmount: { type: Number, default: 0 },
         totalTaxAmount: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true, default: 0 },
+        paid: { type: Number, default: 0 },
+        remainingAmount: { type: Number, default: 0 },
 
         items: [orderItemSchema],
 
@@ -54,28 +56,6 @@ const orderSchema = new mongoose.Schema(
             enum: ["retail", "wholesale"],
             default: "retail",
         },
-
-        // Payment
-        paymentMethod: {
-            type: String,
-            enum: ["cash", "online", "credit", "hybrid", "free"],
-            default: "cash",
-        },
-        paymentMethodName: { type: String, default: "" },
-        cashReceived: { type: Number, default: 0 },
-        change: { type: Number, default: 0 },
-
-        // Online payment
-        onlinePlatform: { type: String, default: "" },
-        onlineAmount: { type: Number, default: 0 },
-
-        // Qarza (credit) — single account
-        qarzaAccount: { type: mongoose.Schema.Types.ObjectId, ref: "QarzaAccount", default: null },
-
-        // Hybrid payment (part cash, part qarza)
-        hybridCash: { type: Number, default: 0 },
-        hybridQarza: { type: Number, default: 0 },
-        hybridQarzaAccount: { type: mongoose.Schema.Types.ObjectId, ref: "QarzaAccount", default: null },
 
         status: {
             type: String,

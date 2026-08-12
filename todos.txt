@@ -11,3 +11,11 @@
 
 3: chek the active work in all models
 4: check taht disocunt limit works or not. 
+
+
+
+
+
+1: recalculate is not working on purcahse form crud.
+2: purchases in supplier also have kpi in purcahse section. 
+3: credits and debigs amout is wrong showed. 

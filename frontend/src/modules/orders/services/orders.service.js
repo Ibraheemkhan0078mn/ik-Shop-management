@@ -41,6 +41,45 @@ export const ordersApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/orders/${id}`, method: "DELETE" }),
             invalidatesTags: ["Orders", "Product", "Batch"],
         }),
+        // Get Order Payments
+        getOrderPayments: build.query({
+            query: (orderId) => ({ url: `/orders/${orderId}/payments` }),
+            transformResponse: (raw) => raw.data || raw,
+            providesTags: (result, error, orderId) => [{ type: "Orders", id: `payments-${orderId}` }],
+        }),
+        // Get Order Payment Status
+        getOrderPaymentStatus: build.query({
+            query: (orderId) => ({ url: `/orders/${orderId}/payment-status` }),
+            transformResponse: (raw) => raw.data || raw,
+            providesTags: (result, error, orderId) => [{ type: "Orders", id: `payment-status-${orderId}` }],
+        }),
+        // Create Order Payment
+        createOrderPayment: build.mutation({
+            query: ({ orderId, ...body }) => ({ url: `/orders/${orderId}/payments`, method: "POST", body }),
+            invalidatesTags: ["Orders"],
+        }),
+        // Update Order Payment
+        updateOrderPayment: build.mutation({
+            query: ({ paymentId, ...body }) => ({ 
+                url: `/orders/payments/${paymentId}`, 
+                method: "PUT", 
+                body 
+            }),
+            invalidatesTags: (result, error, { orderId }) => ["Orders", { type: "Orders", id: `payments-${orderId}` }],
+        }),
+        // Delete Order Payment
+        deleteOrderPayment: build.mutation({
+            query: ({ paymentId }) => ({ 
+                url: `/orders/payments/${paymentId}`, 
+                method: "DELETE" 
+            }),
+            invalidatesTags: (result, error, { orderId }) => ["Orders", { type: "Orders", id: `payments-${orderId}` }],
+        }),
+        // Recalculate Order Paid Amount
+        recalculateOrderPaidAmount: build.mutation({
+            query: (orderId) => ({ url: `/orders/${orderId}/recalculate-payment`, method: "POST" }),
+            invalidatesTags: (result, error, orderId) => ["Orders", { type: "Orders", id: orderId }],
+        }),
     }),
 });
 
@@ -53,4 +92,10 @@ export const {
     useGenerateOrderNumberQuery: useGenerateOrderNumber,
     useCreateOrderMutation: useAddOrder,
     useDeleteOrderMutation: useDeleteOrder,
+    useGetOrderPaymentsQuery: useGetOrderPayments,
+    useGetOrderPaymentStatusQuery: useGetOrderPaymentStatus,
+    useCreateOrderPaymentMutation: useCreateOrderPayment,
+    useUpdateOrderPaymentMutation: useUpdateOrderPayment,
+    useDeleteOrderPaymentMutation: useDeleteOrderPayment,
+    useRecalculateOrderPaidAmountMutation: useRecalculateOrderPaidAmount,
 } = ordersApi;

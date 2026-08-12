@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema(
     {
-        // Reference to the source entity (purchase, sale, expense, etc.)
+        // Reference to the source entity (purchase, sale, expense, qarza, staff_salary, other)
         sourceType: {
             type: String,
-            enum: ["purchase", "sale", "expense", "qarza", "staff_salary", "other"],
+            enum: ["purchase", "sale", "expense", "qarza", "staff_salary", "other", "pos-order"],
             required: true,
         },
         sourceId: {

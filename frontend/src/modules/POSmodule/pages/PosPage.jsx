@@ -1,10 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { createPortal } from "react-dom";
 import {
-  useQarzaAccounts,
-  useCreateQarzaPayment
+  useQarzaAccounts
 } from "../../qarza/services/qarza.service.js";
 import { useAddOrder } from "../../orders/services/orders.service.js";
 import {
@@ -28,7 +26,7 @@ import QarzaAccountCreation from "../../qarza/components/QarzaCreation.jsx";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
-import { ArrowLeft, Filter, ChevronDown } from "lucide-react";
+import { ArrowLeft, Filter } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -228,9 +226,7 @@ export default function PosPage() {
   const { data: heldOrdersResponse, refetch: refetchHeldOrders } = useHoldOrders();
   const heldOrders = heldOrdersResponse?.data || heldOrdersResponse || [];
 
-  const { data: fetchedQarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
-  const qarzaAccounts = localQarzaAccounts.length ? localQarzaAccounts : fetchedQarzaAccounts;
-
+  const { data: qarzaAccounts, refetch: refetchQarzaAccounts } = useQarzaAccounts();
   const { data: productsData, refetch: refetchProducts } = useProducts();
 
   // ── Filter Handlers ───────────────────────────────────────────────────────
@@ -243,7 +239,6 @@ export default function PosPage() {
   const [createHoldOrder] = useCreateHoldOrder();
   const [updateHoldOrder] = useUpdateHoldOrder();
   const [deleteHoldOrder] = useDeleteHoldOrder();
-  const [createQarzaPayment] = useCreateQarzaPayment();
 
   // ── Computed Values ───────────────────────────────────────────────────────
   const cartSubtotal = cartItems.reduce(
@@ -616,13 +611,10 @@ export default function PosPage() {
       selectedStaffId,
       orderDiscount,
       paymentMethod,
-      selectedQarzaAccountId,
-      cashReceived,
-      onlinePlatform,
-      onlineAmount,
-      hybridCash,
-      hybridQarza,
-      hybridQarzaAccountId,
+      paymentMethodId,
+      paymentMethodName,
+      cashAmount,
+      creditAccount,
       orderType,
       customerType,
       selectedCustomerId,
@@ -633,17 +625,17 @@ export default function PosPage() {
     try {
       const { data: orderNumberData } = await api.get("/orders/generate-number");
       const discountAmount = Math.max(0, Number(orderDiscount) || 0);
-      
+
       // Apply per-item discounts from payment modal
       const updatedCartItems = cartItems.map((item, index) => {
         const itemDiscountValue = Number(itemDiscounts[index]) || 0;
         const discountType = itemDiscountTypes[index] || 'percentage';
-        
+
         if (itemDiscountValue > 0) {
           let newDiscountAmount = 0;
           let discountPercent = 0;
           let discountedUnitPrice = item.unitPrice;
-          
+
           if (discountType === 'percentage') {
             discountPercent = itemDiscountValue;
             newDiscountAmount = (item.unitPrice * item.qty * itemDiscountValue) / 100;
@@ -654,13 +646,13 @@ export default function PosPage() {
             discountPercent = (newDiscountAmount / (item.unitPrice * item.qty)) * 100;
             discountedUnitPrice = item.unitPrice - (newDiscountAmount / item.qty);
           }
-          
+
           // Calculate tax amount based on discounted unit price
           const recalculatedTaxAmount = (discountedUnitPrice * item.taxPercent) / 100;
-          
+
           // Calculate item subtotal (discounted price * qty + tax * qty)
           const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (recalculatedTaxAmount * item.qty);
-          
+
           return {
             ...item,
             discountPercent,
@@ -673,15 +665,14 @@ export default function PosPage() {
         }
         return item;
       });
-      
+
       // Calculate bill subtotal as sum of all item totals (each including their tax)
       const billSubtotal = updatedCartItems.reduce((sum, item) => sum + (item.itemTotal || (item.unitPrice * item.qty) + (item.taxAmount * item.qty)), 0);
-      
+
       // Calculate total tax from updated cart items
       const totalTaxAmount = updatedCartItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0) * (Number(item.qty) || 0), 0);
-      
+
       const totalAmount = Math.max(0, billSubtotal - discountAmount);
-      const changeReturned = Math.max(0, (Number(cashReceived) || 0) - totalAmount);
 
       const orderPayload = {
         orderNumber: orderNumberData.orderNumber,
@@ -697,60 +688,19 @@ export default function PosPage() {
         waiter: selectedWaiter,
         staffId: selectedStaffId || null,
         paymentMethod,
+        paymentMethodId,
+        paymentMethodName,
+        cashAmount: paymentMethod === "cash" || paymentMethod === "hybrid" ? Number(cashAmount) || 0 : 0,
+        creditAccount: paymentMethod === "credit" || paymentMethod === "hybrid" ? creditAccount : null,
         orderType: orderType || "retail",
         status: "completed",
-        cashReceived: paymentMethod === "cash" ? Number(cashReceived) || 0 : 0,
-        change: paymentMethod === "cash" ? changeReturned : 0,
-        onlinePlatform: paymentMethod === "online" ? onlinePlatform : "",
-        onlineAmount: paymentMethod === "online" ? Number(onlineAmount) || 0 : 0,
-        qarzaAccount: paymentMethod === "credit" ? selectedQarzaAccountId : null,
-        hybridCash: paymentMethod === "hybrid" ? Number(hybridCash) || 0 : 0,
-        hybridQarza: paymentMethod === "hybrid" ? Number(hybridQarza) || 0 : 0,
-        hybridQarzaAccount: paymentMethod === "hybrid" ? hybridQarzaAccountId : null,
         isPosOrder: true,
       };
 
       const { order: createdOrder } = await addOrder(orderPayload).unwrap();
 
-      // Record qarza (credit) payments
-      if (paymentMethod === "credit" && selectedQarzaAccountId) {
-        try {
-          await createQarzaPayment({
-            qarzaAccountId: selectedQarzaAccountId,
-            amount: totalAmount,
-            type: "debit",
-            date: new Date().toISOString(),
-            notes: `POS Order: ${createdOrder.orderNumber} - ${customerName || "Customer"}`,
-            orderId: createdOrder._id,
-            orderNumber: createdOrder.orderNumber,
-            source: "pos",
-          }).unwrap();
-        } catch (qarzaErr) {
-          console.error("Qarza payment error:", qarzaErr);
-          showError("Order created but failed to record qarza payment");
-        }
-      }
-
-      if (paymentMethod === "hybrid" && hybridQarzaAccountId && Number(hybridQarza) > 0) {
-        try {
-          await createQarzaPayment({
-            qarzaAccountId: hybridQarzaAccountId,
-            amount: Number(hybridQarza),
-            type: "debit",
-            date: new Date().toISOString(),
-            notes: `POS Order (Hybrid): ${createdOrder.orderNumber} - Cash: Rs ${hybridCash}, Qarza: Rs ${hybridQarza} - ${customerName || "Customer"}`,
-            orderId: createdOrder._id,
-            orderNumber: createdOrder.orderNumber,
-            source: "pos",
-          }).unwrap();
-        } catch (qarzaErr) {
-          console.error("Qarza hybrid payment error:", qarzaErr);
-          showError("Order created but failed to record qarza payment");
-        }
-      }
-
       // Print receipt
-      const creditQarzaAccount = qarzaAccounts?.accounts?.find((a) => a._id === selectedQarzaAccountId);
+      const creditQarzaAccount = qarzaAccounts?.accounts?.find((a) => a._id === creditAccount);
       const posDirectPrint = settings?.printer?.posDirectPrint || false;
       
       if (posDirectPrint) {
@@ -788,7 +738,6 @@ export default function PosPage() {
 
       clearCart();
       toggleModal("payment");
-      refetchQarzaAccounts();
       refetchProducts();
     } catch (err) {
       console.error("Checkout error:", err);

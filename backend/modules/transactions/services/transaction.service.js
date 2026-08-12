@@ -115,18 +115,18 @@ const deleteTransaction = async (id) => {
  * - Hybrid: creates 2 transactions (1 cash, 1 credit)
  */
 const createPurchaseTransaction = async (paymentData) => {
-    const { 
-        purchase, 
-        paymentMethod, 
-        amount, 
-        cashAmount, 
-        creditAmount, 
-        creditAccount, 
-        paymentMethodId, 
-        paymentMethodName, 
-        paymentDate, 
-        notes, 
-        createdBy 
+    const {
+        purchase,
+        paymentMethod,
+        amount,
+        cashAmount,
+        creditAmount,
+        creditAccount,
+        paymentMethodId,
+        paymentMethodName,
+        paymentDate,
+        notes,
+        createdBy
     } = paymentData;
 
     const transactions = [];
@@ -201,12 +201,105 @@ const createPurchaseTransaction = async (paymentData) => {
     return transactions;
 };
 
-export { 
-    createTransactionService, 
-    findTransactionService, 
-    findOneTransactionService, 
-    findByIdTransactionService, 
-    updateTransactionService, 
+/**
+ * Create transaction(s) for a POS order payment
+ * - Cash: creates 1 transaction with type 'pos-order-payment'
+ * - Credit: creates 1 transaction with credit account
+ * - Hybrid: creates 2 transactions (1 cash, 1 credit)
+ */
+const createSaleTransaction = async (paymentData) => {
+    const {
+        order,
+        paymentMethod,
+        amount,
+        cashAmount,
+        creditAmount,
+        creditAccount,
+        paymentMethodId,
+        paymentMethodName,
+        paymentDate,
+        notes,
+        createdBy
+    } = paymentData;
+
+    const transactions = [];
+
+    if (paymentMethod === 'cash') {
+        // Single cash transaction
+        const cashTransaction = await createTransactionService({
+            sourceType: 'sale',
+            sourceId: order,
+            method: 'cash',
+            amount: amount,
+            cashAmount: cashAmount || amount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes || `Cash payment for POS order`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+    } else if (paymentMethod === 'credit') {
+        // Single credit transaction
+        const creditTransaction = await createTransactionService({
+            sourceType: 'sale',
+            sourceId: order,
+            method: 'credit',
+            amount: amount,
+            cashAmount: 0,
+            creditAmount: creditAmount || amount,
+            creditAccount: creditAccount,
+            creditType: 'cashout', // We're giving credit, so it's cashout
+            transactionDate: paymentDate,
+            notes: notes || `Credit payment for POS order`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+
+    } else if (paymentMethod === 'hybrid') {
+        // Two transactions: one cash, one credit
+        const cashTransaction = await createTransactionService({
+            sourceType: 'sale',
+            sourceId: order,
+            method: 'cash',
+            amount: cashAmount,
+            cashAmount: cashAmount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (cash portion)` : `Cash portion of hybrid payment for POS order`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+        const creditTransaction = await createTransactionService({
+            sourceType: 'sale',
+            sourceId: order,
+            method: 'credit',
+            amount: creditAmount,
+            cashAmount: 0,
+            creditAmount: creditAmount,
+            creditAccount: creditAccount,
+            creditType: 'cashout', // We're giving credit, so it's cashout
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (credit portion)` : `Credit portion of hybrid payment for POS order`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+    }
+
+    return transactions;
+};
+
+export {
+    createTransactionService,
+    findTransactionService,
+    findOneTransactionService,
+    findByIdTransactionService,
+    updateTransactionService,
     deleteOneTransactionService,
     countTransactionService,
     getTransactions,
@@ -215,5 +308,6 @@ export {
     createTransaction,
     updateTransaction,
     deleteTransaction,
-    createPurchaseTransaction
+    createPurchaseTransaction,
+    createSaleTransaction
 };
