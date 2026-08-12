@@ -2,6 +2,7 @@ import { createPurchaseService, findPurchaseService, findOnePurchaseService, fin
 import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 import { getTransactions } from "../../transactions/services/transaction.service.js";
+import { generateBatchNumber } from "./batch.service.js";
 
 const generatePurchaseNumber = async () => {
     const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
@@ -113,8 +114,33 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
     const purchaseItems = [];
 
     for (const item of purchaseData.items) {
+        let batchNumber = item.batchNumber;
+        
+        // If batchNumber is not provided, generate a unique one via API
+        if (!batchNumber) {
+            let isUnique = false;
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            while (!isUnique && attempts < maxAttempts) {
+                batchNumber = await generateBatchNumber();
+                const existingBatch = await findOneBatchService({
+                    batchNumber: batchNumber,
+                    product: item.product,
+                });
+                if (!existingBatch) {
+                    isUnique = true;
+                }
+                attempts++;
+            }
+            
+            if (!isUnique) {
+                throw new Error("Failed to generate unique batch number after multiple attempts");
+            }
+        }
+
         let batch = await findOneBatchService({
-            batchNumber: item.batchNumber,
+            batchNumber: batchNumber,
             product: item.product,
         });
 
@@ -122,7 +148,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
             // Create new batch with quantity=0 — stock will be incremented when status changes to 'delivered'
             batch = await createBatchService({
                 product: item.product,
-                batchNumber: item.batchNumber,
+                batchNumber: batchNumber,
                 supplier: purchaseData.supplier,
                 quantity: 0,
                 purchasePrice: item.costPrice || item.price,
@@ -193,14 +219,39 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
 
     // First pass: create/update batches (without adjusting stock yet)
     for (const item of data.items) {
+        let batchNumber = item.batchNumber;
+        
+        // If batchNumber is not provided, generate a unique one via API
+        if (!batchNumber) {
+            let isUnique = false;
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            while (!isUnique && attempts < maxAttempts) {
+                batchNumber = await generateBatchNumber();
+                const existingBatch = await findOneBatchService({
+                    batchNumber: batchNumber,
+                    product: item.product,
+                });
+                if (!existingBatch) {
+                    isUnique = true;
+                }
+                attempts++;
+            }
+            
+            if (!isUnique) {
+                throw new Error("Failed to generate unique batch number after multiple attempts");
+            }
+        }
+
         // Always look up batch by batchNumber to ensure consistency with stock adjustments
-        let batch = await findOneBatchService({ batchNumber: item.batchNumber, product: item.product });
+        let batch = await findOneBatchService({ batchNumber: batchNumber, product: item.product });
         
         if (!batch) {
             // Create new batch with quantity=0 - adjustStock will handle the increment
             batch = await createBatchService({
                 product: item.product, 
-                batchNumber: item.batchNumber,
+                batchNumber: batchNumber,
                 supplier: data.supplier, 
                 quantity: 0,  // Start at 0, adjustStock will increment
                 purchasePrice: item.costPrice || item.price, 

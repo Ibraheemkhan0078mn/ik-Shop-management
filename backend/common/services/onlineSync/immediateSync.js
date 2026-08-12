@@ -79,11 +79,26 @@ export async function immediateUploadSingleDoc(operation, modelName, documentId,
 
         // Upload to online
         if (operation === "create") {
-            await onlineModel.updateOne(
-                { _id: doc._id },
-                { $set: doc },
-                { upsert: true }
-            );
+            try {
+                await onlineModel.updateOne(
+                    { _id: doc._id },
+                    { $set: doc },
+                    { upsert: true }
+                );
+            } catch (error) {
+                if (error.code === 11000) {
+                    // Duplicate key error - document already exists with same unique field
+                    console.warn(`[immediateSync] Duplicate key error for ${modelName}:${documentId} - document may already exist online`);
+                    // Try to update instead
+                    await onlineModel.updateOne(
+                        { _id: doc._id },
+                        { $set: doc },
+                        { upsert: false }
+                    );
+                } else {
+                    throw error;
+                }
+            }
         } else if (operation === "update") {
             // Only update if online version is older
             await onlineModel.updateOne(

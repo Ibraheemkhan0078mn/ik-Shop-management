@@ -213,8 +213,14 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
         if (!batch) {
             throw new Error(`Batch not found: ${item.batchNumber}`);
         }
-        if (batch.quantity < item.quantity) {
-            throw new Error(`Insufficient quantity in batch ${item.batchNumber}. Available: ${batch.quantity}, Required: ${item.quantity}. Please check if this batch has already been used or returned.`);
+        // Allow return even if batch quantity is 0 (e.g., for damaged goods or corrections)
+        // Only warn if quantity is negative
+        if (batch.quantity < 0) {
+            throw new Error(`Invalid batch quantity in ${item.batchNumber}. Quantity cannot be negative: ${batch.quantity}`);
+        }
+        // Log warning if batch is empty but allow the return to proceed
+        if (batch.quantity === 0) {
+            console.warn(`Batch ${item.batchNumber} has 0 quantity available. Proceeding with return of ${item.quantity} items. This may indicate the batch was already used or returned.`);
         }
     }
 

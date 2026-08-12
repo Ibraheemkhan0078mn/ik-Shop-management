@@ -9,12 +9,25 @@ import { getLocalDeviceIdentityModel } from "../../../configs/connect.db.js";
 
 export async function deviceIdentityCheckFunction() {
     try {
-
-
-
         let deviceIdentityModel = getLocalDeviceIdentityModel()
         let deviceId;
         let appVersion = null;
+        
+        if (!deviceIdentityModel) {
+            console.warn("Device identity model not initialized, using default device ID");
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 10);
+            const salt = "ibrahim_secret_salt";
+            const base = `${timestamp}-${random}-${salt}`;
+            let hash = 0;
+            for (let i = 0; i < base.length; i++) {
+                hash = (hash << 5) - hash + base.charCodeAt(i);
+                hash |= 0;
+            }
+            let randomUniqueKey = "ID-" + Math.abs(hash).toString(36) + "-" + random;
+            return { deviceId: randomUniqueKey, appVersion: null };
+        }
+        
         let existingDeviceIdentity = await deviceIdentityModel.find()
         if (existingDeviceIdentity?.length > 0) {
             deviceId = existingDeviceIdentity[0].deviceId

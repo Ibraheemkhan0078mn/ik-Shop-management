@@ -61,12 +61,36 @@ async function uploadAllDocs(model, localCT) {
   const cleanupIds = [];
 
   for (const chunk of chunks) {
-    const result = await model.online.bulkWrite(upsertOps(chunk));
-    if (!bulkWriteOk(result, chunk.length)) {
-      console.warn(`[allUpload] Chunk failed for ${model.local.modelName}, skipping cleanup for this chunk.`);
-      continue;
+    try {
+      const result = await model.online.bulkWrite(upsertOps(chunk));
+      if (!bulkWriteOk(result, chunk.length)) {
+        console.warn(`[allUpload] Chunk failed for ${model.local.modelName}, skipping cleanup for this chunk.`);
+        continue;
+      }
+      cleanupIds.push(...chunk.map((d) => d._id.toString()));
+    } catch (error) {
+      if (error.code === 11000 && model.local.modelName === 'users') {
+        // Handle duplicate key error for Users (email uniqueness)
+        console.warn(`[allUpload] Duplicate key error for Users model, attempting individual upserts with email filter`);
+        for (const doc of chunk) {
+          try {
+            // Use email as filter for Users to handle duplicate emails
+            const emailFilter = doc.email ? { email: doc.email } : { _id: doc._id };
+            await model.online.updateOne(
+              emailFilter,
+              { $set: doc },
+              { upsert: true }
+            );
+            cleanupIds.push(doc._id.toString());
+          } catch (individualError) {
+            console.error(`[allUpload] Failed to upsert individual user document:`, individualError.message);
+          }
+        }
+      } else {
+        console.error(`[allUpload] Bulk write error for ${model.local.modelName}:`, error.message);
+        continue;
+      }
     }
-    cleanupIds.push(...chunk.map((d) => d._id.toString()));
   }
 
   // Delete local CT only after all successful chunks are confirmed
@@ -129,6 +153,30 @@ async function uploadTrackedDocs(model, operationType, localCT, onlineCT, device
     if (!docOk) {
       console.warn(`[trackedUpload:${operationType}] Doc chunk failed for ${model.local.modelName}`);
       continue;
+    }
+
+    // Handle duplicate key errors for Users model
+    if (docResult?.writeErrors && docResult.writeErrors.length > 0) {
+      const hasDuplicateError = docResult.writeErrors.some(e => e.code === 11000);
+      if (hasDuplicateError && model.local.modelName === 'users') {
+        console.warn(`[trackedUpload:${operationType}] Duplicate key error for Users model, attempting individual upserts`);
+        for (const doc of docChunk) {
+          try {
+            const emailFilter = doc.email ? { email: doc.email } : { _id: doc._id };
+            if (operationType === "create") {
+              await model.online.updateOne(emailFilter, { $set: doc }, { upsert: true });
+            } else {
+              await model.online.updateOne(
+                { ...emailFilter, updatedAt: { $lt: doc.updatedAt } },
+                { $set: doc },
+                { upsert: false }
+              );
+            }
+          } catch (individualError) {
+            console.error(`[trackedUpload:${operationType}] Failed to upsert individual user:`, individualError.message);
+          }
+        }
+      }
     }
 
     // 2. Upsert online CT with deviceId

@@ -546,7 +546,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             gst: Number(bill.gst), gstType: bill.gstType,
             shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
             items: addedItems.map(it => ({
-                product: it.item, batchNumber: it.batchNumber,
+                product: it.item,
+                batchNumber: it.batchMode === "existing" ? it.batchNumber : undefined, // Only send batchNumber for existing batches
                 quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
                 discount: it.discount, discountType: it.discountType,
                 tax: it.tax, taxType: it.taxType,

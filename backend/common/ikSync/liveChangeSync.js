@@ -147,7 +147,7 @@ export async function liveChangeSyncFunc(operation, modelName, documentId) {
             await onlineModel.findOneAndUpdate(
                 { _id: documentId },
                 docData,
-                { upsert: true, new: true }
+                { upsert: true, returnDocument: 'after' }
             );
             console.log(`[liveChangeSync] ${operation} synced to online DB for ${modelName} (${documentId})`);
         } else if (operation === 'delete') {

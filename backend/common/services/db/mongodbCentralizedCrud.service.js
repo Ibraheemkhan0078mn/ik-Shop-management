@@ -63,7 +63,7 @@ export const updateDocs = async ({ model, modelName, filter, data, options = {} 
   };
 
   if (many) return Model.updateMany(finalFilter, dataWithSyncTimestamp, { runValidators, upsert });
-  return Model.findOneAndUpdate(finalFilter, dataWithSyncTimestamp, { new: returnNew, runValidators, upsert });
+  return Model.findOneAndUpdate(finalFilter, dataWithSyncTimestamp, { returnDocument: returnNew ? 'after' : 'before', runValidators, upsert });
 };
 
 export const deleteDocs = async ({ model, modelName, filter, options = {} }) => {
@@ -80,7 +80,7 @@ export const deleteDocs = async ({ model, modelName, filter, options = {} }) => 
     if (many) {
       return Model.updateMany(filter, updateData);
     }
-    return Model.findOneAndUpdate(filter, updateData, { new: true });
+    return Model.findOneAndUpdate(filter, updateData, { returnDocument: 'after' });
   }
 
   // Hard delete - permanently remove from database
@@ -103,7 +103,7 @@ export const restoreDocs = async ({ model, modelName, filter, options = {} }) =>
   if (many) {
     return Model.updateMany({ ...filter, isDeleted: true }, updateData);
   }
-  return Model.findOneAndUpdate({ ...filter, isDeleted: true }, updateData, { new: true });
+  return Model.findOneAndUpdate({ ...filter, isDeleted: true }, updateData, { returnDocument: 'after' });
 };
 
 /**

@@ -820,7 +820,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         {labels.items}: {item.quantity}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
-                                                        {labels.price}: Rs. {Number(item.price || 0).toFixed(2)}
+                                                        {labels.costPrice || "Cost Price"}: Rs. {Number(item.costPrice || item.price || 0).toFixed(2)}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
                                                         {labels.batch}: {item.batch?.batchNumber || "—"}
