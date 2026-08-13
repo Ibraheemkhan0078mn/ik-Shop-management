@@ -7,6 +7,8 @@ import { useAllCustomers } from "../../customers/services/customers.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
+import StaffModal from "../../staff/components/StaffModal.jsx";
+import CustomerModal from "../../customers/components/CustomerModal.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
@@ -83,8 +85,8 @@ export default function PosPaymentModal({
     const labels = getPosLabels(currentLanguage);
 
     const { data: qarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
-    const { data: staffList = [] } = useGetStaffListQuery({ limit: 100 });
-    const { data: customersData = [] } = useAllCustomers();
+    const { data: staffList = [], refetch: refetchStaffList } = useGetStaffListQuery({ limit: 100 });
+    const { data: customersData = [], refetch: refetchCustomers } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
     const paymentTabs = PAYMENT_TABS(labels);
@@ -97,12 +99,13 @@ export default function PosPaymentModal({
     const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
     const [orderType, setOrderType] = useState("retail");
     const [selectedStaffId, setSelectedStaffId] = useState(initialStaffId);
-    const [cashReceived, setCashReceived] = useState("");
     const [qarzaAccountId, setQarzaAccountId] = useState("");
     const [hybridCash, setHybridCash] = useState("");
     const [hybridQarzaAccountId, setHybridQarzaAccountId] = useState("");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+    const [showStaffModal, setShowStaffModal] = useState(false);
+    const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [itemDiscounts, setItemDiscounts] = useState({});
     const [itemDiscountTypes, setItemDiscountTypes] = useState({});
     const [expandedCalculation, setExpandedCalculation] = useState({});
@@ -161,13 +164,8 @@ export default function PosPaymentModal({
     
     const totalDiscount = discountAmt + itemDiscountTotal;
     const total = Math.max(0, billSubtotal - discountAmt);
-    const cashChange = Math.max(0, (Number(cashReceived) || 0) - total);
     const hybridQarza = total - (Number(hybridCash) || 0);
     const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
-
-    useEffect(() => {
-        if (total > 0) setCashReceived(String(total.toFixed(0)));
-    }, [total]);
 
     const handleQarzaAccountCreated = () => {
         setShowQarzaModal(false);
@@ -178,10 +176,20 @@ export default function PosPaymentModal({
         setShowPaymentMethodModal(false);
     };
 
-    const qarzaOptions = qarzaAccounts?.accounts?.map((a) => ({
+    const handleStaffCreated = () => {
+        setShowStaffModal(false);
+        refetchStaffList();
+    };
+
+    const handleCustomerCreated = () => {
+        setShowCustomerModal(false);
+        refetchCustomers();
+    };
+
+    const qarzaOptions = qarzaAccounts?.accounts?.filter(a => a.type === 'customer').map((a) => ({
         value: a._id,
         label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
-    }));
+    })) || [];
 
     const customerOptions = (customersData?.filter(c => c.isActive !== false) || []).map((c) => ({
         value: c._id,
@@ -195,24 +203,28 @@ export default function PosPaymentModal({
 
     const staffListFiltered = Array.isArray(staffList?.data) ? staffList.data : [];
 
-    // Set first payment method as default when available and not already selected
+    // Auto select qarza account when customer is selected
     useEffect(() => {
-        if (paymentMethodOptions.length > 0 && !selectedPaymentMethodId) {
-            setSelectedPaymentMethodId(paymentMethodOptions[0].value);
+        if (selectedCustomerId && customerType === "regular") {
+            const selectedCustomer = customersData?.find(c => c._id === selectedCustomerId);
+            if (selectedCustomer?.qarzaAccountId) {
+                setQarzaAccountId(selectedCustomer.qarzaAccountId);
+                setHybridQarzaAccountId(selectedCustomer.qarzaAccountId);
+            }
         }
-    }, [paymentMethodOptions, selectedPaymentMethodId]);
+    }, [selectedCustomerId, customerType, customersData]);
 
     const canCheckout = useMemo(() => {
         if (total === 0) return true;
         // Require customerId when customerType is regular
         if (customerType === "regular" && !selectedCustomerId) return false;
         switch (activeTab) {
-            case "cash": return Number(cashReceived) >= total && !!selectedPaymentMethodId;
+            case "cash": return !!selectedPaymentMethodId;
             case "credit": return !!qarzaAccountId;
             case "hybrid": return hybridValid && !!selectedPaymentMethodId && !!hybridQarzaAccountId;
             default: return false;
         }
-    }, [activeTab, cashReceived, total, qarzaAccountId, hybridValid, selectedPaymentMethodId, customerType, selectedCustomerId, hybridQarzaAccountId]);
+    }, [activeTab, total, qarzaAccountId, hybridValid, selectedPaymentMethodId, customerType, selectedCustomerId, hybridQarzaAccountId]);
 
     const buildPayload = useCallback(() => {
         const selectedCustomer = customersData?.find(c => c._id === selectedCustomerId);
@@ -227,12 +239,12 @@ export default function PosPaymentModal({
             paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
             orderType,
-            cashAmount: activeTab === "cash" ? cashReceived : (activeTab === "hybrid" ? hybridCash : 0),
+            cashAmount: activeTab === "cash" ? String(total) : (activeTab === "hybrid" ? hybridCash : 0),
             creditAccount: activeTab === "credit" ? qarzaAccountId : (activeTab === "hybrid" ? hybridQarzaAccountId : null),
             itemDiscounts: itemDiscounts,
             itemDiscountTypes: itemDiscountTypes,
         };
-    }, [customerName, customerType, selectedCustomerId, initialWaiter, selectedStaffId, discountAmt, activeTab, selectedPaymentMethodId, paymentMethodsData, orderType, cashReceived, hybridCash, qarzaAccountId, hybridQarzaAccountId, itemDiscounts, itemDiscountTypes, customersData]);
+    }, [customerName, customerType, selectedCustomerId, initialWaiter, selectedStaffId, discountAmt, activeTab, selectedPaymentMethodId, paymentMethodsData, orderType, total, hybridCash, qarzaAccountId, hybridQarzaAccountId, itemDiscounts, itemDiscountTypes, customersData]);
 
     const handleCheckout = useCallback(() => { if (canCheckout) onCheckout(buildPayload()); }, [canCheckout, buildPayload, onCheckout]);
 
@@ -242,7 +254,6 @@ export default function PosPaymentModal({
         switch (activeTab) {
             case "cash":
                 if (!selectedPaymentMethodId) return labels.selectPaymentMethod;
-                if (Number(cashReceived) < total) return labels.insufficientCash;
                 return null;
             case "credit":
                 if (!qarzaAccountId) return labels.selectQarzaAccount;
@@ -254,7 +265,7 @@ export default function PosPaymentModal({
                 return null;
             default: return null;
         }
-    }, [total, customerType, selectedCustomerId, labels, activeTab, selectedPaymentMethodId, cashReceived, qarzaAccountId, hybridQarzaAccountId, hybridValid]);
+    }, [total, customerType, selectedCustomerId, labels, activeTab, selectedPaymentMethodId, qarzaAccountId, hybridQarzaAccountId, hybridValid]);
 
     // Submit on Enter
     useEffect(() => {
@@ -366,25 +377,41 @@ export default function PosPaymentModal({
                                 </FormField>
 
                                 <FormField label={labels.staffMember}>
-                                    <select
-                                        value={selectedStaffId}
-                                        onChange={(e) => setSelectedStaffId(e.target.value)}
-                                        className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                        style={{
-                                            background: "var(--surface)",
-                                            color: selectedStaffId ? "var(--ink)" : "var(--muted)",
-                                            border: "1px solid var(--border)",
-                                        }}
-                                    >
-                                        <option value="">{labels.selectStaff}</option>
-                                        {staffListFiltered.map((s) => (
-                                            <option key={s._id} value={s._id}>{s.fullName}</option>
-                                        ))}
-                                    </select>
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={selectedStaffId}
+                                            onChange={(e) => setSelectedStaffId(e.target.value)}
+                                            className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                                            style={{
+                                                background: "var(--surface)",
+                                                color: selectedStaffId ? "var(--ink)" : "var(--muted)",
+                                                border: "1px solid var(--border)",
+                                            }}
+                                        >
+                                            <option value="">{labels.selectStaff}</option>
+                                            {staffListFiltered.map((s) => (
+                                                <option key={s._id} value={s._id}>{s.fullName}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowStaffModal(true)}
+                                            className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                            title="Create new staff"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
                                 </FormField>
                             </div>
 
-                            {/* Row 2: Customer Type Toggle & Customer Selection */}
+                            {/* Row 2: Order type toggle */}
+                            <div>
+                                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.orderType}</p>
+                                <OrderTypeToggle value={orderType} onChange={setOrderType} labels={labels} />
+                            </div>
+
+                            {/* Row 3: Customer Type Toggle & Customer Selection */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.customerType}</p>
@@ -396,29 +423,33 @@ export default function PosPaymentModal({
                                         <Input placeholder={labels.optional}
                                             value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                                     ) : (
-                                        <select
-                                            value={selectedCustomerId}
-                                            onChange={(e) => setSelectedCustomerId(e.target.value)}
-                                            className="w-full h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                            style={{
-                                                background: "var(--surface)",
-                                                color: selectedCustomerId ? "var(--ink)" : "var(--muted)",
-                                                border: "1px solid var(--border)",
-                                            }}
-                                        >
-                                            <option value="">{labels.selectCustomer}</option>
-                                            {customerOptions.map((c) => (
-                                                <option key={c.value} value={c.value}>{c.label}</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={selectedCustomerId}
+                                                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                                                className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
+                                                style={{
+                                                    background: "var(--surface)",
+                                                    color: selectedCustomerId ? "var(--ink)" : "var(--muted)",
+                                                    border: "1px solid var(--border)",
+                                                }}
+                                            >
+                                                <option value="">{labels.selectCustomer}</option>
+                                                {customerOptions.map((c) => (
+                                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCustomerModal(true)}
+                                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                                title="Create new customer"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
                                     )}
                                 </FormField>
-                            </div>
-
-                            {/* Order type toggle */}
-                            <div>
-                                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>{labels.orderType}</p>
-                                <OrderTypeToggle value={orderType} onChange={setOrderType} labels={labels} />
                             </div>
 
                             {/* Divider */}
@@ -490,53 +521,18 @@ export default function PosPaymentModal({
                                         </div>
                                     </div>
 
-                                    {/* Cash received */}
+                                    {/* Auto cash received info */}
                                     <div className={rowClass}>
                                         <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.cashReceived}</label>
                                         <div className={controlWrapClass}>
-                                            <div className="relative">
-                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
-                                                <input
-                                                    type="number"
-                                                    value={cashReceived}
-                                                    onChange={(e) => setCashReceived(e.target.value)}
-                                                    placeholder={`Min. Rs ${total.toLocaleString()}`}
-                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
-                                                    style={inputStyle}
-                                                    {...fieldFocus}
-                                                    required
-                                                />
+                                            <div
+                                                className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
+                                                style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
+                                            >
+                                                {labels.autoFullAmount}: <span className="font-semibold">Rs {total.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Change info */}
-                                    {Number(cashReceived) >= total && cashReceived && (
-                                        <div className={rowClass}>
-                                            <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                            <div className={controlWrapClass}>
-                                                <div
-                                                    className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                    style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
-                                                >
-                                                    {labels.changeToReturn}: <span className="font-semibold">Rs {cashChange.toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {Number(cashReceived) > 0 && Number(cashReceived) < total && (
-                                        <div className={rowClass}>
-                                            <span className={labelClass} style={{ color: "var(--muted)" }} />
-                                            <div className={controlWrapClass}>
-                                                <div
-                                                    className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
-                                                    style={{ backgroundColor: 'rgba(220, 38, 38, 0.06)', borderColor: 'rgba(220, 38, 38, 0.2)', color: '#dc2626' }}
-                                                >
-                                                    {labels.shortBy} <span className="font-semibold">Rs {(total - Number(cashReceived)).toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
                                 </>
                             )}
 
@@ -910,6 +906,21 @@ export default function PosPaymentModal({
                     onClose={() => setShowPaymentMethodModal(false)}
                     onSuccess={handlePaymentMethodCreated}
                     labels={{ addPaymentMethod: "Add Payment Method", paymentMethodName: "Payment Method Name", paymentMethodNameRequired: "Payment method name is required", paymentMethodPlaceholder: "e.g., Cash, Bank Transfer", active: "Active", cancel: "Cancel", add: "Add", saving: "Saving..." }}
+                />
+            )}
+            {showStaffModal && (
+                <StaffModal
+                    mode="create"
+                    open={showStaffModal}
+                    onClose={() => setShowStaffModal(false)}
+                    onSuccess={handleStaffCreated}
+                />
+            )}
+            {showCustomerModal && (
+                <CustomerModal
+                    mode="create"
+                    onClose={() => setShowCustomerModal(false)}
+                    onSuccess={handleCustomerCreated}
                 />
             )}
         </div>
