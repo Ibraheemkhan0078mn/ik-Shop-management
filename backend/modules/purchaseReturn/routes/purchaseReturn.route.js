@@ -12,6 +12,7 @@ import {
     getPurchaseDetailsForReturn,
     validatePurchaseReturnNumberData,
     generatePurchaseReturnNumberData,
+    getSupplierPurchaseReturnsData,
 } from "../controllers/purchaseReturn.controller.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get("/purchase/:purchaseId", getPurchaseDetailsForReturn);
 router.post("/validate-number", validatePurchaseReturnNumberData);
 router.get("/generate-number", generatePurchaseReturnNumberData);
+router.get("/supplier/:supplierId", getSupplierPurchaseReturnsData);
 router.get("/", getPurchaseReturnsData);
 router.get("/paginate", getPaginatedPurchaseReturnsData);
 router.get("/pagination", getPaginatedPurchaseReturnsData);

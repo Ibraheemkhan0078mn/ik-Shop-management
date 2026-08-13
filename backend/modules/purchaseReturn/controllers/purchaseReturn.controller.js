@@ -546,3 +546,89 @@ export const validatePurchaseReturnNumberData = asyncHandler(async (req, res) =>
         suggestedNumber: purchaseReturnNumber
     });
 });
+
+export const getSupplierPurchaseReturnsData = asyncHandler(async (req, res) => {
+    const { supplierId } = req.params;
+    const { page = 1, limit = 20, startDate, endDate } = req.query;
+    
+    console.log('Supplier Purchase Returns Request:', { supplierId, page, limit, startDate, endDate });
+    
+    let query = { supplier: supplierId };
+    
+    if (startDate || endDate) {
+        query.returnDate = {};
+        if (startDate) query.returnDate.$gte = new Date(startDate);
+        if (endDate) query.returnDate.$lte = new Date(endDate);
+    }
+
+    const purchaseReturns = await findPurchaseReturnService(query, {
+        sort: { returnDate: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit)
+    });
+
+    console.log('Found purchase returns:', purchaseReturns.length);
+
+    // Manually fetch supplier, purchase, and product data using findOne
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.purchase) {
+            const purchase = await findByIdPurchaseService(purchaseReturn.purchase);
+            if (purchase) {
+                purchaseReturn.purchase = {
+                    _id: purchase._id,
+                    invoiceNumber: purchase.invoiceNumber
+                };
+            }
+        }
+
+        if (purchaseReturn.supplier) {
+            const supplier = await findOneSupplierService({ _id: purchaseReturn.supplier });
+            if (supplier) {
+                purchaseReturn.supplier = {
+                    _id: supplier._id,
+                    name: supplier.name
+                };
+            }
+        }
+
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                if (item.product) {
+                    const product = await findOneProductService({ _id: item.product });
+                    if (product) {
+                        item.product = {
+                            _id: product._id,
+                            name: product.name,
+                            productCode: product.productCode
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    const total = await countPurchaseReturnService(query);
+
+    // Calculate KPIs
+    const allReturns = await findPurchaseReturnService({ supplier: supplierId });
+    const kpis = {
+        totalReturns: allReturns.length,
+        totalRefundAmount: allReturns.reduce((sum, r) => sum + (r.totalRefundAmount || 0), 0),
+        pendingReturns: allReturns.filter(r => r.status === 'pending').length,
+        approvedReturns: allReturns.filter(r => r.status === 'approved').length,
+        rejectedReturns: allReturns.filter(r => r.status === 'rejected').length,
+        draftReturns: allReturns.filter(r => r.status === 'draft').length,
+    };
+
+    console.log('KPIs:', kpis);
+
+    return ApiResponse(res, 200, "Supplier purchase returns retrieved successfully", purchaseReturns, {
+        pagination: {
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(total / limit),
+        },
+        kpis
+    });
+});

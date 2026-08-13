@@ -50,12 +50,24 @@ const getPurchaseByInvoiceNumber = async (invoiceNumber) => {
 };
 
 const getPaginatedPurchases = async (filters = {}) => {
-    const { page = 1, limit = 20, invoiceNumber } = filters;
+    const { page = 1, limit = 20, invoiceNumber, supplier, startDate, endDate } = filters;
     const query = {};
     
     // Add invoice number filter if provided (partial match)
     if (invoiceNumber) {
         query.invoiceNumber = { $regex: invoiceNumber, $options: "i" };
+    }
+    
+    // Add supplier filter if provided
+    if (supplier) {
+        query.supplier = supplier;
+    }
+    
+    // Add date range filter if provided
+    if (startDate || endDate) {
+        query.date = {};
+        if (startDate) query.date.$gte = new Date(startDate);
+        if (endDate) query.date.$lte = new Date(endDate);
     }
     
     const purchases = await findPurchaseService(query, {

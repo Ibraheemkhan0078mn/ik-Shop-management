@@ -1,16 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Package, DollarSign, FileText, Plus, Edit2, Trash2, Receipt, X, Download } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
-import { useGetPurchaseReturnPaymentsQuery } from "../services/purchaseReturn.service.js";
-import { useEffect, useState } from "react";
-import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PurchaseReturnDetailPdfTemplate from "../components/PurchaseReturnDetailPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
-import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import ReceiptTemplate from "../../../shared/components/ReceiptTemplate.jsx";
 
 const STATUS_STYLE = {
     draft: { background: "rgba(107,114,128,0.1)", color: "#6b7280", text: "Draft" },
@@ -22,50 +17,16 @@ const STATUS_STYLE = {
 export default function PurchaseReturnDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
-    
+    const [showPdfModal, setShowPdfModal] = useState(false);
+    const [expandedItems, setExpandedItems] = useState({});
+    const [purchaseReturn, setPurchaseReturn] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
-    
-    const [purchaseReturn, setPurchaseReturn] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [editingPayment, setEditingPayment] = useState(null);
-    const [showReceipt, setShowReceipt] = useState(false);
-    const [showPdfModal, setShowPdfModal] = useState(false);
 
-    const { data: payments, refetch: refetchPayments, isLoading: paymentsLoading } = useGetPurchaseReturnPaymentsQuery(id);
-    const paymentsList = Array.isArray(payments) ? payments : (payments?.data || []);
-
-    const handleDeletePayment = async (paymentId) => {
-        if (!window.confirm("Are you sure you want to delete this refund?")) return;
-        
-        try {
-            const response = await fetch(`http://localhost:5001/api/purchase-returns/${id}/payments/${paymentId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const data = await response.json();
-            if (data.success) {
-                showSuccess("Refund deleted successfully");
-                refetchPayments();
-            } else {
-                showError(data.message || "Failed to delete refund");
-            }
-        } catch (error) {
-            showError("Failed to delete refund");
-        }
-    };
-
-    const handleEditPayment = (payment) => {
-        setEditingPayment(payment);
-    };
-
-    const handlePaymentSuccess = () => {
-        setEditingPayment(null);
-        refetchPayments();
-    };
-
-    useEffect(() => {
+    React.useEffect(() => {
         const fetchData = async () => {
             try {
                 const result = await getPurchaseReturnByIdApi(id);
@@ -93,348 +54,300 @@ export default function PurchaseReturnDetail() {
 
     return (
         <>
-            {editingPayment && (
-                <PurchaseReturnPaymentModal
-                    purchaseReturn={purchaseReturn}
-                    payment={editingPayment}
-                    onClose={() => setEditingPayment(null)}
-                    onSuccess={handlePaymentSuccess}
-                />
-            )}
-            {showReceipt && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[90] p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-800">Purchase Return Receipt</h2>
-                            <button onClick={() => setShowReceipt(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                                <X className="w-5 h-5 text-gray-600" />
+            <div className="min-h-screen bg-[var(--app-bg)]">
+                <div className="max-w-5xl mx-auto px-6 py-8">
+
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 -ml-2 hover:bg-[var(--hover)] rounded-lg transition-all"
+                            >
+                                <ArrowLeft size={20} className="text-[var(--ink)]" />
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-[var(--ink)] font-display leading-tight">
+                                    {labels.purchaseReturnDetails || "Purchase Return Details"}
+                                </h1>
+                                <p className="text-sm text-[var(--muted)]">
+                                    {purchaseReturn.purchaseReturnNumber || purchaseReturn.returnNumber || "—"} · {date}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowPdfModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all shadow-sm"
+                            >
+                                <Download size={15} />
+                                {labels.exportDetails || "Export"}
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4">
-                            <ReceiptTemplate
-                                invoiceNumber={purchaseReturn.returnNumber}
-                                date={date}
-                                customerName={purchaseReturn.supplier?.name}
-                                items={purchaseReturn.items}
-                                summary={{
-                                    totalAmount: purchaseReturn.totalAmount
-                                }}
-                                payments={paymentsList}
-                                type="purchase-return"
-                            />
-                        </div>
                     </div>
-                </div>
-            )}
-            <div className="p-6 bg-[var(--app-bg)] min-h-screen">
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button
-                    onClick={() => navigate("/purchase-returns")}
-                    className="p-2 hover:bg-[var(--hover)] rounded-md transition-all"
-                >
-                    <ArrowLeft size={20} className="text-[var(--ink)]" />
-                </button>
-                <div className="flex-1 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
-                        {purchaseReturn.returnNumber}
-                    </h1>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowPdfModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-colors"
-                        >
-                            <Download size={16} />
-                            Export Details
-                        </button>
-                        <button
-                            onClick={() => setShowReceipt(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            title="Print Receipt"
-                        >
-                            <Receipt size={16} />
-                            Receipt
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="space-y-6">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Calendar size={20} className="text-primary" />
+                    {/* Paper sheet */}
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm px-8 py-8">
+
+                        {/* Return info row */}
+                        <div className="flex flex-wrap items-start justify-between gap-6">
+                            <div>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Return Number</p>
+                                <p className="text-base font-semibold text-[var(--ink)]">{purchaseReturn.purchaseReturnNumber || purchaseReturn.returnNumber || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.date || "Date"}</p>
-                                <p className="font-semibold text-[var(--ink)]">{date}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                <Package size={20} className="text-orange-600" />
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Supplier</p>
+                                <p className="text-base font-semibold text-[var(--ink)]">{purchaseReturn.supplierName || purchaseReturn.supplier?.name || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalItems || "Total Items"}</p>
-                                <p className="font-semibold text-[var(--ink)]">
-                                    {purchaseReturn?.items?.length || 0} items
-                                </p>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Date</p>
+                                <p className="text-base font-semibold text-[var(--ink)]">{date}</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                                <DollarSign size={20} className="text-red-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalAmount || "Total Amount"}</p>
-                                <p className="font-semibold text-red-600">
-                                    Rs {(purchaseReturn?.totalAmount ?? 0).toLocaleString()}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Return Information */}
-                <div className="card p-6">
-                    <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <FileText size={20} />
-                        {labels.returnInformation || "Return Information"}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                {labels.returnNumber || "Return #"}
-                            </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
-                                {purchaseReturn?.returnNumber || "—"}
-                            </p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                {labels.supplier || "Supplier"}
-                            </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
-                                {purchaseReturn?.supplierName || purchaseReturn?.supplier?.name || "—"}
-                            </p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                {labels.returnDate || "Return Date"}
-                            </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">{date}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                {labels.reason || "Reason"}
-                            </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1 capitalize">
-                                {purchaseReturn?.reason?.replace(/_/g, " ") || "—"}
-                            </p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                {labels.status || "Status"}
-                            </label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
-                                <span 
-                                    className="px-3 py-1 rounded-lg text-xs font-semibold"
+                            <div className="text-right">
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Status</p>
+                                <span
+                                    className="inline-block px-3 py-1 rounded-lg text-sm font-semibold"
                                     style={{ background: statusStyle.background, color: statusStyle.color }}
                                 >
                                     {statusStyle.text}
                                 </span>
-                            </p>
-                        </div>
-                        {purchaseReturn?.notes && (
-                            <div className="md:col-span-2">
-                                <label className="text-xs text-[var(--muted)] uppercase font-bold">
-                                    {labels.notes || "Notes"}
-                                </label>
-                                <p className="text-[var(--ink)] mt-1">{purchaseReturn.notes}</p>
                             </div>
+                        </div>
+
+                        {purchaseReturn?.reason && (
+                            <p className="text-sm text-[var(--muted)] mt-6 italic">
+                                Reason: {purchaseReturn.reason.replace(/_/g, " ")}
+                            </p>
                         )}
-                    </div>
-                </div>
 
-                {/* Items Table */}
-                <div className="card p-6">
-                    <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <Package size={20} />
-                        {labels.items || "Items"}
-                    </h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead style={{ background: "var(--surface-muted)" }}>
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.productName || "Product"}
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.quantity || "Quantity"}
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.costPrice || "Cost Price"}
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.subtotal || "Subtotal"}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
-                                {purchaseReturn?.items?.map((item, index) => (
-                                    <tr key={index} className="hover:bg-[var(--surface-muted)] transition-all">
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-[var(--ink)]">
-                                                {item.productName || item.product?.name || "—"}
-                                            </p>
-                                            {item.variant && (
-                                                <p className="text-xs text-[var(--muted)]">{item.variant}</p>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-center font-medium text-[var(--ink)]">
-                                            {item.quantity || 0}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
-                                            Rs {(item.costPrice || 0).toLocaleString()}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-semibold text-red-600">
-                                            Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot style={{ background: "var(--surface-muted)", borderTop: "2px solid var(--border)" }}>
-                                <tr>
-                                    <td colSpan="3" className="px-4 py-3 text-right font-bold text-[var(--ink)]">
-                                        {labels.totalAmount || "Total Amount"}:
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-bold text-red-600 text-lg">
-                                        Rs {(purchaseReturn?.totalAmount ?? 0).toLocaleString()}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+                        {purchaseReturn?.notes && (
+                            <p className="text-sm text-[var(--muted)] mt-2 italic">
+                                Notes: {purchaseReturn.notes}
+                            </p>
+                        )}
 
-                {/* Payment/Refund Details Section */}
-                <div className="card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-[var(--ink)] flex items-center gap-2">
-                            <DollarSign size={20} />
-                            {labels.refundDetails || "Refund Details"}
-                        </h3>
-                        <button
-                            onClick={() => setEditingPayment({})}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 text-sm font-medium"
-                        >
-                            <Plus size={16} />
-                            Add Refund
-                        </button>
-                    </div>
-                    {paymentsLoading ? (
-                        <div className="text-center text-[var(--muted)] py-4">Loading refunds...</div>
-                    ) : (
+                        <div className="h-px bg-[var(--border)] my-8" />
+
+                        {/* Refund KPI row */}
+                        <div className="flex flex-wrap items-start justify-between gap-6">
+                            <div>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refund Amount</p>
+                                <p className="text-2xl font-bold text-red-600">Rs {(purchaseReturn?.totalRefundAmount ?? purchaseReturn?.totalAmount ?? 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Items</p>
+                                <p className="text-2xl font-bold text-[var(--ink)]">{purchaseReturn?.items?.length || 0}</p>
+                            </div>
+                            {/* <div>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Quantity</p>
+                                <p className="text-2xl font-bold text-[var(--accent-2)]">{Number(purchaseReturn?.totalQuantity || 0).toLocaleString()}</p>
+                            </div> */}
+                        </div>
+
+                        <div className="h-px bg-[var(--border)] my-7" />
+
+                        {/* Items */}
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
+                                Items ({purchaseReturn?.items?.length || 0})
+                            </h3>
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead style={{ background: "var(--surface-muted)" }}>
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
-                                            {labels.date || "Date"}
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
-                                            {labels.method || "Method"}
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                            {labels.amount || "Amount"}
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
-                                            {labels.creditAccount || "Credit Account"}
-                                        </th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
-                                            {labels.actions || "Actions"}
-                                        </th>
+                                <thead>
+                                    <tr className="border-b border-[var(--border)]">
+                                        <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Product</th>
+                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Return Qty</th>
+                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Cost Price</th>
+                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Cut Amount</th>
+                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Refund Amount</th>
+                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
-                                    {paymentsList?.length > 0 ? (
-                                        paymentsList.map((payment) => (
-                                            <tr key={payment._id} className="hover:bg-[var(--surface-muted)] transition-all">
-                                                <td className="px-4 py-3">
-                                                    <p className="font-medium text-[var(--ink)]">
-                                                        {new Date(payment.paymentDate).toLocaleDateString()}
-                                                    </p>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                                                        payment.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
-                                                        payment.paymentMethod === 'credit' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-purple-100 text-purple-800'
-                                                    }`}>
-                                                        {payment.paymentMethod}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-bold text-[var(--ink)]">
-                                                    {payment.amount?.toLocaleString()} Rs
-                                                    {payment.cashAmount > 0 && <span className="text-xs text-[var(--muted)] block">Cash: {payment.cashAmount?.toLocaleString()}</span>}
-                                                    {payment.creditAmount > 0 && <span className="text-xs text-[var(--muted)] block">Credit: {payment.creditAmount?.toLocaleString()}</span>}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {payment.creditAccount?.name || "—"}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <div className="flex justify-center gap-2">
+                                <tbody className="divide-y divide-[var(--border)]">
+                                    {purchaseReturn?.items?.map((item, index) => {
+                                        const price = item.costPrice || item.purchasePrice || 0;
+                                        const quantity = item.quantity || 0;
+                                        const cutAmount = item.cut || 0;
+                                        const refundAmount = (quantity * price) - cutAmount;
+
+                                        const isExpanded = expandedItems[index];
+
+                                        return (
+                                            <React.Fragment key={index}>
+                                                <tr>
+                                                    <td className="py-3">
+                                                        <p className="font-medium text-[var(--ink)]">
+                                                            {item.productName || item.product?.name || "—"}
+                                                        </p>
+                                                        {item.product?.productCode && (
+                                                            <p className="text-xs text-[var(--muted)]">{item.product.productCode}</p>
+                                                        )}
+                                                        {item.batchNumber && (
+                                                            <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 text-center text-[var(--ink)]">{quantity}</td>
+                                                    <td className="py-3 text-right text-[var(--ink)]">Rs {price.toLocaleString()}</td>
+                                                    <td className="py-3 text-right text-red-600">Rs {cutAmount.toLocaleString()}</td>
+                                                    <td className="py-3 text-right font-semibold text-red-600">Rs {refundAmount.toLocaleString()}</td>
+                                                    <td className="py-3 text-center">
                                                         <button
-                                                            onClick={() => handleEditPayment(payment)}
-                                                            className="p-2 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
-                                                            title="Edit Refund"
+                                                            onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                            className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                            style={{ color: "var(--muted)" }}
+                                                            title={isExpanded ? "Hide calculations" : "Show calculations"}
                                                         >
-                                                            <Edit2 size={16} />
+                                                            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDeletePayment(payment._id)}
-                                                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                                            title="Delete Refund"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                No refunds recorded for this return.
-                                            </td>
-                                        </tr>
-                                    )}
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr>
+                                                        <td colSpan="6" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                {/* Total Price Calculation */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Calculation</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Return Quantity:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Cost Price:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {price.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * price).toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Cut Calculation */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Cut Amount</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cutAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
+                                                                            <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {cutAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Final Refund */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Final Refund</p>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Base Total:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(quantity * price).toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cutAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Refund Amount:</span>
+                                                                            <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
-                    )}
+
+                        <div className="h-px bg-[var(--border)] my-10" />
+
+                        {/* Summary Section */}
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
+                                Summary
+                            </h3>
+                        </div>
+                        
+                        {/* Calculate summary values */}
+                        {(() => {
+                            const totalBaseAmount = (purchaseReturn?.items || []).reduce((sum, it) => {
+                                const price = it.costPrice || it.purchasePrice || 0;
+                                const quantity = it.quantity || 0;
+                                return sum + (quantity * price);
+                            }, 0);
+                            
+                            const totalCutAmount = (purchaseReturn?.items || []).reduce((sum, it) => {
+                                return sum + (it.cut || 0);
+                            }, 0);
+                            
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Base Amount Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Base Amount</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Items Base Total:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalBaseAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>Base Amount:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalBaseAmount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Cut Amount Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Cut Amount</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Total Cut:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalCutAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
+                                                <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {totalCutAmount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Final Total Card */}
+                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.25)" }}>
+                            <p className="text-xs font-semibold mb-2" style={{ color: "#dc2626" }}>Total Refund Amount</p>
+                            <div className="text-xs space-y-1">
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Final Refund:</span>
+                                    <span className="text-lg font-bold font-mono text-red-600">Rs {(purchaseReturn?.totalRefundAmount ?? purchaseReturn?.totalAmount ?? 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        {showPdfModal && (
-            <PdfModal
-                isOpen={showPdfModal}
-                onClose={() => setShowPdfModal(false)}
-                fileName={`PurchaseReturn-${purchaseReturn?.returnNumber || 'details'}.pdf`}
-                labels={labels}
-            >
-                <PurchaseReturnDetailPdfTemplate purchaseReturn={purchaseReturn} payments={paymentsList} labels={labels} />
-            </PdfModal>
-        )}
+            {showPdfModal && (
+                <PdfModal
+                    isOpen={showPdfModal}
+                    onClose={() => setShowPdfModal(false)}
+                    fileName={`PurchaseReturn-${purchaseReturn?.purchaseReturnNumber || purchaseReturn?.returnNumber || 'details'}.pdf`}
+                    labels={labels}
+                >
+                    <PurchaseReturnDetailPdfTemplate purchaseReturn={purchaseReturn} labels={labels} />
+                </PdfModal>
+            )}
         </>
     );
 }

@@ -3,20 +3,25 @@ import { baseApi } from "../../../app/rtkBaseApi.js";
 export const purchaseReturnApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
         getPurchaseReturns: build.query({
-            query: () => "/purchase-returns",
+            query: () => ({ url: "/purchase-returns" }),
             providesTags: ["PurchaseReturn"],
         }),
         getPaginatedPurchaseReturns: build.query({
-            query: ({ page = 1, limit = 20, status, supplier }) => {
-                let url = `/purchase-returns/paginate?page=${page}&limit=${limit}`;
-                if (status) url += `&status=${status}`;
-                if (supplier) url += `&supplier=${supplier}`;
-                return url;
-            },
+            query: ({ page = 1, limit = 20, status, supplier }) => ({
+                url: "/purchase-returns/paginate",
+                params: { page, limit, status, supplier },
+            }),
+            providesTags: ["PurchaseReturn"],
+        }),
+        getSupplierPurchaseReturns: build.query({
+            query: ({ supplierId, page = 1, limit = 20, startDate, endDate }) => ({
+                url: `/purchase-returns/supplier/${supplierId}`,
+                params: { page, limit, startDate, endDate },
+            }),
             providesTags: ["PurchaseReturn"],
         }),
         getPurchaseReturnById: build.query({
-            query: (id) => `/purchase-returns/${id}`,
+            query: (id) => ({ url: `/purchase-returns/${id}` }),
             providesTags: (result, error, id) => [{ type: "PurchaseReturn", id }],
         }),
         getPurchaseByInvoiceNumber: build.mutation({
@@ -84,7 +89,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
             invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
         getPurchaseReturnPayments: build.query({
-            query: (id) => `/purchase-returns/${id}/payments`,
+            query: (id) => ({ url: `/purchase-returns/${id}/payments` }),
             providesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturnPayments"],
         }),
         deletePurchaseReturnPayment: build.mutation({
@@ -108,6 +113,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
 export const {
     useGetPurchaseReturnsQuery,
     useGetPaginatedPurchaseReturnsQuery,
+    useGetSupplierPurchaseReturnsQuery,
     useGetPurchaseReturnByIdQuery,
     useGetPurchaseByInvoiceNumberMutation,
     useCreatePurchaseReturnMutation,
