@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, ShoppingCart, Phone, Mail, MapPin, Building2, Plus, DollarSign, Eye, Copy, RotateCcw, Check, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, ShoppingCart, Phone, Mail, MapPin, Building2, Plus, DollarSign, Eye, Copy, RotateCcw, Check, X, Trash2, RefreshCw } from "lucide-react";
 import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { usePurchasesBySupplier } from "../../productPurchases/services/purchases.service.js";
-import { useSupplierPaymentsSummary, useSupplierPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
+import { useSupplierPaymentsSummary, useSupplierPayments, useDeleteQarzaPayment, useRecalculateSupplierBalance } from "../../qarza/services/qarza.service.js";
 import { useDeletePurchase, useUpdatePurchaseStatus } from "../../productPurchases/services/purchases.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateSupplier } from "../services/suppliers.service.js";
@@ -60,6 +60,8 @@ export default function SupplierDetail() {
     const [createQarzaAccount] = useCreateQarzaAccount();
     const [updateSupplier] = useUpdateSupplier();
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+    const [recalculateSupplierBalance] = useRecalculateSupplierBalance();
+    const [isRecalculating, setIsRecalculating] = useState(false);
 
     const refresh = useCallback(() => {}, []);
 
@@ -71,6 +73,20 @@ export default function SupplierDetail() {
             refresh();
         } catch (e) {
             showError(e?.data?.message ?? "Delete failed");
+        }
+    };
+
+    const handleRecalculateBalance = async () => {
+        if (!qarzaAccountId) return;
+        setIsRecalculating(true);
+        try {
+            await recalculateSupplierBalance(qarzaAccountId).unwrap();
+            showSuccess("Balance recalculated successfully");
+            refetchSupplier();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to recalculate balance");
+        } finally {
+            setIsRecalculating(false);
         }
     };
 
@@ -314,12 +330,22 @@ export default function SupplierDetail() {
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
-                            <button
-                                onClick={() => setModal({ mode: "create" })}
-                                className="btn-add"
-                            >
-                                <Plus size={16} /> Add Payment
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleRecalculateBalance}
+                                    disabled={isRecalculating}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <RefreshCw size={16} className={isRecalculating ? "animate-spin" : ""} />
+                                    {isRecalculating ? "Recalculating..." : "Recalculate Balance"}
+                                </button>
+                                <button
+                                    onClick={() => setModal({ mode: "create" })}
+                                    className="btn-add"
+                                >
+                                    <Plus size={16} /> Add Payment
+                                </button>
+                            </div>
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <PaginatedList

@@ -1,9 +1,13 @@
-﻿import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
+﻿import asyncHandler from "express-async-handler";
+import { findByIdQarzaAccountService as getQarzaAccountByIdService, updateQarzaAccountService } from "../services/qarzaAccount.crud.js";
+import { recalculateCustomerBalance } from "../services/recalculateCustomerBalance.service.js";
+import { recalculateSupplierBalance } from "../services/recalculateSupplierBalance.service.js";
+import { recalculateGeneralAccountBalance } from "../services/recalculateGeneralAccountBalance.service.js";
+import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 import {
     qarzaAccountCreate as qarzaAccountCreateService,
     getAllQarzaAccounts as getAllQarzaAccountsService,
-    getQarzaAccountById as getQarzaAccountByIdService,
     findQarzaAccountById as findQarzaAccountByIdService,
     findQarzaAccountByTypeAndName as findQarzaAccountByTypeAndNameService,
     qarzaAccountUpdate as qarzaAccountUpdateService,
@@ -1100,3 +1104,81 @@ export const getPaginatedQarzaPaymentsWithoutAccount = async (req, res) => {
         return res.json({ success: false, msg: "Error getting payments without account" });
     }
 };
+
+// Recalculate customer account balance
+export const recalculateCustomerAccountBalance = asyncHandler(async (req, res) => {
+    try {
+        const { qarzaAccountId } = req.params;
+        
+        const result = await recalculateCustomerBalance(qarzaAccountId);
+        
+        // Update account balance
+        await updateQarzaAccountService(qarzaAccountId, {
+            balance: result.data.overall
+        });
+        
+        res.status(200).json({ 
+            success: true, 
+            message: "Customer account balance recalculated successfully", 
+            data: result.data 
+        });
+    } catch (error) {
+        console.error("Error recalculating customer account balance:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Error recalculating customer account balance" 
+        });
+    }
+});
+
+// Recalculate supplier account balance
+export const recalculateSupplierAccountBalance = asyncHandler(async (req, res) => {
+    try {
+        const { qarzaAccountId } = req.params;
+        
+        const result = await recalculateSupplierBalance(qarzaAccountId);
+        
+        // Update account balance
+        await updateQarzaAccountService(qarzaAccountId, {
+            balance: result.data.overall
+        });
+        
+        res.status(200).json({ 
+            success: true, 
+            message: "Supplier account balance recalculated successfully", 
+            data: result.data 
+        });
+    } catch (error) {
+        console.error("Error recalculating supplier account balance:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Error recalculating supplier account balance" 
+        });
+    }
+});
+
+// Recalculate general account balance
+export const recalculateGeneralAccountBalanceController = asyncHandler(async (req, res) => {
+    try {
+        const { qarzaAccountId } = req.params;
+        
+        const result = await recalculateGeneralAccountBalance(qarzaAccountId);
+        
+        // Update account balance
+        await updateQarzaAccountService(qarzaAccountId, {
+            balance: result.data.overall
+        });
+        
+        res.status(200).json({ 
+            success: true, 
+            message: "General account balance recalculated successfully", 
+            data: result.data 
+        });
+    } catch (error) {
+        console.error("Error recalculating general account balance:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Error recalculating general account balance" 
+        });
+    }
+});

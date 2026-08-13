@@ -10,6 +10,7 @@ import {
     customerDelete as customerDeleteService,
     getPaginatedCustomers as getPaginatedCustomersService,
 } from "../services/customer.service.js";
+import { calculateCustomerOrderKPIs } from "../services/customerOrderKPI.service.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 import { qarzaAccountCreate as qarzaAccountCreateService } from "../../qarza/services/qarza.service.js";
@@ -169,4 +170,23 @@ export const deleteCustomer = asyncHandler(async (req, res, next) => {
 
     await customerDeleteService(id);
     res.status(200).json({ success: true, message: "Customer deleted successfully", data: {} });
+});
+
+export const getCustomerOrderKPIs = asyncHandler(async (req, res, next) => {
+    const { customerId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    const customer = await getCustomerByIdService(customerId);
+    
+    if (!customer) {
+        return next(new ErrorResponse("Customer not found", 404));
+    }
+
+    const kpiData = await calculateCustomerOrderKPIs(customerId, startDate, endDate);
+    
+    res.status(200).json({ 
+        success: true, 
+        message: "Customer order KPIs retrieved successfully", 
+        data: kpiData.data 
+    });
 });

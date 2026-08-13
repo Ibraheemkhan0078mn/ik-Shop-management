@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy } from "lucide-react";
-import { useCustomer } from "../services/customers.service.js";
+import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw } from "lucide-react";
+import { useCustomer, useCustomerOrderKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateCustomer } from "../services/customers.service.js";
+import { useRecalculateCustomerBalance } from "../../qarza/services/qarza.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useCustomerPaymentsSummary, useCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
@@ -39,6 +40,11 @@ export default function CustomerDetail() {
         startDate, 
         endDate 
     });
+    const { data: orderKPIs } = useCustomerOrderKPIs({ 
+        customerId: id, 
+        startDate, 
+        endDate 
+    });
 
     const customer = customerData;
     const orders = ordersData?.data || [];
@@ -49,6 +55,8 @@ export default function CustomerDetail() {
     const [deletePayment] = useDeleteQarzaPayment();
     const [deleteOrder] = useDeleteOrder();
     const [createQarzaAccount] = useCreateQarzaAccount();
+    const [recalculateCustomerBalance] = useRecalculateCustomerBalance();
+    const [isRecalculating, setIsRecalculating] = useState(false);
     const [updateCustomer] = useUpdateCustomer();
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
@@ -59,9 +67,22 @@ export default function CustomerDetail() {
         try {
             await deletePayment({ paymentId, qarzaAccountId }).unwrap();
             showSuccess("Payment deleted");
-            refresh();
-        } catch (e) {
-            showError(e?.data?.message ?? "Delete failed");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete payment");
+        }
+    };
+
+    const handleRecalculateBalance = async () => {
+        if (!qarzaAccountId) return;
+        setIsRecalculating(true);
+        try {
+            await recalculateCustomerBalance(qarzaAccountId).unwrap();
+            showSuccess("Balance recalculated successfully");
+            refetchCustomer();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to recalculate balance");
+        } finally {
+            setIsRecalculating(false);
         }
     };
 
@@ -247,12 +268,22 @@ export default function CustomerDetail() {
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
-                            <button
-                                onClick={() => setModal({ mode: "create" })}
-                                className="btn-add"
-                            >
-                                <Plus size={16} /> Add Payment
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleRecalculateBalance}
+                                    disabled={isRecalculating}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <RefreshCw size={16} className={isRecalculating ? "animate-spin" : ""} />
+                                    {isRecalculating ? "Recalculating..." : "Recalculate Balance"}
+                                </button>
+                                <button
+                                    onClick={() => setModal({ mode: "create" })}
+                                    className="btn-add"
+                                >
+                                    <Plus size={16} /> Add Payment
+                                </button>
+                            </div>
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <PaginatedList
@@ -372,19 +403,19 @@ export default function CustomerDetail() {
                     <div className="grid grid-cols-4 gap-4 mb-6">
                         <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
                             <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Orders</p>
-                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{orders.length}</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{orderKPIs?.totalOrders || 0}</p>
                         </div>
                         <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
                             <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Amount</p>
-                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toLocaleString()}</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {(orderKPIs?.totalOrderAmount || 0).toLocaleString()}</p>
                         </div>
                         <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
                             <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Paid Amount</p>
-                            <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {orders.reduce((sum, o) => sum + (o.paid || 0), 0).toLocaleString()}</p>
+                            <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {(orderKPIs?.totalPaidAmount || 0).toLocaleString()}</p>
                         </div>
                         <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
                             <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
-                            <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {orders.reduce((sum, o) => sum + (o.remainingAmount || 0), 0).toLocaleString()}</p>
+                            <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {(orderKPIs?.totalRemainingAmount || 0).toLocaleString()}</p>
                         </div>
                     </div>
 

@@ -1,12 +1,13 @@
 // src/modules/qarza/pages/EachQarzaAccountRecords.jsx
 import { useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Download, Filter, X } from "lucide-react";
+import { Plus, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Download, Filter, X, RefreshCw } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
     useAccountPaymentsPaginated,
     useAccountPaymentsSummary,
     useDeleteQarzaPayment,
+    useRecalculateGeneralBalance,
 } from "../services/qarza.service.js";
 import QarzaPaymentModal from "../components/QarzaPaymentModal.jsx";
 import QarzaPaymentPdfTemplate from "../components/QarzaPaymentPdfTemplate.jsx";
@@ -36,6 +37,8 @@ export default function EachQarzaAccountRecords() {
 
     const { data: summary } = useAccountPaymentsSummary(id);
     const [deletePayment] = useDeleteQarzaPayment();
+    const [recalculateGeneralBalance] = useRecalculateGeneralBalance();
+    const [isRecalculating, setIsRecalculating] = useState(false);
     const accountName = summary?.account?.name || "";
 
     const [modal, setModal] = useState(null);
@@ -62,6 +65,19 @@ export default function EachQarzaAccountRecords() {
             refresh();
         } catch (e) {
             showError(e?.data?.message ?? "Delete failed");
+        }
+    };
+
+    const handleRecalculateBalance = async () => {
+        setIsRecalculating(true);
+        try {
+            await recalculateGeneralBalance(id).unwrap();
+            showSuccess("Balance recalculated successfully");
+            refresh();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to recalculate balance");
+        } finally {
+            setIsRecalculating(false);
         }
     };
 
@@ -213,17 +229,27 @@ export default function EachQarzaAccountRecords() {
                     heading={`${language === "en" ? "Account Payments" : "اکاؤنٹ ادائیگیاں"} ${accountName ? `(${accountName})` : ''}`}
                     subheading={language === "en" ? "View and manage payment records" : "ادائیگی ریکارڈز دیکھیں اور انتظام کریں"}
                     leftActions={
-                        (role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
-                            <PermissionGuard 
-                                execute={() => setModal({ mode: "create" })} 
-                                permission="creditsAndDebitsAccounts.payment.create" 
-                                isConfirmation={false}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleRecalculateBalance}
+                                disabled={isRecalculating}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <div>
-                                    <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Payment" : "ادائیگی شامل کریں"} />
-                                </div>
-                            </PermissionGuard>
-                        )
+                                <RefreshCw size={16} className={isRecalculating ? "animate-spin" : ""} />
+                                {isRecalculating ? "Recalculating..." : "Recalculate Balance"}
+                            </button>
+                            {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.create")) && (
+                                <PermissionGuard 
+                                    execute={() => setModal({ mode: "create" })} 
+                                    permission="creditsAndDebitsAccounts.payment.create" 
+                                    isConfirmation={false}
+                                >
+                                    <div>
+                                        <ScreenTabButton lucideIcon={Plus} text={language === "en" ? "Add Payment" : "ادائیگی شامل کریں"} />
+                                    </div>
+                                </PermissionGuard>
+                            )}
+                        </div>
                     }
                     rightActions={
                         <div className="relative">

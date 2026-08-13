@@ -709,8 +709,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.quantity} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field><Label>{labels.unit}</Label>

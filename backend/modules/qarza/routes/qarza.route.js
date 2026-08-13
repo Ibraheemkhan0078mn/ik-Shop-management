@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import { createQarzaPayment, deleteQarzaPayment, getAllQarzaAccount, getqarzaAccount, getQarzaAccountRelatedPayments, qarzaAccountCreate, qarzaAccountDelete, qarzaAccountUpdate, updateQarzaPayment, getPaginatedQarzaAccounts, getPaginatedQarzaPayments, getQarzaAccountPaymentsSummary, getCreditsDebitsReport, getAccountLedger, getPaginatedQarzaPaymentsWithoutAccount, getManualPayments, getSupplierPayments, getCustomerPayments, getManualPaymentsSummary, getSupplierPaymentsSummary, getCustomerPaymentsSummary } from "../controllers/qarza.controller.js";
+import { createQarzaPayment, deleteQarzaPayment, getAllQarzaAccount, getqarzaAccount, getQarzaAccountRelatedPayments, qarzaAccountCreate, qarzaAccountDelete, qarzaAccountUpdate, updateQarzaPayment, getPaginatedQarzaAccounts, getPaginatedQarzaPayments, getQarzaAccountPaymentsSummary, getCreditsDebitsReport, getAccountLedger, getPaginatedQarzaPaymentsWithoutAccount, getManualPayments, getSupplierPayments, getCustomerPayments, getManualPaymentsSummary, getSupplierPaymentsSummary, getCustomerPaymentsSummary, recalculateCustomerAccountBalance, recalculateSupplierAccountBalance, recalculateGeneralAccountBalanceController } from "../controllers/qarza.controller.js";
 import { upload } from '../../../common/middlewares/multer.middleware.js'
 
 
@@ -27,6 +27,9 @@ router.post("/createQarzaPayment", createQarzaPayment);
 router.put("/updateQarzaPayment", updateQarzaPayment);
 router.delete("/deleteQarzaPayment", deleteQarzaPayment);
 router.post("/getQarzaAccountRelatedPayments", getQarzaAccountRelatedPayments);
+router.post("/recalculate/customer/:qarzaAccountId", recalculateCustomerAccountBalance);
+router.post("/recalculate/supplier/:qarzaAccountId", recalculateSupplierAccountBalance);
+router.post("/recalculate/general/:qarzaAccountId", recalculateGeneralAccountBalanceController);
 
 
 

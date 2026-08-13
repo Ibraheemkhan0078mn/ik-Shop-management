@@ -154,6 +154,31 @@ export const qarzaApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (_r, _e, arg) => [{ type: "Qarza", id: arg.qarzaAccountId }, "Qarza"],
         }),
+
+        // ── Recalculation ─────────────────────────────────────────────
+        recalculateCustomerBalance: build.mutation({
+            query: (qarzaAccountId) => ({
+                url: `/qarzaRoutes/recalculate/customer/${qarzaAccountId}`,
+                method: "POST",
+            }),
+            invalidatesTags: ["Qarza"],
+        }),
+
+        recalculateSupplierBalance: build.mutation({
+            query: (qarzaAccountId) => ({
+                url: `/qarzaRoutes/recalculate/supplier/${qarzaAccountId}`,
+                method: "POST",
+            }),
+            invalidatesTags: ["Qarza"],
+        }),
+
+        recalculateGeneralBalance: build.mutation({
+            query: (qarzaAccountId) => ({
+                url: `/qarzaRoutes/recalculate/general/${qarzaAccountId}`,
+                method: "POST",
+            }),
+            invalidatesTags: ["Qarza"],
+        }),
     }),
 });
 
@@ -175,4 +200,7 @@ export const {
     useCreateQarzaPaymentMutation: useCreateQarzaPayment,
     useUpdateQarzaPaymentMutation: useUpdateQarzaPayment,
     useDeleteQarzaPaymentMutation: useDeleteQarzaPayment,
+    useRecalculateCustomerBalanceMutation: useRecalculateCustomerBalance,
+    useRecalculateSupplierBalanceMutation: useRecalculateSupplierBalance,
+    useRecalculateGeneralBalanceMutation: useRecalculateGeneralBalance,
 } = qarzaApi;

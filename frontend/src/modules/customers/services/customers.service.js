@@ -36,6 +36,15 @@ export const customerApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/customers/${id}`, method: "DELETE" }),
             invalidatesTags: ["Customer"],
         }),
+
+        getCustomerOrderKPIs: build.query({
+            query: ({ customerId, startDate, endDate }) => ({ 
+                url: `/customers/${customerId}/order-kpis`,
+                params: startDate || endDate ? { startDate, endDate } : undefined
+            }),
+            transformResponse: (raw) => raw?.data ?? raw,
+            providesTags: (_r, _e, customerId) => [{ type: "Customer", id: `kpi-${customerId}` }],
+        }),
     }),
 });
 
@@ -46,4 +55,5 @@ export const {
     useCreateCustomerMutation: useCreateCustomer,
     useUpdateCustomerMutation: useUpdateCustomer,
     useDeleteCustomerMutation: useDeleteCustomer,
+    useGetCustomerOrderKPIsQuery: useCustomerOrderKPIs,
 } = customerApi;
