@@ -77,9 +77,10 @@ const getAllProductReturns = async (filters = {}) => {
 };
 
 const getPaginatedProductReturns = async (filters = {}) => {
-    const { page = 1, limit = 10, status, search } = filters;
+    const { page = 1, limit = 10, status, search, returnNumber } = filters;
     const query = {};
     if (status) query.returnStatus = status;
+    if (returnNumber) query.returnNumber = { $regex: returnNumber, $options: "i" };
     if (search) {
         query.$or = [
             { returnNumber: { $regex: search, $options: "i" } },

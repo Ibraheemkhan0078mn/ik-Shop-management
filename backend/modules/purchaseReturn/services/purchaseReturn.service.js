@@ -59,10 +59,11 @@ const countPurchaseReturns = async (query = {}) => {
 };
 
 const getPaginatedPurchaseReturns = async (filters = {}) => {
-    const { page = 1, limit = 20, status, search } = filters;
+    const { page = 1, limit = 20, status, search, returnHash } = filters;
     const query = {};
     
     if (status) query.status = status;
+    if (returnHash) query.returnNumber = { $regex: returnHash, $options: "i" };
     if (search) {
         query.$or = [
             { returnNumber: { $regex: search, $options: "i" } },

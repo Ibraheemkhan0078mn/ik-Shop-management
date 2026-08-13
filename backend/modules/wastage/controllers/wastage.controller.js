@@ -34,7 +34,7 @@ export const getWastages = asyncHandler(async (req, res, next) => {
 
 // ─── GET PAGINATED ───────────────────────────────────────────────────────────
 export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
-    const { status, reason, startDate, endDate } = req.query;
+    const { status, reason, startDate, endDate, wastageNumber } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 10);
     const skip = (page - 1) * limit;
@@ -42,6 +42,7 @@ export const getPaginatedWastages = asyncHandler(async (req, res, next) => {
     let query = {};
     if (status) query.status = status;
     if (reason) query.reason = reason;
+    if (wastageNumber) query.wastageNumber = { $regex: wastageNumber, $options: "i" };
     if (startDate || endDate) {
         query.wastageDate = {};
         if (startDate) query.wastageDate.$gte = new Date(startDate);

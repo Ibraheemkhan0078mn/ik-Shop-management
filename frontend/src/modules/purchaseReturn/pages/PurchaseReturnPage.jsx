@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Plus, CheckCircle, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -31,6 +31,23 @@ export default function PurchaseReturnPage() {
     const [modal, setModal] = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [filterId, setFilterId] = useState("");
+    const [debouncedFilterId, setDebouncedFilterId] = useState("");
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+    const hasActiveFilter = filterId !== "";
+
+    const clearFilter = () => {
+        setFilterId("");
+    };
+
+    // Debounce filter input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilterId(filterId);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [filterId]);
 
     const usePurchaseReturnsQuery = (params = {}) => {
         const [data, setData] = useState(null);
@@ -131,6 +148,60 @@ export default function PurchaseReturnPage() {
                         </PermissionGuard>
                     </>
                 }
+                rightActions={
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                hasActiveFilter 
+                                    ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                    : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                            }`}
+                        >
+                            <Filter size={16} />
+                            <span className="text-xs font-bold uppercase tracking-wider">
+                                {language === "en" ? "Filter" : "فلٹر"}
+                            </span>
+                            {hasActiveFilter && (
+                                <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                            )}
+                        </button>
+
+                        {/* Filter Dropdown */}
+                        {showFilterDropdown && (
+                            <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                        {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                    </span>
+                                    {hasActiveFilter && (
+                                        <button
+                                            onClick={clearFilter}
+                                            className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                        >
+                                            <X size={12} />
+                                            {language === "en" ? "Clear" : "صاف"}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* ID Filter */}
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                        {language === "en" ? "Return Hash" : "ریٹرن ہیش"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter return hash..."
+                                        value={filterId}
+                                        onChange={(e) => setFilterId(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                }
             />
 
                 <PaginatedList
@@ -138,6 +209,7 @@ export default function PurchaseReturnPage() {
                     limit={20}
                     dataKey="data"
                     wrapperClassName="min-h-0"
+                    queryArgs={debouncedFilterId ? { returnHash: debouncedFilterId } : {}}
                     renderItems={(purchaseReturns) => (
                         <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                             <table className="w-full text-sm text-left">

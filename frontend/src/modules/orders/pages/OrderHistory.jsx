@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePaginatedOrders, useDeleteOrder } from "../services/orders.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -363,8 +363,25 @@ export default function OrderHistory() {
     const [returnModalOrderId, setReturnModalOrderId] = useState(null);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [filterId, setFilterId] = useState("");
+    const [debouncedFilterId, setDebouncedFilterId] = useState("");
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [deleteOrder] = useDeleteOrder();
     const paginatedListRef = useRef(null);
+
+    const hasActiveFilter = filterId !== "";
+
+    const clearFilter = () => {
+        setFilterId("");
+    };
+
+    // Debounce filter input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilterId(filterId);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [filterId]);
 
     const handleDelete = async (id) => {
         if (window.confirm(language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟")) {
@@ -384,6 +401,7 @@ export default function OrderHistory() {
     const dateFilter = {};
     if (startDate) dateFilter.startDate = startDate;
     if (endDate) dateFilter.endDate = endDate;
+    if (debouncedFilterId) dateFilter.orderNumber = debouncedFilterId;
 
     return (
         <div className="h-screen flex flex-col overflow-hidden">
@@ -400,6 +418,60 @@ export default function OrderHistory() {
                             onEndDateChange={setEndDate}
                             onClear={handleClearFilters}
                         />
+                    }
+                    rightActions={
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                    hasActiveFilter 
+                                        ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                        : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    {language === "en" ? "Filter" : "فلٹر"}
+                                </span>
+                                {hasActiveFilter && (
+                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                )}
+                            </button>
+
+                            {/* Filter Dropdown */}
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                            {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                        </span>
+                                        {hasActiveFilter && (
+                                            <button
+                                                onClick={clearFilter}
+                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                            >
+                                                <X size={12} />
+                                                {language === "en" ? "Clear" : "صاف"}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* ID Filter */}
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Order Number" : "آرڈر نمبر"}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter order number..."
+                                            value={filterId}
+                                            onChange={(e) => setFilterId(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     }
                 />
             </div>

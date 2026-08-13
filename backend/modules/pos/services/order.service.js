@@ -41,10 +41,13 @@ const countOrders = async (query = {}) => {
 };
 
 const getPaginatedOrders = async (filters = {}) => {
-    const { page = 1, limit = 20 } = filters;
+    const { page = 1, limit = 20, orderNumber } = filters;
     const skip = (page - 1) * limit;
     
-    const orders = await findOrderService({}, {
+    const query = {};
+    if (orderNumber) query.orderNumber = { $regex: orderNumber, $options: "i" };
+    
+    const orders = await findOrderService(query, {
         sort: { createdAt: -1 },
         limit,
         skip
