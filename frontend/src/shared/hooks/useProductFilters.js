@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 const DEFAULT_PRICE_RANGE = { min: 0, max: 1000 };
 
 const INITIAL_FILTERS = {
-  category: [],
-  subCategory: [],
+  categoryName: [],
+  subCategoryName: [],
   brandName: [],
   minPrice: DEFAULT_PRICE_RANGE.min,
   maxPrice: DEFAULT_PRICE_RANGE.max,
@@ -67,11 +67,11 @@ export const useProductFilters = () => {
   const getActiveFilterParams = useCallback(() => {
     const params = {};
     
-    if (debouncedFilters.category && debouncedFilters.category.length > 0) {
-      params.category = debouncedFilters.category;
+    if (debouncedFilters.categoryName && debouncedFilters.categoryName.length > 0) {
+      params.categoryName = debouncedFilters.categoryName;
     }
-    if (debouncedFilters.subCategory && debouncedFilters.subCategory.length > 0) {
-      params.subCategory = debouncedFilters.subCategory;
+    if (debouncedFilters.subCategoryName && debouncedFilters.subCategoryName.length > 0) {
+      params.subCategoryName = debouncedFilters.subCategoryName;
     }
     if (debouncedFilters.brandName && debouncedFilters.brandName.length > 0) {
       params.brandName = debouncedFilters.brandName;

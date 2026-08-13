@@ -12,8 +12,8 @@ const productSchema = new mongoose.Schema(
         cloudinaryPublicId: { type: String },
 
         // ─── Classification ───────────────────────────────────────
-        category: { type: mongoose.Schema.Types.ObjectId, ref: "Categories" },
-        subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategories" },
+        categoryName: { type: String, trim: true },
+        subCategoryName: { type: String, trim: true },
 
         // ─── Count Format ─────────────────────────────────────────
         countFormat: { type: String, enum: ["volume", "weight", "length"], default: "volume" },

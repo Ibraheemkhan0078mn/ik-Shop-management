@@ -168,40 +168,16 @@ export default function ProductDetail() {
                                 <p className="font-medium text-[var(--ink)] truncate">{product.brandName}</p>
                             </div>
                         )}
-                        {(product.category?.name ) && (
+                        {product.categoryName && (
                             <div className="min-w-0">
                                 <label className="text-sm text-[var(--muted)]">Category</label>
-                                <p className="font-medium text-[var(--ink)] break-words">{product.category?.name || "—"}</p>
+                                <p className="font-medium text-[var(--ink)] break-words">{product.categoryName || "—"}</p>
                             </div>
                         )}
-                        {product.unit && (
+                        {product.subCategoryName && (
                             <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Unit</label>
-                                <p className="font-medium text-[var(--ink)] capitalize truncate">{product.unit}</p>
-                            </div>
-                        )}
-                        {product.defaultCostPrice !== undefined && product.defaultCostPrice !== null && (
-                            <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Cost Price</label>
-                                <p className="font-medium text-[var(--ink)] truncate">Rs {product.defaultCostPrice}</p>
-                            </div>
-                        )}
-                        {product.defaultSalePrice !== undefined && product.defaultSalePrice !== null && (
-                            <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Sale Price</label>
-                                <p className="font-medium text-[var(--accent-2)] truncate">Rs {product.defaultSalePrice}</p>
-                            </div>
-                        )}
-                        {product.taxPercent !== undefined && product.taxPercent !== null && (
-                            <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Tax %</label>
-                                <p className="font-medium text-[var(--ink)] truncate">{product.taxPercent}%</p>
-                            </div>
-                        )}
-                        {product.taxType && (
-                            <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Tax Type</label>
-                                <p className="font-medium text-[var(--ink)] capitalize truncate">{product.taxType}</p>
+                                <label className="text-sm text-[var(--muted)]">Sub Category</label>
+                                <p className="font-medium text-[var(--ink)] break-words">{product.subCategoryName || "—"}</p>
                             </div>
                         )}
                         {product.minStockLevel !== undefined && product.minStockLevel !== null && (
@@ -228,11 +204,10 @@ export default function ProductDetail() {
                                 <p className="font-medium text-[var(--ink)] truncate">{product.rackLocation}</p>
                             </div>
                         )}
-                        <div className="min-w-0">
-                            <label className="text-sm text-[var(--muted)] block mb-1">Allow Negative Stock</label>
-                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${product.allowNegativeStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                {product.allowNegativeStock ? "Yes" : "No"}
-                            </span>
+
+                        {/* Discount Section */}
+                        <div className="sm:col-span-2 lg:col-span-3 pt-4 border-t border-[var(--border)]">
+                            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3 text-[var(--muted)]">Discount Settings</h4>
                         </div>
                         <div className="min-w-0">
                             <label className="text-sm text-[var(--muted)] block mb-1">Discount Allowed</label>
@@ -242,16 +217,22 @@ export default function ProductDetail() {
                         </div>
                         {product.isDiscountAllowed && product.maxDiscountPercent !== undefined && product.maxDiscountPercent !== null && (
                             <div className="min-w-0">
-                                <label className="text-sm text-[var(--muted)]">Max Discount %</label>
-                                <p className="font-medium text-[var(--ink)] truncate">{product.maxDiscountPercent}%</p>
-                            </div>
-                        )}
-                        {product.isDiscountAllowed && product.discountLimit !== undefined && product.discountLimit !== null && (
-                            <div className="min-w-0">
                                 <label className="text-sm text-[var(--muted)]">Discount Limit</label>
-                                <p className="font-medium text-[var(--ink)] truncate">Rs {product.discountLimit}</p>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.maxDiscountPercent}% ({product.discountLimitType || 'percentage'})</p>
                             </div>
                         )}
+
+                        {/* Tax Section */}
+                        <div className="sm:col-span-2 lg:col-span-3 pt-4 border-t border-[var(--border)]">
+                            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3 text-[var(--muted)]">Tax Applied in POS</h4>
+                        </div>
+                        {product.taxPercent !== undefined && product.taxPercent !== null && (
+                            <div className="min-w-0">
+                                <label className="text-sm text-[var(--muted)]">Tax Rate</label>
+                                <p className="font-medium text-[var(--ink)] truncate">{product.taxPercent}% ({product.taxType || 'percentage'})</p>
+                            </div>
+                        )}
+
                         <div className="min-w-0">
                             <label className="text-sm text-[var(--muted)] block mb-1">Status</label>
                             <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

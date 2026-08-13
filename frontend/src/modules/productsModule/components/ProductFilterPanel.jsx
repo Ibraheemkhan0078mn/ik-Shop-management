@@ -50,16 +50,16 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleCategoryToggle = (categoryId) => {
-    if (categoryId === "all") {
-      updateFilter("category", []);
+  const handleCategoryToggle = (categoryName) => {
+    if (categoryName === "all") {
+      updateFilter("categoryName", []);
       return;
     }
-    const currentCategories = filters.category || [];
-    const newCategories = currentCategories.includes(categoryId)
-      ? currentCategories.filter((id) => id !== categoryId)
-      : [...currentCategories, categoryId];
-    updateFilter("category", newCategories);
+    const currentCategories = filters.categoryName || [];
+    const newCategories = currentCategories.includes(categoryName)
+      ? currentCategories.filter((name) => name !== categoryName)
+      : [...currentCategories, categoryName];
+    updateFilter("categoryName", newCategories);
   };
 
   const handleBrandToggle = (brandName) => {
@@ -192,7 +192,7 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
                 >
                   <input
                     type="checkbox"
-                    checked={filters.category?.length === 0}
+                    checked={filters.categoryName?.length === 0}
                     onChange={() => handleCategoryToggle("all")}
                     className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
                   />
@@ -205,8 +205,8 @@ export default function ProductFilterPanel({ onFiltersChange, isOpen, onClose, b
                   >
                     <input
                       type="checkbox"
-                      checked={filters.category?.includes(cat._id)}
-                      onChange={() => handleCategoryToggle(cat._id)}
+                      checked={filters.categoryName?.includes(cat.name)}
+                      onChange={() => handleCategoryToggle(cat.name)}
                       className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
                     />
                     <span className="text-sm text-[var(--ink)]">{cat.name}</span>

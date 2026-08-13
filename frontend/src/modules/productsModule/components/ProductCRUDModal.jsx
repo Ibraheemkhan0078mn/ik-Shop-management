@@ -23,8 +23,8 @@ const EMPTY_FORM = {
   productCode: "",
   barcode: "",
   description: "",
-  category: "",
-  subCategory: "",
+  categoryName: "",
+  subCategoryName: "",
   countFormat: "volume",
   defaultCostPrice: 0,
   defaultSalePrice: 0,
@@ -87,13 +87,12 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
   useEffect(() => {
     if (!isCreate && productData) {
-      const safeGetId = (item) => item?._id || item || "";
       setForm({
         ...EMPTY_FORM,
         ...productData,
         id: productData._id || "",
-        category: safeGetId(productData.category),
-        subCategory: safeGetId(productData.subCategory),
+        categoryName: productData.categoryName || "",
+        subCategoryName: productData.subCategoryName || "",
       });
       setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
     }
@@ -127,8 +126,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
     
     // Reset subcategory when category changes
-    if (name === 'category') {
-      setForm((prev) => ({ ...prev, subCategory: '' }));
+    if (name === 'categoryName') {
+      setForm((prev) => ({ ...prev, subCategoryName: '' }));
     }
   }, []);
 
@@ -137,10 +136,10 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     console.log('Category created:', newCategory);
     // Invalidate the categories query to refetch
     // The RTK Query will automatically refetch when the component re-renders
-    // Set the newly created category as selected
-    if (newCategory?._id || newCategory?.data?._id) {
-      const categoryId = newCategory._id || newCategory.data._id;
-      updateField('category', categoryId);
+    // Set the newly created category name as selected
+    if (newCategory?.name || newCategory?.data?.name) {
+      const categoryName = newCategory.name || newCategory.data.name;
+      updateField('categoryName', categoryName);
     }
   }, [updateField]);
 
@@ -148,20 +147,20 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const handleSubCategoryCreated = useCallback((newSubCategory) => {
     console.log('Subcategory created:', newSubCategory);
     // Invalidate the subcategories query to refetch
-    // Set the newly created subcategory as selected
-    if (newSubCategory?._id || newSubCategory?.data?._id) {
-      const subCategoryId = newSubCategory._id || newSubCategory.data._id;
-      updateField('subCategory', subCategoryId);
+    // Set the newly created subcategory name as selected
+    if (newSubCategory?.name || newSubCategory?.data?.name) {
+      const subCategoryName = newSubCategory.name || newSubCategory.data.name;
+      updateField('subCategoryName', subCategoryName);
     }
   }, [updateField]);
 
   // Handle brand creation callback
   const handleBrandCreated = useCallback((newBrand) => {
     console.log('Brand created:', newBrand);
-    // Set the newly created brand as selected
-    if (newBrand?._id || newBrand?.data?._id) {
-      const brandId = newBrand._id || newBrand.data._id;
-      updateField('brandName', brandId);
+    // Set the newly created brand name as selected
+    if (newBrand?.name || newBrand?.data?.name) {
+      const brandName = newBrand.name || newBrand.data.name;
+      updateField('brandName', brandName);
     }
   }, [updateField]);
 
@@ -182,7 +181,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     [updateField, labels]
   );
 
-  const categoryOptions = useMemo(() => categories.filter(c => c.isActive !== false).map((c) => ({ label: c.name, value: c._id })), [categories]);
+  const categoryOptions = useMemo(() => categories.filter(c => c.isActive !== false).map((c) => ({ label: c.name, value: c.name })), [categories]);
   const unitOptions = useMemo(() => UNITS.map((u) => ({ label: u.label, value: u.value })), [UNITS]);
 
   const validateForm = useCallback(() => {
@@ -377,11 +376,11 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               {/* Category */}
               <SelectField
                 label={labels.category}
-                name="category"
-                value={form.category}
+                name="categoryName"
+                value={form.categoryName}
                 onChange={updateField}
                 options={categoryOptions}
-                error={errors.category}
+                error={errors.categoryName}
                 required
                 placeholder={labels.selectCategory}
                 action={{ label: labels.new, icon: Plus, onClick: () => setShowCategoryDialog(true) }}
@@ -432,7 +431,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   name="brandName"
                   value={form.brandName}
                   onChange={updateField}
-                  options={brands.filter(b => b.isActive).map((b) => ({ label: b.name, value: b._id }))}
+                  options={brands.filter(b => b.isActive).map((b) => ({ label: b.name, value: b.name }))}
                   error={errors.brandName}
                   required
                   placeholder={labels.selectBrand || "Select Brand"}

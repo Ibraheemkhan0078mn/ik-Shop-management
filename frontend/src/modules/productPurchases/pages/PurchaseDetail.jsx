@@ -340,7 +340,147 @@ export default function PurchaseDetail() {
                             </table>
                         </div>
 
-                        <div className="h-px bg-[var(--border)] my-7" />
+                        <div className="h-px bg-[var(--border)] my-10" />
+
+                        {/* Summary Section */}
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
+                                Summary
+                            </h3>
+                        </div>
+                        
+                        {/* Calculate summary values */}
+                        {(() => {
+                            const subtotalAfterItems = (purchase?.items || []).reduce((sum, it) => {
+                                const price = it.costPrice || it.price || it.perItemPrice || 0;
+                                const quantity = it.quantity || 0;
+                                const baseTotal = quantity * price;
+                                const discountAmount = it.discountType === 'percentage'
+                                    ? baseTotal * (it.discount || 0) / 100
+                                    : (it.discount || 0);
+                                const afterDiscount = baseTotal - discountAmount;
+                                const taxAmount = it.taxType === 'percentage'
+                                    ? afterDiscount * (it.tax || 0) / 100
+                                    : (it.tax || 0);
+                                return sum + (afterDiscount + taxAmount);
+                            }, 0);
+                            
+                            const billDiscount = purchase.discountType === "percentage"
+                                ? (subtotalAfterItems * (purchase.discount || 0)) / 100
+                                : (purchase.discount || 0);
+                            const afterBillDiscount = subtotalAfterItems - billDiscount;
+                            const billTax = purchase.gstType === "fixed"
+                                ? (purchase.gst || 0)
+                                : (afterBillDiscount * (purchase.gst || 0)) / 100;
+                            const afterBillTax = afterBillDiscount + billTax;
+                            const shipping = purchase.shippingCost || 0;
+                            const total = afterBillTax + shipping;
+                            
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Subtotal Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Subtotal</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Items Subtotal:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {subtotalAfterItems.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>Subtotal:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {subtotalAfterItems.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Bill Discount Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount (Bill)</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Discount:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{(purchase.discount || 0).toFixed(2)} {purchase.discountType === "fixed" ? "fixed" : "%"}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
+                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {billDiscount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {afterBillDiscount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Bill Tax Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax/GST (Bill)</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {afterBillDiscount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Tax:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{(purchase.gst || 0).toFixed(2)} {purchase.gstType === "fixed" ? "fixed" : "%"}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                                <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {billTax.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {afterBillTax.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Shipping Card */}
+                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Shipping</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>After Tax Value:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {afterBillTax.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
+                                                <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {shipping.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>After Shipping:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {total.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Final Total Card */}
+                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Total</p>
+                            <div className="text-xs space-y-1">
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>After Bill Discount:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {((purchase?.totalAmount || 0) - (purchase?.shippingCost || 0) - (purchase.gstType === "fixed" ? (purchase.gst || 0) : 0)).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(purchase.gstType === "fixed" ? (purchase.gst || 0) : 0).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
+                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(purchase.shippingCost || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                    <span style={{ color: "var(--accent-2)" }}>Grand Total:</span>
+                                    <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {(purchase?.totalAmount || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-[var(--border)] my-10" />
 
                         {/* Payments */}
                         <div className="flex items-center justify-between mb-3">

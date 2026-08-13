@@ -70,7 +70,7 @@ const findConflictingUnique = async (id, { hotKeySku, productCode, barcode }) =>
 
 const getProducts = async () => {
     const products = await findProductService({}, {
-        populate: ["batches", "category", "subCategory"],
+        populate: ["batches"],
         sort: { createdAt: -1 }
     });
     return attachBatchSellingPrice(products);
@@ -84,17 +84,17 @@ const getPaginationProduct = async (filters = {}) => {
     const query = {};
 
     // Category filter (multiple selection)
-    if (filterParams.category && Array.isArray(filterParams.category)) {
-        query.category = { $in: filterParams.category };
-    } else if (filterParams.category) {
-        query.category = filterParams.category;
+    if (filterParams.categoryName && Array.isArray(filterParams.categoryName)) {
+        query.categoryName = { $in: filterParams.categoryName };
+    } else if (filterParams.categoryName) {
+        query.categoryName = filterParams.categoryName;
     }
 
     // Subcategory filter (multiple selection)
-    if (filterParams.subCategory && Array.isArray(filterParams.subCategory)) {
-        query.subCategory = { $in: filterParams.subCategory };
-    } else if (filterParams.subCategory) {
-        query.subCategory = filterParams.subCategory;
+    if (filterParams.subCategoryName && Array.isArray(filterParams.subCategoryName)) {
+        query.subCategoryName = { $in: filterParams.subCategoryName };
+    } else if (filterParams.subCategoryName) {
+        query.subCategoryName = filterParams.subCategoryName;
     }
 
     // Brand filter (multiple selection)
@@ -161,7 +161,7 @@ const getPaginationProduct = async (filters = {}) => {
         sort: { createdAt: -1 },
         skip: skip,
         limit: parseInt(limit),
-        populate: ["batches", "category", "subCategory"]
+        populate: ["batches"]
     });
 
     const total = await countProductService(query);
@@ -178,11 +178,7 @@ const getPaginationProduct = async (filters = {}) => {
 
 const getProductById = async (id) => {
     return await findByIdProductService(id, {
-        populate: [
-            { path: "category", select: "name" },
-            { path: "subCategory", select: "name" },
-            "batches"
-        ]
+        populate: ["batches"]
     });
 };
 

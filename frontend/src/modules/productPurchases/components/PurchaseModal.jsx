@@ -224,6 +224,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [isInvoiceNumberLocked, setIsInvoiceNumberLocked] = useState(true);
     const [expandedItems, setExpandedItems] = useState({});
+    const [isRecalculating, setIsRecalculating] = useState(false);
+    const hasRecalculatedRef = useRef(false);
 
     const supplierOptions = useMemo(() => {
         if (isUpdate && bill.supplier) {
@@ -268,7 +270,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             item: it.product?._id ?? it.product ?? "", name: it.product?.name ?? "",
             quantity: it.quantity ?? 0, unit: it.unit ?? "",
             pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
-            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.price ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
+            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.costPrice ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
             mfgDate: toInputDate(it.mfgDate), expiryDate: toInputDate(it.expiryDate),
             batchNumber: it.batchNumber ?? it.batch?.batchNumber ?? "", batchMode: (it.batchId ?? it.batch?._id) ? "existing" : "new",
             batchSelection: it.batchId ?? it.batch?._id ?? "", batchId: it.batchId ?? it.batch?._id ?? "",
@@ -286,7 +288,40 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             gstType: existingPurchase.gstType ?? "percentage",
             shippingCost: existingPurchase.shippingCost ?? 0,
         });
+        // Reset recalculation flag when loading new purchase
+        hasRecalculatedRef.current = false;
     }, [existingPurchase, isUpdate]);
+
+    // Auto-recalculate after data is loaded in edit mode
+    useEffect(() => {
+        if (!isUpdate || !existingPurchase || addedItems.length === 0 || hasRecalculatedRef.current) return;
+        
+        // Recalculate each item's totals
+        const finalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType) => {
+            const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
+            const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType);
+            return afterDiscount + taxAmount;
+        };
+        
+        const recalculatedItems = addedItems.map(it => {
+            const quantity = Number(it.quantity) || 0;
+            const costPrice = Number(it.costPrice) || 0;
+            const discount = Number(it.discount) || 0;
+            const discountType = it.discountType || 'percentage';
+            const tax = Number(it.tax) || 0;
+            const taxType = it.taxType || 'percentage';
+            
+            const totalPurchasePrice = finalSubtotal(quantity, costPrice, discount, discountType, tax, taxType);
+            
+            return {
+                ...it,
+                totalPurchasePrice
+            };
+        });
+        
+        setAddedItems(recalculatedItems);
+        hasRecalculatedRef.current = true;
+    }, [existingPurchase, isUpdate, addedItems]);
 
     // auto-invoice
     useEffect(() => {
@@ -348,9 +383,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setItemForm(p => ({
             ...p,
             batchNumber: selectedBatch.batchNumber ?? p.batchNumber,
-            perItemPrice: editingIndex === null && selectedBatch.purchasePrice != null ? String(selectedBatch.purchasePrice) : p.perItemPrice,
+            costPrice: editingIndex === null && selectedBatch.purchasePrice != null ? String(selectedBatch.purchasePrice) : p.costPrice,
+            perItemPrice: editingIndex === null && selectedBatch.sellingPrice != null ? String(selectedBatch.sellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(selectedBatch.mfgDate),
             expiryDate: toInputDate(selectedBatch.expiryDate),
+            discount: editingIndex === null ? "0" : p.discount,
+            tax: editingIndex === null ? "0" : p.tax,
         }));
     }, [selectedBatch, isExistingMode, editingIndex]);
 
@@ -533,7 +571,36 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setEditingIndex(idx);
     };
 
+    // Recalculate all purchase totals
+    const handleRecalculate = () => {
+        setIsRecalculating(true);
+        
+        // Recalculate each item's totals
+        const recalculatedItems = addedItems.map(it => {
+            const quantity = Number(it.quantity) || 0;
+            const costPrice = Number(it.costPrice) || 0;
+            const discount = Number(it.discount) || 0;
+            const discountType = it.discountType || 'percentage';
+            const tax = Number(it.tax) || 0;
+            const taxType = it.taxType || 'percentage';
+            
+            const totalPurchasePrice = calculateItemFinalSubtotal(quantity, costPrice, discount, discountType, tax, taxType);
+            
+            return {
+                ...it,
+                totalPurchasePrice
+            };
+        });
+        
+        setAddedItems(recalculatedItems);
+        setIsRecalculating(false);
+        showSuccess("Recalculated successfully");
+    };
+
     const handleSubmit = async () => {
+        // First run recalculation
+        handleRecalculate();
+        
         if (!addedItems.length) return showError(labels.addAtLeastOneItem);
         if (!bill.supplier) return showError(labels.selectSupplier);
         if (!bill.purchaseDate) return showError(labels.selectDate ?? "Please select a purchase date");
@@ -636,21 +703,54 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field><Label>{labels.quantity} *</Label>
-                                        <Inp name="quantity" type="number" placeholder="0" value={itemForm.quantity} onChange={handleItemChange} />
+                                        <Inp 
+                                            name="quantity" 
+                                            type="number" 
+                                            placeholder="0" 
+                                            value={itemForm.quantity} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
                                     </Field>
                                     <Field><Label>{labels.unit}</Label>
                                         <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl w-full flex items-center justify-center" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
                                     </Field>
                                 </div>
                                 <div className="grid grid-cols-1 gap-4">
-                                    <Field><Label>{labels.costPrice || "Cost Price"} *</Label><Inp name="costPrice" type="number" placeholder="0.00" value={itemForm.costPrice} onChange={handleItemChange} /></Field>
+                                    <Field><Label>{labels.costPrice || "Cost Price"} *</Label>
+                                        <Inp 
+                                            name="costPrice" 
+                                            type="number" 
+                                            placeholder="0.00" 
+                                            value={itemForm.costPrice} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field><Label>{labels.discount}</Label><Inp name="discount" type="number" placeholder="0" value={itemForm.discount} onChange={handleItemChange} /></Field>
+                                    <Field><Label>{labels.discount}</Label>
+                                        <Inp 
+                                            name="discount" 
+                                            type="number" 
+                                            placeholder="0" 
+                                            value={itemForm.discount} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                     <Field>
                                         <Label>{labels.discountType}</Label>
-                                        <Sel value={itemForm.discountType} onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))}>
+                                        <Sel 
+                                            value={itemForm.discountType} 
+                                            onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))}
+                                            disabled={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        >
                                             <option value="percentage">{labels.percentage}</option>
                                             <option value="fixed">{labels.fixed}</option>
                                         </Sel>
@@ -658,10 +758,25 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field><Label>{labels.taxPercent}</Label><Inp name="tax" type="number" placeholder="0" value={itemForm.tax} onChange={handleItemChange} /></Field>
+                                    <Field><Label>{labels.taxPercent}</Label>
+                                        <Inp 
+                                            name="tax" 
+                                            type="number" 
+                                            placeholder="0" 
+                                            value={itemForm.tax} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                     <Field>
                                         <Label>{labels.taxType || "Tax Type"}</Label>
-                                        <Sel value={itemForm.taxType} onChange={e => setItemForm(p => ({ ...p, taxType: e.target.value }))}>
+                                        <Sel 
+                                            value={itemForm.taxType} 
+                                            onChange={e => setItemForm(p => ({ ...p, taxType: e.target.value }))}
+                                            disabled={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        >
                                             <option value="percentage">{labels.percentage}</option>
                                             <option value="fixed">{labels.fixed}</option>
                                         </Sel>
@@ -669,12 +784,40 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <Field><Label>{labels.mfgDate}</Label><Inp name="mfgDate" type="date" value={itemForm.mfgDate} onChange={handleItemChange} /></Field>
-                                    <Field><Label>{labels.expiryDate}</Label><Inp name="expiryDate" type="date" value={itemForm.expiryDate} onChange={handleItemChange} /></Field>
+                                    <Field><Label>{labels.mfgDate}</Label>
+                                        <Inp 
+                                            name="mfgDate" 
+                                            type="date" 
+                                            value={itemForm.mfgDate} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
+                                    <Field><Label>{labels.expiryDate}</Label>
+                                        <Inp 
+                                            name="expiryDate" 
+                                            type="date" 
+                                            value={itemForm.expiryDate} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
-                                    <Field><Label>Declare Sale Price</Label><Inp name="perItemPrice" type="number" placeholder="0.00" value={itemForm.perItemPrice} onChange={handleItemChange} /></Field>
+                                    <Field><Label>Declare Sale Price</Label>
+                                        <Inp 
+                                            name="perItemPrice" 
+                                            type="number" 
+                                            placeholder="0.00" 
+                                            value={itemForm.perItemPrice} 
+                                            onChange={handleItemChange}
+                                            readOnly={isExistingMode}
+                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                 </div>
 
                                 {!isUpdate && bill.supplier && frequentItems.length > 0 && (
@@ -916,6 +1059,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
 
                     {/* row 3: summary */}
                     <Card title={labels.summary} icon={DollarSign}>
+                        <div className="flex items-center justify-between mb-4">
+                            <Btn 
+                                variant="secondary" 
+                                size="sm" 
+                                onClick={handleRecalculate}
+                                disabled={isRecalculating || addedItems.length === 0}
+                            >
+                                {isRecalculating ? "Recalculating..." : "Recalculate Totals"}
+                            </Btn>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Subtotal Card */}
                             <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
