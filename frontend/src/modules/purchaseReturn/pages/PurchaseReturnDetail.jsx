@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Trash2, Plus } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
+import { useGetPurchaseReturnPaymentsQuery, useDeletePurchaseReturnPaymentMutation, useRecalculatePurchaseReturnMutation } from "../services/purchaseReturn.service.js";
 import PurchaseReturnDetailPdfTemplate from "../components/PurchaseReturnDetailPdfTemplate.jsx";
+import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
+import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const STATUS_STYLE = {
     draft: { background: "rgba(107,114,128,0.1)", color: "#6b7280", text: "Draft" },
@@ -18,13 +22,59 @@ export default function PurchaseReturnDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [expandedItems, setExpandedItems] = useState({});
+    const [expandedPayments, setExpandedPayments] = useState({});
     const [purchaseReturn, setPurchaseReturn] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
+
+    // Transaction/Refund hooks
+    const { data: paymentsData, refetch: refetchPayments } = useGetPurchaseReturnPaymentsQuery(id);
+    const [deletePayment] = useDeletePurchaseReturnPaymentMutation();
+    const [recalculatePurchaseReturn] = useRecalculatePurchaseReturnMutation();
+
+    const payments = paymentsData?.data || paymentsData || [];
+
+    // Calculate payment status
+    const totalRefundAmount = purchaseReturn?.totalRefundAmount || 0;
+    const refundedAmount = purchaseReturn?.refundedAmount || 0;
+    const remainingAmount = totalRefundAmount - refundedAmount;
+    const refundStatus = purchaseReturn?.refundStatus || 'pending';
+
+    const handleDeletePayment = async (paymentId) => {
+        try {
+            await deletePayment({ id, paymentId }).unwrap();
+            showSuccess("Refund deleted successfully");
+            refetchPayments();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete refund");
+        }
+    };
+
+    const handleRecalculate = async () => {
+        try {
+            await recalculatePurchaseReturn(id).unwrap();
+            showSuccess("Purchase return recalculated successfully");
+            refetchPayments();
+            // Refetch purchase return to get updated refunded amount
+            const result = await getPurchaseReturnByIdApi(id);
+            setPurchaseReturn(result.data);
+        } catch (error) {
+            showError(error?.data?.message || "Failed to recalculate");
+        }
+    };
+
+    const handlePaymentSuccess = async () => {
+        setShowPaymentModal(false);
+        refetchPayments();
+        // Refetch purchase return to get updated refunded amount
+        const result = await getPurchaseReturnByIdApi(id);
+        setPurchaseReturn(result.data);
+    };
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -76,6 +126,14 @@ export default function PurchaseReturnDetail() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleRecalculate}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
+                                title="Recalculate Refund"
+                            >
+                                <RefreshCw size={15} />
+                                Recalculate
+                            </button>
                             <button
                                 onClick={() => setShowPdfModal(true)}
                                 className="flex items-center gap-2 px-4 py-2 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all shadow-sm"
@@ -132,16 +190,20 @@ export default function PurchaseReturnDetail() {
                         <div className="flex flex-wrap items-start justify-between gap-6">
                             <div>
                                 <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refund Amount</p>
-                                <p className="text-2xl font-bold text-red-600">Rs {(purchaseReturn?.totalRefundAmount ?? purchaseReturn?.totalAmount ?? 0).toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-red-600">Rs {totalRefundAmount.toLocaleString()}</p>
                             </div>
                             <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Items</p>
-                                <p className="text-2xl font-bold text-[var(--ink)]">{purchaseReturn?.items?.length || 0}</p>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refunded</p>
+                                <p className="text-2xl font-bold text-blue-600">Rs {refundedAmount.toLocaleString()}</p>
                             </div>
-                            {/* <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Quantity</p>
-                                <p className="text-2xl font-bold text-[var(--accent-2)]">{Number(purchaseReturn?.totalQuantity || 0).toLocaleString()}</p>
-                            </div> */}
+                            <div>
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Remaining</p>
+                                <p className="text-2xl font-bold text-orange-600">Rs {remainingAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Refund Status</p>
+                                <p className="text-2xl font-bold text-[var(--ink)] capitalize">{refundStatus}</p>
+                            </div>
                         </div>
 
                         <div className="h-px bg-[var(--border)] my-7" />
@@ -335,6 +397,143 @@ export default function PurchaseReturnDetail() {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="h-px bg-[var(--border)] my-10" />
+
+                        {/* Refunds/Transactions */}
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
+                                Refunds ({payments.length})
+                            </h3>
+                            {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
+                                <button
+                                    onClick={() => setShowPaymentModal(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                                >
+                                    <Plus size={15} />
+                                    Record Refund
+                                </button>
+                            )}
+                        </div>
+
+                        {payments.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-[var(--border)]">
+                                            <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Date</th>
+                                            <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Method</th>
+                                            <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Amount</th>
+                                            <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Notes</th>
+                                            <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--border)]">
+                                        {payments.map((payment, index) => {
+                                            const isPaymentExpanded = expandedPayments[index];
+                                            return (
+                                                <React.Fragment key={index}>
+                                                    <tr>
+                                                        <td className="py-3 text-sm text-[var(--ink)]">
+                                                            {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="py-3">
+                                                            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                                                payment.method === 'cash' ? 'bg-green-100 text-green-800' :
+                                                                payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-purple-100 text-purple-800'
+                                                            }`}>
+                                                                {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
+                                                                 payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
+                                                                 payment.method || "—"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 text-right font-semibold text-red-600">Rs {(payment.amount || 0).toLocaleString()}</td>
+                                                        <td className="py-3 text-sm text-center text-[var(--muted)]">{payment.notes || "—"}</td>
+                                                        <td className="py-3">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => setExpandedPayments(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                                    className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
+                                                                    title={isPaymentExpanded ? "Hide details" : "Show details"}
+                                                                >
+                                                                    {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                                </button>
+                                                                <ConfirmDialog
+                                                                    onConfirm={() => handleDeletePayment(payment._id)}
+                                                                    message="Are you sure you want to delete this refund?"
+                                                                >
+                                                                    <button
+                                                                        className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
+                                                                        title="Delete refund"
+                                                                    >
+                                                                        <Trash2 size={15} />
+                                                                    </button>
+                                                                </ConfirmDialog>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {isPaymentExpanded && (
+                                                        <tr>
+                                                            <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Details</p>
+                                                                        <div className="text-xs space-y-1">
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Refund ID:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment._id || "—"}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Transaction Date:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{new Date(payment.transactionDate || payment.paymentDate).toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Payment Method:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.method || "—"}</span>
+                                                                            </div>
+                                                                            {payment.creditAccount && (
+                                                                                <div className="flex justify-between">
+                                                                                    <span style={{ color: "var(--ink)" }}>Credit Account:</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.creditAccount.name || "—"}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Amount Information</p>
+                                                                        <div className="text-xs space-y-1">
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Amount:</span>
+                                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>Rs {(payment.amount || 0).toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Cash Amount:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(payment.cashAmount || 0).toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Credit Amount:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(payment.creditAmount || 0).toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between">
+                                                                                <span style={{ color: "var(--ink)" }}>Notes:</span>
+                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.notes || "—"}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-[var(--muted)] py-6 text-center">No refunds recorded yet</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -347,6 +546,13 @@ export default function PurchaseReturnDetail() {
                 >
                     <PurchaseReturnDetailPdfTemplate purchaseReturn={purchaseReturn} labels={labels} />
                 </PdfModal>
+            )}
+            {showPaymentModal && (
+                <PurchaseReturnPaymentModal
+                    purchaseReturn={purchaseReturn}
+                    onClose={() => setShowPaymentModal(false)}
+                    onSuccess={handlePaymentSuccess}
+                />
             )}
         </>
     );

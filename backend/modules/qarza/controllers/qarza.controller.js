@@ -284,6 +284,7 @@ export const getSupplierPayments = async (req, res) => {
         // Query for:
         // 1. Manual qarza transactions (sourceType: 'qarza', sourceId matches)
         // 2. Purchase credit transactions (sourceType: 'purchase', creditAccount matches)
+        // 3. Purchase return refund transactions (sourceType: 'purchaseReturn', creditAccount matches)
         // Explicitly exclude sale transactions
         let query = {
             $and: [
@@ -291,7 +292,8 @@ export const getSupplierPayments = async (req, res) => {
                 {
                     $or: [
                         { sourceType: 'qarza', sourceId: qarzaAccountId },
-                        { sourceType: 'purchase', creditAccount: qarzaAccountId }
+                        { sourceType: 'purchase', creditAccount: qarzaAccountId },
+                        { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId }
                     ]
                 }
             ]
@@ -725,7 +727,7 @@ export const getSupplierPaymentsSummary = async (req, res) => {
             });
         }
 
-        // Get manual qarza transactions + purchase credit transactions
+        // Get manual qarza transactions + purchase credit transactions + purchase return refund transactions
         // Explicitly exclude sale transactions
         const transactions = await getTransactions({
             $and: [
@@ -733,7 +735,8 @@ export const getSupplierPaymentsSummary = async (req, res) => {
                 {
                     $or: [
                         { sourceType: 'qarza', sourceId: qarzaAccountId },
-                        { sourceType: 'purchase', creditAccount: qarzaAccountId }
+                        { sourceType: 'purchase', creditAccount: qarzaAccountId },
+                        { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId }
                     ]
                 }
             ]

@@ -14,6 +14,14 @@ import { findByIdBatchService } from "../../productPurchases/services/batch.crud
 import { findByIdPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
 import { findOneProductService } from "../../product/services/product.crud.js";
+import {
+    createPurchaseReturnPayment,
+    getPurchaseReturnPayments,
+    deletePurchaseReturnPayment
+} from "../services/purchaseReturnPayment.service.js";
+import {
+    recalculatePurchaseReturnRefundAmount
+} from "../services/purchaseReturn.service.js";
 
 const normalizePurchaseReturnItems = async (items = []) => {
     if (!Array.isArray(items)) return [];
@@ -631,4 +639,37 @@ export const getSupplierPurchaseReturnsData = asyncHandler(async (req, res) => {
         },
         kpis
     });
+});
+
+// Payment/Refund endpoints for purchase returns
+export const addPurchaseReturnPaymentData = asyncHandler(async (req, res) => {
+    const userId = req.user?._id || req.user?.id || null;
+    const { id } = req.params;
+
+    const paymentData = {
+        ...req.body,
+        purchaseReturn: id,
+        createdBy: userId,
+    };
+
+    const transactions = await createPurchaseReturnPayment(paymentData);
+    return ApiResponse(res, 201, "Purchase return refund added successfully", transactions);
+});
+
+export const getPurchaseReturnPaymentsData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const payments = await getPurchaseReturnPayments(id);
+    return ApiResponse(res, 200, "Purchase return refunds retrieved successfully", payments);
+});
+
+export const deletePurchaseReturnPaymentData = asyncHandler(async (req, res) => {
+    const { id, paymentId } = req.params;
+    const result = await deletePurchaseReturnPayment(paymentId);
+    return ApiResponse(res, 200, "Purchase return refund deleted successfully", result);
+});
+
+export const recalculatePurchaseReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const result = await recalculatePurchaseReturnRefundAmount(id);
+    return ApiResponse(res, 200, "Purchase return recalculated successfully", result);
 });

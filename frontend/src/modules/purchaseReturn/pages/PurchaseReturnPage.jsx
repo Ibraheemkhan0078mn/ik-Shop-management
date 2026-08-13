@@ -2,12 +2,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter } from "lucide-react";
+import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter, DollarSign, Eye } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
+import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi, approvePurchaseReturnApi } from "../api/purchaseReturnApi.js";
@@ -27,9 +28,10 @@ export default function PurchaseReturnPage() {
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
     const dispatch = useDispatch();
-    
+
     const [modal, setModal] = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
+    const [paymentModal, setPaymentModal] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
@@ -112,6 +114,17 @@ export default function PurchaseReturnPage() {
                     purchaseReturnId={modal.id}
                     onClose={() => setModal(null)}
                     onSuccess={() => setRefreshKey((v) => v + 1)}
+                />
+            )}
+
+            {paymentModal && (
+                <PurchaseReturnPaymentModal
+                    purchaseReturn={paymentModal}
+                    onClose={() => setPaymentModal(null)}
+                    onSuccess={() => {
+                        setPaymentModal(null);
+                        setRefreshKey((v) => v + 1);
+                    }}
                 />
             )}
 
@@ -232,6 +245,7 @@ export default function PurchaseReturnPage() {
                                             purchaseReturn={pr}
                                             onEdit={() => setModal({ mode: "update", id: pr._id })}
                                             onDelete={() => handleDelete(pr._id)}
+                                            onPayment={() => setPaymentModal(pr)}
                                         />
                                     ))}
                                 </tbody>
@@ -248,15 +262,20 @@ export default function PurchaseReturnPage() {
     );
 }
 
-function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
+function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete, onPayment }) {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
-    
+
     const date = new Date(purchaseReturn?.returnDate ?? purchaseReturn?.createdAt).toLocaleDateString();
     const status = purchaseReturn?.status ?? "draft";
     const statusClass = STATUS_CLASS[status] ?? STATUS_CLASS.draft;
+
+    // Calculate payment status
+    const totalRefundAmount = purchaseReturn?.totalRefundAmount || 0;
+    const refundedAmount = purchaseReturn?.refundedAmount || 0;
+    const remainingAmount = totalRefundAmount - refundedAmount;
 
     const getStatusLabel = (status) => {
         switch (status) {
@@ -268,11 +287,18 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
         }
     };
 
+    const handlePaymentClick = (e) => {
+        e.stopPropagation();
+        onPayment();
+    };
+
+    const handleViewDetails = (e) => {
+        e.stopPropagation();
+        navigate(`/purchase-returns/${purchaseReturn._id}`);
+    };
+
     return (
-        <tr 
-            className="transition border-b border-edge hover:bg-surface-muted cursor-pointer"
-            onClick={() => navigate(`/purchase-returns/${purchaseReturn._id}`)}
-        >
+        <tr className="transition border-b border-edge hover:bg-surface-muted">
             <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
                 {purchaseReturn?.purchaseReturnNumber ?? "—"}
             </td>
@@ -285,8 +311,12 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             <td className="px-4 py-3 text-center text-ink">
                 {purchaseReturn?.totalItems ?? purchaseReturn?.items?.length ?? 0}
             </td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
-                Rs {(purchaseReturn?.totalRefundAmount ?? 0).toLocaleString()}
+            <td className="px-4 py-3 text-right">
+                <div className="text-xs">
+                    <div className="font-semibold tabular-nums text-primary">Rs {totalRefundAmount.toLocaleString()}</div>
+                    <div className="text-[10px] text-green-600">Paid: Rs {refundedAmount.toLocaleString()}</div>
+                    <div className="text-[10px] text-orange-600">Rem: Rs {remainingAmount.toLocaleString()}</div>
+                </div>
             </td>
             <td className="px-4 py-3 text-center">
                 <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${statusClass}`}>
@@ -298,6 +328,22 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                        onClick={handleViewDetails}
+                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                        title="View Details"
+                    >
+                        <Eye className="w-3 h-3" />
+                    </button>
+                    {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
+                        <button
+                            onClick={handlePaymentClick}
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
+                            title="Record Refund"
+                        >
+                            <DollarSign className="w-3 h-3" />
+                        </button>
+                    )}
                     {purchaseReturn?.status !== 'approved' && (
                         <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
                             <button

@@ -305,6 +305,99 @@ const createSaleTransaction = async (paymentData) => {
     return transactions;
 };
 
+/**
+ * Create transaction(s) for a purchase return refund
+ * - Cash: creates 1 transaction (cash outflow - we're refunding money)
+ * - Credit: creates 1 transaction with credit account (reducing credit balance)
+ * - Hybrid: creates 2 transactions (1 cash, 1 credit)
+ */
+const createPurchaseReturnTransaction = async (paymentData) => {
+    const {
+        purchaseReturn,
+        paymentMethod,
+        amount,
+        cashAmount,
+        creditAmount,
+        creditAccount,
+        paymentMethodId,
+        paymentMethodName,
+        paymentDate,
+        notes,
+        createdBy
+    } = paymentData;
+
+    const transactions = [];
+
+    if (paymentMethod === 'cash') {
+        // Single cash transaction (outflow - we're giving money back)
+        const cashTransaction = await createTransactionService({
+            sourceType: 'purchaseReturn',
+            sourceId: purchaseReturn,
+            method: 'cash',
+            amount: amount,
+            cashAmount: cashAmount || amount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes || `Cash refund for purchase return`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+    } else if (paymentMethod === 'credit') {
+        // Single credit transaction (reducing credit balance - cashout)
+        const creditTransaction = await createTransactionService({
+            sourceType: 'purchaseReturn',
+            sourceId: purchaseReturn,
+            method: 'credit',
+            amount: amount,
+            cashAmount: 0,
+            creditAmount: creditAmount || amount,
+            creditAccount: creditAccount,
+            creditType: 'cashout', // We're reducing credit owed to us, so it's cashout
+            transactionDate: paymentDate,
+            notes: notes || `Credit refund for purchase return`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+
+    } else if (paymentMethod === 'hybrid') {
+        // Two transactions: one cash, one credit
+        const cashTransaction = await createTransactionService({
+            sourceType: 'purchaseReturn',
+            sourceId: purchaseReturn,
+            method: 'cash',
+            amount: cashAmount,
+            cashAmount: cashAmount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (cash portion)` : `Cash portion of hybrid refund for purchase return`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+        const creditTransaction = await createTransactionService({
+            sourceType: 'purchaseReturn',
+            sourceId: purchaseReturn,
+            method: 'credit',
+            amount: creditAmount,
+            cashAmount: 0,
+            creditAmount: creditAmount,
+            creditAccount: creditAccount,
+            creditType: 'cashout', // We're reducing credit owed to us, so it's cashout
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (credit portion)` : `Credit portion of hybrid refund for purchase return`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+    }
+
+    return transactions;
+};
+
 export {
     createTransactionService,
     findTransactionService,
@@ -320,5 +413,6 @@ export {
     updateTransaction,
     deleteTransaction,
     createPurchaseTransaction,
-    createSaleTransaction
+    createSaleTransaction,
+    createPurchaseReturnTransaction
 };

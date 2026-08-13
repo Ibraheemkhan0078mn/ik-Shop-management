@@ -7,6 +7,7 @@ import {
     deleteOnePurchaseReturnService,
     countPurchaseReturnService
 } from "./purchaseReturn.crud.js";
+import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 const createPurchaseReturn = async (data) => {
     return await createPurchaseReturnService(data);
@@ -96,6 +97,65 @@ const getPaginatedPurchaseReturns = async (filters = {}) => {
     };
 };
 
+/**
+ * Calculate refund status for a purchase return based on transactions
+ * Returns object with totalRefunded, remainingAmount, refundStatus, and transaction details
+ */
+const calculatePurchaseReturnRefundStatus = async (purchaseReturnId, totalRefundAmount) => {
+    const transactions = await getTransactions({ sourceType: 'purchaseReturn', sourceId: purchaseReturnId });
+    
+    const totalRefunded = transactions.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const remainingAmount = totalRefundAmount - totalRefunded;
+    
+    let refundStatus = 'pending';
+    if (remainingAmount <= 0) {
+        refundStatus = 'full';
+    } else if (totalRefunded > 0) {
+        refundStatus = 'partial';
+    }
+    
+    // Calculate cash and credit breakdowns
+    const totalCash = transactions.reduce((sum, t) => sum + (t.cashAmount || 0), 0) || 0;
+    const totalCredit = transactions.reduce((sum, t) => sum + (t.creditAmount || 0), 0) || 0;
+    
+    return {
+        totalRefunded,
+        remainingAmount,
+        refundStatus,
+        totalCash,
+        totalCredit,
+        transactionCount: transactions.length,
+        transactions
+    };
+};
+
+/**
+ * Recalculate and update purchase return refundedAmount from all related transactions
+ * This function syncs the purchase return document's refundedAmount with the actual transaction totals
+ */
+const recalculatePurchaseReturnRefundAmount = async (purchaseReturnId) => {
+    const purchaseReturn = await getPurchaseReturnById(purchaseReturnId);
+    if (!purchaseReturn) {
+        throw new Error("Purchase return not found");
+    }
+
+    // Handle both direct purchase return object and wrapped response
+    const totalRefundAmount = purchaseReturn?.totalRefundAmount || purchaseReturn?.data?.totalRefundAmount;
+    if (!totalRefundAmount && totalRefundAmount !== 0) {
+        throw new Error("Purchase return total refund amount not found");
+    }
+
+    const refundStatus = await calculatePurchaseReturnRefundStatus(purchaseReturnId, totalRefundAmount);
+
+    // Update purchase return with recalculated values using direct service to avoid items iteration
+    await updatePurchaseReturnService(purchaseReturnId, {
+        refundedAmount: refundStatus.totalRefunded,
+        refundStatus: refundStatus.refundStatus
+    });
+
+    return refundStatus;
+};
+
 export {
     createPurchaseReturn,
     getAllPurchaseReturns,
@@ -104,5 +164,7 @@ export {
     updatePurchaseReturn,
     deletePurchaseReturn,
     countPurchaseReturns,
-    getPaginatedPurchaseReturns
+    getPaginatedPurchaseReturns,
+    calculatePurchaseReturnRefundStatus,
+    recalculatePurchaseReturnRefundAmount
 };

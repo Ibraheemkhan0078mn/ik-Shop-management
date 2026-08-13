@@ -73,6 +73,15 @@ const purchaseReturnSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    refundedAmount: {
+        type: Number,
+        default: 0
+    },
+    refundStatus: {
+        type: String,
+        enum: ["pending", "partial", "full"],
+        default: "pending"
+    },
     status: {
         type: String,
         enum: ["draft", "pending", "approved", "rejected"],

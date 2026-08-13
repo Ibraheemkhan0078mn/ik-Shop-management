@@ -19,7 +19,7 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    const remainingAmount = purchaseReturn?.totalAmount - (purchaseReturn?.paidAmount || 0);
+    const remainingAmount = (purchaseReturn?.totalRefundAmount || 0) - (purchaseReturn?.refundedAmount || 0);
     const editingAmount = payment?.amount || remainingAmount;
 
     // Auto-set cash amount based on payment method

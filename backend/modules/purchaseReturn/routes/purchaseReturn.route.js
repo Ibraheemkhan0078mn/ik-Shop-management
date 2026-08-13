@@ -13,6 +13,10 @@ import {
     validatePurchaseReturnNumberData,
     generatePurchaseReturnNumberData,
     getSupplierPurchaseReturnsData,
+    addPurchaseReturnPaymentData,
+    getPurchaseReturnPaymentsData,
+    deletePurchaseReturnPaymentData,
+    recalculatePurchaseReturnData,
 } from "../controllers/purchaseReturn.controller.js";
 
 const router = express.Router();
@@ -31,5 +35,10 @@ router.delete("/:id", deletePurchaseReturnData);
 router.put("/:id/submit", submitPurchaseReturnData);
 router.put("/:id/approve", approvePurchaseReturnData);
 router.put("/:id/reject", rejectPurchaseReturnData);
+// Payment/Refund endpoints
+router.post("/:id/payments", addPurchaseReturnPaymentData);
+router.get("/:id/payments", getPurchaseReturnPaymentsData);
+router.delete("/:id/payments/:paymentId", deletePurchaseReturnPaymentData);
+router.put("/:id/recalculate", recalculatePurchaseReturnData);
 
 export default router;

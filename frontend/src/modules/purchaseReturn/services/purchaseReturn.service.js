@@ -80,6 +80,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
             query: () => ({ url: "/purchase-returns/generate-number", method: "GET" }),
             transformResponse: (raw) => raw.data || raw,
         }),
+        // New transaction-based payment endpoints
         addPurchaseReturnPayment: build.mutation({
             query: ({ id, ...data }) => ({
                 url: `/purchase-returns/${id}/payments`,
@@ -93,19 +94,18 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
             providesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturnPayments"],
         }),
         deletePurchaseReturnPayment: build.mutation({
-            query: ({ returnId, paymentId }) => ({
-                url: `/purchase-returns/${returnId}/payments/${paymentId}`,
+            query: ({ id, paymentId }) => ({
+                url: `/purchase-returns/${id}/payments/${paymentId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, { returnId }) => [{ type: "PurchaseReturn", returnId }, "PurchaseReturnPayments"],
+            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturnPayments"],
         }),
-        updatePurchaseReturnPayment: build.mutation({
-            query: ({ returnId, paymentId, ...data }) => ({
-                url: `/purchase-returns/${returnId}/payments/${paymentId}`,
+        recalculatePurchaseReturn: build.mutation({
+            query: (id) => ({
+                url: `/purchase-returns/${id}/recalculate`,
                 method: "PUT",
-                body: data,
             }),
-            invalidatesTags: (result, error, { returnId }) => [{ type: "PurchaseReturn", returnId }, "PurchaseReturnPayments"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
         }),
     }),
 });
@@ -126,5 +126,5 @@ export const {
     useAddPurchaseReturnPaymentMutation,
     useGetPurchaseReturnPaymentsQuery,
     useDeletePurchaseReturnPaymentMutation,
-    useUpdatePurchaseReturnPaymentMutation,
+    useRecalculatePurchaseReturnMutation,
 } = purchaseReturnApi;
