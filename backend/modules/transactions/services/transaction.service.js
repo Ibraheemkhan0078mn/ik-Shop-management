@@ -60,6 +60,17 @@ const getTransactions = async (filter = {}) => {
         query.createdBy = filter.createdBy;
     }
     
+    // Pass-through for MongoDB operators and creditType
+    if (filter.$or) {
+        query.$or = filter.$or;
+    }
+    if (filter.$and) {
+        query.$and = filter.$and;
+    }
+    if (filter.creditType) {
+        query.creditType = filter.creditType;
+    }
+    
     // Date range filters
     if (filter.startDate || filter.endDate) {
         query.transactionDate = {};

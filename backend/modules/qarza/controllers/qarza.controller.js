@@ -195,6 +195,9 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         // Get all transactions for this account
         let transactions = await getTransactions(query);
         
+        // Sort by transaction date (newest first)
+        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        
         // Apply pagination manually since getTransactions doesn't support skip/limit
         let total = transactions.length;
         let skip = (page - 1) * limit;
@@ -211,6 +214,173 @@ export const getPaginatedQarzaPayments = async (req, res) => {
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error getting payments" });
+    }
+};
+
+// API 1: Get manual payments only for general credits/debits accounts
+export const getManualPayments = async (req, res) => {
+    try {
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let { qarzaAccountId, type } = req.query;
+
+        if (!qarzaAccountId) {
+            return res.json({ success: false, msg: "Account ID is required" });
+        }
+        
+        // Query for manual qarza transactions only (sourceType: 'qarza')
+        let query = { 
+            sourceType: 'qarza', 
+            sourceId: qarzaAccountId 
+        };
+        
+        // Apply type filter (map to creditType)
+        if (type && type !== 'all' && type !== 'undefined') {
+            if (type === 'cashin') {
+                query.creditType = 'cashin';
+            } else if (type === 'cashout' || type === 'debit') {
+                query.creditType = 'cashout';
+            }
+        }
+        
+        let transactions = await getTransactions(query);
+        
+        // Sort by transaction date (newest first)
+        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        
+        let total = transactions.length;
+        let skip = (page - 1) * limit;
+        let paginatedTransactions = transactions.slice(skip, skip + limit);
+
+        return res.json({ 
+            success: true, 
+            data: paginatedTransactions,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting manual payments" });
+    }
+};
+
+// API 2: Get supplier-related transactions + purchase credit transactions
+export const getSupplierPayments = async (req, res) => {
+    try {
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let { qarzaAccountId, type } = req.query;
+
+        if (!qarzaAccountId) {
+            return res.json({ success: false, msg: "Account ID is required" });
+        }
+        
+        // Query for:
+        // 1. Manual qarza transactions (sourceType: 'qarza', sourceId matches)
+        // 2. Purchase credit transactions (sourceType: 'purchase', creditAccount matches)
+        // Explicitly exclude sale transactions
+        let query = {
+            $and: [
+                { sourceType: { $ne: 'sale' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza', sourceId: qarzaAccountId },
+                        { sourceType: 'purchase', creditAccount: qarzaAccountId }
+                    ]
+                }
+            ]
+        };
+        
+        // Apply type filter (map to creditType)
+        if (type && type !== 'all' && type !== 'undefined') {
+            if (type === 'cashin') {
+                query.creditType = 'cashin';
+            } else if (type === 'cashout' || type === 'debit') {
+                query.creditType = 'cashout';
+            }
+        }
+        
+        let transactions = await getTransactions(query);
+        
+        // Sort by transaction date (newest first)
+        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        
+        let total = transactions.length;
+        let skip = (page - 1) * limit;
+        let paginatedTransactions = transactions.slice(skip, skip + limit);
+
+        return res.json({ 
+            success: true, 
+            data: paginatedTransactions,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting supplier payments" });
+    }
+};
+
+// API 3: Get manual transactions + POS credit transactions for customers
+export const getCustomerPayments = async (req, res) => {
+    try {
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let { qarzaAccountId, type } = req.query;
+
+        if (!qarzaAccountId) {
+            return res.json({ success: false, msg: "Account ID is required" });
+        }
+        
+        // Query for:
+        // 1. Manual qarza transactions (sourceType: 'qarza', sourceId matches)
+        // 2. POS sale credit transactions (sourceType: 'sale', creditAccount matches, creditAmount > 0)
+        // Explicitly exclude purchase transactions
+        let query = {
+            $and: [
+                { sourceType: { $ne: 'purchase' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza', sourceId: qarzaAccountId },
+                        { sourceType: 'sale', creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } }
+                    ]
+                }
+            ]
+        };
+        
+        // Apply type filter (map to creditType)
+        if (type && type !== 'all' && type !== 'undefined') {
+            if (type === 'cashin') {
+                query.creditType = 'cashin';
+            } else if (type === 'cashout' || type === 'debit') {
+                query.creditType = 'cashout';
+            }
+        }
+        
+        let transactions = await getTransactions(query);
+        
+        // Sort by transaction date (newest first)
+        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        
+        let total = transactions.length;
+        let skip = (page - 1) * limit;
+        let paginatedTransactions = transactions.slice(skip, skip + limit);
+
+        return res.json({ 
+            success: true, 
+            data: paginatedTransactions,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error getting customer payments" });
     }
 };
 
@@ -473,6 +643,196 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
         return res.json({ 
             success: false, 
             msg: "Error getting payment summary",
+            accountExists: false 
+        });
+    }
+};
+
+// KPI API 1: Manual payments summary for general credits/debits accounts
+export const getManualPaymentsSummary = async (req, res) => {
+    try {
+        let { qarzaAccountId } = req.query;
+
+        const account = await getQarzaAccountByIdService(qarzaAccountId);
+        
+        if (!account) {
+            return res.json({ 
+                success: false, 
+                msg: "Qarza account not found",
+                accountExists: false 
+            });
+        }
+
+        // Get manual qarza transactions only
+        const transactions = await getTransactions({ 
+            sourceType: 'qarza', 
+            sourceId: qarzaAccountId 
+        });
+        
+        const cashIn = transactions
+            .filter(t => t.creditType === 'cashin')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const cashOut = transactions
+            .filter(t => t.creditType === 'cashout')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const overall = cashIn - cashOut;
+
+        return res.json({ 
+            success: true, 
+            accountExists: true,
+            data: {
+                account: {
+                    _id: account?._id,
+                    name: account?.name,
+                    type: account?.type,
+                    phoneNo: account?.phoneNo,
+                    address: account?.address
+                },
+                cashIn,
+                cashOut,
+                overall,
+                totalTransactions: transactions.length
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ 
+            success: false, 
+            msg: "Error getting manual payments summary",
+            accountExists: false 
+        });
+    }
+};
+
+// KPI API 2: Supplier payments summary (manual + purchase credit transactions)
+export const getSupplierPaymentsSummary = async (req, res) => {
+    try {
+        let { qarzaAccountId } = req.query;
+
+        const account = await getQarzaAccountByIdService(qarzaAccountId);
+        
+        if (!account) {
+            return res.json({ 
+                success: false, 
+                msg: "Qarza account not found",
+                accountExists: false 
+            });
+        }
+
+        // Get manual qarza transactions + purchase credit transactions
+        // Explicitly exclude sale transactions
+        const transactions = await getTransactions({
+            $and: [
+                { sourceType: { $ne: 'sale' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza', sourceId: qarzaAccountId },
+                        { sourceType: 'purchase', creditAccount: qarzaAccountId }
+                    ]
+                }
+            ]
+        });
+        
+        const cashIn = transactions
+            .filter(t => t.creditType === 'cashin')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const cashOut = transactions
+            .filter(t => t.creditType === 'cashout')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const overall = cashIn - cashOut;
+
+        return res.json({ 
+            success: true, 
+            accountExists: true,
+            data: {
+                account: {
+                    _id: account?._id,
+                    name: account?.name,
+                    type: account?.type,
+                    phoneNo: account?.phoneNo,
+                    address: account?.address
+                },
+                cashIn,
+                cashOut,
+                overall,
+                totalTransactions: transactions.length
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ 
+            success: false, 
+            msg: "Error getting supplier payments summary",
+            accountExists: false 
+        });
+    }
+};
+
+// KPI API 3: Customer payments summary (manual + POS credit transactions)
+export const getCustomerPaymentsSummary = async (req, res) => {
+    try {
+        let { qarzaAccountId } = req.query;
+
+        const account = await getQarzaAccountByIdService(qarzaAccountId);
+        
+        if (!account) {
+            return res.json({ 
+                success: false, 
+                msg: "Qarza account not found",
+                accountExists: false 
+            });
+        }
+
+        // Get manual qarza transactions + POS sale credit transactions
+        // Explicitly exclude purchase transactions
+        const transactions = await getTransactions({
+            $and: [
+                { sourceType: { $ne: 'purchase' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza', sourceId: qarzaAccountId },
+                        { sourceType: 'sale', creditAccount: qarzaAccountId }
+                    ]
+                }
+            ]
+        });
+        
+        const cashIn = transactions
+            .filter(t => t.creditType === 'cashin')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const cashOut = transactions
+            .filter(t => t.creditType === 'cashout')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const overall = cashIn - cashOut;
+
+        return res.json({ 
+            success: true, 
+            accountExists: true,
+            data: {
+                account: {
+                    _id: account?._id,
+                    name: account?.name,
+                    type: account?.type,
+                    phoneNo: account?.phoneNo,
+                    address: account?.address
+                },
+                cashIn,
+                cashOut,
+                overall,
+                totalTransactions: transactions.length
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.json({ 
+            success: false, 
+            msg: "Error getting customer payments summary",
             accountExists: false 
         });
     }

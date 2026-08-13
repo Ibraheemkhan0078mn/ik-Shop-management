@@ -7,7 +7,7 @@ import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateCustomer } from "../services/customers.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
-import { useAccountPaymentsSummary, useAccountPaymentsPaginated, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
+import { useCustomerPaymentsSummary, useCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -44,7 +44,7 @@ export default function CustomerDetail() {
     const orders = ordersData?.data || [];
     
     const qarzaAccountId = customer?.qarzaAccountId;
-    const { data: summary } = useAccountPaymentsSummary(qarzaAccountId);
+    const { data: summary } = useCustomerPaymentsSummary(qarzaAccountId);
     const accountExists = summary?.accountExists !== false;
     const [deletePayment] = useDeleteQarzaPayment();
     const [deleteOrder] = useDeleteOrder();
@@ -256,7 +256,7 @@ export default function CustomerDetail() {
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <PaginatedList
-                                rtkQuery={useAccountPaymentsPaginated}
+                                rtkQuery={useCustomerPayments}
                                 limit={20}
                                 dataKey="data"
                                 wrapperClassName="h-full"
@@ -295,18 +295,22 @@ export default function CustomerDetail() {
                                                                     {new Date(item.transactionDate || item.date).toLocaleDateString()}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-center">
-                                                                    <button
-                                                                        onClick={() => setModal({ mode: "update", payment: item })}
-                                                                        className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                                                    >
-                                                                        <Edit size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDelete(item._id)}
-                                                                        className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
-                                                                    >
-                                                                        <Package size={14} />
-                                                                    </button>
+                                                                    {item.sourceType !== 'sale' && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => setModal({ mode: "update", payment: item })}
+                                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                                            >
+                                                                                <Edit size={14} />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleDelete(item._id)}
+                                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
+                                                                            >
+                                                                                <Package size={14} />
+                                                                            </button>
+                                                                        </>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         );

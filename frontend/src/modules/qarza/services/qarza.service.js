@@ -74,6 +74,60 @@ export const qarzaApi = baseApi.injectEndpoints({
             providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
         }),
 
+        // Manual payments (general credits/debits)
+        getManualPayments: build.query({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type } = {}) => ({
+                url: "/qarzaRoutes/payments/manual",
+                params: { qarzaAccountId, page, limit, type },
+            }),
+            providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
+        }),
+
+        getManualPaymentsSummary: build.query({
+            query: (qarzaAccountId) => ({
+                url: "/qarzaRoutes/payments/summary/manual",
+                params: { qarzaAccountId },
+            }),
+            transformResponse: (raw) => raw.data ?? raw,
+            providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
+        }),
+
+        // Supplier payments (manual + purchase credit)
+        getSupplierPayments: build.query({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type } = {}) => ({
+                url: "/qarzaRoutes/payments/supplier",
+                params: { qarzaAccountId, page, limit, type },
+            }),
+            providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
+        }),
+
+        getSupplierPaymentsSummary: build.query({
+            query: (qarzaAccountId) => ({
+                url: "/qarzaRoutes/payments/summary/supplier",
+                params: { qarzaAccountId },
+            }),
+            transformResponse: (raw) => raw.data ?? raw,
+            providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
+        }),
+
+        // Customer payments (manual + POS credit)
+        getCustomerPayments: build.query({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type } = {}) => ({
+                url: "/qarzaRoutes/payments/customer",
+                params: { qarzaAccountId, page, limit, type },
+            }),
+            providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
+        }),
+
+        getCustomerPaymentsSummary: build.query({
+            query: (qarzaAccountId) => ({
+                url: "/qarzaRoutes/payments/summary/customer",
+                params: { qarzaAccountId },
+            }),
+            transformResponse: (raw) => raw.data ?? raw,
+            providesTags: (_r, _e, id) => [{ type: "Qarza", id }],
+        }),
+
         createQarzaPayment: build.mutation({
             query: (body) => ({
                 url: "/qarzaRoutes/createQarzaPayment",
@@ -112,6 +166,12 @@ export const {
     useGetAccountPaymentsQuery: useAccountPayments,
     useGetAccountPaymentsPaginatedQuery: useAccountPaymentsPaginated,
     useGetAccountPaymentsSummaryQuery: useAccountPaymentsSummary,
+    useGetManualPaymentsQuery: useManualPayments,
+    useGetManualPaymentsSummaryQuery: useManualPaymentsSummary,
+    useGetSupplierPaymentsQuery: useSupplierPayments,
+    useGetSupplierPaymentsSummaryQuery: useSupplierPaymentsSummary,
+    useGetCustomerPaymentsQuery: useCustomerPayments,
+    useGetCustomerPaymentsSummaryQuery: useCustomerPaymentsSummary,
     useCreateQarzaPaymentMutation: useCreateQarzaPayment,
     useUpdateQarzaPaymentMutation: useUpdateQarzaPayment,
     useDeleteQarzaPaymentMutation: useDeleteQarzaPayment,

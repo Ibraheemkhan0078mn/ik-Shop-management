@@ -116,7 +116,7 @@ export default function PurchaseDetail() {
                     <div className="flex items-start justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => navigate("/purchases")}
+                                onClick={() => navigate(-1)}
                                 className="p-2 -ml-2 hover:bg-[var(--hover)] rounded-lg transition-all"
                             >
                                 <ArrowLeft size={20} className="text-[var(--ink)]" />

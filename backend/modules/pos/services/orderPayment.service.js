@@ -62,7 +62,7 @@ export const createOrderPayment = async (paymentData) => {
             const qarzaPayment = await createQarzaPaymentService({
                 qarzaAccountId: paymentData.creditAccount,
                 amount: creditPaymentAmount,
-                type: 'debit', // They owe us, so it's debit
+                type: 'cashout', // We're giving credit, so it's cashout
                 date: paymentData.paymentDate,
                 notes: `POS Order payment: ${order.orderNumber}`,
                 source: 'pos',
@@ -101,11 +101,6 @@ export const calculateOrderPaymentStatus = async (orderId, totalAmount) => {
         }
         transactionCount++;
     });
-
-    // If no transactions exist (old orders), assume order is fully paid
-    if (transactionCount === 0) {
-        totalPaid = totalAmount;
-    }
 
     const remainingAmount = Math.max(0, totalAmount - totalPaid);
     const paymentStatus = remainingAmount === 0 ? 'full' : totalPaid > 0 ? 'partial' : 'pending';
