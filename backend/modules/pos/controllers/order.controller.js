@@ -18,7 +18,7 @@ import {
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.js";
 import { createOrderPayment, getOrderPayments, calculateOrderPaymentStatus, recalculateOrderPaidAmount } from "../services/orderPayment.service.js";
-import { getTransactions } from "../../transactions/services/transaction.service.js";
+import { getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/generate-number
@@ -301,6 +301,12 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
     // Restore stock for all items before deletion
     for (const item of order.items) {
         await adjustStock(item.product, item.batchId, 'inc', item.quantity);
+    }
+
+    // Delete all related transactions for this order
+    const transactions = await getTransactions({ sourceType: 'sale', sourceId: req.params.id });
+    for (const transaction of transactions) {
+        await deleteTransaction(transaction._id);
     }
 
     await orderDeleteService(req.params.id);

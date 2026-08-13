@@ -757,78 +757,80 @@ export default function PosPaymentModal({
                                                         </div>
                                                     </div>
 
-                                                    {/* Discount section */}
-                                                    <div className="mb-3 p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Section</p>
-                                                        <div className="grid grid-cols-2 gap-3 mb-2">
-                                                            <div>
-                                                                <label className="text-xs" style={{ color: "var(--muted)" }}>Max Discount:</label>
+                                                    {/* Discount section - only show if discount is allowed for this product */}
+                                                    {item.isDiscountAllowed !== false && (
+                                                        <div className="mb-3 p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Section</p>
+                                                            <div className="grid grid-cols-2 gap-3 mb-2">
+                                                                <div>
+                                                                    <label className="text-xs" style={{ color: "var(--muted)" }}>Max Discount:</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={item.maxDiscountPercent || 0}
+                                                                        className="w-full px-2 py-1 text-xs rounded border"
+                                                                        style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-xs" style={{ color: "var(--muted)" }}>Max Amount:</label>
+                                                                    <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
+                                                                        Rs {((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <select
+                                                                    value={itemDiscountTypes[index] || 'percentage'}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        setItemDiscountTypes(prev => ({
+                                                                            ...prev,
+                                                                            [index]: value
+                                                                        }));
+                                                                    }}
+                                                                    className="px-2 py-1.5 text-xs rounded-lg border"
+                                                                    style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                                                                >
+                                                                    <option value="percentage">%</option>
+                                                                    <option value="fixed">Rs</option>
+                                                                </select>
                                                                 <input
                                                                     type="number"
-                                                                    value={item.maxDiscountPercent || 0}
-                                                                    className="w-full px-2 py-1 text-xs rounded border"
+                                                                    min="0"
+                                                                    placeholder="0"
+                                                                    value={itemDiscounts[index] || ""}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        const numValue = Number(value);
+                                                                        
+                                                                        if (item.maxDiscountPercent > 0 && itemDiscountTypes[index] === 'percentage') {
+                                                                            if (numValue > item.maxDiscountPercent) {
+                                                                                alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
+                                                                                return;
+                                                                            }
+                                                                        }
+                                                                        
+                                                                        setItemDiscounts(prev => ({
+                                                                            ...prev,
+                                                                            [index]: value
+                                                                        }));
+                                                                    }}
+                                                                    className="flex-1 px-3 py-1.5 text-xs rounded-lg border"
                                                                     style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
                                                                 />
                                                             </div>
-                                                            <div>
-                                                                <label className="text-xs" style={{ color: "var(--muted)" }}>Max Amount:</label>
-                                                                <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
-                                                                    Rs {((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)}
+                                                            <div className="text-xs mt-2 space-y-1">
+                                                                <div className="flex justify-between">
+                                                                    <span style={{ color: "var(--ink)" }}>Discount Applied:</span>
+                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountAmount.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                    <span style={{ color: "var(--accent-2)" }}>After Discount (Subtotal):</span>
+                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.itemSubtotalWithTax.toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <select
-                                                                value={itemDiscountTypes[index] || 'percentage'}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
-                                                                    setItemDiscountTypes(prev => ({
-                                                                        ...prev,
-                                                                        [index]: value
-                                                                    }));
-                                                                }}
-                                                                className="px-2 py-1.5 text-xs rounded-lg border"
-                                                                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                                            >
-                                                                <option value="percentage">%</option>
-                                                                <option value="fixed">Rs</option>
-                                                            </select>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                placeholder="0"
-                                                                value={itemDiscounts[index] || ""}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
-                                                                    const numValue = Number(value);
-                                                                    
-                                                                    if (item.maxDiscountPercent > 0 && itemDiscountTypes[index] === 'percentage') {
-                                                                        if (numValue > item.maxDiscountPercent) {
-                                                                            alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
-                                                                            return;
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    setItemDiscounts(prev => ({
-                                                                        ...prev,
-                                                                        [index]: value
-                                                                    }));
-                                                                }}
-                                                                className="flex-1 px-3 py-1.5 text-xs rounded-lg border"
-                                                                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                                            />
-                                                        </div>
-                                                        <div className="text-xs mt-2 space-y-1">
-                                                            <div className="flex justify-between">
-                                                                <span style={{ color: "var(--ink)" }}>Discount Applied:</span>
-                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountAmount.toFixed(2)}</span>
-                                                            </div>
-                                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                <span style={{ color: "var(--accent-2)" }}>After Discount (Subtotal):</span>
-                                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.itemSubtotalWithTax.toFixed(2)}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

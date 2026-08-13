@@ -173,7 +173,15 @@ export const getPaginatedQarzaPayments = async (req, res) => {
             return res.json({ success: false, msg: "Account ID is required" });
         }
         
-        let query = { sourceType: 'qarza', sourceId: qarzaAccountId };
+        // Query for transactions where either:
+        // 1. sourceType is 'qarza' AND sourceId matches the qarza account (direct qarza transactions)
+        // 2. creditAccount matches the qarza account (POS sale transactions with credit payment)
+        let query = {
+            $or: [
+                { sourceType: 'qarza', sourceId: qarzaAccountId },
+                { creditAccount: qarzaAccountId }
+            ]
+        };
         
         // Apply type filter (map to creditType)
         if (type && type !== 'all' && type !== 'undefined') {
@@ -420,8 +428,13 @@ export const getQarzaAccountPaymentsSummary = async (req, res) => {
             });
         }
 
-        // Get transactions for this account
-        const transactionFilter = { sourceType: 'qarza', sourceId: qarzaAccountId };
+        // Get transactions for this account (both direct qarza transactions and POS sale credit payments)
+        const transactionFilter = {
+            $or: [
+                { sourceType: 'qarza', sourceId: qarzaAccountId },
+                { creditAccount: qarzaAccountId }
+            ]
+        };
         const transactions = await getTransactions(transactionFilter);
         
         // Calculate cashin and cashout based on creditType
