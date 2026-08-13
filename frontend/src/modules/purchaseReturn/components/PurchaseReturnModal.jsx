@@ -214,7 +214,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     const batchId = item.batch?._id || item.batch;
                     if (batchId && !stocks[batchId]) {
                         try {
-                            const response = await fetch(`${backendBaseUrl}/batches/${batchId}`, {
+                            const response = await fetch(`${backendBaseUrl}/batches/stock/${batchId}`, {
                                 headers: {
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 }
@@ -402,13 +402,33 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     };
 
     const handleItemDetailChange = (batchId, field, value) => {
-        setSelectedItems((prev) => ({
-            ...prev,
-            [batchId]: {
-                ...prev[batchId],
-                [field]: value,
-            },
-        }));
+        setSelectedItems((prev) => {
+            const updated = {
+                ...prev,
+                [batchId]: {
+                    ...prev[batchId],
+                    [field]: value,
+                },
+            };
+
+            // Validate return quantity against limits
+            if (field === "returnQuantity") {
+                const item = purchaseData?.items?.find(i => (i.batch?._id || i.batch) === batchId);
+                if (item) {
+                    const batchStock = batchStocks[batchId] || 0;
+                    const purchaseQuantity = item.quantity || 0;
+                    const maxLimit = Math.min(batchStock, purchaseQuantity);
+                    const quantity = Number(value) || 0;
+                    
+                    // Clamp the value to the maximum allowed limit
+                    if (quantity > maxLimit) {
+                        updated[batchId].returnQuantity = maxLimit;
+                    }
+                }
+            }
+
+            return updated;
+        });
     };
 
     const calculateDiscountAmount = (item, quantity) => {
@@ -842,12 +862,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                             <Inp
                                                                 type="number"
                                                                 min={1}
-                                                                max={batchStocks[batchId] || item.quantity}
+                                                                max={Math.min(batchStocks[batchId] || 0, item.quantity || 0)}
                                                                 value={details.returnQuantity}
                                                                 onChange={(e) => handleItemDetailChange(batchId, "returnQuantity", e.target.value)}
                                                             />
                                                             <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                                                                Max limit: Stock ({batchStocks[batchId] || item.quantity})
+                                                                Max limit: {Math.min(batchStocks[batchId] || 0, item.quantity || 0)} (Stock: {batchStocks[batchId] || 0}, Purchase: {item.quantity || 0})
                                                             </p>
                                                         </Field>
                                                         <Field>

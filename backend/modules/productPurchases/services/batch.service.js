@@ -12,6 +12,10 @@ const getBatches = async (productId = null) => {
     });
 };
 
+const getBatchById = async (id) => {
+    return await findByIdBatchService(id);
+};
+
 const createBatch = async (batchData, ProductModel) => {
     const existingBatch = await findOneBatchService({
         batchNumber: batchData.batchNumber,
@@ -93,4 +97,4 @@ const generateBatchNumber = async () => {
     return `PB-${String(nextNumber).padStart(3, '0')}`;
 };
 
-export { getBatches, createBatch, updateBatch, deleteBatch, generateBatchNumber };
+export { getBatches, createBatch, updateBatch, deleteBatch, generateBatchNumber, getBatchById };

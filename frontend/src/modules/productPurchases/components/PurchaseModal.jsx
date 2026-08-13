@@ -737,8 +737,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.discount} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field>
@@ -746,8 +744,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <Sel 
                                             value={itemForm.discountType} 
                                             onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))}
-                                            disabled={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         >
                                             <option value="percentage">{labels.percentage}</option>
                                             <option value="fixed">{labels.fixed}</option>
@@ -763,8 +759,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.tax} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field>
@@ -772,8 +766,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <Sel 
                                             value={itemForm.taxType} 
                                             onChange={e => setItemForm(p => ({ ...p, taxType: e.target.value }))}
-                                            disabled={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         >
                                             <option value="percentage">{labels.percentage}</option>
                                             <option value="fixed">{labels.fixed}</option>
