@@ -6,6 +6,7 @@ import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
 import PurchaseDetailPdfTemplate from "../components/PurchaseDetailPdfTemplate.jsx";
+import PaymentPdfTemplate from "../components/PaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { usePermissionGuard } from "../../../shared/hooks/usePermissionGuard.js";
@@ -24,6 +25,8 @@ export default function PurchaseDetail() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState(null);
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [showPaymentPdfModal, setShowPaymentPdfModal] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState(null);
     const [expandedItems, setExpandedItems] = useState({});
     const [expandedPayments, setExpandedPayments] = useState({});
 
@@ -55,7 +58,7 @@ export default function PurchaseDetail() {
     const date = new Date(purchase?.purchaseDate ?? purchase?.date ?? purchase?.createdAt).toLocaleDateString();
 
     const totalPaid = paymentStatus.totalPaid || 0;
-    const remainingAmount = paymentStatus.remainingAmount || (purchase?.totalAmount ?? 0);
+    const remainingAmount = (purchase?.totalAmount ?? 0) - (purchase?.paidAmount ?? 0);
     const paymentStatusText = paymentStatus.paymentStatus || 'pending';
     const totalCash = paymentStatus.totalCash || 0;
     const totalCredit = paymentStatus.totalCredit || 0;
@@ -94,6 +97,11 @@ export default function PurchaseDetail() {
         } catch (error) {
             showError(error?.data?.message || "Failed to recalculate payment");
         }
+    };
+
+    const handlePaymentPdf = (payment) => {
+        setSelectedPayment(payment);
+        setShowPaymentPdfModal(true);
     };
 
     const canEditPayments = hasPermission('purchases:edit');
@@ -509,7 +517,7 @@ export default function PurchaseDetail() {
                                             <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Date</th>
                                             <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Method</th>
                                             <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Amount</th>
-                                            <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Notes</th>
+                                            <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Notes</th>
                                             <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
@@ -534,9 +542,16 @@ export default function PurchaseDetail() {
                                                             </span>
                                                         </td>
                                                         <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
-                                                        <td className="py-3 text-sm text-[var(--muted)]">{payment.notes || "—"}</td>
+                                                        <td className="py-3 text-sm text-center text-[var(--muted)]">{payment.notes || "—"}</td>
                                                         <td className="py-3">
                                                             <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => handlePaymentPdf(payment)}
+                                                                    className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
+                                                                    title="Download payment PDF"
+                                                                >
+                                                                    <Download size={15} />
+                                                                </button>
                                                                 <button
                                                                     onClick={() => setExpandedPayments(prev => ({ ...prev, [index]: !prev[index] }))}
                                                                     className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
@@ -652,6 +667,19 @@ export default function PurchaseDetail() {
                     labels={labels}
                 >
                     <PurchaseDetailPdfTemplate purchase={purchase} payments={payments} labels={labels} />
+                </PdfModal>
+            )}
+            {showPaymentPdfModal && selectedPayment && (
+                <PdfModal
+                    isOpen={showPaymentPdfModal}
+                    onClose={() => {
+                        setShowPaymentPdfModal(false);
+                        setSelectedPayment(null);
+                    }}
+                    fileName={`Payment-${selectedPayment._id || 'receipt'}.pdf`}
+                    labels={labels}
+                >
+                    <PaymentPdfTemplate payment={selectedPayment} purchase={purchase} labels={labels} />
                 </PdfModal>
             )}
         </>
