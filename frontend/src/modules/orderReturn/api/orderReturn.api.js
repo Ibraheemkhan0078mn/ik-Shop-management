@@ -86,7 +86,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
             invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn"],
         }),
         getOrderReturnRefunds: build.query({
-            query: (id) => `/product-returns/${id}/refunds`,
+            query: (id) => ({ url: `/product-returns/${id}/refunds` }),
             providesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturnRefunds"],
             transformResponse: (res) => res.data,
         }),
@@ -104,6 +104,34 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 body: data,
             }),
             invalidatesTags: (result, error, { returnId }) => [{ type: "OrderReturn", returnId }, "OrderReturnRefunds"],
+        }),
+        // Order return payment endpoints (new transaction system)
+        addOrderReturnPayment: build.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/product-returns/${id}/payments`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments"],
+        }),
+        getOrderReturnPayments: build.query({
+            query: (id) => ({ url: `/product-returns/${id}/payments` }),
+            providesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturnPayments"],
+            transformResponse: (res) => res.payments || res.data || [],
+        }),
+        deleteOrderReturnPayment: build.mutation({
+            query: ({ id, paymentId }) => ({
+                url: `/product-returns/${id}/payments/${paymentId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments"],
+        }),
+        recalculateOrderReturn: build.mutation({
+            query: (id) => ({
+                url: `/product-returns/${id}/recalculate`,
+                method: "PATCH",
+            }),
+            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }],
         }),
     }),
 });
@@ -123,4 +151,8 @@ export const {
     useGetOrderReturnRefundsQuery,
     useDeleteOrderReturnRefundMutation,
     useUpdateOrderReturnRefundMutation,
+    useAddOrderReturnPaymentMutation,
+    useGetOrderReturnPaymentsQuery,
+    useDeleteOrderReturnPaymentMutation,
+    useRecalculateOrderReturnMutation,
 } = orderReturnApi;

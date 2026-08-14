@@ -19,6 +19,9 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
+    // Filter credit accounts to show only supplier type for purchases
+    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'supplier') || [];
+
     // Use live payment status from API if available, otherwise fall back to purchase data
     const totalPaid = paymentStatus?.totalPaid || purchase?.paidAmount || 0;
     const remainingAmount = paymentStatus?.remainingAmount !== undefined 
@@ -250,7 +253,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
                                         required
                                     >
                                         <option value="">Select credit account</option>
-                                        {creditAccounts?.accounts?.map(account => (
+                                        {supplierCreditAccounts.map(account => (
                                             <option key={account._id} value={account._id}>
                                                 {account.name} (Type: {account.type})
                                             </option>
@@ -327,7 +330,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
                                         required
                                     >
                                         <option value="">Select credit account</option>
-                                        {creditAccounts?.accounts?.map(account => (
+                                        {supplierCreditAccounts.map(account => (
                                             <option key={account._id} value={account._id}>
                                                 {account.name} (Type: {account.type})
                                             </option>

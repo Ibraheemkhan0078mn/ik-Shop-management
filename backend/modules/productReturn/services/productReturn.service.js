@@ -1,6 +1,7 @@
 import { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService } from "./productReturn.crud.js";
 import { findOneOrderService } from "../../pos/services/order.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
+import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 const generateReturnNumber = async () => {
     const lastReturn = await findProductReturnService({}, { sort: { createdAt: -1 }, limit: 1 });
@@ -181,6 +182,45 @@ const updateReturnStatus = async (id, status) => {
     return await updateProductReturnService(id, { returnStatus: status }, { populate: ["referenceOrderId", "items.productId"] });
 };
 
+const calculateProductReturnRefundStatus = async (productReturnId, totalRefundAmount) => {
+    const transactions = await getTransactions({ sourceType: 'orderReturn', sourceId: productReturnId });
+    const totalRefunded = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    
+    let refundStatus = 'pending';
+    if (totalRefunded >= totalRefundAmount && totalRefundAmount > 0) {
+        refundStatus = 'fully_refunded';
+    } else if (totalRefunded > 0) {
+        refundStatus = 'partial';
+    }
+    
+    return {
+        totalRefunded,
+        refundStatus,
+        remainingAmount: Math.max(0, totalRefundAmount - totalRefunded)
+    };
+};
+
+const recalculateProductReturnRefundAmount = async (productReturnId) => {
+    const productReturn = await findByIdProductReturnService(productReturnId);
+    if (!productReturn) {
+        throw new Error("Product return not found");
+    }
+
+    const totalRefundAmount = productReturn?.totalRefundAmount || 0;
+    if (!totalRefundAmount && totalRefundAmount !== 0) {
+        throw new Error("Product return total refund amount not found");
+    }
+
+    const refundStatus = await calculateProductReturnRefundStatus(productReturnId, totalRefundAmount);
+
+    await updateProductReturnService(productReturnId, {
+        refundedAmount: refundStatus.totalRefunded,
+        refundStatus: refundStatus.refundStatus
+    });
+
+    return refundStatus;
+};
+
 export {
     generateReturnNumber,
     getOrderByNumber,
@@ -191,4 +231,5 @@ export {
     updateProductReturn,
     deleteProductReturn,
     updateReturnStatus,
+    recalculateProductReturnRefundAmount,
 };

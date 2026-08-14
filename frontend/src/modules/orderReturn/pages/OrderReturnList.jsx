@@ -1,6 +1,6 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
@@ -25,6 +25,7 @@ const HIDE_CLASS = { sm: "hidden sm:table-cell", md: "hidden md:table-cell" };
 const colClass = (col) => [HIDE_CLASS[col.hideBelow], col.align && `text-${col.align}`].filter(Boolean).join(" ");
 
 const OrderReturnList = () => {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getOrderReturnLabels(language);
@@ -35,6 +36,7 @@ const OrderReturnList = () => {
         { key: "customerName", label: labels.customer, hideBelow: "md" },
         { key: "items", label: labels.items, align: "center", hideBelow: "sm" },
         { key: "refund", label: labels.refund, align: "right" },
+        { key: "refundStatus", label: labels.refundStatus || "Refund Status", align: "center" },
         { key: "status", label: labels.status, align: "center" },
         { key: "date", label: labels.date, hideBelow: "md" },
         { key: "actions", label: labels.actions, align: "center" },
@@ -111,10 +113,7 @@ const OrderReturnList = () => {
     };
 
     const handleView = (returnItem) => {
-        setSelectedReturn(returnItem);
-        setIsEditMode(false);
-        setIsViewMode(true);
-        setShowModal(true);
+        navigate(`/order-returns/${returnItem._id}`);
     };
 
     const handleModalClose = () => {
@@ -295,6 +294,20 @@ const OrderReturnList = () => {
 // ---- Subcomponents ---------------------------------------------------------
 
 function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
+    const refundStatusStyle = {
+        pending: "bg-gray-100 text-gray-700",
+        partial: "bg-yellow-100 text-yellow-700",
+        fully_refunded: "bg-green-100 text-green-700",
+    };
+    const getRefundStatusLabel = (status) => {
+        switch (status) {
+            case 'pending': return 'Pending';
+            case 'partial': return 'Partial';
+            case 'fully_refunded': return 'Fully Refunded';
+            default: return status;
+        }
+    };
+
     return (
         <tr className="border-b border-edge transition-colors hover:bg-primary-hover">
             <td className="px-4 py-3 font-medium text-ink">{returnItem.returnNumber}</td>
@@ -308,7 +321,12 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
                 {returnItem.items?.length || 0}
             </td>
             <td className="px-4 py-3 text-right font-semibold text-primary">
-                ${returnItem.totalRefundAmount?.toFixed(2) || "0.00"}
+                Rs {(returnItem.totalRefundAmount || 0).toLocaleString()}
+            </td>
+            <td className="px-4 py-3 text-center">
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${refundStatusStyle[returnItem.refundStatus] || refundStatusStyle.pending}`}>
+                    {getRefundStatusLabel(returnItem.refundStatus)}
+                </span>
             </td>
             <td className="px-4 py-3 text-center">
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(returnItem.returnStatus)}`}>

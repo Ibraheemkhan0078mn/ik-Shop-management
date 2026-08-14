@@ -10,6 +10,10 @@ import {
     updateReturnStatusData,
     getPaginatedProductReturnsCont,
     approveOrderReturnData,
+    addProductReturnPaymentData,
+    getProductReturnPaymentsData,
+    deleteProductReturnPaymentData,
+    recalculateProductReturnData,
 } from "../controllers/productReturn.controller.js";
 
 const router = express.Router();
@@ -33,5 +37,11 @@ router.patch("/:id/status", updateReturnStatusData);
 
 // Approve order return
 router.patch("/:id/approve", approveOrderReturnData);
+
+// Payment endpoints
+router.post("/:id/payments", addProductReturnPaymentData);
+router.get("/:id/payments", getProductReturnPaymentsData);
+router.delete("/:id/payments/:paymentId", deleteProductReturnPaymentData);
+router.patch("/:id/recalculate", recalculateProductReturnData);
 
 export default router;

@@ -13,10 +13,12 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 
-const PAYMENT_TABS = (labels) => [
+const PAYMENT_TABS = (labels, customerType) => [
     { key: "cash", label: labels.cash, icon: Wallet },
-    { key: "credit", label: labels.qarza, icon: CreditCard },
-    { key: "hybrid", label: labels.hybrid, icon: Layers },
+    ...(customerType === "regular" ? [
+        { key: "credit", label: labels.qarza, icon: CreditCard },
+        { key: "hybrid", label: labels.hybrid, icon: Layers },
+    ] : []),
 ];
 
 // ─── Design Atoms ─────────────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ export default function PosPaymentModal({
     const { data: customersData = [], refetch: refetchCustomers } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    const paymentTabs = PAYMENT_TABS(labels);
+    const paymentTabs = PAYMENT_TABS(labels, customerType);
 
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
@@ -213,6 +215,13 @@ export default function PosPaymentModal({
             }
         }
     }, [selectedCustomerId, customerType, customersData]);
+
+    // Reset to cash tab when customer type changes to walkin
+    useEffect(() => {
+        if (customerType === "walkin" && (activeTab === "credit" || activeTab === "hybrid")) {
+            setActiveTab("cash");
+        }
+    }, [customerType, activeTab]);
 
     const canCheckout = useMemo(() => {
         if (total === 0) return true;

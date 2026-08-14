@@ -398,6 +398,99 @@ const createPurchaseReturnTransaction = async (paymentData) => {
     return transactions;
 };
 
+/**
+ * Create transaction(s) for an order return refund
+ * - Cash: creates 1 transaction (cash outflow - we're refunding money)
+ * - Credit: creates 1 transaction with credit account (receiving credit back - cashin)
+ * - Hybrid: creates 2 transactions (1 cash, 1 credit)
+ */
+const createOrderReturnTransaction = async (paymentData) => {
+    const {
+        productReturn,
+        paymentMethod,
+        amount,
+        cashAmount,
+        creditAmount,
+        creditAccount,
+        paymentMethodId,
+        paymentMethodName,
+        paymentDate,
+        notes,
+        createdBy
+    } = paymentData;
+
+    const transactions = [];
+
+    if (paymentMethod === 'cash') {
+        // Single cash transaction (outflow - we're giving money back)
+        const cashTransaction = await createTransactionService({
+            sourceType: 'orderReturn',
+            sourceId: productReturn,
+            method: 'cash',
+            amount: amount,
+            cashAmount: cashAmount || amount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes || `Cash refund for order return`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+    } else if (paymentMethod === 'credit') {
+        // Single credit transaction (receiving credit back - cashin)
+        const creditTransaction = await createTransactionService({
+            sourceType: 'orderReturn',
+            sourceId: productReturn,
+            method: 'credit',
+            amount: amount,
+            cashAmount: 0,
+            creditAmount: creditAmount || amount,
+            creditAccount: creditAccount,
+            creditType: 'cashin', // We're receiving credit back from customer, so it's cashin
+            transactionDate: paymentDate,
+            notes: notes || `Credit refund for order return`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+
+    } else if (paymentMethod === 'hybrid') {
+        // Two transactions: one cash, one credit
+        const cashTransaction = await createTransactionService({
+            sourceType: 'orderReturn',
+            sourceId: productReturn,
+            method: 'cash',
+            amount: cashAmount,
+            cashAmount: cashAmount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (cash portion)` : `Cash portion of hybrid refund for order return`,
+            createdBy,
+        });
+        transactions.push(cashTransaction);
+
+        const creditTransaction = await createTransactionService({
+            sourceType: 'orderReturn',
+            sourceId: productReturn,
+            method: 'credit',
+            amount: creditAmount,
+            cashAmount: 0,
+            creditAmount: creditAmount,
+            creditAccount: creditAccount,
+            creditType: 'cashin', // We're receiving credit back from customer, so it's cashin
+            transactionDate: paymentDate,
+            notes: notes ? `${notes} (credit portion)` : `Credit portion of hybrid refund for order return`,
+            createdBy,
+        });
+        transactions.push(creditTransaction);
+    }
+
+    return transactions;
+};
+
 export {
     createTransactionService,
     findTransactionService,
@@ -414,5 +507,6 @@ export {
     deleteTransaction,
     createPurchaseTransaction,
     createSaleTransaction,
-    createPurchaseReturnTransaction
+    createPurchaseReturnTransaction,
+    createOrderReturnTransaction
 };

@@ -39,6 +39,7 @@ import ExpenseReport from "../modules/reports/pages/ExpenseReport.jsx";
 import CreditsDebitsReport from "../modules/reports/pages/CreditsDebitsReport.jsx";
 import SalesReport from "../modules/reports/pages/SalesKPIReport.jsx";
 import ProductReturnList from "../modules/orderReturn/pages/OrderReturnList.jsx";
+import OrderReturnDetail from "../modules/orderReturn/pages/OrderReturnDetail.jsx";
 import CustomerPage from "../modules/customers/pages/CustomerPage.jsx";
 import CustomerDetail from "../modules/customers/pages/CustomerDetail.jsx";
 import StaffList from "../modules/staff/pages/StaffList.jsx";
@@ -78,6 +79,7 @@ function AppRoutes() {
             <Route path="/purchase-returns" element={<ProtectedRoute><PurchaseReturnPage /></ProtectedRoute>} />
             <Route path="/purchase-returns/:id" element={<ProtectedRoute><PurchaseReturnDetail /></ProtectedRoute>} />
             <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
+            <Route path="/order-returns/:id" element={<ProtectedRoute><OrderReturnDetail /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />

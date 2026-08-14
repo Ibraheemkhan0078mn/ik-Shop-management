@@ -115,26 +115,53 @@ export default function OrderReturnPdfTemplate({ orderReturn = {}, refunds = [],
                         <DollarSign size={18} />
                         {labels.refundDetails || "Refund Details"}
                     </h3>
-                    <table className="w-full border border-gray-200">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-600 border-b">{labels.date || "Date"}</th>
-                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-600 border-b">{labels.method || "Method"}</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.amount || "Amount"}</th>
-                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-600 border-b">{labels.creditAccount || "Credit Account"}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {refunds.map((refund, index) => (
-                                <tr key={index} className="border-b">
-                                    <td className="px-4 py-2 text-sm text-gray-900">{new Date(refund.refundDate).toLocaleDateString()}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-900 capitalize">{refund.refundMethod}</td>
-                                    <td className="px-4 py-2 text-right font-bold text-gray-900">Rs {(refund.amount || 0).toLocaleString()}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-900">{refund.creditAccount?.name || "—"}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {refunds.map((refund, index) => (
+                        <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                            <div className="grid grid-cols-4 gap-4 mb-3 pb-3 border-b border-gray-200">
+                                <div>
+                                    <label className="text-xs text-gray-500 uppercase font-bold">{labels.date || "Date"}</label>
+                                    <p className="text-sm text-gray-900 mt-1">{new Date(refund.refundDate || refund.transactionDate || refund.date).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 uppercase font-bold">{labels.method || "Method"}</label>
+                                    <p className="text-sm text-gray-900 mt-1 capitalize">{refund.refundMethod || refund.method || "—"}</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 uppercase font-bold">{labels.amount || "Amount"}</label>
+                                    <p className="text-sm font-bold text-gray-900 mt-1">Rs {(refund.amount || 0).toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 uppercase font-bold">{labels.creditAccount || "Credit Account"}</label>
+                                    <p className="text-sm text-gray-900 mt-1">{refund.creditAccount?.name || "—"}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Refunded Items</p>
+                                <table className="w-full border border-gray-200 text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-3 py-1 text-left text-xs font-semibold uppercase text-gray-600 border-b">{labels.productName || "Product"}</th>
+                                            <th className="px-3 py-1 text-center text-xs font-semibold uppercase text-gray-600 border-b">{labels.quantity || "Qty"}</th>
+                                            <th className="px-3 py-1 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.originalPrice || "Original Price"}</th>
+                                            <th className="px-3 py-1 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.cut || "Cut"}</th>
+                                            <th className="px-3 py-1 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.refundAmount || "Refund Amount"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {orderReturn?.items?.map((item, itemIndex) => (
+                                            <tr key={itemIndex} className="border-b">
+                                                <td className="px-3 py-1 text-gray-900">{item.productName}</td>
+                                                <td className="px-3 py-1 text-center text-gray-900">{item.quantity}</td>
+                                                <td className="px-3 py-1 text-right text-gray-900">Rs {(item.originalPrice || 0).toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right text-gray-900">Rs {(item.cut || 0).toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right font-semibold text-red-600">Rs {(item.refundAmount || 0).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

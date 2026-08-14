@@ -3,10 +3,11 @@ import { DollarSign, Calendar, X, Plus } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
+import { useAddOrderReturnPaymentMutation } from "../api/orderReturn.api.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 
-export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, onClose, onSuccess }) {
+export default function OrderReturnPaymentModal({ orderReturn, payment, onClose, onSuccess }) {
     const isEditing = Boolean(payment);
     const [paymentDate, setPaymentDate] = useState(payment?.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     const [paymentMethod, setPaymentMethod] = useState(payment?.paymentMethod || "cash");
@@ -18,11 +19,12 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
 
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
+    const [addOrderReturnPayment] = useAddOrderReturnPaymentMutation();
 
-    // Filter credit accounts to show only supplier type for purchase returns
-    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'supplier') || [];
+    // Filter credit accounts to show only customer type for order returns
+    const customerCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'customer') || [];
 
-    const remainingAmount = (purchaseReturn?.totalRefundAmount || 0) - (purchaseReturn?.refundedAmount || 0);
+    const remainingAmount = (orderReturn?.totalRefundAmount || 0) - (orderReturn?.refundedAmount || 0);
     const editingAmount = payment?.amount || remainingAmount;
 
     // Auto-set cash amount based on payment method
@@ -47,7 +49,6 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
         e.preventDefault();
 
         let paymentData = {
-            purchaseReturn: purchaseReturn._id,
             paymentDate,
             paymentMethod,
             paymentMethodId: selectedPaymentMethodId,
@@ -89,32 +90,11 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
         }
 
         try {
-            let response;
-            if (isEditing) {
-                response = await fetch(`http://localhost:5001/api/purchase-returns/${purchaseReturn._id}/payments/${payment._id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(paymentData),
-                });
-            } else {
-                response = await fetch(`http://localhost:5001/api/purchase-returns/${purchaseReturn._id}/payments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(paymentData),
-                });
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                showSuccess(isEditing ? "Refund updated successfully" : "Refund recorded successfully");
-                onSuccess();
-            } else {
-                showError(data.message || "Failed to record refund");
-            }
+            await addOrderReturnPayment({ id: orderReturn._id, ...paymentData }).unwrap();
+            showSuccess("Refund recorded successfully");
+            onSuccess();
         } catch (error) {
-            showError("Failed to record refund");
+            showError(error?.data?.message || "Failed to record refund");
         }
     };
 
@@ -135,11 +115,11 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                     <div className="bg-[var(--hover)] p-3 rounded-lg">
                         <div className="flex justify-between text-sm mb-1">
                             <span className="text-[var(--muted)]">Total Return Amount:</span>
-                            <span className="font-medium text-[var(--ink)]">Rs {purchaseReturn?.totalAmount?.toLocaleString()}</span>
+                            <span className="font-medium text-[var(--ink)]">Rs {orderReturn?.totalRefundAmount?.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-sm mb-1">
                             <span className="text-[var(--muted)]">Refunded Amount:</span>
-                            <span className="font-medium text-[var(--ink)]">Rs {(purchaseReturn?.paidAmount || 0).toLocaleString()}</span>
+                            <span className="font-medium text-[var(--ink)]">Rs {(orderReturn?.refundedAmount || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-sm font-semibold">
                             <span className="text-[var(--muted)]">Remaining:</span>
@@ -240,7 +220,7 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                                     required
                                 >
                                     <option value="">Select credit account</option>
-                                    {supplierCreditAccounts.map(account => (
+                                    {customerCreditAccounts.map(account => (
                                         <option key={account._id} value={account._id}>
                                             {account.name} (Type: {account.type})
                                         </option>
@@ -306,7 +286,7 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                                         required
                                     >
                                         <option value="">Select credit account</option>
-                                        {supplierCreditAccounts.map(account => (
+                                        {customerCreditAccounts.map(account => (
                                             <option key={account._id} value={account._id}>
                                                 {account.name} (Type: {account.type})
                                             </option>

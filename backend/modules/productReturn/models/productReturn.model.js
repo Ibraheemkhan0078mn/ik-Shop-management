@@ -61,12 +61,25 @@ const productReturnSchema = new mongoose.Schema(
             required: true,
             default: 0,
         },
+        refundedAmount: {
+            type: Number,
+            default: 0,
+        },
+        refundStatus: {
+            type: String,
+            enum: ["pending", "partial", "fully_refunded"],
+            default: "pending",
+        },
         returnDate: {
             type: Date,
             default: Date.now,
         },
         customerName: {
             type: String,
+        },
+        customerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Customer",
         },
         returnStatus: {
             type: String,

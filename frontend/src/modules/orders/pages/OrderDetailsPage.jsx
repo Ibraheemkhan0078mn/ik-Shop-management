@@ -399,46 +399,96 @@ export default function OrderDetailsPage() {
                                             <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Method</th>
                                             <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Amount</th>
                                             <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Notes</th>
-                                            {/* <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th> */}
+                                            <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border)]">
-                                        {payments.map((payment, index) => (
-                                            <tr key={index}>
-                                                <td className="py-3 text-sm text-[var(--ink)]">
-                                                    {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
-                                                </td>
-                                                <td className="py-3">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                                        payment.method === 'cash' ? 'bg-green-100 text-green-800' :
-                                                        payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-purple-100 text-purple-800'
-                                                    }`}>
-                                                        {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
-                                                         payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
-                                                         payment.method || "—"}</span>
-                                                </td>
-                                                <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
-                                                <td className="py-3 text-right text-[var(--muted)]">{payment.notes || "—"}</td>
-                                                {/* <td className="py-3">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {canDeletePayments && (
-                                                            <ConfirmDialog
-                                                                onConfirm={() => handleDeletePayment(payment._id)}
-                                                                message="Are you sure you want to delete this payment?"
+                                        {payments.map((payment, index) => {
+                                            const isPaymentExpanded = expandedItems[`payment-${index}`];
+                                            return (
+                                                <React.Fragment key={index}>
+                                                    <tr>
+                                                        <td className="py-3 text-sm text-[var(--ink)]">
+                                                            {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="py-3">
+                                                            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                                                payment.method === 'cash' ? 'bg-green-100 text-green-800' :
+                                                                payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-purple-100 text-purple-800'
+                                                            }`}>
+                                                                {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
+                                                                 payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
+                                                                 payment.method || "—"}</span>
+                                                        </td>
+                                                        <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
+                                                        <td className="py-3 text-right text-[var(--muted)]">{payment.notes || "—"}</td>
+                                                        <td className="py-3">
+                                                            <button
+                                                                onClick={() => setExpandedItems(prev => ({ ...prev, [`payment-${index}`]: !prev[`payment-${index}`] }))}
+                                                                className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
+                                                                title={isPaymentExpanded ? "Hide details" : "Show details"}
                                                             >
-                                                                <button
-                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
-                                                                    title="Delete payment"
-                                                                >
-                                                                    <Trash2 size={15} />
-                                                                </button>
-                                                            </ConfirmDialog>
-                                                        )}
-                                                    </div>
-                                                </td> */}
-                                            </tr>
-                                        ))}
+                                                                {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {isPaymentExpanded && (
+                                                        <tr>
+                                                            <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Payment Items</p>
+                                                                    <div className="overflow-x-auto">
+                                                                        <table className="w-full text-xs">
+                                                                            <thead>
+                                                                                <tr className="border-b border-[var(--border)]">
+                                                                                    <th className="px-3 py-2 text-left text-[var(--muted)] font-medium">Product</th>
+                                                                                    <th className="px-3 py-2 text-center text-[var(--muted)] font-medium">Portion</th>
+                                                                                    <th className="px-3 py-2 text-center text-[var(--muted)] font-medium">Qty</th>
+                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Unit Price</th>
+                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Tax</th>
+                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Discount</th>
+                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Total</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {order?.items?.map((item, itemIndex) => {
+                                                                                    const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
+                                                                                    const totalTax = (item.taxAmount || 0) * (item.quantity || 0);
+                                                                                    const totalDiscount = item.discountAmount || 0;
+                                                                                    const finalTotal = lineTotal - totalDiscount + totalTax;
+                                                                                    return (
+                                                                                        <tr key={itemIndex} className="border-b border-[var(--border)]">
+                                                                                            <td className="px-3 py-2 text-[var(--ink)]">{item.name || "—"}</td>
+                                                                                            <td className="px-3 py-2 text-center capitalize text-[var(--ink)]">{item.portionType || "full"}</td>
+                                                                                            <td className="px-3 py-2 text-center text-[var(--ink)]">{item.quantity || 0}</td>
+                                                                                            <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {(item.unitPrice || 0).toLocaleString()}</td>
+                                                                                            <td className="px-3 py-2 text-right text-[var(--ink)]">
+                                                                                                <div className="text-xs">
+                                                                                                    <span className="text-[var(--muted)]">{item.taxPercent || 0}%</span>
+                                                                                                    {item.taxAmount > 0 && <span className="ml-1">({totalTax.toFixed(2)})</span>}
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-3 py-2 text-right text-red-600">
+                                                                                                <div className="text-xs">
+                                                                                                    <span>{item.discountPercent || 0}%</span>
+                                                                                                    {item.discountAmount > 0 && <span className="ml-1">({totalDiscount.toFixed(2)})</span>}
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {finalTotal.toLocaleString()}</td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -455,7 +505,7 @@ export default function OrderDetailsPage() {
                     fileName={`Order-${order?.orderNumber || 'details'}.pdf`}
                     labels={{}}
                 >
-                    <OrderDetailsPdfTemplate order={order} labels={{}} />
+                    <OrderDetailsPdfTemplate order={order} payments={payments} labels={{}} />
                 </PdfModal>
             )}
         </>

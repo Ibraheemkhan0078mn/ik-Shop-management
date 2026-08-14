@@ -5,7 +5,7 @@ const transactionSchema = new mongoose.Schema(
         // Reference to the source entity (purchase, sale, expense, qarza, staff_salary, other)
         sourceType: {
             type: String,
-            enum: ["purchase", "sale", "expense", "qarza", "staff_salary", "other", "pos-order", "purchaseReturn"],
+            enum: ["purchase", "sale", "expense", "qarza", "staff_salary", "other", "pos-order", "purchaseReturn", "orderReturn"],
             required: true,
         },
         sourceId: {

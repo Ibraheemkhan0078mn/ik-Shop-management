@@ -10,7 +10,13 @@ import {
     deleteProductReturn,
     updateReturnStatus,
     getPaginatedProductReturns,
+    recalculateProductReturnRefundAmount,
 } from "../services/productReturn.service.js";
+import {
+    createProductReturnPayment,
+    getProductReturnPayments,
+    deleteProductReturnPayment
+} from "../services/productReturnPayment.service.js";
 
 // Generate return number
 export const getReturnNumber = asyncHandler(async (req, res, next) => {
@@ -140,16 +146,52 @@ export const updateReturnStatusData = asyncHandler(async (req, res, next) => {
 // Approve order return
 export const approveOrderReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
-    
+
     const productReturn = await updateReturnStatus(id, 'approved');
-    
+
     if (!productReturn) {
         return next(new ErrorResponse("Product return not found", 404));
     }
-    
+
     res.status(200).json({
         success: true,
         message: "Order return approved successfully",
         data: productReturn,
     });
+});
+
+// Add product return payment
+export const addProductReturnPaymentData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const userId = req.user?._id;
+
+    const paymentData = {
+        ...req.body,
+        productReturn: id,
+        createdBy: userId,
+    };
+
+    const transactions = await createProductReturnPayment(paymentData);
+    res.status(201).json({ success: true, message: "Product return refund added successfully", transactions });
+});
+
+// Get product return payments
+export const getProductReturnPaymentsData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const payments = await getProductReturnPayments(id);
+    res.status(200).json({ success: true, message: "Product return refunds retrieved successfully", payments });
+});
+
+// Delete product return payment
+export const deleteProductReturnPaymentData = asyncHandler(async (req, res) => {
+    const { id, paymentId } = req.params;
+    const result = await deleteProductReturnPayment(paymentId);
+    res.status(200).json({ success: true, message: "Product return refund deleted successfully", result });
+});
+
+// Recalculate product return
+export const recalculateProductReturnData = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const result = await recalculateProductReturnRefundAmount(id);
+    res.status(200).json({ success: true, message: "Product return recalculated successfully", result });
 });
