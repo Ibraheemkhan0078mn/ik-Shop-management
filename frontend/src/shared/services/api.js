@@ -25,6 +25,27 @@ const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    paramsSerializer: {
+        serialize: (params) => {
+            // Custom serializer to handle arrays properly
+            const parts = [];
+            Object.keys(params).forEach(key => {
+                const value = params[key];
+                if (value === null || value === undefined) {
+                    return;
+                }
+                if (Array.isArray(value)) {
+                    // Serialize arrays as repeated parameters: key=val1&key=val2
+                    value.forEach(v => {
+                        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`);
+                    });
+                } else {
+                    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+                }
+            });
+            return parts.join('&');
+        }
+    }
 });
 
 api.interceptors.response.use(

@@ -91,12 +91,12 @@ export default function PosPaymentModal({
     const { data: customersData = [], refetch: refetchCustomers } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    const paymentTabs = PAYMENT_TABS(labels, customerType);
-
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
     const [customerName, setCustomerName] = useState(initialCustomerName);
     const [customerType, setCustomerType] = useState("walkin");
+
+    const paymentTabs = PAYMENT_TABS(labels, customerType);
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
     const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
     const [orderType, setOrderType] = useState("retail");

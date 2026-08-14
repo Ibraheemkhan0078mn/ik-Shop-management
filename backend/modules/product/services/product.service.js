@@ -80,28 +80,40 @@ const getPaginationProduct = async (filters = {}) => {
     const { page = 1, limit = 20, ...filterParams } = filters;
     const skip = (page - 1) * limit;
 
+    // Debug: Log incoming filter parameters
+    console.log('=== Product Pagination Filters ===');
+    console.log('Incoming filterParams:', JSON.stringify(filterParams, null, 2));
+
     // Build MongoDB query from filter parameters
     const query = {};
 
+    // Helper function to normalize filter values to arrays
+    const normalizeToArray = (value) => {
+        if (!value) return null;
+        if (Array.isArray(value)) return value.length > 0 ? value : null;
+        // Handle string values (convert single value to array for $in query)
+        return typeof value === 'string' ? [value] : null;
+    };
+
     // Category filter (multiple selection)
-    if (filterParams.categoryName && Array.isArray(filterParams.categoryName)) {
-        query.categoryName = { $in: filterParams.categoryName };
-    } else if (filterParams.categoryName) {
-        query.categoryName = filterParams.categoryName;
+    const categoryNames = normalizeToArray(filterParams.categoryName);
+    if (categoryNames) {
+        query.categoryName = categoryNames.length === 1 ? categoryNames[0] : { $in: categoryNames };
+        console.log('Category filter applied:', query.categoryName);
     }
 
     // Subcategory filter (multiple selection)
-    if (filterParams.subCategoryName && Array.isArray(filterParams.subCategoryName)) {
-        query.subCategoryName = { $in: filterParams.subCategoryName };
-    } else if (filterParams.subCategoryName) {
-        query.subCategoryName = filterParams.subCategoryName;
+    const subCategoryNames = normalizeToArray(filterParams.subCategoryName);
+    if (subCategoryNames) {
+        query.subCategoryName = subCategoryNames.length === 1 ? subCategoryNames[0] : { $in: subCategoryNames };
+        console.log('Subcategory filter applied:', query.subCategoryName);
     }
 
     // Brand filter (multiple selection)
-    if (filterParams.brandName && Array.isArray(filterParams.brandName)) {
-        query.brandName = { $in: filterParams.brandName };
-    } else if (filterParams.brandName) {
-        query.brandName = filterParams.brandName;
+    const brandNames = normalizeToArray(filterParams.brandName);
+    if (brandNames) {
+        query.brandName = brandNames.length === 1 ? brandNames[0] : { $in: brandNames };
+        console.log('Brand filter applied:', query.brandName);
     }
 
     // Price range filter
@@ -156,6 +168,10 @@ const getPaginationProduct = async (filters = {}) => {
         const barcodeRegex = new RegExp(filterParams.barcode, 'i');
         query.barcode = barcodeRegex;
     }
+
+    // Debug: Log the final MongoDB query
+    console.log('Final MongoDB query:', JSON.stringify(query, null, 2));
+    console.log('=== End Product Pagination Filters ===\n');
 
     const products = await findProductService(query, {
         sort: { createdAt: -1 },

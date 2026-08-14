@@ -1,6 +1,6 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Phone, Mail, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Edit, Phone, Mail, MapPin, Building2, Package } from "lucide-react";
 import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -21,9 +21,19 @@ export default function SupplierDetail() {
     const labels = getSupplierLabels(language);
     
     const [activeTab, setActiveTab] = useState("details");
+    const [imageLoadState, setImageLoadState] = useState(undefined);
     const { data: supplierData, isLoading, refetch: refetchSupplier } = useSupplier(id);
     const supplier = supplierData;
     const qarzaAccountId = supplier?.qarzaAccountId;
+
+    const handleImageLoad = () => setImageLoadState(true);
+    const handleImageError = () => setImageLoadState(false);
+
+    const PlaceholderImg = ({ size = 16, name = "" }) => (
+        <div className={`w-${size} h-${size} rounded-xl bg-(--surface-muted) flex items-center justify-center shrink-0`}>
+            {name ? <span className="text-2xl font-bold text-(--muted)">{name.charAt(0).toUpperCase()}</span> : <Package className="w-6 h-6 text-(--muted)" strokeWidth={1.5} />}
+        </div>
+    );
 
     if (isLoading) {
         return <div className="p-6 text-center">{labels.loading || "Loading..."}</div>;
@@ -81,15 +91,27 @@ export default function SupplierDetail() {
                 <div className="card p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2 flex items-start gap-4 p-4 bg-[var(--surface-muted)] rounded-xl">
-                            {supplier.image ? (
+                            {supplier.image && imageLoadState === true ? (
                                 <BigViewImage 
                                     src={`${IMAGE_BASE}/${supplier.image}`} 
                                     alt={supplier.name} 
-                                    className="w-16 h-16 rounded-xl object-cover"
+                                    className="w-16 h-16 rounded-xl object-cover shrink-0"
+                                    onLoad={handleImageLoad}
+                                    onError={handleImageError}
                                 />
                             ) : (
-                                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-2xl font-bold text-white">
-                                    {supplier.name?.charAt(0).toUpperCase()}
+                                <div className="relative shrink-0">
+                                    {supplier.image && imageLoadState === undefined ? (
+                                        <BigViewImage 
+                                            src={`${IMAGE_BASE}/${supplier.image}`} 
+                                            alt={supplier.name} 
+                                            className="w-16 h-16 rounded-xl object-cover shrink-0"
+                                            onLoad={handleImageLoad}
+                                            onError={handleImageError}
+                                        />
+                                    ) : (
+                                        <PlaceholderImg size={16} name={supplier.name} />
+                                    )}
                                 </div>
                             )}
                             <div className="flex-1">

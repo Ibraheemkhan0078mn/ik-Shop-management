@@ -1,7 +1,7 @@
 // src/modules/suppliers/pages/SupplierPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Package } from "lucide-react";
 import { useDeleteSupplier, useSuppliers } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -112,6 +112,16 @@ function SupplierRow({ supplier, onEdit, onDelete, onView }) {
     
     const isActive = supplier?.isActive ?? true;
     const IMAGE_BASE = "http://localhost:5001/uploads";
+    const [imageLoadState, setImageLoadState] = useState(undefined);
+
+    const handleImageLoad = () => setImageLoadState(true);
+    const handleImageError = () => setImageLoadState(false);
+
+    const PlaceholderImg = ({ size = 11, name = "" }) => (
+        <div className={`w-${size} h-${size} rounded-xl bg-(--surface-muted) flex items-center justify-center shrink-0`}>
+            {name ? <span className="text-lg font-bold text-(--muted)">{name.charAt(0).toUpperCase()}</span> : <Package className="w-5 h-5 text-(--muted)" strokeWidth={1.5} />}
+        </div>
+    );
 
     return (
         <tr 
@@ -121,16 +131,28 @@ function SupplierRow({ supplier, onEdit, onDelete, onView }) {
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
             <td className="px-4 py-3">
-                <div className="relative inline-block">
-                    {supplier?.image ? (
+                <div className="relative inline-block shrink-0">
+                    {supplier?.image && imageLoadState === true ? (
                         <BigViewImage 
                             src={`${IMAGE_BASE}/${supplier.image}`} 
                             alt={supplier.name}
                             className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border)"
+                            onLoad={handleImageLoad}
+                            onError={handleImageError}
                         />
                     ) : (
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-[#0d8a7e] flex items-center justify-center text-sm font-bold text-white">
-                            {supplier?.name?.charAt(0).toUpperCase() || "S"}
+                        <div className="relative">
+                            {supplier?.image && imageLoadState === undefined ? (
+                                <BigViewImage 
+                                    src={`${IMAGE_BASE}/${supplier.image}`} 
+                                    alt={supplier.name}
+                                    className="w-11 h-11 rounded-xl object-cover ring-1 ring-(--border)"
+                                    onLoad={handleImageLoad}
+                                    onError={handleImageError}
+                                />
+                            ) : (
+                                <PlaceholderImg size={11} name={supplier.name} />
+                            )}
                         </div>
                     )}
                     {isActive && (

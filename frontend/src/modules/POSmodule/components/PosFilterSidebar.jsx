@@ -53,15 +53,23 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleCategoryToggle = (categoryId) => {
-    const currentCategories = filters.category || [];
-    const newCategories = currentCategories.includes(categoryId)
-      ? currentCategories.filter((id) => id !== categoryId)
-      : [...currentCategories, categoryId];
-    updateFilter("category", newCategories);
+  const handleCategoryToggle = (categoryName) => {
+    if (categoryName === "all") {
+      updateFilter("categoryName", []);
+      return;
+    }
+    const currentCategories = filters.categoryName || [];
+    const newCategories = currentCategories.includes(categoryName)
+      ? currentCategories.filter((name) => name !== categoryName)
+      : [...currentCategories, categoryName];
+    updateFilter("categoryName", newCategories);
   };
 
   const handleBrandToggle = (brandName) => {
+    if (brandName === "all") {
+      updateFilter("brandName", []);
+      return;
+    }
     const currentBrands = filters.brandName || [];
     const newBrands = currentBrands.includes(brandName)
       ? currentBrands.filter((b) => b !== brandName)
@@ -174,6 +182,17 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
           </button>
           {expandedSections.category && (
             <div className="space-y-1 max-h-48 overflow-y-auto">
+              <label
+                className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.categoryName?.length === 0 || !filters.categoryName}
+                  onChange={() => handleCategoryToggle("all")}
+                  className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
+                />
+                <span className="text-sm text-[var(--ink)] font-semibold">All Categories</span>
+              </label>
               {categories.map((cat) => (
                 <label
                   key={cat._id}
@@ -181,8 +200,8 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
                 >
                   <input
                     type="checkbox"
-                    checked={filters.category?.includes(cat._id)}
-                    onChange={() => handleCategoryToggle(cat._id)}
+                    checked={filters.categoryName?.includes(cat.name)}
+                    onChange={() => handleCategoryToggle(cat.name)}
                     className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
                   />
                   <span className="text-sm text-[var(--ink)]">{cat.name}</span>
@@ -203,6 +222,17 @@ export default function PosFilterSidebar({ onFiltersChange, isOpen, onClose, bra
           </button>
           {expandedSections.brand && (
             <div className="space-y-1 max-h-48 overflow-y-auto">
+              <label
+                className="flex items-center gap-2 p-2 rounded hover:bg-[var(--app-bg)] cursor-pointer transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.brandName?.length === 0 || !filters.brandName}
+                  onChange={() => handleBrandToggle("all")}
+                  className="w-4 h-4 rounded border-[var(--border)] accent-[var(--accent-2)]"
+                />
+                <span className="text-sm text-[var(--ink)] font-semibold">All Brands</span>
+              </label>
               {brands.length > 0 ? (
                 brands.map((brand) => (
                   <label
