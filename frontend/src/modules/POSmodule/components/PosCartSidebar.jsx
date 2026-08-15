@@ -300,7 +300,12 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
     const [expanded, setExpanded] = useState(false);
     
     // Calculate tax details
-    const taxAmount = (cartItem.unitPrice * (cartItem.taxPercent || 0)) / 100;
+    let taxAmount = 0;
+    if (cartItem.taxType === 'fixed') {
+        taxAmount = cartItem.taxPercent || 0;
+    } else {
+        taxAmount = (cartItem.unitPrice * (cartItem.taxPercent || 0)) / 100;
+    }
     const afterTaxPrice = cartItem.unitPrice + taxAmount;
     const totalWithTax = afterTaxPrice * cartItem.qty;
     
@@ -414,8 +419,13 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                             <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cartItem.unitPrice.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span style={{ color: "var(--ink)" }}>Tax Percent:</span>
-                            <span className="font-mono" style={{ color: "var(--ink)" }}>{cartItem.taxPercent || 0}%</span>
+                            <span style={{ color: "var(--ink)" }}>Tax Rate:</span>
+                            <span className="font-mono" style={{ color: "var(--ink)" }}>
+                                {cartItem.taxType === 'fixed' 
+                                    ? `Rs ${cartItem.taxPercent || 0} (fixed)` 
+                                    : `${cartItem.taxPercent || 0}% (percentage)`
+                                }
+                            </span>
                         </div>
                         <div className="flex justify-between">
                             <span style={{ color: "var(--ink)" }}>Tax Amount:</span>

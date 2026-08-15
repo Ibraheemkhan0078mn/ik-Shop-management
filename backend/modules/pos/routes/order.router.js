@@ -11,9 +11,9 @@ router.get("/generate-number",          generateOrderNumber);   // GET  /orders/
 router.get("/",                         getOrders);             // GET  /orders
 router.get("/paginated",                getPaginatedOrders);    // GET  /orders/paginated
 router.get("/by-customer",              getOrdersByCustomer);   // GET  /orders/by-customer
-router.get("/:id",                      getOrderById);          // GET  /orders/:id
 router.get("/:id/payments",             getOrderPaymentsData); // GET  /orders/:id/payments
 router.get("/:id/payment-status",       getOrderPaymentStatusData); // GET  /orders/:id/payment-status
+router.get("/:id",                      getOrderById);          // GET  /orders/:id
 router.post("/:id/recalculate-payment", authorize("admin"), recalculateOrderPaidAmountData); // POST /orders/:id/recalculate-payment
 router.post("/", authorize("admin", "staff"), addOrder);        // POST /orders
 router.delete("/:id", authorize("admin"),     deleteOrder);     // DELETE /orders/:id

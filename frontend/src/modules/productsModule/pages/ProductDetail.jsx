@@ -218,7 +218,12 @@ export default function ProductDetail() {
                         {product.isDiscountAllowed && product.maxDiscountPercent !== undefined && product.maxDiscountPercent !== null && (
                             <div className="min-w-0">
                                 <label className="text-sm text-[var(--muted)]">Discount Limit</label>
-                                <p className="font-medium text-[var(--ink)] truncate">{product.maxDiscountPercent}% ({product.discountLimitType || 'percentage'})</p>
+                                <p className="font-medium text-[var(--ink)] truncate">
+                                    {product.discountLimitType === 'fixed' 
+                                        ? `Rs ${product.maxDiscountPercent} (fixed)` 
+                                        : `${product.maxDiscountPercent}% (percentage)`
+                                    }
+                                </p>
                             </div>
                         )}
 
@@ -229,7 +234,12 @@ export default function ProductDetail() {
                         {product.taxPercent !== undefined && product.taxPercent !== null && (
                             <div className="min-w-0">
                                 <label className="text-sm text-[var(--muted)]">Tax Rate</label>
-                                <p className="font-medium text-[var(--ink)] truncate">{product.taxPercent}% ({product.taxType || 'percentage'})</p>
+                                <p className="font-medium text-[var(--ink)] truncate">
+                                    {product.taxType === 'fixed' 
+                                        ? `Rs ${product.taxPercent} (fixed)` 
+                                        : `${product.taxPercent}% (percentage)`
+                                    }
+                                </p>
                             </div>
                         )}
 

@@ -270,11 +270,22 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
                                 <input
                                     type="number"
                                     value={cashAmount}
-                                    onChange={(e) => setCashAmount(e.target.value)}
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value);
+                                        if (value > remainingAmount) {
+                                            setCashAmount(remainingAmount.toString());
+                                        } else {
+                                            setCashAmount(e.target.value);
+                                        }
+                                    }}
                                     placeholder="Enter cash amount"
+                                    max={remainingAmount}
+                                    min="0"
+                                    step="0.01"
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                                     required
                                 />
+                                <p className="text-xs text-[var(--muted)] mt-1">Maximum: Rs {remainingAmount.toLocaleString()}</p>
                             </div>
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>

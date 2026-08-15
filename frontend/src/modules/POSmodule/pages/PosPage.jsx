@@ -243,7 +243,12 @@ export default function PosPage() {
   // ── Computed Values ───────────────────────────────────────────────────────
   const cartSubtotal = cartItems.reduce(
     (sum, item) => {
-      const taxAmount = (item.unitPrice * (item.taxPercent || 0)) / 100;
+      let taxAmount = 0;
+      if (item.taxType === 'fixed') {
+        taxAmount = item.taxPercent || 0;
+      } else {
+        taxAmount = (item.unitPrice * (item.taxPercent || 0)) / 100;
+      }
       const afterTaxPrice = item.unitPrice + taxAmount;
       return sum + afterTaxPrice * (Number(item.qty) || 0);
     },

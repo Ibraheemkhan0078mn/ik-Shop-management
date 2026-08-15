@@ -303,9 +303,21 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
         await adjustStock(item.product, item.batchId, 'inc', item.quantity);
     }
 
-    // Delete all related transactions for this order
+    // Delete all related transactions for this order and reverse credit account balances
     const transactions = await getTransactions({ sourceType: 'sale', sourceId: req.params.id });
     for (const transaction of transactions) {
+        // Reverse credit account balance if this was a credit/hybrid payment
+        if (transaction.creditAccount && (transaction.method === 'credit' || transaction.method === 'hybrid')) {
+            const { findByIdQarzaAccountService, updateQarzaAccountService } = await import("../../qarza/services/qarzaAccount.crud.js");
+            const creditAccount = await findByIdQarzaAccountService(transaction.creditAccount);
+            if (creditAccount) {
+                const creditAmount = transaction.creditAmount || transaction.amount;
+                // Reverse the balance change (decrease since we're reversing a debit)
+                await updateQarzaAccountService(creditAccount._id, {
+                    balance: creditAccount.balance - creditAmount
+                });
+            }
+        }
         await deleteTransaction(transaction._id);
     }
 
@@ -320,6 +332,7 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getOrderPaymentsData = asyncHandler(async (req, res) => {
     try {
+        console.log("The getorder payment data api si running. ")
         const payments = await getTransactions({ sourceType: 'sale', sourceId: req.params.id });
         res.status(200).json({
             success: true,

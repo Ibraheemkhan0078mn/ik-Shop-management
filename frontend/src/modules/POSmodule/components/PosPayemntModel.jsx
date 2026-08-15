@@ -138,7 +138,12 @@ export default function PosPaymentModal({
         }
         
         // Calculate item subtotal including tax (tax applied to discounted unit price)
-        const itemTaxAmount = (discountedUnitPrice * (item.taxPercent || 0)) / 100;
+        let itemTaxAmount = 0;
+        if (item.taxType === 'fixed') {
+            itemTaxAmount = item.taxPercent || 0;
+        } else {
+            itemTaxAmount = (discountedUnitPrice * (item.taxPercent || 0)) / 100;
+        }
         const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (itemTaxAmount * item.qty);
         
         return {
@@ -222,6 +227,16 @@ export default function PosPaymentModal({
             setActiveTab("cash");
         }
     }, [customerType, activeTab]);
+
+    // Auto select first payment method when available
+    useEffect(() => {
+        if (!selectedPaymentMethodId && paymentMethodsData?.length > 0) {
+            const firstActiveMethod = paymentMethodsData.find(pm => pm.isActive !== false);
+            if (firstActiveMethod) {
+                setSelectedPaymentMethodId(firstActiveMethod._id);
+            }
+        }
+    }, [paymentMethodsData, selectedPaymentMethodId]);
 
     const canCheckout = useMemo(() => {
         if (total === 0) return true;
@@ -752,8 +767,13 @@ export default function PosPaymentModal({
                                                                 <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountedUnitPrice.toFixed(2)}</span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span style={{ color: "var(--ink)" }}>Tax Percent:</span>
-                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{item.taxPercent || 0}%</span>
+                                                                <span style={{ color: "var(--ink)" }}>Tax Rate:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>
+                                                                    {item.taxType === 'fixed' 
+                                                                        ? `Rs ${item.taxPercent || 0} (fixed)` 
+                                                                        : `${item.taxPercent || 0}% (percentage)`
+                                                                    }
+                                                                </span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
@@ -773,17 +793,20 @@ export default function PosPaymentModal({
                                                             <div className="grid grid-cols-2 gap-3 mb-2">
                                                                 <div>
                                                                     <label className="text-xs" style={{ color: "var(--muted)" }}>Max Discount:</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.maxDiscountPercent || 0}
-                                                                        className="w-full px-2 py-1 text-xs rounded border"
-                                                                        style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
-                                                                    />
+                                                                    <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
+                                                                        {item.discountLimitType === 'fixed' 
+                                                                            ? `Rs ${item.maxDiscountPercent || 0}` 
+                                                                            : `${item.maxDiscountPercent || 0}%`
+                                                                        }
+                                                                    </div>
                                                                 </div>
                                                                 <div>
                                                                     <label className="text-xs" style={{ color: "var(--muted)" }}>Max Amount:</label>
                                                                     <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
-                                                                        Rs {((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)}
+                                                                        Rs {item.discountLimitType === 'fixed' 
+                                                                            ? ((item.maxDiscountPercent || 0) * item.qty).toFixed(2)
+                                                                            : ((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)
+                                                                        }
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -812,10 +835,22 @@ export default function PosPaymentModal({
                                                                         const value = e.target.value;
                                                                         const numValue = Number(value);
                                                                         
-                                                                        if (item.maxDiscountPercent > 0 && itemDiscountTypes[index] === 'percentage') {
-                                                                            if (numValue > item.maxDiscountPercent) {
-                                                                                alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
-                                                                                return;
+                                                                        // Validate max discount based on type
+                                                                        if (item.maxDiscountPercent > 0) {
+                                                                            if (itemDiscountTypes[index] === 'percentage') {
+                                                                                if (numValue > item.maxDiscountPercent) {
+                                                                                    alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
+                                                                                    return;
+                                                                                }
+                                                                            } else {
+                                                                                // Fixed amount validation
+                                                                                const maxFixed = item.discountLimitType === 'fixed' 
+                                                                                    ? (item.maxDiscountPercent || 0) * item.qty 
+                                                                                    : (item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100;
+                                                                                if (numValue > maxFixed) {
+                                                                                    alert(`Maximum discount allowed is Rs ${maxFixed.toFixed(2)}`);
+                                                                                    return;
+                                                                                }
                                                                             }
                                                                         }
                                                                         

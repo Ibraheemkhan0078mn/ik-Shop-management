@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import { useCreateStaffRoleMutation } from "../api/staff.api.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -93,9 +94,16 @@ export default function StaffRoleModal({ mode = "create", open, onClose }) {
 
                 {/* Banner */}
                 {banner && (
-                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">
+                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200 group hover:bg-red-500/20 transition-colors">
                         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <span>{banner}</span>
+                        <span className="flex-1">{banner}</span>
+                        <button
+                            onClick={() => { setBanner(null); toast.dismiss(); }}
+                            className="text-red-400 hover:text-red-600 transition-colors p-0.5 shrink-0"
+                            aria-label="Close banner"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 )}
 

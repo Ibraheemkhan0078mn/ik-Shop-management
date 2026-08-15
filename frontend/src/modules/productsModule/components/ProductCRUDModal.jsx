@@ -1,6 +1,6 @@
 // src/components/ProductCRUDModal.jsx
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Scan, Plus, AlertCircle, Check } from "lucide-react";
+import { Scan, Plus, AlertCircle, Check, X } from "lucide-react";
 import { useCreateProduct, useUpdateProduct, useProduct } from "../services/product.service";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
@@ -12,6 +12,7 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { toast } from "sonner";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -94,6 +95,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         categoryName: productData.categoryName || "",
         subCategoryName: productData.subCategoryName || "",
       });
+      setShowTax(productData.taxPercent > 0);
       setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
     }
   }, [isCreate, productData]);
@@ -303,7 +305,17 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
           {banner && (
             <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{banner}</span>
+              <span className="flex-1">{banner}</span>
+              <button
+                onClick={() => {
+                  setBanner(null);
+                  toast.dismiss();
+                }}
+                className="shrink-0 p-0.5 hover:bg-red-500/20 rounded transition-colors"
+                title="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           )}
 

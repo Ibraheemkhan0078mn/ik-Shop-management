@@ -1,7 +1,8 @@
 // src/modules/qarza/components/QarzaAccountModal.jsx
 // Props: mode "create"|"update", account (full object for update), onClose, onSuccess
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Wallet, Check, AlertCircle } from "lucide-react";
+import { Wallet, Check, AlertCircle, X } from "lucide-react";
+import { toast } from "sonner";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getQarzaLabels } from "../labels/qarzaLabels.js";
@@ -218,9 +219,16 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
 
                 {/* Banner */}
                 {banner && (
-                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">
+                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200 group hover:bg-red-500/20 transition-colors">
                         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <span>{banner}</span>
+                        <span className="flex-1">{banner}</span>
+                        <button
+                            onClick={() => { setBanner(null); toast.dismiss(); }}
+                            className="text-red-400 hover:text-red-600 transition-colors p-0.5 shrink-0"
+                            aria-label="Close banner"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 )}
 
