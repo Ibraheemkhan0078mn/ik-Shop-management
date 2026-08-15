@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Package, DollarSign, FileText, Download } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { getWastageLabels } from "../labels/wastageLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useWastage } from "../services/wastage.service.js";
@@ -40,187 +40,199 @@ export default function WastageDetail() {
     const date = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] min-h-screen">
+        <div className="h-screen flex flex-col bg-[var(--app-bg)]">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button
-                    onClick={() => navigate("/wastage")}
-                    className="p-2 hover:bg-[var(--hover)] rounded-md transition-all"
-                >
-                    <ArrowLeft size={20} className="text-[var(--ink)]" />
-                </button>
-                <div className="flex-1 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[var(--ink)] font-display">
-                            {labels.wastageDetails || "Wastage Details"}
-                        </h1>
-                        <p className="text-sm text-[var(--muted)]">
-                            {wastage?.wastageNumber || "—"}
-                        </p>
+            <div className="flex-none px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate("/wastage")}
+                            className="p-2 rounded-lg hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--ink)]"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-bold text-[var(--ink)]">{wastage?.wastageNumber}</h1>
+                            <p className="text-sm text-[var(--muted)]">{labels.wastageDetails || "Wastage Details"}</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setShowPdfModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
+                            title="Export PDF"
                         >
-                            <Download size={16} />
-                            Export Details
+                            <Download size={15} />
+                            Export
                         </button>
-                        <span 
-                            className="px-4 py-2 rounded-lg text-sm font-semibold"
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-6xl mx-auto">
+                    {/* Status row */}
+                    <div className="flex items-center justify-between mb-6">
+                        <span
+                            className="px-4 py-2 rounded-full text-sm font-medium"
                             style={{ background: statusStyle.background, color: statusStyle.color }}
                         >
                             {statusStyle.text}
                         </span>
                     </div>
-                </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="space-y-6">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Calendar size={20} className="text-primary" />
+                    <div className="border-b border-[var(--border)] my-6" />
+
+                    {/* Wastage Information */}
+                    <div className="mb-6">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3">Wastage Information</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Wastage Number</p>
+                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.wastageNumber}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.date || "Date"}</p>
-                                <p className="font-semibold text-[var(--ink)]">{date}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                <Package size={20} className="text-orange-600" />
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Reason</p>
+                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{wastage?.reason?.replace(/_/g, " ") || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalItems || "Total Items"}</p>
-                                <p className="font-semibold text-[var(--ink)]">
-                                    {wastage?.totalItems || wastage?.items?.length || 0} items
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                                <DollarSign size={20} className="text-red-600" />
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Wastage Date</p>
+                                <p className="text-sm font-semibold text-[var(--ink)]">{date}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalLoss || "Total Loss"}</p>
-                                <p className="font-semibold text-red-600">
-                                    Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
-                                </p>
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Status</p>
+                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{statusStyle.text}</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Wastage Information */}
-                <div className="card p-6">
-                    <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <FileText size={20} />
-                        {labels.wastageInformation || "Wastage Information"}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.wastageNumber || "Wastage #"}</label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">{wastage?.wastageNumber || "—"}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.reason || "Reason"}</label>
-                            <p className="font-semibold text-[var(--ink)] mt-1 capitalize">
-                                {wastage?.reason?.replace(/_/g, " ") || "—"}
-                            </p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalQuantity || "Total Quantity"}</label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">{wastage?.totalQuantity || 0}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.status || "Status"}</label>
-                            <p className="font-semibold text-[var(--ink)] mt-1">
-                                <span 
-                                    className="px-3 py-1 rounded-lg text-xs font-semibold"
-                                    style={{ background: statusStyle.background, color: statusStyle.color }}
-                                >
-                                    {statusStyle.text}
-                                </span>
-                            </p>
                         </div>
                         {wastage?.notes && (
-                            <div className="md:col-span-2">
-                                <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.notes || "Notes"}</label>
-                                <p className="text-[var(--ink)] mt-1">{wastage.notes}</p>
-                            </div>
+                            <p className="text-sm text-[var(--muted)] mt-4 italic">{wastage.notes}</p>
                         )}
                     </div>
-                </div>
 
-                {/* Items Table */}
-                <div className="card p-6">
-                    <h3 className="text-lg font-semibold text-[var(--ink)] mb-4 flex items-center gap-2">
-                        <Package size={20} />
-                        {labels.items || "Items"}
-                    </h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead style={{ background: "var(--surface-muted)" }}>
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.productName || "Product"}
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.quantity || "Quantity"}
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.costPrice || "Cost Price"}
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">
-                                        {labels.lossAmount || "Loss Amount"}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
-                                {wastage?.items?.map((item, index) => (
-                                    <tr key={index} className="hover:bg-[var(--surface-muted)] transition-all">
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-[var(--ink)]">{item.productName || "—"}</p>
-                                            {item.variant && (
-                                                <p className="text-xs text-[var(--muted)]">{item.variant}</p>
-                                            )}
+                    <div className="border-b border-[var(--border)] my-6" />
+
+                    {/* Financial Details */}
+                    <div className="mb-6">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3">Financial Details</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Items</p>
+                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.totalItems || wastage?.items?.length || 0}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Quantity</p>
+                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.totalQuantity || 0}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Loss Amount</p>
+                                <p className="text-sm font-semibold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-b border-[var(--border)] my-6" />
+
+                    {/* Items - Single Sheet Preview */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                                Wasted Items ({wastage?.items?.length || 0})
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[var(--border)]">
+                                        <th className="px-4 py-3 text-left text-[var(--muted)] font-medium">{labels.productName || "Product"}</th>
+                                        <th className="px-4 py-3 text-center text-[var(--muted)] font-medium">{labels.quantity || "Qty"}</th>
+                                        <th className="px-4 py-3 text-right text-[var(--muted)] font-medium">{labels.costPrice || "Cost Price"}</th>
+                                        <th className="px-4 py-3 text-right text-[var(--muted)] font-medium">{labels.lossAmount || "Loss Amount"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {wastage?.items?.map((item, index) => (
+                                        <React.Fragment key={index}>
+                                            <tr className="border-b border-[var(--border)]">
+                                                <td className="px-4 py-3 text-[var(--ink)]">
+                                                    <p className="font-medium">{item.product?.name || item.productName || "—"}</p>
+                                                    {item.product?._id && <p className="text-xs text-[var(--muted)]">ID: {item.product._id}</p>}
+                                                    {item.batchNumber && <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>}
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-[var(--ink)]">{item.quantity || 0}</td>
+                                                <td className="px-4 py-3 text-right text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
+                                            </tr>
+                                            <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
+                                                <td colSpan="4" className="px-4 py-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
+                                                            <p className="text-xs font-semibold text-[var(--muted)] mb-2">Item Details</p>
+                                                            <div className="text-xs space-y-1">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Product ID:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">{item.product?._id || item.productId || "—"}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Product Name:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">{item.product?.name || item.productName || "—"}</span>
+                                                                </div>
+                                                                {item.batchNumber && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-[var(--muted)]">Batch Number:</span>
+                                                                        <span className="font-mono text-[var(--ink)]">{item.batchNumber}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Quantity:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">{item.quantity || 0}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
+                                                            <p className="text-xs font-semibold text-[var(--muted)] mb-2">Loss Calculation</p>
+                                                            <div className="text-xs space-y-1">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Cost Price:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Quantity:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">{item.quantity || 0}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-[var(--muted)]">Line Total:</span>
+                                                                    <span className="font-mono text-[var(--ink)]">Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString()}</span>
+                                                                </div>
+                                                                <div className="h-px bg-[var(--border)] my-1"></div>
+                                                                <div className="flex justify-between font-semibold">
+                                                                    <span className="text-[var(--ink)]">Loss Amount:</span>
+                                                                    <span className="font-mono text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </React.Fragment>
+                                    ))}
+                                </tbody>
+                                <tfoot style={{ background: "var(--surface-muted)", borderTop: "2px solid var(--border)" }}>
+                                    <tr>
+                                        <td colSpan="3" className="px-4 py-3 text-right font-bold text-[var(--ink)]">
+                                            {labels.totalLoss || "Total Loss"}:
                                         </td>
-                                        <td className="px-4 py-3 text-center font-medium text-[var(--ink)]">
-                                            {item.quantity || 0}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">
-                                            Rs {(item.costPrice || 0).toLocaleString()}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-semibold text-red-600">
-                                            Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}
+                                        <td className="px-4 py-3 text-right font-bold text-red-600 text-lg">
+                                            Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot style={{ background: "var(--surface-muted)", borderTop: "2px solid var(--border)" }}>
-                                <tr>
-                                    <td colSpan="3" className="px-4 py-3 text-right font-bold text-[var(--ink)]">
-                                        {labels.totalLoss || "Total Loss"}:
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-bold text-red-600 text-lg">
-                                        Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
+
             {showPdfModal && (
                 <PdfModal
                     isOpen={showPdfModal}

@@ -1,5 +1,4 @@
 import React from "react";
-import { Package, DollarSign, FileText, Calendar, AlertTriangle } from "lucide-react";
 
 export default function WastageDetailPdfTemplate({ wastage = {}, labels = {} }) {
     const date = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
@@ -9,97 +8,161 @@ export default function WastageDetailPdfTemplate({ wastage = {}, labels = {} }) 
             {/* Header */}
             <div className="mb-6 pb-4 border-b-2 border-gray-200">
                 <h1 className="text-2xl font-bold text-gray-900">{labels.wastageDetails || "Wastage Details"}</h1>
-                <p className="text-sm text-gray-500">{wastage?.wastageNumber || "—"}</p>
+                <p className="text-sm text-gray-500">{wastage?.wastageNumber || "—"} · {date}</p>
             </div>
 
-            {/* Summary Cards */}
-            <div className="mb-6 grid grid-cols-3 gap-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Calendar size={18} className="text-blue-600" />
-                        <p className="text-xs text-gray-500 uppercase font-bold">{labels.date || "Date"}</p>
-                    </div>
-                    <p className="font-semibold text-gray-900">{date}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Package size={18} className="text-orange-600" />
-                        <p className="text-xs text-gray-500 uppercase font-bold">{labels.totalItems || "Total Items"}</p>
-                    </div>
-                    <p className="font-semibold text-gray-900">{wastage?.totalItems || wastage?.items?.length || 0} items</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                        <DollarSign size={18} className="text-red-600" />
-                        <p className="text-xs text-gray-500 uppercase font-bold">{labels.totalLoss || "Total Loss"}</p>
-                    </div>
-                    <p className="font-semibold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
+            {/* Status row */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${
+                        wastage?.status === "approved" ? "bg-green-100 text-green-700" :
+                        wastage?.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                        wastage?.status === "rejected" ? "bg-red-100 text-red-700" :
+                        wastage?.status === "draft" ? "bg-gray-100 text-gray-700" :
+                        "bg-blue-100 text-blue-700"
+                    }`}>
+                        {wastage?.status || "Unknown"}
+                    </span>
                 </div>
             </div>
+
+            <div className="border-b border-gray-200 my-6" />
 
             {/* Wastage Information */}
-            <div className="mb-6 p-4 border border-gray-200 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <FileText size={18} />
-                    {labels.wastageInformation || "Wastage Information"}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-6">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Wastage Information</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                        <label className="text-xs text-gray-500 uppercase font-bold">{labels.wastageNumber || "Wastage #"}</label>
-                        <p className="font-semibold text-gray-900 mt-1">{wastage?.wastageNumber || "—"}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Wastage Number</p>
+                        <p className="text-sm font-semibold text-gray-900">{wastage?.wastageNumber || "—"}</p>
                     </div>
                     <div>
-                        <label className="text-xs text-gray-500 uppercase font-bold">{labels.reason || "Reason"}</label>
-                        <p className="font-semibold text-gray-900 mt-1 capitalize">{wastage?.reason?.replace(/_/g, " ") || "—"}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Reason</p>
+                        <p className="text-sm font-semibold text-gray-900 capitalize">{wastage?.reason?.replace(/_/g, " ") || "—"}</p>
                     </div>
                     <div>
-                        <label className="text-xs text-gray-500 uppercase font-bold">{labels.totalQuantity || "Total Quantity"}</label>
-                        <p className="font-semibold text-gray-900 mt-1">{wastage?.totalQuantity || 0}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Wastage Date</p>
+                        <p className="text-sm font-semibold text-gray-900">{date}</p>
                     </div>
                     <div>
-                        <label className="text-xs text-gray-500 uppercase font-bold">{labels.status || "Status"}</label>
-                        <p className="font-semibold text-gray-900 mt-1 capitalize">{wastage?.status || "—"}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Status</p>
+                        <p className="text-sm font-semibold text-gray-900 capitalize">{wastage?.status || "—"}</p>
                     </div>
-                    {wastage?.notes && (
-                        <div className="md:col-span-2">
-                            <label className="text-xs text-gray-500 uppercase font-bold">{labels.notes || "Notes"}</label>
-                            <p className="text-gray-900 mt-1">{wastage.notes}</p>
-                        </div>
-                    )}
+                </div>
+                {wastage?.notes && (
+                    <p className="text-sm text-gray-500 mt-4 italic">{wastage.notes}</p>
+                )}
+            </div>
+
+            <div className="border-b border-gray-200 my-6" />
+
+            {/* Financial Details */}
+            <div className="mb-6">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Financial Details</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Items</p>
+                        <p className="text-sm font-semibold text-gray-900">{wastage?.totalItems || wastage?.items?.length || 0}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Quantity</p>
+                        <p className="text-sm font-semibold text-gray-900">{wastage?.totalQuantity || 0}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Loss Amount</p>
+                        <p className="text-sm font-semibold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Items Table */}
-            <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <AlertTriangle size={18} />
-                    {labels.wastedItems || "Wasted Items"}
-                </h3>
+            <div className="border-b border-gray-200 my-6" />
+
+            {/* Wasted Items */}
+            <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                        Wasted Items ({wastage?.items?.length || 0})
+                    </p>
+                </div>
                 <table className="w-full border border-gray-200">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-600 border-b">{labels.productName || "Product"}</th>
-                            <th className="px-4 py-2 text-center text-xs font-semibold uppercase text-gray-600 border-b">{labels.quantity || "Quantity"}</th>
-                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.costPrice || "Cost Price"}</th>
-                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">{labels.lossAmount || "Loss Amount"}</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-600 border-b">Product</th>
+                            <th className="px-4 py-2 text-center text-xs font-semibold uppercase text-gray-600 border-b">Qty</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Cost Price</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-600 border-b">Loss Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         {wastage?.items?.map((item, index) => (
-                            <tr key={index} className="border-b">
-                                <td className="px-4 py-2">
-                                    <p className="font-medium text-gray-900">{item.productName || "—"}</p>
-                                    {item.variant && <p className="text-xs text-gray-500">{item.variant}</p>}
-                                </td>
-                                <td className="px-4 py-2 text-center font-medium text-gray-900">{item.quantity || 0}</td>
-                                <td className="px-4 py-2 text-right font-medium text-gray-900">Rs {(item.costPrice || 0).toLocaleString()}</td>
-                                <td className="px-4 py-2 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
-                            </tr>
+                            <React.Fragment key={index}>
+                                <tr className="border-b">
+                                    <td className="px-4 py-3">
+                                        <p className="font-medium text-gray-900">{item.product?.name || item.productName || "—"}</p>
+                                        {item.product?._id && <p className="text-xs text-gray-500">ID: {item.product._id}</p>}
+                                        {item.batchNumber && <p className="text-xs text-gray-500">Batch: {item.batchNumber}</p>}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-gray-900">{item.quantity || 0}</td>
+                                    <td className="px-4 py-3 text-right text-gray-900">Rs {(item.costPrice || 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
+                                </tr>
+                                <tr className="border-b bg-gray-50">
+                                    <td colSpan="4" className="px-4 py-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                                                <p className="text-xs font-semibold text-gray-600 mb-2">Item Details</p>
+                                                <div className="text-xs space-y-1">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Product ID:</span>
+                                                        <span className="font-mono text-gray-900">{item.product?._id || item.productId || "—"}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Product Name:</span>
+                                                        <span className="font-mono text-gray-900">{item.product?.name || item.productName || "—"}</span>
+                                                    </div>
+                                                    {item.batchNumber && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-700">Batch Number:</span>
+                                                            <span className="font-mono text-gray-900">{item.batchNumber}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Quantity:</span>
+                                                        <span className="font-mono text-gray-900">{item.quantity || 0}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                                                <p className="text-xs font-semibold text-gray-600 mb-2">Loss Calculation</p>
+                                                <div className="text-xs space-y-1">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Cost Price:</span>
+                                                        <span className="font-mono text-gray-900">Rs {(item.costPrice || 0).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Quantity:</span>
+                                                        <span className="font-mono text-gray-900">{item.quantity || 0}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-700">Line Total:</span>
+                                                        <span className="font-mono text-gray-900">Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="h-px bg-gray-200 my-1"></div>
+                                                    <div className="flex justify-between font-semibold">
+                                                        <span className="text-gray-900">Loss Amount:</span>
+                                                        <span className="font-mono text-red-700">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </React.Fragment>
                         ))}
                     </tbody>
                     <tfoot className="bg-gray-50">
                         <tr>
-                            <td colSpan="3" className="px-4 py-2 text-right font-bold text-gray-900">{labels.totalLoss || "Total Loss"}:</td>
+                            <td colSpan="3" className="px-4 py-2 text-right font-bold text-gray-900">Total Loss:</td>
                             <td className="px-4 py-2 text-right font-bold text-red-600 text-lg">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</td>
                         </tr>
                     </tfoot>
