@@ -23,6 +23,7 @@ export const reportsLabels = {
     customRange: "Custom Range",
     fromDate: "From Date",
     toDate: "To Date",
+    category: "Category",
     
     // Sales Report
     salesReport: "Sales Report",
@@ -293,6 +294,7 @@ export const reportsLabels = {
     customRange: "حسب ضرورت حد",
     fromDate: "سے تاریخ",
     toDate: "تک تاریخ",
+    category: "زمرہ",
     
     // Sales Report
     salesReport: "فروخت رپورٹ",
@@ -563,6 +565,7 @@ export const reportsLabels = {
     customRange: "حسب ضرورت حد / Custom Range",
     fromDate: "سے تاریخ / From Date",
     toDate: "تک تاریخ / To Date",
+    category: "زمرہ / Category",
     
     // Sales Report
     salesReport: "فروخت رپورٹ / Sales Report",

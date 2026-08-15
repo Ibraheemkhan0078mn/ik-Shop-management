@@ -1,34 +1,11 @@
-import React, { useState, useMemo } from "react";
-import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Percent, Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { useGetExpenseReportQuery } from "../services/reports.service.js";
+import React, { useState } from "react";
+import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Filter } from "lucide-react";
+import { useGetExpenseReportQuery, useGetExpenseKPIReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import ExpenseReportPdfTemplate from "../components/ExpenseReportPdfTemplate.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
-
-const SECTION_KEYS = ['categories', 'types'];
-
-function KpiCard({ label, value, icon: Icon, color, description, isCurrency = true }) {
-    return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
-                </div>
-                <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className="font-semibold text-[var(--ink)]">
-                        {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || value || 0)}
-                    </p>
-                </div>
-            </div>
-            {description && (
-                <p className="text-xs mt-2 text-[var(--muted)]">{description}</p>
-            )}
-        </div>
-    );
-}
 
 function BreakdownItem({ label, value, count, percentage, color }) {
     return (
@@ -101,107 +78,57 @@ function TransactionTable({ transactions }) {
     );
 }
 
-function SourceSection({ title, icon: Icon, color, kpiValue, kpiDescription, count, breakdown, breakdownLabelKey, transactions, isExpanded, onToggle }) {
-    return (
-        <div className="card">
-            <button
-                onClick={onToggle}
-                className="w-full flex items-center justify-between p-5 text-left"
-            >
-                <div className="flex items-center gap-3">
-                    <Icon size={22} style={{ color }} />
-                    <div>
-                        <h3 className="text-md font-semibold text-[var(--ink)]">{title}</h3>
-                        <p className="text-xs text-[var(--muted)]">{kpiDescription} • {count} items</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <p className="text-xl font-bold" style={{ color }}>Rs {kpiValue?.toLocaleString() || 0}</p>
-                    {isExpanded ? <ChevronUp size={20} className="text-[var(--muted)]" /> : <ChevronDown size={20} className="text-[var(--muted)]" />}
-                </div>
-            </button>
-
-            {isExpanded && (
-                <div className="px-5 pb-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-                    {breakdown && breakdown.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-sm font-semibold mb-2 text-[var(--ink)]">Breakdown</p>
-                            <div className="space-y-1">
-                                {breakdown.map((item, idx) => (
-                                    <BreakdownItem
-                                        key={idx}
-                                        label={item[breakdownLabelKey]}
-                                        value={item.total}
-                                        count={item.count}
-                                        percentage={item.percentage}
-                                        color={color}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    <div>
-                        <p className="text-sm font-semibold mb-2 text-[var(--ink)]">Transactions</p>
-                        <TransactionTable transactions={transactions} />
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
 
 export default function ExpenseReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
 
-    const PERIOD_OPTIONS = useMemo(() => [
-        { value: "today", label: labels.today },
-        { value: "month", label: labels.thisMonth },
-        { value: "3month", label: labels.last3Months },
-        { value: "year", label: labels.thisYear },
-        { value: "custom", label: labels.customRange },
-    ], [labels]);
-
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-    const [period, setPeriod] = useState("today");
+    const [period, setPeriod] = useState("month");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const [expandedSections, setExpandedSections] = useState({});
+    const [category, setCategory] = useState("all");
 
-    const filters = { period };
+    const kpiFilters = { period };
     if (period === "custom" && fromDate && toDate) {
-        filters.fromDate = fromDate;
-        filters.toDate = toDate;
+        kpiFilters.fromDate = fromDate;
+        kpiFilters.toDate = toDate;
     }
 
-    const { data, isLoading, isFetching, error, refetch } = useGetExpenseReportQuery(filters);
+    const dataFilters = { period, limit: 50 };
+    if (period === "custom" && fromDate && toDate) {
+        dataFilters.fromDate = fromDate;
+        dataFilters.toDate = toDate;
+    }
+    if (category && category !== 'all') {
+        dataFilters.categoryId = category;
+    }
 
-    if (error) {
-        showError(error?.data?.message || "Failed to load expense report");
+    const { data: kpiData, isLoading: kpiLoading, error: kpiError } = useGetExpenseKPIReportQuery(kpiFilters);
+    const { data: expenseData, isLoading: dataLoading, isFetching, error: dataError, refetch } = useGetExpenseReportQuery(dataFilters);
+
+    if (kpiError) {
+        showError(kpiError?.data?.message || "Failed to load expense KPI data");
+    }
+    if (dataError) {
+        showError(dataError?.data?.message || "Failed to load expense data");
     }
 
     const handleRefresh = () => refetch();
-    const showLoader = isLoading || isFetching;
+    const showLoader = kpiLoading || dataLoading || isFetching;
 
-    const toggleSection = (key) => {
-        setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    const summary = kpiData?.data || {};
+    const breakdowns = kpiData?.data?.expensesByCategory || [];
+    const transactions = expenseData?.data || [];
+    const totalExpenses = summary?.totalAmount || 0;
+    const expenseCount = summary?.expenseCount || 0;
+    const averageExpense = summary?.averageExpense || 0;
+    const categoryCount = breakdowns?.length || 0;
+    const details = {
+        expenseCount,
+        categoryCount
     };
-
-    const handleExpandAll = () => {
-        const all = {};
-        SECTION_KEYS.forEach(k => { all[k] = true; });
-        setExpandedSections(all);
-    };
-
-    const handleCollapseAll = () => {
-        setExpandedSections({});
-    };
-
-    const summary = data?.data?.summary || {};
-    const details = data?.data?.details || {};
-    const breakdowns = data?.data?.breakdowns || {};
-    const transactions = data?.data?.transactions || {};
 
     return (
         <div className="p-6 min-h-screen bg-[var(--app-bg)]">
@@ -229,61 +156,64 @@ export default function ExpenseReport() {
                 </div>
             </div>
 
-            {/* Date filter */}
+            {/* Filter bar */}
             <div className="card p-4 mb-6 no-print">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={16} className="text-[var(--accent-2)]" />
                     <span className="text-sm font-semibold text-[var(--ink)]">{labels.periodFilter}</span>
                 </div>
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex gap-2 flex-wrap">
-                        {PERIOD_OPTIONS.map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => setPeriod(opt.value)}
-                                className="px-4 py-2 rounded-lg transition-colors"
-                                style={{
-                                    background: period === opt.value ? 'var(--accent-2)' : 'var(--surface-muted)',
-                                    color: period === opt.value ? 'white' : 'var(--ink)'
-                                }}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleExpandAll}
-                            className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
-                            style={{ background: 'var(--surface)', color: 'var(--ink)' }}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
+                        <select
+                            value={period}
+                            onChange={(e) => setPeriod(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
-                            {labels.expandAll}
-                        </button>
-                        <button
-                            onClick={handleCollapseAll}
-                            className="px-3 py-1 text-sm rounded border border-[var(--border)] transition-colors"
-                            style={{ background: 'var(--surface)', color: 'var(--ink)' }}
-                        >
-                            {labels.collapseAll}
-                        </button>
+                            <option value="today">{labels.today}</option>
+                            <option value="month">{labels.thisMonth}</option>
+                            <option value="3month">{labels.last3Months}</option>
+                            <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
+                        </select>
                     </div>
+                    <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.category}</label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                        >
+                            <option value="all">{labels.allCategories}</option>
+                            <option value="general">{labels.general}</option>
+                            {breakdowns.expensesByCategory && breakdowns.expensesByCategory.map((cat) => (
+                                cat.category !== 'general' && <option key={cat.category} value={cat.category}>{cat.category}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {period === "custom" && (
+                        <>
+                            <div>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
-                {period === "custom" && (
-                    <div className="flex gap-2 mt-4">
-                        <input
-                            type="date"
-                            value={fromDate}
-                            onChange={(e) => setFromDate(e.target.value)}
-                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        />
-                        <input
-                            type="date"
-                            value={toDate}
-                            onChange={(e) => setToDate(e.target.value)}
-                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        />
-                    </div>
-                )}
             </div>
 
             {/* Content */}
@@ -292,171 +222,101 @@ export default function ExpenseReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
-                <div>
-                    {/* KPI Grid Row 1 */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <KpiCard 
-                            label={labels.totalExpenses} 
-                            value={summary.totalExpenses} 
-                            icon={DollarSign} 
-                            color="#ef4444" 
-                            description={`${details.expenseCount || 0} ${labels.transactions}`} 
-                        />
-                        <KpiCard 
-                            label={labels.averageExpense} 
-                            value={summary.averageExpense} 
-                            icon={BarChart3} 
-                            color="#3b82f6" 
-                            description={labels.perTransaction}
-                        />
-                        <KpiCard 
-                            label={labels.highestExpense} 
-                            value={summary.highestExpense} 
-                            icon={TrendingUp} 
-                            color="#f59e0b" 
-                            description={labels.largestTransaction}
-                        />
-                        <KpiCard 
-                            label={labels.categories} 
-                            value={details.categoryCount || 0} 
-                            icon={Receipt} 
-                            color="#8b5cf6" 
-                            description={labels.typesOfExpenses} 
-                            isCurrency={false}
-                        />
-                    </div>
-
-                    {/* KPI Grid Row 2 */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <KpiCard 
-                            label={labels.dailyAverage} 
-                            value={summary.dailyAverage} 
-                            icon={DollarSign} 
-                            color="#10b981" 
-                            description={labels.averagePerDay}
-                        />
-                        <KpiCard 
-                            label={labels.lowestExpense} 
-                            value={summary.lowestExpense} 
-                            icon={DollarSign} 
-                            color="#06b6d4" 
-                            description={labels.smallestTransaction}
-                        />
-                        <KpiCard 
-                            label={labels.weeklyAverage} 
-                            value={summary.weeklyAverage || 0} 
-                            icon={DollarSign} 
-                            color="#059669" 
-                            description={labels.averagePerWeek}
-                        />
-                        <KpiCard 
-                            label={labels.monthlyProjection} 
-                            value={summary.monthlyProjection || 0} 
-                            icon={TrendingUp} 
-                            color="#7c3aed" 
-                            description={labels.estimatedMonthly}
-                        />
-                    </div>
-
-                    {/* Summary Card */}
-                    <div className="card p-6 mb-6 border-2" style={{ borderColor: '#ef4444' }}>
-                        <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="card">
+                    {/* KPI Cards - Inline */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-b border-[var(--border)]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
+                                <DollarSign size={20} className="text-[var(--accent-2)]" />
+                            </div>
                             <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Receipt size={22} style={{ color: '#ef4444' }} />
-                                    <span className="text-sm font-semibold text-[var(--muted)]">{labels.expenseSummary}</span>
-                                </div>
-                                <p className="text-3xl font-bold" style={{ color: '#ef4444' }}>
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalExpenses}</p>
+                                <p className="font-semibold text-[var(--ink)]">
                                     Rs {(summary.totalExpenses || 0).toLocaleString()}
                                 </p>
-                                <p className="text-xs mt-1 text-[var(--muted)]">
-                                    {labels.totalOperatingExpenses}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                <TrendingUp size={20} className="text-red-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.averageExpense}</p>
+                                <p className="font-semibold text-red-600">
+                                    Rs {(summary.averageExpense || 0).toLocaleString()}
                                 </p>
                             </div>
-                            <div className="text-right">
-                                <p className="text-sm text-[var(--muted)]">{labels.expenseCount}</p>
-                                <p className="text-2xl font-bold text-[var(--ink)]">{details.expenseCount || 0}</p>
-                                <p className="text-sm mt-2 text-[var(--muted)]">{labels.avgPerTransaction}</p>
-                                <p className="text-lg font-bold text-[var(--ink)]">Rs {(summary.averageExpense || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                <Receipt size={20} className="text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.categories}</p>
+                                <p className="font-semibold text-green-600">
+                                    {details.categoryCount || 0}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <BarChart3 size={20} className="text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.transactions}</p>
+                                <p className="font-semibold text-blue-600">
+                                    {details.expenseCount || 0}
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Detailed Sections */}
-                    <div className="space-y-4 mb-6">
-                        <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.expenseBreakdown}</h2>
+                    {/* Detailed Sections - Flat Preview */}
+                    <div className="p-4 space-y-6">
+                        {/* Categories Breakdown */}
+                        <div>
+                            <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByCategory}</h3>
+                            {breakdowns.expensesByCategory && breakdowns.expensesByCategory.length > 0 ? (
+                                <div className="space-y-2">
+                                    {breakdowns.expensesByCategory.map((item, idx) => (
+                                        <BreakdownItem
+                                            key={idx}
+                                            label={item.category}
+                                            value={item.total}
+                                            count={item.count}
+                                            percentage={item.percentage}
+                                            color="#ef4444"
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-[var(--muted)]">No category data available</p>
+                            )}
+                        </div>
 
-                        {/* Categories Section */}
-                        <SourceSection
-                            title={labels.expensesByCategory}
-                            icon={Receipt}
-                            color="#ef4444"
-                            kpiValue={summary.totalExpenses}
-                            kpiDescription={labels.totalExpenses}
-                            count={details.categoryCount || 0}
-                            breakdown={breakdowns.expensesByCategory}
-                            breakdownLabelKey="category"
-                            transactions={transactions.expenses}
-                            isExpanded={!!expandedSections.categories}
-                            onToggle={() => toggleSection('categories')}
-                        />
-
-                        {/* Types Section */}
+                        {/* Types Breakdown */}
                         {breakdowns.expensesByType && breakdowns.expensesByType.length > 0 && (
-                            <SourceSection
-                                title={labels.expensesByType}
-                                icon={BarChart3}
-                                color="#3b82f6"
-                                kpiValue={summary.totalExpenses}
-                                kpiDescription={labels.totalExpenses}
-                                count={details.typeCount || 0}
-                                breakdown={breakdowns.expensesByType}
-                                breakdownLabelKey="type"
-                                isExpanded={!!expandedSections.types}
-                                onToggle={() => toggleSection('types')}
-                            />
+                            <div>
+                                <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByType}</h3>
+                                <div className="space-y-2">
+                                    {breakdowns.expensesByType.map((item, idx) => (
+                                        <BreakdownItem
+                                            key={idx}
+                                            label={item.type}
+                                            value={item.total}
+                                            count={item.count}
+                                            percentage={item.percentage}
+                                            color="#3b82f6"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
                         )}
-                    </div>
 
-                    {/* Additional Metrics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                    <Percent size={20} className="text-[var(--accent-2)]" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.highestCategory}</p>
-                                    <p className="font-semibold text-[var(--ink)]">{summary.topCategoryPercentage || 0}%</p>
-                                </div>
-                            </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.percentageOfTopCategory}</p>
-                        </div>
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                    <Receipt size={20} className="text-[var(--accent-2)]" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.topCategory}</p>
-                                    <p className="font-semibold text-[var(--ink)]">{summary.topCategory || 'N/A'}</p>
-                                </div>
-                            </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.highestSpendingCategory}</p>
-                        </div>
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                    <TrendingUp size={20} className="text-[var(--accent-2)]" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.trend}</p>
-                                    <p className="font-semibold text-[var(--ink)]">
-                                        {summary.trend > 0 ? 'Increasing' : (summary.trend < 0 ? 'Decreasing' : 'Stable')}
-                                    </p>
-                                </div>
-                            </div>
-                            <p className="text-xs mt-2 text-[var(--muted)]">{labels.comparedToPreviousPeriod}</p>
+                        {/* Transactions Table */}
+                        <div>
+                            <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.transactions}</h3>
+                            <TransactionTable transactions={transactions.expenses} />
                         </div>
                     </div>
                 </div>

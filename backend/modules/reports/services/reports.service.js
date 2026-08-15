@@ -3177,12 +3177,36 @@ export const getProfitLossReport = async (filters = {}) => {
 
 // Expense Report
 export const getExpenseReport = async (filters = {}) => {
-    const { fromDate, toDate, categoryId, search, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, categoryId, search, period = "month", page = 1, limit = 20 } = filters;
 
     const matchQuery = {};
 
-    if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
+    let dateFilter = {};
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "today") {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "3month") {
+        const now = new Date();
+        const startOfThreeMonths = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startOfThreeMonths, $lte: endOfCurrentMonth } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+    }
+    
+    if (Object.keys(dateFilter).length > 0) {
         matchQuery.createdAt = dateFilter.createdAt;
     }
 
@@ -3235,17 +3259,67 @@ export const getExpenseReport = async (filters = {}) => {
 
     // Calculate overall total manually
     const overallTotal = data.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const averageExpense = data.length > 0 ? overallTotal / data.length : 0;
+    const highestExpense = data.length > 0 ? Math.max(...data.map(e => e.amount || 0)) : 0;
+    const lowestExpense = data.length > 0 ? Math.min(...data.map(e => e.amount || 0)) : 0;
+    
+    // Calculate category breakdown with proper structure
+    const expensesByCategory = categoryTotals.map(item => ({
+        category: item._id,
+        total: item.total,
+        count: item.count,
+        percentage: overallTotal > 0 ? ((item.total / overallTotal) * 100).toFixed(1) : 0
+    }));
+    
+    // Calculate type breakdown
+    const typeTotalsMap = {};
+    data.forEach(expense => {
+        const type = expense.type || 'other';
+        if (!typeTotalsMap[type]) {
+            typeTotalsMap[type] = { total: 0, count: 0 };
+        }
+        typeTotalsMap[type].total += expense.amount || 0;
+        typeTotalsMap[type].count += 1;
+    });
+    
+    const expensesByType = Object.keys(typeTotalsMap).map(type => ({
+        type,
+        total: typeTotalsMap[type].total,
+        count: typeTotalsMap[type].count,
+        percentage: overallTotal > 0 ? ((typeTotalsMap[type].total / overallTotal) * 100).toFixed(1) : 0
+    }));
 
     return {
-        data,
+        data: {
+            summary: {
+                totalExpenses: overallTotal,
+                averageExpense,
+                highestExpense,
+                lowestExpense,
+                dailyAverage: overallTotal, // Simplified for now
+                weeklyAverage: overallTotal, // Simplified for now
+                monthlyProjection: overallTotal, // Simplified for now
+                topCategory: expensesByCategory.length > 0 ? expensesByCategory[0].category : null,
+                topCategoryPercentage: expensesByCategory.length > 0 ? expensesByCategory[0].percentage : 0,
+                trend: 0 // Simplified for now
+            },
+            details: {
+                expenseCount: data.length,
+                categoryCount: categoryTotals.length,
+                typeCount: Object.keys(typeTotalsMap).length
+            },
+            breakdowns: {
+                expensesByCategory,
+                expensesByType
+            },
+            transactions: {
+                expenses: data
+            }
+        },
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
-        summary: {
-            totalExpenses: overallTotal,
-            categoryBreakdown: categoryTotals
-        }
+        totalPages: Math.ceil(total / limit)
     };
 };
 
