@@ -2,7 +2,7 @@
 import {
   BarChart3, Wallet, Users, DollarSign, CreditCard,
   Package, TrendingUp, Trash2, RotateCcw, Truck,
-  FileText, Receipt, Boxes, User,  Tag
+  FileText, Receipt, Boxes, User, Tag
 } from "lucide-react";
 
 const translations = {
@@ -61,7 +61,7 @@ const NAV_ITEMS = [
   { id: "purchases", icon: CreditCard, url: "/purchases", allowedUrls: ["/purchases"] },
   { id: "purchaseReturn", icon: RotateCcw, url: "/purchase-returns", allowedUrls: ["/purchase-returns"] },
   { id: "productWastage", icon: Trash2, url: "/wastage", allowedUrls: ["/wastage"] },
-   {
+  {
     id: "orders", icon: Receipt, url: "/order-history",
     allowedUrls: ["/order-history", "/product-return"],
     items: [

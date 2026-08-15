@@ -10,7 +10,7 @@ export default function CreditsDebitsReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [period, setPeriod] = useState("today");
+    const [period, setPeriod] = useState("month");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [accountType, setAccountType] = useState("all");
@@ -240,7 +240,7 @@ export default function CreditsDebitsReport() {
                 <div>
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.creditsDebitsReport}</h1>
                     <p className="text-sm text-[var(--muted)]">
-                        {labels.creditsDebitsAnalysis}
+                        {labels.trackTransactions}
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -309,9 +309,9 @@ export default function CreditsDebitsReport() {
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="all">{labels.allTypes}</option>
-                            <option value="personal">{labels.personal}</option>
-                            <option value="business">{labels.business}</option>
-                            <option value="others">{labels.others}</option>
+                            <option value="general">{labels.general}</option>
+                            <option value="customer">{labels.customer}</option>
+                            <option value="supplier">{labels.supplier}</option>
                         </select>
                     </div>
                     <div>
@@ -345,63 +345,55 @@ export default function CreditsDebitsReport() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
                 </div>
             ) : (
-                <div>
-                    {/* KPI Cards */}
+                <div className="card">
+                    {/* KPI Cards - Inline */}
                     {reportData && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                        <Wallet size={20} className="text-[var(--accent-2)]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalAccounts}</p>
-                                        <p className="font-semibold text-[var(--ink)]">
-                                            {reportData.kpi?.totalAccounts || 0}
-                                        </p>
-                                    </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-b border-[var(--border)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
+                                    <Wallet size={20} className="text-[var(--accent-2)]" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalAccounts}</p>
+                                    <p className="font-semibold text-[var(--ink)]">
+                                        {reportData.kpi?.totalAccounts || 0}
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                                        <TrendingUp size={20} className="text-red-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.iOwe}</p>
-                                        <p className="font-semibold text-red-600">
-                                            Rs {(reportData.kpi?.totalDebitOnOthers || 0).toLocaleString()}
-                                        </p>
-                                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                    <TrendingUp size={20} className="text-red-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.iOwe}</p>
+                                    <p className="font-semibold text-red-600">
+                                        Rs {(reportData.kpi?.totalDebitOnOthers || 0).toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                                        <TrendingDown size={20} className="text-green-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.owedToMe}</p>
-                                        <p className="font-semibold text-green-600">
-                                            Rs {(reportData.kpi?.totalDebitOnMe || 0).toLocaleString()}
-                                        </p>
-                                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                    <TrendingDown size={20} className="text-green-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.owedToMe}</p>
+                                    <p className="font-semibold text-green-600">
+                                        Rs {(reportData.kpi?.totalDebitOnMe || 0).toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                                        <Wallet size={20} className="text-yellow-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.netBalance}</p>
-                                        <p className={`font-semibold ${(reportData.kpi?.finalAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {(reportData.kpi?.finalAmount || 0) >= 0 ? '+' : ''}Rs {(reportData.kpi?.finalAmount || 0).toLocaleString()}
-                                        </p>
-                                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                    <Wallet size={20} className="text-yellow-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.netBalance}</p>
+                                    <p className={`font-semibold ${(reportData.kpi?.finalAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {(reportData.kpi?.finalAmount || 0) >= 0 ? '+' : ''}Rs {(reportData.kpi?.finalAmount || 0).toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -409,54 +401,49 @@ export default function CreditsDebitsReport() {
 
                     {/* Accounts Table */}
                     {reportData && reportData.accounts && reportData.accounts.length > 0 ? (
-                        <div className="card">
-                            <div className="p-4 border-b border-[var(--border)]">
-                                <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.creditAccounts}</h2>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-[var(--surface-muted)]">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.account}</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.type}</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalToPay}</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.statusAndBalance}</th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-[var(--surface-muted)]">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.accountName}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.accountType}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalToPay}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.statusAndBalance}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--border)]">
+                                    {reportData.accounts.map((accountData, index) => (
+                                        <tr key={index} className="hover:bg-[var(--surface-muted)] transition-colors">
+                                            <td className="px-4 py-3">
+                                                <div>
+                                                    <p className="font-medium text-[var(--ink)]">{accountData.account.name}</p>
+                                                    <p className="text-xs text-[var(--muted)]">{accountData.account.phoneNo || "—"}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm capitalize text-[var(--ink)]">{accountData.account.type}</td>
+                                            <td className="px-4 py-3 text-right font-medium text-red-600">Rs {(accountData.totalToPay || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right font-medium text-green-600">Rs {(accountData.totalPaid || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                {getBalanceDisplay(accountData)}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <button
+                                                    onClick={() => fetchLedger(accountData.account._id)}
+                                                    className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
+                                                    title={labels.viewLedger}
+                                                >
+                                                    <Eye size={16} className="text-[var(--accent-2)]" />
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[var(--border)]">
-                                        {reportData.accounts.map((accountData, index) => (
-                                            <tr key={index} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div>
-                                                        <p className="font-medium text-[var(--ink)]">{accountData.account.name}</p>
-                                                        <p className="text-xs text-[var(--muted)]">{accountData.account.phoneNo || "—"}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm capitalize text-[var(--ink)]">{accountData.account.type}</td>
-                                                <td className="px-4 py-3 text-right font-medium text-red-600">Rs {(accountData.totalToPay || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right font-medium text-green-600">Rs {(accountData.totalPaid || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {getBalanceDisplay(accountData)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        onClick={() => fetchLedger(accountData.account._id)}
-                                                        className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
-                                                        title={labels.viewLedger}
-                                                    >
-                                                        <Eye size={16} className="text-[var(--accent-2)]" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     ) : (
-                        <div className="card p-12 text-center">
+                        <div className="p-12 text-center">
                             <Wallet size={48} className="mx-auto mb-4 text-[var(--muted)]" />
                             <h3 className="text-lg font-medium text-[var(--ink)] mb-2">{labels.noAccountsFound}</h3>
                             <p className="text-[var(--muted)]">{labels.tryAdjustingFilters}</p>

@@ -1,4 +1,5 @@
 ﻿import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 import { findByIdQarzaAccountService as getQarzaAccountByIdService, updateQarzaAccountService } from "../services/qarzaAccount.crud.js";
 import { recalculateCustomerBalance } from "../services/recalculateCustomerBalance.service.js";
 import { recalculateSupplierBalance } from "../services/recalculateSupplierBalance.service.js";
@@ -867,8 +868,54 @@ export const getCreditsDebitsReport = async (req, res) => {
 
         const QarzaAccountModel = getLocalQarzaAccountModel();
 
-        // Build transaction filter based on date range
-        let transactionFilter = { sourceType: 'qarza' };
+        // Build transaction filter based on date range and account type
+        let transactionFilter = {};
+        
+        // If accountType filter is applied, use specific transaction sources
+        // Otherwise, show all transactions from all sources for all account types
+        if (accountType === 'customer') {
+            // Customer: manual qarza + POS sale credit + order return refunds
+            transactionFilter = {
+                $and: [
+                    { sourceType: { $ne: 'purchase' } },
+                    {
+                        $or: [
+                            { sourceType: 'qarza' },
+                            { sourceType: 'sale' },
+                            { sourceType: 'orderReturn' }
+                        ]
+                    }
+                ]
+            };
+        } else if (accountType === 'supplier') {
+            // Supplier: manual qarza + purchase credit + purchase return refunds
+            transactionFilter = {
+                $and: [
+                    { sourceType: { $ne: 'sale' } },
+                    {
+                        $or: [
+                            { sourceType: 'qarza' },
+                            { sourceType: 'purchase' },
+                            { sourceType: 'purchaseReturn' }
+                        ]
+                    }
+                ]
+            };
+        } else if (accountType === 'general') {
+            // General: only manual qarza transactions
+            transactionFilter = { sourceType: 'qarza' };
+        } else {
+            // All account types: show all transactions from all sources without restrictions
+            transactionFilter = {
+                $or: [
+                    { sourceType: 'qarza' },
+                    { sourceType: 'sale' },
+                    { sourceType: 'orderReturn' },
+                    { sourceType: 'purchase' },
+                    { sourceType: 'purchaseReturn' }
+                ]
+            };
+        }
         if (startDate || endDate) {
             transactionFilter.transactionDate = {};
             if (startDate) {
@@ -896,32 +943,122 @@ export const getCreditsDebitsReport = async (req, res) => {
         const transactions = await getTransactions(transactionFilter);
 
         console.log(transactions, "the transactions in qarza report")
-        // Get unique account IDs from transactions
-        const accountIdsFromTransactions = [...new Set(transactions.map(t => t.sourceId.toString()))];
+        console.log("Total transactions fetched:", transactions.length)
+        
+        // Get unique account IDs from transactions (for qarza sourceType) or creditAccount (for POS transactions)
+        const accountIdsFromTransactions = new Set();
+        transactions.forEach(t => {
+            if (t.sourceType === 'qarza' && t.sourceId) {
+                // Handle both string and ObjectId for sourceId
+                const sourceIdStr = typeof t.sourceId === 'object' ? t.sourceId.toString() : t.sourceId;
+                accountIdsFromTransactions.add(sourceIdStr);
+            } else if (t.creditAccount) {
+                // Handle both string, ObjectId, and object with _id for creditAccount
+                let creditAccountStr;
+                if (typeof t.creditAccount === 'object' && t.creditAccount._id) {
+                    // creditAccount is a populated object with _id
+                    creditAccountStr = typeof t.creditAccount._id === 'object' ? t.creditAccount._id.toString() : t.creditAccount._id;
+                } else if (typeof t.creditAccount === 'object') {
+                    // creditAccount is an ObjectId
+                    creditAccountStr = t.creditAccount.toString();
+                } else {
+                    // creditAccount is a string
+                    creditAccountStr = t.creditAccount;
+                }
+                accountIdsFromTransactions.add(creditAccountStr);
+            }
+        });
+        console.log("Unique account IDs from transactions:", Array.from(accountIdsFromTransactions))
 
         // Build account filter
         let accountFilter = {};
         if (accountId) {
             accountFilter._id = accountId;
-        } else if (startDate || endDate) {
-            // If date filter is applied, only show accounts with transactions in that period
-            accountFilter._id = { $in: accountIdsFromTransactions };
         }
-        if (accountType) {
+        // Only apply account type filter if a specific type is selected (not 'all' or undefined)
+        if (accountType && accountType !== 'all') {
             accountFilter.type = accountType;
         }
+        // Don't filter by account IDs from transactions - show all accounts matching the type filter
+        // This ensures we see all accounts even if they have no transactions in the selected period
 
         // Get accounts
         const accounts = await getAllQarzaAccountsService(accountFilter);
+        console.log("Total accounts fetched:", accounts.length)
+        console.log("Account filter applied:", accountFilter)
 
         // Calculate summary for each account based on actual transactions
         const accountSummaries = accounts.map(account => {
-            const accountTransactions = transactions.filter(t => t.sourceId.toString() === account._id.toString());
+            const accountIdStr = account._id.toString();
+            console.log("Processing account:", account.name, "ID:", accountIdStr, "Type:", account.type)
             
-            // Calculate from actual transactions
-            const totalPaid = accountTransactions.filter(t => t.creditType === 'cashin').reduce((sum, t) => sum + (t.amount || 0), 0);
-            const totalToPay = accountTransactions.filter(t => t.creditType === 'cashout').reduce((sum, t) => sum + (t.amount || 0), 0);
-            const remainingBalance = totalToPay - totalPaid; // Positive = need to pay, Negative = they owe us
+            // Filter transactions for this account (either by sourceId for qarza or creditAccount for POS)
+            const accountTransactions = transactions.filter(t => {
+                if (t.sourceType === 'qarza') {
+                    const sourceIdStr = typeof t.sourceId === 'object' ? t.sourceId.toString() : t.sourceId;
+                    return t.sourceId && sourceIdStr === accountIdStr;
+                } else if (t.creditAccount) {
+                    // Handle both string, ObjectId, and object with _id for creditAccount
+                    let creditAccountStr;
+                    if (typeof t.creditAccount === 'object' && t.creditAccount._id) {
+                        // creditAccount is a populated object with _id
+                        creditAccountStr = typeof t.creditAccount._id === 'object' ? t.creditAccount._id.toString() : t.creditAccount._id;
+                    } else if (typeof t.creditAccount === 'object') {
+                        // creditAccount is an ObjectId
+                        creditAccountStr = t.creditAccount.toString();
+                    } else {
+                        // creditAccount is a string
+                        creditAccountStr = t.creditAccount;
+                    }
+                    return creditAccountStr === accountIdStr;
+                }
+                return false;
+            });
+            console.log("Transactions matched for account:", account.name, accountTransactions.length)
+            
+            // Calculate from actual transactions based on source type and credit type
+            let totalPaid = 0;
+            let totalToPay = 0;
+            
+            accountTransactions.forEach(t => {
+                if (t.sourceType === 'qarza') {
+                    // Manual qarza transactions
+                    const amount = t.amount || 0;
+                    if (t.creditType === 'cashin') {
+                        totalPaid += amount; // We received money
+                    } else if (t.creditType === 'cashout') {
+                        totalToPay += amount; // We gave money
+                    }
+                } else if (t.sourceType === 'sale') {
+                    // POS sale transactions - customer owes us on credit sales
+                    const creditAmount = t.creditAmount || 0;
+                    if (creditAmount > 0) {
+                        totalToPay += creditAmount; // Customer owes us (credit sale)
+                    }
+                } else if (t.sourceType === 'orderReturn') {
+                    // Order return transactions - we returned money to customer
+                    const creditAmount = t.creditAmount || 0;
+                    if (creditAmount > 0) {
+                        totalPaid += creditAmount; // We returned money to customer
+                    }
+                } else if (t.sourceType === 'purchase') {
+                    // Purchase transactions - we owe supplier on credit purchases
+                    const creditAmount = t.creditAmount || 0;
+                    if (creditAmount > 0) {
+                        totalPaid += creditAmount; // We owe supplier (credit purchase)
+                    }
+                } else if (t.sourceType === 'purchaseReturn') {
+                    // Purchase return transactions - supplier returned money to us
+                    const creditAmount = t.creditAmount || 0;
+                    if (creditAmount > 0) {
+                        totalToPay += creditAmount; // Supplier returned money to us
+                    }
+                }
+            });
+            
+            console.log("Calculated for account:", account.name, "totalPaid:", totalPaid, "totalToPay:", totalToPay)
+            
+            const remainingBalance = totalToPay - totalPaid; // Positive = need to receive, Negative = need to pay
             
             const lastTransaction = accountTransactions.length > 0 ? accountTransactions[0].transactionDate : null;
 
@@ -1019,7 +1156,41 @@ export const getAccountLedger = async (req, res) => {
             return res.json({ success: false, msg: "Account not found" });
         }
 
-        let transactionFilter = { sourceType: 'qarza', sourceId: accountId };
+        // Build transaction filter based on account type
+        let transactionFilter = {};
+        
+        if (account.type === 'customer') {
+            // Customer: manual qarza + POS sale credit + order return refunds
+            transactionFilter = {
+                $and: [
+                    { sourceType: { $ne: 'purchase' } },
+                    {
+                        $or: [
+                            { sourceType: 'qarza', sourceId: accountId },
+                            { sourceType: 'sale', creditAccount: accountId, creditAmount: { $gt: 0 } },
+                            { sourceType: 'orderReturn', creditAccount: accountId }
+                        ]
+                    }
+                ]
+            };
+        } else if (account.type === 'supplier') {
+            // Supplier: manual qarza + purchase credit + purchase return refunds
+            transactionFilter = {
+                $and: [
+                    { sourceType: { $ne: 'sale' } },
+                    {
+                        $or: [
+                            { sourceType: 'qarza', sourceId: accountId },
+                            { sourceType: 'purchase', creditAccount: accountId },
+                            { sourceType: 'purchaseReturn', creditAccount: accountId }
+                        ]
+                    }
+                ]
+            };
+        } else {
+            // General: only manual qarza transactions
+            transactionFilter = { sourceType: 'qarza', sourceId: accountId };
+        }
         if (startDate || endDate) {
             transactionFilter.transactionDate = {};
             if (startDate) {
@@ -1036,10 +1207,40 @@ export const getAccountLedger = async (req, res) => {
 
         const transactions = await getTransactions(transactionFilter);
 
-        // Calculate running balance
+        // Calculate running balance based on transaction source type
         let runningBalance = 0;
         const ledger = transactions.map(transaction => {
-            const amount = transaction.creditType === 'cashin' ? (transaction.amount || 0) : -(transaction.amount || 0);
+            let amount = 0;
+            
+            if (transaction.sourceType === 'qarza') {
+                // Manual qarza transactions
+                if (transaction.creditType === 'cashin') {
+                    amount = transaction.amount || 0; // We received money
+                } else if (transaction.creditType === 'cashout') {
+                    amount = -(transaction.amount || 0); // We gave money
+                }
+            } else if (transaction.sourceType === 'sale') {
+                // POS sale transactions
+                if (transaction.creditAmount > 0) {
+                    amount = -(transaction.creditAmount); // Customer owes us (credit sale) - negative because it increases what we're owed
+                }
+            } else if (transaction.sourceType === 'orderReturn') {
+                // Order return transactions
+                if (transaction.creditAmount > 0) {
+                    amount = transaction.creditAmount; // We returned money to customer - positive because it reduces what we're owed
+                }
+            } else if (transaction.sourceType === 'purchase') {
+                // Purchase transactions
+                if (transaction.creditAmount > 0) {
+                    amount = transaction.creditAmount; // We owe supplier (credit purchase) - positive because it increases what we owe
+                }
+            } else if (transaction.sourceType === 'purchaseReturn') {
+                // Purchase return transactions
+                if (transaction.creditAmount > 0) {
+                    amount = -(transaction.creditAmount); // Supplier returned money to us - negative because it reduces what we owe
+                }
+            }
+            
             runningBalance += amount;
             
             return {
