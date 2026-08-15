@@ -2,7 +2,7 @@
 import {
   BarChart3, Wallet, Users, DollarSign, CreditCard,
   Package, TrendingUp, Trash2, RotateCcw, Truck,
-  FileText, Receipt, Boxes, User, UserCircle, Tag
+  FileText, Receipt, Boxes, User,  Tag
 } from "lucide-react";
 
 const translations = {
@@ -50,15 +50,18 @@ const NAV_ITEMS = [
     items: [
       { id: "categories", icon: FileText, url: "/products/categories" },
       { id: "brands", icon: Tag, url: "/products/brands" },
-      // { id: "subCategories", icon: FileText, url: "/products/sub-categories" },
     ],
   },
-  { id: "productWastage", icon: Trash2, url: "/wastage", allowedUrls: ["/wastage"] },
+  { id: "suppliers", icon: Truck, url: "/suppliers", allowedUrls: ["/suppliers"] },
+  { id: "customers", icon: Users, url: "/customers", allowedUrls: ["/customers"] },
+  { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
+  { id: "creditDebits", icon: Wallet, url: "/qarzaAccount", allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"] },
+  { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff"] },
+  { id: "users", icon: Users, url: "/users", allowedUrls: ["/users"] },
   { id: "purchases", icon: CreditCard, url: "/purchases", allowedUrls: ["/purchases"] },
   { id: "purchaseReturn", icon: RotateCcw, url: "/purchase-returns", allowedUrls: ["/purchase-returns"] },
-  { id: "customers", icon: Users, url: "/customers", allowedUrls: ["/customers"] },
-  { id: "suppliers", icon: Truck, url: "/suppliers", allowedUrls: ["/suppliers"] },
-  {
+  { id: "productWastage", icon: Trash2, url: "/wastage", allowedUrls: ["/wastage"] },
+   {
     id: "orders", icon: Receipt, url: "/order-history",
     allowedUrls: ["/order-history", "/product-return"],
     items: [
@@ -66,9 +69,6 @@ const NAV_ITEMS = [
       { id: "orderReturn", icon: RotateCcw, url: "/product-return" },
     ],
   },
-  { id: "creditDebits", icon: Wallet, url: "/qarzaAccount", allowedUrls: ["/qarzaAccount", "/EachQarzaAccountRecord"] },
-  { id: "expenses", icon: DollarSign, url: "/expenses", allowedUrls: ["/expenses"] },
-  { id: "staff", icon: Users, url: "/staff", allowedUrls: ["/staff"] },
   {
     id: "reports", icon: TrendingUp, url: "/reports/main-business",
     allowedUrls: ["/reports/main-business", "/reports/sales", "/reports/purchases",
@@ -77,8 +77,8 @@ const NAV_ITEMS = [
     items: [
       { id: "mainBusinessReport", icon: BarChart3, url: "/reports/main-business" },
       { id: "salesReport", icon: Receipt, url: "/reports/sales" },
-      { id: "purchaseReport", icon: CreditCard, url: "/reports/purchases" },
       { id: "inventoryReport", icon: Boxes, url: "/reports/inventory" },
+      { id: "purchaseReport", icon: CreditCard, url: "/reports/purchases" },
       { id: "customerReport", icon: Users, url: "/reports/customers" },
       { id: "supplierReport", icon: Truck, url: "/reports/suppliers" },
       { id: "staffReport", icon: User, url: "/reports/staff" },
@@ -86,7 +86,6 @@ const NAV_ITEMS = [
       { id: "creditDebits", icon: Wallet, url: "/reports/credits-debits" },
     ],
   },
-  { id: "users", icon: Users, url: "/users", allowedUrls: ["/users"] },
 ];
 
 const label = (lang, id) => translations[lang]?.[id] ?? translations.en[id] ?? id;
