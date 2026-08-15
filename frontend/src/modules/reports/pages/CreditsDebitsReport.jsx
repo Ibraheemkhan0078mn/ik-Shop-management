@@ -10,9 +10,9 @@ export default function CreditsDebitsReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [period, setPeriod] = useState("month");
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
+    const [transactionPeriod, setTransactionPeriod] = useState("all");
+    const [customFromDate, setCustomFromDate] = useState("");
+    const [customToDate, setCustomToDate] = useState("");
     const [accountType, setAccountType] = useState("all");
     const [status, setStatus] = useState("all");
     const [search, setSearch] = useState("");
@@ -22,16 +22,30 @@ export default function CreditsDebitsReport() {
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState(null);
 
-    // Calculate date range based on period
-    const getDatesFromPeriod = (periodValue) => {
+    // Calculate date range based on transaction period
+    // This filter only shows accounts that have transactions in the selected period
+    const transactionDates = useMemo(() => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        switch (periodValue) {
+        switch (transactionPeriod) {
+            case "all": {
+                return { from: null, to: null };
+            }
             case "today": {
                 return {
                     from: today.toISOString().split('T')[0],
                     to: today.toISOString().split('T')[0]
+                };
+            }
+            case "week": {
+                const weekStart = new Date(now);
+                weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+                return {
+                    from: weekStart.toISOString().split('T')[0],
+                    to: weekEnd.toISOString().split('T')[0]
                 };
             }
             case "month": {
@@ -42,38 +56,21 @@ export default function CreditsDebitsReport() {
                     to: monthEnd.toISOString().split('T')[0]
                 };
             }
-            case "3month": {
-                const threeMonthStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-                const threeMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return {
-                    from: threeMonthStart.toISOString().split('T')[0],
-                    to: threeMonthEnd.toISOString().split('T')[0]
-                };
-            }
-            case "year": {
-                const yearStart = new Date(now.getFullYear(), 0, 1);
-                const yearEnd = new Date(now.getFullYear(), 11, 31);
-                return {
-                    from: yearStart.toISOString().split('T')[0],
-                    to: yearEnd.toISOString().split('T')[0]
-                };
-            }
             case "custom":
             default:
-                return { from: fromDate, to: toDate };
+                return { from: customFromDate, to: customToDate };
         }
-    };
-
-    const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
+    }, [transactionPeriod, customFromDate, customToDate]);
     
     const filters = useMemo(() => ({ 
-        startDate: period === "custom" ? fromDate : dates.from, 
-        endDate: period === "custom" ? toDate : dates.to, 
+        startDate: transactionPeriod === "all" ? null : (transactionPeriod === "custom" ? customFromDate : transactionDates.from), 
+        endDate: transactionPeriod === "all" ? null : (transactionPeriod === "custom" ? customToDate : transactionDates.to), 
         accountType, status, search 
-    }), [period, fromDate, toDate, dates.from, dates.to, accountType, status, search]);
+    }), [transactionPeriod, customFromDate, customToDate, transactionDates.from, transactionDates.to, accountType, status, search]);
 
     useEffect(() => {
         fetchReport();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.startDate, filters.endDate, filters.accountType, filters.status, filters.search]);
 
     const fetchReport = async () => {
@@ -265,42 +262,7 @@ export default function CreditsDebitsReport() {
                     <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
-                        <select
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        >
-                            <option value="today">{labels.today}</option>
-                            <option value="month">{labels.thisMonth}</option>
-                            <option value="3month">{labels.last3Months}</option>
-                            <option value="year">{labels.thisYear}</option>
-                            <option value="custom">{labels.customRange}</option>
-                        </select>
-                    </div>
-                    {period === "custom" && (
-                        <>
-                            <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
-                                <input
-                                    type="date"
-                                    value={fromDate}
-                                    onChange={(e) => setFromDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
-                                <input
-                                    type="date"
-                                    value={toDate}
-                                    onChange={(e) => setToDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                                />
-                            </div>
-                        </>
-                    )}
+                    {/* Transaction period filter UI commented out - logic remains intact in state and functions */}
                     <div>
                         <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.accountType}</label>
                         <select
@@ -462,7 +424,7 @@ export default function CreditsDebitsReport() {
                 <CreditsDebitsReportPdfTemplate
                     reportData={reportData}
                     labels={labels}
-                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
+                    selectedPeriodLabel={transactionPeriod === "all" ? labels.allPeriods : (transactionPeriod === "custom" ? `${customFromDate} to ${customToDate}` : transactionPeriod)}
                 />
             </PdfModal>
         </div>

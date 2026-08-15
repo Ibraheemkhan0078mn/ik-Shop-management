@@ -871,11 +871,27 @@ export const getCreditsDebitsReport = async (req, res) => {
         // Build transaction filter based on date range and account type
         let transactionFilter = {};
         
+        // Build date filter first
+        let dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.transactionDate = {};
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                dateFilter.transactionDate.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                dateFilter.transactionDate.$lte = end;
+            }
+        }
+        
         // If accountType filter is applied, use specific transaction sources
         // Otherwise, show all transactions from all sources for all account types
         if (accountType === 'customer') {
             // Customer: manual qarza + POS sale credit + order return refunds
-            transactionFilter = {
+            const sourceFilter = {
                 $and: [
                     { sourceType: { $ne: 'purchase' } },
                     {
@@ -887,9 +903,15 @@ export const getCreditsDebitsReport = async (req, res) => {
                     }
                 ]
             };
+            // Merge date filter with source filter
+            if (Object.keys(dateFilter).length > 0) {
+                transactionFilter = { $and: [sourceFilter, dateFilter] };
+            } else {
+                transactionFilter = sourceFilter;
+            }
         } else if (accountType === 'supplier') {
             // Supplier: manual qarza + purchase credit + purchase return refunds
-            transactionFilter = {
+            const sourceFilter = {
                 $and: [
                     { sourceType: { $ne: 'sale' } },
                     {
@@ -901,12 +923,24 @@ export const getCreditsDebitsReport = async (req, res) => {
                     }
                 ]
             };
+            // Merge date filter with source filter
+            if (Object.keys(dateFilter).length > 0) {
+                transactionFilter = { $and: [sourceFilter, dateFilter] };
+            } else {
+                transactionFilter = sourceFilter;
+            }
         } else if (accountType === 'general') {
             // General: only manual qarza transactions
-            transactionFilter = { sourceType: 'qarza' };
+            const sourceFilter = { sourceType: 'qarza' };
+            // Merge date filter with source filter
+            if (Object.keys(dateFilter).length > 0) {
+                transactionFilter = { $and: [sourceFilter, dateFilter] };
+            } else {
+                transactionFilter = sourceFilter;
+            }
         } else {
             // All account types: show all transactions from all sources without restrictions
-            transactionFilter = {
+            const sourceFilter = {
                 $or: [
                     { sourceType: 'qarza' },
                     { sourceType: 'sale' },
@@ -915,18 +949,11 @@ export const getCreditsDebitsReport = async (req, res) => {
                     { sourceType: 'purchaseReturn' }
                 ]
             };
-        }
-        if (startDate || endDate) {
-            transactionFilter.transactionDate = {};
-            if (startDate) {
-                const start = new Date(startDate);
-                start.setHours(0, 0, 0, 0);
-                transactionFilter.transactionDate.$gte = start;
-            }
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                transactionFilter.transactionDate.$lte = end;
+            // Merge date filter with source filter
+            if (Object.keys(dateFilter).length > 0) {
+                transactionFilter = { $and: [sourceFilter, dateFilter] };
+            } else {
+                transactionFilter = sourceFilter;
             }
         }
         if (direction) {
@@ -979,8 +1006,12 @@ export const getCreditsDebitsReport = async (req, res) => {
         if (accountType && accountType !== 'all') {
             accountFilter.type = accountType;
         }
-        // Don't filter by account IDs from transactions - show all accounts matching the type filter
-        // This ensures we see all accounts even if they have no transactions in the selected period
+        // Filter by account IDs from transactions when date range is provided
+        // This ensures we only show accounts that have transactions in the selected period
+        // When no date range is provided (all periods), show all accounts matching the type filter
+        if ((startDate || endDate) && accountIdsFromTransactions.size > 0) {
+            accountFilter._id = { $in: Array.from(accountIdsFromTransactions) };
+        }
 
         // Get accounts
         const accounts = await getAllQarzaAccountsService(accountFilter);

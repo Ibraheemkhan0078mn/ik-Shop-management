@@ -13,7 +13,10 @@ export const reportsLabels = {
     
     // Period filters
     period: "Period",
+    transactionPeriod: "Transaction Period",
+    allPeriods: "All Periods",
     today: "Today",
+    thisWeek: "This Week",
     thisMonth: "This Month",
     last3Months: "Last 3 Months",
     thisYear: "This Year",
@@ -280,7 +283,10 @@ export const reportsLabels = {
     
     // Period filters
     period: "مدت",
+    transactionPeriod: "لین دین کی مدت",
+    allPeriods: "تمام مدتیں",
     today: "آج",
+    thisWeek: "اس ہفتے",
     thisMonth: "اس مہینے",
     last3Months: "پچھلے 3 مہینے",
     thisYear: "اس سال",
@@ -547,7 +553,10 @@ export const reportsLabels = {
     
     // Period filters
     period: "مدت / Period",
+    transactionPeriod: "لین دین کی مدت / Transaction Period",
+    allPeriods: "تمام مدتیں / All Periods",
     today: "آج / Today",
+    thisWeek: "اس ہفتے / This Week",
     thisMonth: "اس مہینے / This Month",
     last3Months: "پچھلے 3 مہینے / Last 3 Months",
     thisYear: "اس سال / This Year",
