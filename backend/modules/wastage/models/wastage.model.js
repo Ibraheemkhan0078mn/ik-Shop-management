@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 
 const wastageSchema = new mongoose.Schema({
     // Reference
-    wastageNumber: { type: String, required: true, unique: true },           // Auto-generated e.g. WST-0001
+    wastageNumber: { type: String, required: true },           // Auto-generated e.g. WST-0001
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },  // Which shop/pharmacy
 
     // Wastage Meta

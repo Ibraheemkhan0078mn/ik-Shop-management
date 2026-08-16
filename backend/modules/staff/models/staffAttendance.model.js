@@ -40,6 +40,6 @@ const staffAttendanceSchema = new mongoose.Schema({
 });
 
 // Compound index for date to ensure only one attendance record per day
-staffAttendanceSchema.index({ date: 1 }, { unique: true });
+staffAttendanceSchema.index({ date: 1 });
 
 export default staffAttendanceSchema;

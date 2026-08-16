@@ -44,7 +44,6 @@ const productReturnSchema = new mongoose.Schema(
         returnNumber: {
             type: String,
             required: true,
-            unique: true,
         },
         referenceOrderId: {
             type: mongoose.Schema.Types.ObjectId,

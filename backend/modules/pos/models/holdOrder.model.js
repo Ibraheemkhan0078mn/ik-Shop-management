@@ -21,7 +21,7 @@ const holdItemSchema = new mongoose.Schema({
 // ─────────────────────────────────────────────────────────────────────────────
 const holdOrderSchema = new mongoose.Schema(
     {
-        orderNumber: { type: String, required: true, unique: true },
+        orderNumber: { type: String, required: true },
         items: { type: [holdItemSchema], required: true },
         subtotal: { type: Number, required: true, default: 0 },
         discountAmount: { type: Number, default: 0 },

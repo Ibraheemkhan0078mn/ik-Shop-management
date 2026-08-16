@@ -47,7 +47,6 @@ const purchaseReturnItemSchema = new mongoose.Schema({
 const purchaseReturnSchema = new mongoose.Schema({
     purchaseReturnNumber: {
         type: String,
-        unique: true,
         required: true
     },
     purchase: {

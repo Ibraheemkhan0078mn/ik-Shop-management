@@ -9,7 +9,6 @@ const staffSchema = new mongoose.Schema({
     cnic: {
         type: String,
         required: true,
-        unique: true,
         trim: true
     },
     phone: {

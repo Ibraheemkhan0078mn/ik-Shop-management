@@ -19,13 +19,11 @@ const customerSchema = new mongoose.Schema(
             type: String,
             trim: true,
             sparse: true,
-            unique: true,
         },
         cnic: {
             type: String,
             trim: true,
             sparse: true,
-            unique: true,
         },
         address: {
             type: String,

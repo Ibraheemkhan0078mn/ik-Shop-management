@@ -30,7 +30,7 @@ const orderItemSchema = new mongoose.Schema({
 // ─────────────────────────────────────────────────────────────────────────────
 const orderSchema = new mongoose.Schema(
     {
-        orderNumber: { type: String, required: true, unique: true },
+        orderNumber: { type: String, required: true },
 
         // Money
         subtotal: { type: Number, required: true, default: 0 },

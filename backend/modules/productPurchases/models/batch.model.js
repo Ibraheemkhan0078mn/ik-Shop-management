@@ -10,7 +10,6 @@ const batchSchema = new mongoose.Schema(
         batchNumber: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
         },
         supplier: {
