@@ -7,6 +7,7 @@ import {
     countStaffRoles as countStaffRolesService
 } from "../services/staffRole.service.js";
 import { getLocalStaffRoleModel, getLocalStaffModel } from "../../../configs/connect.db.js";
+import { findOneDoc } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 export const createStaffRole = async (req, res) => {
     try {
@@ -18,7 +19,10 @@ export const createStaffRole = async (req, res) => {
 
         let StaffRoleModel = getLocalStaffRoleModel();
 
-        const existingRole = await StaffRoleModel.findOne({ name, isDeleted: false });
+        const existingRole = await findOneDoc({
+            model: StaffRoleModel,
+            filter: { name, isDeleted: false }
+        });
         if (existingRole) {
             return res.json({ success: false, msg: "Role with this name already exists" });
         }
@@ -80,7 +84,10 @@ export const deleteStaffRole = async (req, res) => {
         }
 
         // Check if any staff member has this role
-        const staffWithRole = await StaffModel.findOne({ role: _id, isDeleted: false });
+        const staffWithRole = await findOneDoc({
+            model: StaffModel,
+            filter: { role: _id, isDeleted: false }
+        });
         if (staffWithRole) {
             return res.json({ success: false, msg: "This role is already integrated with staff. Cannot delete." });
         }

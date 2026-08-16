@@ -12,6 +12,7 @@ import {
     getCategoryModel,
     getQarzaAccountModel,
 } from "./dashboard.crud.js";
+import { findDocs, countDocs } from "../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // Helper function to get date range based on filter
 const getDateRange = (range) => {
@@ -113,27 +114,27 @@ export const getDashboardData = async () => {
         payables,
     ] = await Promise.all([
         // Today's data
-        OrderModel.find({ createdAt: { $gte: startOfDay } }),
-        PurchaseModel.find({ createdAt: { $gte: startOfDay } }),
-        ExpenseModel.find({ createdAt: { $gte: startOfDay } }),
+        findDocs({ model: OrderModel, filter: { createdAt: { $gte: startOfDay } } }),
+        findDocs({ model: PurchaseModel, filter: { createdAt: { $gte: startOfDay } } }),
+        findDocs({ model: ExpenseModel, filter: { createdAt: { $gte: startOfDay } } }),
         
         // Monthly data
-        OrderModel.find({ createdAt: { $gte: startOfMonth } }),
-        PurchaseModel.find({ createdAt: { $gte: startOfMonth } }),
-        ExpenseModel.find({ createdAt: { $gte: startOfMonth } }),
+        findDocs({ model: OrderModel, filter: { createdAt: { $gte: startOfMonth } } }),
+        findDocs({ model: PurchaseModel, filter: { createdAt: { $gte: startOfMonth } } }),
+        findDocs({ model: ExpenseModel, filter: { createdAt: { $gte: startOfMonth } }  }),
         
         // Counts
-        ProductModel.countDocuments({ isActive: true }),
-        CustomerModel.countDocuments(),
-        SupplierModel.countDocuments(),
+        countDocs({ model: ProductModel, filter: { isActive: true } }),
+        countDocs({ model: CustomerModel }),
+        countDocs({ model: SupplierModel }),
         
         // Stock alerts
-        ProductModel.find({ isActive: true }).lean(),
-        BatchModel.find({ isActive: true }).lean(),
+        findDocs({ model: ProductModel, filter: { isActive: true }, options: { lean: true } }),
+        findDocs({ model: BatchModel, filter: { isActive: true }, options: { lean: true } }),
         
         // Recent data
-        OrderModel.find().sort({ createdAt: -1 }).limit(10).populate('items.product').populate('customer'),
-        PurchaseModel.find().sort({ createdAt: -1 }).limit(10).populate('supplier'),
+        findDocs({ model: OrderModel, options: { sort: { createdAt: -1 }, limit: 10, populate: ['items.product', 'customer'] } }),
+        findDocs({ model: PurchaseModel, options: { sort: { createdAt: -1 }, limit: 10, populate: 'supplier' } }),
         
         // Top selling products
         OrderModel.aggregate([
@@ -159,9 +160,9 @@ export const getDashboardData = async () => {
         ]),
         
         // Pending approvals
-        WastageModel.countDocuments({ status: "pending" }),
-        PurchaseReturnModel.countDocuments({ status: "pending" }),
-        ProductReturnModel.countDocuments({ returnStatus: "pending" }),
+        countDocs({ model: WastageModel, filter: { status: "pending" } }),
+        countDocs({ model: PurchaseReturnModel, filter: { status: "pending" } }),
+        countDocs({ model: ProductReturnModel, filter: { returnStatus: "pending" } }),
         
         // Inventory value
         BatchModel.aggregate([

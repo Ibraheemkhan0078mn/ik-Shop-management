@@ -14,6 +14,7 @@ import {
 } from "../services/onlineAuth.service.js";
 import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
+import { findOneDoc } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // export const loginUser = asyncHandler(async (req, res, next) => {
 //     const { email, password } = req.body || {};
@@ -223,7 +224,10 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 
     // Check if an admin already exists locally
     const LocalUserModel = getLocalUserModel();
-    const existingAdmin = await LocalUserModel.findOne({ role: 'admin' });
+    const existingAdmin = await findOneDoc({
+        model: LocalUserModel,
+        filter: { role: 'admin' }
+    });
     if (existingAdmin) {
         return next(new ErrorResponse("An admin account already exists. Only one admin is allowed.", 400));
     }
@@ -330,7 +334,10 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
 export const checkAdminRegistrationAllowed = asyncHandler(async (req, res, next) => {
     try {
         const LocalUserModel = getLocalUserModel();
-        const existingAdmin = await LocalUserModel.findOne({ role: 'admin' });
+        const existingAdmin = await findOneDoc({
+            model: LocalUserModel,
+            filter: { role: 'admin' }
+        });
         
         if (existingAdmin) {
             return res.status(200).json({

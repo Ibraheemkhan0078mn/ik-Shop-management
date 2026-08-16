@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalSettingsModel } from "../../../configs/connect.db.js";
 
 const createSettingsService = (data) => {
@@ -28,7 +28,7 @@ const updateSettingsService = (filter, data) => {
 
 const findOneAndUpdateSettingsService = (filter, data, options = {}) => {
     const SettingsModel = getLocalSettingsModel();
-    return SettingsModel.findOneAndUpdate(filter, data, { returnDocument: 'after', upsert: true, ...options });
+    return updateDocs({ model: SettingsModel, filter, data, options: { ...options, upsert: true } });
 };
 
 const deleteOneSettingsService = (id) => {
@@ -38,7 +38,7 @@ const deleteOneSettingsService = (id) => {
 
 const countSettingsService = (query) => {
     const SettingsModel = getLocalSettingsModel();
-    return SettingsModel.countDocuments(query);
+    return countDocs({ model: SettingsModel, filter: query });
 };
 
 export { 

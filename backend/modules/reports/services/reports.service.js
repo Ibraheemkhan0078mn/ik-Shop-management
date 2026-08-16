@@ -20,6 +20,7 @@ import {
     getStaffSaleBillModel,
     getStaffAttendanceModel,
 } from "./reports.crud.js";
+import { findDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // Service function imports
 import {
@@ -3400,11 +3401,24 @@ export const getActivityReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    // Fetch data using model directly (no service function available)
+    // Fetch data using main DB service function
     const ActivityLogModel = getActivityLogModel();
     const [data, total] = await Promise.all([
-        ActivityLogModel.find(matchQuery).populate("user", "name email").sort({ createdAt: -1 }).skip(skip).limit(limit),
-        ActivityLogModel.countDocuments(matchQuery)
+        findDocs({
+            model: ActivityLogModel,
+            filter: matchQuery,
+            options: {
+                populate: "user",
+                select: "name email",
+                sort: { createdAt: -1 },
+                skip,
+                limit
+            }
+        }),
+        countDocs({
+            model: ActivityLogModel,
+            filter: matchQuery
+        })
     ]);
 
     // Calculate activity by action type manually

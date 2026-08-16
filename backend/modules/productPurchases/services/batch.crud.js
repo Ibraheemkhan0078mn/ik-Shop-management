@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalBatchModel } from "../../../configs/connect.db.js";
 
 const createBatchService = (data) => {
@@ -33,12 +33,12 @@ const deleteOneBatchService = (id) => {
 
 const deleteManyBatchService = (query) => {
     const BatchModel = getLocalBatchModel();
-    return BatchModel.deleteMany(query);
+    return deleteDocs({ model: BatchModel, filter: query, options: { many: true } });
 };
 
 const countBatchService = (query) => {
     const BatchModel = getLocalBatchModel();
-    return BatchModel.countDocuments(query);
+    return countDocs({ model: BatchModel, filter: query });
 };
 
 export { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, deleteManyBatchService, countBatchService };

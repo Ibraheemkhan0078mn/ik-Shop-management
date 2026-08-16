@@ -11,6 +11,7 @@ import {
     deleteOneStaffService,
     countStaffService
 } from "./staff.crud.js";
+import { findDocs, findOneDoc, updateDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import {
     createStaffSalaryPaymentService,
     findStaffSalaryPaymentService,
@@ -36,7 +37,10 @@ export const calculateStaffCommission = async (staffId, startDate, endDate) => {
     const StaffModel = getLocalStaffModel();
     
     // Get staff details
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -53,17 +57,21 @@ export const calculateStaffCommission = async (staffId, startDate, endDate) => {
         if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
     }
     
-    const orders = await OrderModel.find(matchQuery);
+    const orders = await findDocs({
+        model: OrderModel,
+        filter: matchQuery
+    });
     
     // Calculate commission for orders that don't have it yet (for percentage-based staff)
     if (staff.salaryType === 'percentage' && staff.percentage > 0) {
         for (const order of orders) {
             if (!order.staffCommission || order.staffCommission === 0) {
                 const commissionAmount = (order.totalAmount * staff.percentage) / 100;
-                await OrderModel.updateOne(
-                    { _id: order._id },
-                    { staffCommission: commissionAmount }
-                );
+                await updateDocs({
+                    model: OrderModel,
+                    filter: { _id: order._id },
+                    data: { staffCommission: commissionAmount }
+                });
                 order.staffCommission = commissionAmount;
             }
         }
@@ -90,7 +98,10 @@ export const calculateStaffCommissionAllTime = async (staffId) => {
     const StaffModel = getLocalStaffModel();
     
     // Get staff details
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -102,17 +113,21 @@ export const calculateStaffCommissionAllTime = async (staffId) => {
         createdAt: { $gte: new Date(staff.joinDate) }
     };
     
-    const orders = await OrderModel.find(matchQuery);
+    const orders = await findDocs({
+        model: OrderModel,
+        filter: matchQuery
+    });
     
     // Calculate commission for orders that don't have it yet
     if (staff.salaryType === 'percentage' && staff.percentage > 0) {
         for (const order of orders) {
             if (!order.staffCommission || order.staffCommission === 0) {
                 const commissionAmount = (order.totalAmount * staff.percentage) / 100;
-                await OrderModel.updateOne(
-                    { _id: order._id },
-                    { staffCommission: commissionAmount }
-                );
+                await updateDocs({
+                    model: OrderModel,
+                    filter: { _id: order._id },
+                    data: { staffCommission: commissionAmount }
+                });
                 order.staffCommission = commissionAmount;
             }
         }
@@ -159,8 +174,15 @@ export const getStaffCommissionOrders = async (staffId, startDate, endDate, page
     const skip = (page - 1) * limit;
     
     const [orders, total] = await Promise.all([
-        OrderModel.find(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        OrderModel.countDocuments(matchQuery)
+        findDocs({
+            model: OrderModel,
+            filter: matchQuery,
+            options: { sort: { createdAt: -1 }, skip, limit }
+        }),
+        countDocs({
+            model: OrderModel,
+            filter: matchQuery
+        })
     ]);
     
     // Calculate commission for orders that don't have it yet
@@ -168,10 +190,11 @@ export const getStaffCommissionOrders = async (staffId, startDate, endDate, page
         for (const order of orders) {
             if (!order.staffCommission || order.staffCommission === 0) {
                 const commissionAmount = (order.totalAmount * staff.percentage) / 100;
-                await OrderModel.updateOne(
-                    { _id: order._id },
-                    { staffCommission: commissionAmount }
-                );
+                await updateDocs({
+                    model: OrderModel,
+                    filter: { _id: order._id },
+                    data: { staffCommission: commissionAmount }
+                });
                 order.staffCommission = commissionAmount;
             }
         }
@@ -195,7 +218,10 @@ export const createStaffSaleBillFromPOS = async (staffId, posOrder) => {
     const StaffModel = getLocalStaffModel();
     
     // Fetch the staff
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -378,12 +404,20 @@ export const getSaleBillsByStaff = async (staffId, filters = {}) => {
     const skip = (page - 1) * limit;
     
     const [data, total] = await Promise.all([
-        OrderModel.find(matchQuery, null, {
-            sort: { createdAt: -1 },
-            skip: skip,
-            limit: limit
-        }).populate('items.product'),
-        OrderModel.countDocuments(matchQuery)
+        findDocs({
+            model: OrderModel,
+            filter: matchQuery,
+            options: {
+                sort: { createdAt: -1 },
+                skip: skip,
+                limit: limit,
+                populate: 'items.product'
+            }
+        }),
+        countDocs({
+            model: OrderModel,
+            filter: matchQuery
+        })
     ]);
     
     return {
@@ -532,7 +566,11 @@ export const getAttendanceHistory = async (filters = {}) => {
 
 export const getActiveStaff = async () => {
     const StaffModel = getLocalStaffModel();
-    const staff = await StaffModel.find({ status: 'active' }).sort({ fullName: 1 });
+    const staff = await findDocs({
+        model: StaffModel,
+        filter: { status: 'active' },
+        options: { sort: { fullName: 1 } }
+    });
     return staff;
 };
 
@@ -540,7 +578,10 @@ export const getActiveStaff = async () => {
 export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     const StaffModel = getLocalStaffModel();
     
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -675,7 +716,10 @@ export const calculatePaymentSummary = async (staffId) => {
     const StaffModel = getLocalStaffModel();
     const OrderModel = getLocalOrderModel();
     
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -688,9 +732,12 @@ export const calculatePaymentSummary = async (staffId) => {
     
     if (staff.salaryType === 'percentage') {
         // Calculate from all completed orders (all-time)
-        const orders = await OrderModel.find({
-            staffId,
-            status: 'completed'
+        const orders = await findDocs({
+            model: OrderModel,
+            filter: {
+                staffId,
+                status: 'completed'
+            }
         });
         
         totalEarnings = orders.reduce((sum, order) => {

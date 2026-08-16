@@ -1,13 +1,18 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getLocalSubCategoryModel } from "../../../configs/connect.db.js";
+import { findDocs, createDoc, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 export const getSubCategories = asyncHandler(async (req, res, next) => {
     const SubCategoryModel = getLocalSubCategoryModel();
 
-    const subcategories = await SubCategoryModel.find()
-        .populate("category", "name")
-        .sort({ createdAt: -1 });
+    const subcategories = await findDocs({
+        model: SubCategoryModel
+    }, {
+        populate: "category",
+        select: "name",
+        sort: { createdAt: -1 }
+    });
 
     res.status(200).json({
         success: true,
@@ -23,9 +28,12 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
 
     const { name, category } = validatedData;
 
-    const subCategoryExists = await SubCategoryModel.findOne({
-        name,
-        category,
+    const subCategoryExists = await findOneDoc({
+        model: SubCategoryModel,
+        filter: {
+            name,
+            category,
+        }
     });
 
     if (subCategoryExists) {
@@ -37,7 +45,10 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
         );
     }
 
-    const subcategory = await SubCategoryModel.create(validatedData);
+    const subcategory = await createDoc({
+        model: SubCategoryModel,
+        data: validatedData
+    });
 
     res.status(201).json({
         success: true,
@@ -50,7 +61,10 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
     const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
 
-    let subcategory = await SubCategoryModel.findById(id);
+    let subcategory = await findOneDoc({
+        model: SubCategoryModel,
+        filter: { _id: id }
+    });
 
     if (!subcategory) {
         return next(new ErrorResponse("Subcategory not found", 404));
@@ -60,10 +74,13 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
 
     if (validatedData.name) {
         const checkCategory = validatedData.category || subcategory.category;
-        const nameExists = await SubCategoryModel.findOne({
-            _id: { $ne: id },
-            name: validatedData.name,
-            category: checkCategory,
+        const nameExists = await findOneDoc({
+            model: SubCategoryModel,
+            filter: {
+                _id: { $ne: id },
+                name: validatedData.name,
+                category: checkCategory,
+            }
         });
 
         if (nameExists) {
@@ -76,9 +93,11 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
         }
     }
 
-    subcategory = await SubCategoryModel.findByIdAndUpdate(id, validatedData, {
-        new: true,
-        runValidators: true,
+    subcategory = await updateDocs({
+        model: SubCategoryModel,
+        filter: { _id: id },
+        data: validatedData,
+        options: { runValidators: true }
     });
 
     res.status(200).json({
@@ -92,13 +111,20 @@ export const deleteSubCategory = asyncHandler(async (req, res, next) => {
     const SubCategoryModel = getLocalSubCategoryModel();
     const { id } = req.params;
 
-    const subcategory = await SubCategoryModel.findById(id);
+    const subcategory = await findOneDoc({
+        model: SubCategoryModel,
+        filter: { _id: id }
+    });
 
     if (!subcategory) {
         return next(new ErrorResponse("Subcategory not found", 404));
     }
 
-    await subcategory.deleteOne();
+    await deleteDocs({
+        model: SubCategoryModel,
+        filter: { _id: id },
+        options: { hardDelete: true }
+    });
 
     res.status(200).json({
         success: true,

@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalAppThemeModel } from "../../../configs/connect.db.js";
 
 const createAppThemeService = (data) => {
@@ -28,7 +28,7 @@ const updateAppThemeService = (id, data) => {
 
 const updateManyAppThemeService = (filter, data) => {
     const AppThemeModel = getLocalAppThemeModel();
-    return AppThemeModel.updateMany(filter, data);
+    return updateDocs({ model: AppThemeModel, filter, data, options: { many: true } });
 };
 
 const deleteOneAppThemeService = (id) => {
@@ -38,7 +38,7 @@ const deleteOneAppThemeService = (id) => {
 
 const countAppThemeService = (query) => {
     const AppThemeModel = getLocalAppThemeModel();
-    return AppThemeModel.countDocuments(query);
+    return countDocs({ model: AppThemeModel, filter: query });
 };
 
 export { 

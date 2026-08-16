@@ -7,6 +7,7 @@ import {
     getLocalPurchaseReturnModel,
     getLocalPurchaseModel
 } from "../../../configs/connect.db.js";
+import { findDocs, updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 /**
  * Recalculate stock for a specific product and its batches
@@ -37,13 +38,21 @@ export const recalculateProductStock = async (productId) => {
         }
 
         // a: Take the product and all its batches
-        const batches = await BatchModel.find({ 
-            product: productId, 
-            isDeleted: false 
-        }).lean();
+        const batches = await findDocs({
+            model: BatchModel,
+            filter: {
+                product: productId,
+                isDeleted: false
+            },
+            options: { lean: true }
+        });
 
         if (!batches || batches.length === 0) {
-            await ProductModel.findByIdAndUpdate(productId, { currentStockLevel: 0 });
+            await updateDocs({
+                model: ProductModel,
+                filter: { _id: productId },
+                data: { currentStockLevel: 0 }
+            });
             return { productId, currentStockLevel: 0, batches: [] };
         }
 
@@ -183,8 +192,10 @@ export const recalculateProductStock = async (productId) => {
                 const calculatedStock = Math.max(0, totalPurchased - totalPurchaseReturned - totalSold + totalProductReturned - totalWasted);
 
                 // Update batch in database (quantity is the batch stock level field)
-                await BatchModel.findByIdAndUpdate(batchId, { 
-                    quantity: calculatedStock
+                await updateDocs({
+                    model: BatchModel,
+                    filter: { _id: batchId },
+                    data: { quantity: calculatedStock }
                 });
 
                 return {
@@ -204,7 +215,11 @@ export const recalculateProductStock = async (productId) => {
         const totalProductStock = batchResults.reduce((sum, b) => sum + b.quantity, 0);
 
         // Update product stock in database
-        await ProductModel.findByIdAndUpdate(productId, { currentStockLevel: totalProductStock });
+        await updateDocs({
+            model: ProductModel,
+            filter: { _id: productId },
+            data: { currentStockLevel: totalProductStock }
+        });
 
         return {
             productId,
@@ -228,7 +243,11 @@ export const recalculateAllStock = async () => {
             throw new Error("Database models not initialized. Please ensure database connection is established.");
         }
 
-        const products = await ProductModel.find({ isDeleted: false }).select("_id").lean();
+        const products = await findDocs({
+            model: ProductModel,
+            filter: { isDeleted: false },
+            options: { select: "_id", lean: true }
+        });
         const results = await Promise.all(
             products.map(p => recalculateProductStock(p._id))
         );

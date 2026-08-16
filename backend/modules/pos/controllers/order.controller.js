@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getLocalOrderModel, getLocalHoldOrderModel, getLocalBatchModel, getLocalProductModel, getLocalStaffModel } from "../../../configs/connect.db.js";
 import { adjustStock } from "../../../common/services/stockManager.js";
+import { findDocs, findOneDoc, updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import {
     orderCreate as orderCreateService,
     getAllOrders as getAllOrdersService,
@@ -30,8 +31,20 @@ export const generateOrderNumber = asyncHandler(async (req, res) => {
     const HoldOrderModel = getLocalHoldOrderModel();
     
     // Find the highest existing order number to maintain sequence
-    const existingOrders = await OrderModel.find({}, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(100);
-    const existingHoldOrders = await HoldOrderModel.find({}, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(100);
+    const existingOrders = await findDocs({
+        model: OrderModel
+    }, {
+        select: "orderNumber",
+        sort: { createdAt: -1 },
+        limit: 100
+    });
+    const existingHoldOrders = await findDocs({
+        model: HoldOrderModel
+    }, {
+        select: "orderNumber",
+        sort: { createdAt: -1 },
+        limit: 100
+    });
     
     // Extract numeric parts from existing order numbers (format: O-0001 or O-1234)
     const extractNumber = (orderNumber) => {
@@ -59,8 +72,14 @@ export const generateOrderNumber = asyncHandler(async (req, res) => {
         
         // Check for duplicates in both collections
         const [orderExists, holdExists] = await Promise.all([
-            OrderModel.findOne({ orderNumber }),
-            HoldOrderModel.findOne({ orderNumber })
+            findOneDoc({
+                model: OrderModel,
+                filter: { orderNumber }
+            }),
+            findOneDoc({
+                model: HoldOrderModel,
+                filter: { orderNumber }
+            })
         ]);
         
         if (!orderExists && !holdExists) {
@@ -219,10 +238,11 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             const commissionAmount = (validatedData.totalAmount * staff.percentage) / 100;
             
             // Update order with commission
-            await getLocalOrderModel().updateOne(
-                { _id: order._id },
-                { staffCommission: commissionAmount }
-            );
+            await updateDocs({
+                model: getLocalOrderModel(),
+                filter: { _id: order._id },
+                data: { staffCommission: commissionAmount }
+            });
         }
     }
 
