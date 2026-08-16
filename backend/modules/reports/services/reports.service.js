@@ -3348,9 +3348,14 @@ export const getWastageReport = async (filters = {}) => {
 
     const skip = (page - 1) * limit;
 
-    // Fetch data using service functions
+    // Fetch data using service functions with options
     const [data, total] = await Promise.all([
-        findWastageService(matchQuery).populate("product", "name").populate("batch", "batchNumber").sort({ createdAt: -1 }).skip(skip).limit(limit),
+        findWastageService(matchQuery, {
+            populate: ["product", "batch"],
+            sort: { createdAt: -1 },
+            skip,
+            limit
+        }),
         countWastageService(matchQuery)
     ]);
 
@@ -3553,14 +3558,15 @@ export const getLowStockProducts = async (filters = {}) => {
     const { limit = 10 } = filters;
     const limitNum = parseInt(limit) || 10;
 
-    // Fetch low stock batches using service function
+    // Fetch low stock batches using service function with options
     const lowStockBatches = await findBatchService({
         quantity: { $gt: 0, $lte: 10 },
         isActive: true
-    })
-        .populate("product", "name defaultSalePrice")
-        .sort({ quantity: 1 })
-        .limit(limitNum);
+    }, {
+        populate: { path: "product", select: "name defaultSalePrice" },
+        sort: { quantity: 1 },
+        limit: limitNum
+    });
 
     return lowStockBatches;
 };
@@ -3573,15 +3579,16 @@ export const getNearExpiryProducts = async (filters = {}) => {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    // Fetch near expiry batches using service function
+    // Fetch near expiry batches using service function with options
     const nearExpiryBatches = await findBatchService({
         expiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() },
         quantity: { $gt: 0 },
         isActive: true
-    })
-        .populate("product", "name defaultSalePrice")
-        .sort({ expiryDate: 1 })
-        .limit(limitNum);
+    }, {
+        populate: { path: "product", select: "name defaultSalePrice" },
+        sort: { expiryDate: 1 },
+        limit: limitNum
+    });
 
     return nearExpiryBatches;
 };
@@ -3590,11 +3597,12 @@ export const getNearExpiryProducts = async (filters = {}) => {
 export const getRecentSales = async (filters = {}) => {
     const { limit = 10 } = filters;
 
-    // Fetch recent sales using service function
-    const recentSales = await findOrderService({ status: "completed" })
-        .populate("items.product", "name")
-        .sort({ createdAt: -1 })
-        .limit(limit);
+    // Fetch recent sales using service function with options
+    const recentSales = await findOrderService({ status: "completed" }, {
+        populate: { path: "items.product", select: "name" },
+        sort: { createdAt: -1 },
+        limit
+    });
 
     return recentSales;
 };
@@ -3603,12 +3611,12 @@ export const getRecentSales = async (filters = {}) => {
 export const getRecentPurchases = async (filters = {}) => {
     const { limit = 10 } = filters;
 
-    // Fetch recent purchases using service function
-    const recentPurchases = await findPurchaseService()
-        .populate("supplier", "name")
-        .populate("items.product", "name")
-        .sort({ createdAt: -1 })
-        .limit(limit);
+    // Fetch recent purchases using service function with options
+    const recentPurchases = await findPurchaseService({}, {
+        populate: [{ path: "supplier", select: "name" }, { path: "items.product", select: "name" }],
+        sort: { createdAt: -1 },
+        limit
+    });
 
     return recentPurchases;
 };

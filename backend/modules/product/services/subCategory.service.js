@@ -1,17 +1,21 @@
 import { create, find, findOne, findById, update, deleteOne, count } from "./subCategory.crud.js";
 
 const getSubCategories = async () => { 
-    return await find().populate("category", "name").sort({ createdAt: -1 });
+    return await find({}, {
+        populate: { path: "category", select: "name" },
+        sort: { createdAt: -1 }
+    });
 }; 
 
 const getPaginationSubCategories = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const query = {};
-    const subcategories = await find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .populate("category");
+    const subcategories = await find(query, {
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+        populate: { path: "category", select: "name" }
+    });
     const total = await count(query);
     return {
         data: subcategories,
@@ -56,7 +60,9 @@ const getSubCategoriesById = async (id) => {
 };
 
 const getSubCategoriesByCatagId = async (id) => {
-    const subcategory = await find({ category: id }).populate("category", "name");
+    const subcategory = await find({ category: id }, {
+        populate: { path: "category", select: "name" }
+    });
     if (!subcategory) {
         throw new Error("Subcategory not found");
     }

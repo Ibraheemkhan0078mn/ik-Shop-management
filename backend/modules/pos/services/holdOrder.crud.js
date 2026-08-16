@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalHoldOrderModel } from "../../../configs/connect.db.js";
 
 const createHoldOrderService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneHoldOrderService = (id) => {
 
 const countHoldOrderService = (query) => {
     const HoldOrderModel = getLocalHoldOrderModel();
-    return HoldOrderModel.countDocuments(query);
+    return countDocs({ model: HoldOrderModel, filter: query });
 };
 
 export { createHoldOrderService, findHoldOrderService, findOneHoldOrderService, findByIdHoldOrderService, updateHoldOrderService, deleteOneHoldOrderService, countHoldOrderService };

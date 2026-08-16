@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalTransactionModel } from "../../../configs/connect.db.js";
 
 const createTransactionService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneTransactionService = (id) => {
 
 const countTransactionService = (query) => {
     const TransactionModel = getLocalTransactionModel();
-    return TransactionModel.countDocuments(query);
+    return countDocs({ model: TransactionModel, filter: query });
 };
 
 // Module service functions with business logic

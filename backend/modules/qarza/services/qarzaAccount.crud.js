@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalQarzaAccountModel } from "../../../configs/connect.db.js";
 
 const createQarzaAccountService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneQarzaAccountService = (id) => {
 
 const countQarzaAccountService = (query) => {
     const QarzaAccountModel = getLocalQarzaAccountModel();
-    return QarzaAccountModel.countDocuments(query);
+    return countDocs({ model: QarzaAccountModel, filter: query });
 };
 
 export { createQarzaAccountService, findQarzaAccountService, findOneQarzaAccountService, findByIdQarzaAccountService, updateQarzaAccountService, deleteOneQarzaAccountService, countQarzaAccountService };

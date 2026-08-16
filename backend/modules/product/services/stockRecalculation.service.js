@@ -7,7 +7,7 @@ import {
     getLocalPurchaseReturnModel,
     getLocalPurchaseModel
 } from "../../../configs/connect.db.js";
-import { findDocs, updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { findDocs, updateDocs, aggregateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 /**
  * Recalculate stock for a specific product and its batches
@@ -62,129 +62,144 @@ export const recalculateProductStock = async (productId) => {
                 const batchId = batch._id;
 
                 // 1. Purchased stock (delivered purchases for this batch)
-                const purchases = await PurchaseModel.aggregate([
-                    {
-                        $match: {
-                            status: "delivered",
-                            isDeleted: false,
-                            "items.batch": batchId
+                const purchases = await aggregateDocs({
+                    model: PurchaseModel,
+                    pipeline: [
+                        {
+                            $match: {
+                                status: "delivered",
+                                isDeleted: false,
+                                "items.batch": batchId
+                            }
+                        },
+                        { $unwind: "$items" },
+                        {
+                            $match: {
+                                "items.batch": batchId
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalPurchased: { $sum: "$items.quantity" }
+                            }
                         }
-                    },
-                    { $unwind: "$items" },
-                    {
-                        $match: {
-                            "items.batch": batchId
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalPurchased: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
+                    ]
+                });
                 const totalPurchased = purchases[0]?.totalPurchased || 0;
 
                 // 2. Purchase returns (approved purchase returns for this batch)
-                const purchaseReturns = await PurchaseReturnModel.aggregate([
-                    {
-                        $match: {
-                            status: "approved",
-                            isDeleted: false,
-                            "items.batch": batchId
+                const purchaseReturns = await aggregateDocs({
+                    model: PurchaseReturnModel,
+                    pipeline: [
+                        {
+                            $match: {
+                                status: "approved",
+                                isDeleted: false,
+                                "items.batch": batchId
+                            }
+                        },
+                        { $unwind: "$items" },
+                        {
+                            $match: {
+                                "items.batch": batchId
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalPurchaseReturned: { $sum: "$items.quantity" }
+                            }
                         }
-                    },
-                    { $unwind: "$items" },
-                    {
-                        $match: {
-                            "items.batch": batchId
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalPurchaseReturned: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
+                    ]
+                });
                 const totalPurchaseReturned = purchaseReturns[0]?.totalPurchaseReturned || 0;
 
                 // 3. Sales from orders (completed orders for this batch)
-                const sales = await OrderModel.aggregate([
-                    {
-                        $match: {
-                            status: "completed",
-                            isDeleted: false,
-                            "items.batchId": batchId
+                const sales = await aggregateDocs({
+                    model: OrderModel,
+                    pipeline: [
+                        {
+                            $match: {
+                                status: "completed",
+                                isDeleted: false,
+                                "items.batchId": batchId
+                            }
+                        },
+                        { $unwind: "$items" },
+                        {
+                            $match: {
+                                "items.batchId": batchId
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalSold: { $sum: "$items.quantity" }
+                            }
                         }
-                    },
-                    { $unwind: "$items" },
-                    {
-                        $match: {
-                            "items.batchId": batchId
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalSold: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
+                    ]
+                });
                 const totalSold = sales[0]?.totalSold || 0;
 
                 // 4. Order returns / Product returns (approved returns for this batch)
-                const productReturns = await ProductReturnModel.aggregate([
-                    {
-                        $match: {
-                            returnStatus: "approved",
-                            isDeleted: false,
-                            "items.batchId": batchId
+                const productReturns = await aggregateDocs({
+                    model: ProductReturnModel,
+                    pipeline: [
+                        {
+                            $match: {
+                                returnStatus: "approved",
+                                isDeleted: false,
+                                "items.batchId": batchId
+                            }
+                        },
+                        { $unwind: "$items" },
+                        {
+                            $match: {
+                                "items.batchId": batchId
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalReturned: { $sum: "$items.quantity" }
+                            }
                         }
-                    },
-                    { $unwind: "$items" },
-                    {
-                        $match: {
-                            "items.batchId": batchId
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalReturned: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
+                    ]
+                });
                 const totalProductReturned = productReturns[0]?.totalReturned || 0;
 
                 // 5. Wastage (approved wastage for this batch)
-                const wastage = await WastageModel.aggregate([
-                    {
-                        $match: {
-                            status: "approved",
-                            isDeleted: false,
-                            $or: [
-                                { "items.batch": batchId },
-                                { "items.batchNumber": batch.batchNumber, "items.product": productId }
-                            ]
+                const wastage = await aggregateDocs({
+                    model: WastageModel,
+                    pipeline: [
+                        {
+                            $match: {
+                                status: "approved",
+                                isDeleted: false,
+                                $or: [
+                                    { "items.batch": batchId },
+                                    { "items.batchNumber": batch.batchNumber, "items.product": productId }
+                                ]
+                            }
+                        },
+                        { $unwind: "$items" },
+                        {
+                            $match: {
+                                $or: [
+                                    { "items.batch": batchId },
+                                    { "items.batchNumber": batch.batchNumber, "items.product": productId }
+                                ]
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalWasted: { $sum: "$items.quantity" }
+                            }
                         }
-                    },
-                    { $unwind: "$items" },
-                    {
-                        $match: {
-                            $or: [
-                                { "items.batch": batchId },
-                                { "items.batchNumber": batch.batchNumber, "items.product": productId }
-                            ]
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            totalWasted: { $sum: "$items.quantity" }
-                        }
-                    }
-                ]);
+                    ]
+                });
                 const totalWasted = wastage[0]?.totalWasted || 0;
 
                 // Calculate current batch stock according to formula:

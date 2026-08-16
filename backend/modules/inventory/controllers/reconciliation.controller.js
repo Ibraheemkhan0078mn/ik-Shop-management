@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getProductModel, getBatchModel } from "../services/reconciliation.crud.js";
+import { findDocs, findOneDoc, updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // ─── RECONCILE INVENTORY ─────────────────────────────────────────────────────────
 // Validates that product.currentStockLevel equals sum of active batch quantities
@@ -10,7 +11,10 @@ export const reconcileInventory = asyncHandler(async (req, res, next) => {
     const BatchModel = getBatchModel();
     const { fix = false } = req.query;
 
-    const products = await ProductModel.find().populate("batches");
+    const products = await findDocs({
+        model: ProductModel,
+        options: { populate: "batches", lean: false }
+    });
     const discrepancies = [];
     let fixedCount = 0;
 
@@ -34,7 +38,11 @@ export const reconcileInventory = asyncHandler(async (req, res, next) => {
 
             // Fix if requested
             if (fix === "true") {
-                await ProductModel.findByIdAndUpdate(product._id, { currentStockLevel: calculatedStock });
+                await updateDocs({
+                    model: ProductModel,
+                    filter: { _id: product._id },
+                    data: { currentStockLevel: calculatedStock }
+                });
                 fixedCount++;
             }
         }
@@ -60,18 +68,22 @@ export const validateBatchStock = asyncHandler(async (req, res, next) => {
     const BatchModel = getBatchModel();
 
     // Find batches with negative stock
-    const negativeStockBatches = await BatchModel.find({ quantity: { $lt: 0 } })
-        .populate("product", "name")
-        .populate("supplier", "name");
+    const negativeStockBatches = await findDocs({
+        model: BatchModel,
+        filter: { quantity: { $lt: 0 } },
+        options: { populate: [{ path: "product", select: "name" }, { path: "supplier", select: "name" }] }
+    });
 
     // Find expired batches that are still active
     const now = new Date();
-    const expiredActiveBatches = await BatchModel.find({
-        expiryDate: { $lt: now },
-        isActive: true
-    })
-        .populate("product", "name")
-        .populate("supplier", "name");
+    const expiredActiveBatches = await findDocs({
+        model: BatchModel,
+        filter: {
+            expiryDate: { $lt: now },
+            isActive: true
+        },
+        options: { populate: [{ path: "product", select: "name" }, { path: "supplier", select: "name" }] }
+    });
 
     res.status(200).json({
         success: true,
@@ -102,7 +114,11 @@ export const getProductInventoryStatus = asyncHandler(async (req, res, next) => 
     const BatchModel = getBatchModel();
     const { productId } = req.params;
 
-    const product = await ProductModel.findById(productId).populate("batches");
+    const product = await findOneDoc({
+        model: ProductModel,
+        filter: { _id: productId },
+        options: { populate: "batches", lean: false }
+    });
     if (!product) {
         return next(new ErrorResponse("Product not found", 404));
     }

@@ -118,3 +118,31 @@ export const countDocs = async ({ model, modelName, filter = {}, options = {} })
 
   return Model.countDocuments(finalFilter);
 };
+
+/**
+ * Aggregate documents with soft delete support
+ * Note: Aggregation pipelines that need isDeleted filtering should include it in the pipeline
+ */
+export const aggregateDocs = async ({ model, modelName, pipeline = [], options = {} }) => {
+  const Model = resolveModel({ model, modelName });
+  const { includeDeleted = false } = options;
+
+  // If not including deleted and pipeline doesn't already handle isDeleted, add it
+  if (!includeDeleted) {
+    const hasDeletedFilter = pipeline.some(stage => 
+      stage.$match && (stage.$match.isDeleted !== undefined || stage.$match.isDeleted !== null)
+    );
+    
+    if (!hasDeletedFilter && pipeline.length > 0) {
+      // Add isDeleted filter to the first $match stage or create a new one
+      const firstMatchIndex = pipeline.findIndex(stage => stage.$match);
+      if (firstMatchIndex >= 0) {
+        pipeline[firstMatchIndex].$match.isDeleted = { $ne: true };
+      } else {
+        pipeline.unshift({ $match: { isDeleted: { $ne: true } } });
+      }
+    }
+  }
+
+  return Model.aggregate(pipeline);
+};

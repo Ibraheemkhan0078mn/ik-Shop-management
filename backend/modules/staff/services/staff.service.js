@@ -28,7 +28,8 @@ import {
     findStaffAttendanceService,
     findOneStaffAttendanceService,
     createStaffAttendanceService,
-    countStaffAttendanceService
+    countStaffAttendanceService,
+    updateStaffAttendanceService
 } from "./staffAttendance.crud.js";
 
 // Calculate staff commission from orders (with date range)
@@ -154,7 +155,10 @@ export const getStaffCommissionOrders = async (staffId, startDate, endDate, page
     const StaffModel = getLocalStaffModel();
     
     // Get staff details
-    const staff = await StaffModel.findById(staffId);
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
     if (!staff) {
         throw new Error('Staff not found');
     }
@@ -501,7 +505,7 @@ export const createOrUpdateAttendance = async (date, attendanceData, userId) => 
         }
 
         console.log('Attendance array before save (update):', attendance.attendance);
-        await attendance.save();
+        await updateStaffAttendanceService(attendance._id, { attendance: attendance.attendance });
     } else {
         // Create new attendance record
         console.log('Creating new attendance record with:', {

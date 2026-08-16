@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalExpensesModel } from "../../../configs/connect.db.js";
 
 const createExpenseService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneExpenseService = (id) => {
 
 const countExpenseService = (query) => {
     const ExpenseModel = getLocalExpensesModel();
-    return ExpenseModel.countDocuments(query);
+    return countDocs({ model: ExpenseModel, filter: query });
 };
 
 export { createExpenseService, findExpenseService, findOneExpenseService, findByIdExpenseService, updateExpenseService, deleteOneExpenseService, countExpenseService };

@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalPurchaseModel } from "../../../configs/connect.db.js";
 
 const createPurchaseService = (data) => {
@@ -6,9 +6,9 @@ const createPurchaseService = (data) => {
     return createDoc({ model: PurchaseModel, data });
 };
 
-const findPurchaseService = (query = {}) => {
+const findPurchaseService = (query = {}, options = {}) => {
     const PurchaseModel = getLocalPurchaseModel();
-    return findDocs({ model: PurchaseModel, filter: query });
+    return findDocs({ model: PurchaseModel, filter: query, options });
 };
 
 const findOnePurchaseService = (query) => {
@@ -33,7 +33,7 @@ const deleteOnePurchaseService = (id) => {
 
 const countPurchaseService = (query) => {
     const PurchaseModel = getLocalPurchaseModel();
-    return PurchaseModel.countDocuments(query);
+    return countDocs({ model: PurchaseModel, filter: query });
 };
 
 export { createPurchaseService, findPurchaseService, findOnePurchaseService, findByIdPurchaseService, updatePurchaseService, deleteOnePurchaseService, countPurchaseService };

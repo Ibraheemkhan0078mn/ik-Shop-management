@@ -1,6 +1,7 @@
 import { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService } from "./batch.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 import { calculateBatchesStockStatus, calculateBatchStockStatus } from "./batchStockStatus.service.js";
+import { updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 const getBatches = async (productId = null) => {
     const query = {};
@@ -30,8 +31,10 @@ const createBatch = async (batchData, ProductModel) => {
 
     const batch = await createBatchService(batchData);
 
-    await ProductModel.findByIdAndUpdate(batchData.product, {
-        $push: { batches: batch._id },
+    await updateDocs({
+        model: ProductModel,
+        filter: { _id: batchData.product },
+        data: { $push: { batches: batch._id } }
     });
 
     await handleProductStockQuantity(batchData.product, "create", batchData.quantity);
@@ -74,8 +77,10 @@ const deleteBatch = async (id, ProductModel) => {
         throw new Error("Batch not found");
     }
 
-    await ProductModel.findByIdAndUpdate(batch.product, {
-        $pull: { batches: batch._id },
+    await updateDocs({
+        model: ProductModel,
+        filter: { _id: batch.product },
+        data: { $pull: { batches: batch._id } }
     });
 
     await handleProductStockQuantity(batch.product, "delete", batch.quantity);

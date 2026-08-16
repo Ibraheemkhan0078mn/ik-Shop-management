@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalStaffRoleModel } from "../../../configs/connect.db.js";
 
 const createStaffRoleService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneStaffRoleService = (id) => {
 
 const countStaffRoleService = (query) => {
     const StaffRoleModel = getLocalStaffRoleModel();
-    return StaffRoleModel.countDocuments(query);
+    return countDocs({ model: StaffRoleModel, filter: query });
 };
 
 export { 

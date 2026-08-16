@@ -6,6 +6,7 @@
 
 import { getLocalBatchModel, getLocalProductModel } from '../../../configs/connect.db.js';
 import { getPurchases } from '../services/purchase.service.js';
+import { findOneDoc, updateDocs } from '../../../common/services/db/mongodbCentralizedCrud.service.js';
 
 async function migrateCostPriceToBatches() {
     try {
@@ -32,9 +33,13 @@ async function migrateCostPriceToBatches() {
                 }
                 
                 // Find the batch by batchNumber and product
-                const batch = await BatchModel.findOne({
-                    batchNumber: item.batchNumber,
-                    product: item.product
+                const batch = await findOneDoc({
+                    model: BatchModel,
+                    filter: {
+                        batchNumber: item.batchNumber,
+                        product: item.product
+                    },
+                    options: { lean: false }
                 });
                 
                 if (!batch) {
@@ -45,8 +50,11 @@ async function migrateCostPriceToBatches() {
                 // Update batch purchasePrice if it's different from costPrice
                 if (batch.purchasePrice !== item.costPrice) {
                     const oldPrice = batch.purchasePrice;
-                    batch.purchasePrice = item.costPrice;
-                    await batch.save();
+                    await updateDocs({
+                        model: BatchModel,
+                        filter: { _id: batch._id },
+                        data: { purchasePrice: item.costPrice }
+                    });
                     
                     console.log(`Updated batch ${batch.batchNumber}: purchasePrice ${oldPrice} -> ${item.costPrice}`);
                     updatedBatches++;

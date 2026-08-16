@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalProductReturnModel } from "../../../configs/connect.db.js";
 
 const createProductReturnService = (data) => {
@@ -40,7 +40,7 @@ const deleteOneProductReturnService = (id) => {
 const countProductReturnService = (query) => {
     const ProductReturnModel = getLocalProductReturnModel();
     if (!ProductReturnModel) throw new Error("Database not connected");
-    return ProductReturnModel.countDocuments(query);
+    return countDocs({ model: ProductReturnModel, filter: query });
 };
 
 export { createProductReturnService, findProductReturnService, findOneProductReturnService, findByIdProductReturnService, updateProductReturnService, deleteOneProductReturnService, countProductReturnService };

@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalOrderModel } from "../../../configs/connect.db.js";
 
 const createOrderService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneOrderService = (id) => {
 
 const countOrderService = (query) => {
     const OrderModel = getLocalOrderModel();
-    return OrderModel.countDocuments(query);
+    return countDocs({ model: OrderModel, filter: query });
 };
 
 export { createOrderService, findOrderService, findOneOrderService, findByIdOrderService, updateOrderService, deleteOneOrderService, countOrderService };

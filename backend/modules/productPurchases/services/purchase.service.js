@@ -3,6 +3,7 @@ import { findOneBatchService, createBatchService, updateBatchService } from "./b
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 import { getTransactions } from "../../transactions/services/transaction.service.js";
 import { generateBatchNumber } from "./batch.service.js";
+import { updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 const generatePurchaseNumber = async () => {
     const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
@@ -175,8 +176,10 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 expiryDate: item.expiryDate,
             });
 
-            await ProductModel.findByIdAndUpdate(item.product, {
-                $push: { batches: batch._id },
+            await updateDocs({
+                model: ProductModel,
+                filter: { _id: item.product },
+                data: { $push: { batches: batch._id } }
             });
         } else {
             // Only update batch metadata — do NOT modify quantity here.
@@ -277,7 +280,11 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 mfgDate: item.mfgDate, 
                 expiryDate: item.expiryDate,
             });
-            await ProductModel.findByIdAndUpdate(item.product, { $push: { batches: batch._id } });
+            await updateDocs({
+                model: ProductModel,
+                filter: { _id: item.product },
+                data: { $push: { batches: batch._id } }
+            });
         } else {
             // Update existing batch (quantity is NOT updated here - adjustStock already handles it)
             await updateBatchService(batch._id, {

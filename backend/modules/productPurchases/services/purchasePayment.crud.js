@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalPurchasePaymentModel } from "../../../configs/connect.db.js";
 
 const createPurchasePaymentService = (data) => {
@@ -33,7 +33,7 @@ const deleteOnePurchasePaymentService = (id) => {
 
 const countPurchasePaymentService = (query) => {
     const PurchasePaymentModel = getLocalPurchasePaymentModel();
-    return PurchasePaymentModel.countDocuments(query);
+    return countDocs({ model: PurchasePaymentModel, filter: query });
 };
 
 export { 

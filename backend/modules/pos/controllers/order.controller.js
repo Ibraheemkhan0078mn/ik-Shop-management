@@ -232,7 +232,10 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     // Calculate staff commission if staff has percentage-based salary
     if (validatedData.staffId) {
         const StaffModel = getLocalStaffModel();
-        const staff = await StaffModel.findById(validatedData.staffId);
+        const staff = await findOneDoc({
+            model: StaffModel,
+            filter: { _id: validatedData.staffId }
+        });
         
         if (staff && staff.salaryType === 'percentage' && staff.percentage > 0) {
             const commissionAmount = (validatedData.totalAmount * staff.percentage) / 100;

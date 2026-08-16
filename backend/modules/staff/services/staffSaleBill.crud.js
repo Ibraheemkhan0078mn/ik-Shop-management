@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalStaffSaleBillModel } from "../../../configs/connect.db.js";
 
 const createStaffSaleBillService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneStaffSaleBillService = (id) => {
 
 const countStaffSaleBillService = (query) => {
     const StaffSaleBillModel = getLocalStaffSaleBillModel();
-    return StaffSaleBillModel.countDocuments(query);
+    return countDocs({ model: StaffSaleBillModel, filter: query });
 };
 
 export { 

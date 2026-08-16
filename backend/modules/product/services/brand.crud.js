@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalBrandModel } from "../../../configs/connect.db.js";
 
 const createBrandService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneBrandService = (id) => {
 
 const countBrandService = (query) => {
     const BrandModel = getLocalBrandModel();
-    return BrandModel.countDocuments(query);
+    return countDocs({ model: BrandModel, filter: query });
 };
 
 export { createBrandService, findBrandService, findOneBrandService, findByIdBrandService, updateBrandService, deleteOneBrandService, countBrandService };

@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalExpenseCategoryModel } from "../../../configs/connect.db.js";
 
 const createExpenseCategoryService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneExpenseCategoryService = (id) => {
 
 const countExpenseCategoryService = (query) => {
     const ExpenseCategoryModel = getLocalExpenseCategoryModel();
-    return ExpenseCategoryModel.countDocuments(query);
+    return countDocs({ model: ExpenseCategoryModel, filter: query });
 };
 
 export { createExpenseCategoryService, findExpenseCategoryService, findOneExpenseCategoryService, findByIdExpenseCategoryService, updateExpenseCategoryService, deleteOneExpenseCategoryService, countExpenseCategoryService };

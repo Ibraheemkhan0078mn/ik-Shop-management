@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalProductModel } from "../../../configs/connect.db.js";
 
 const createProductService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneProductService = (id) => {
 
 const countProductService = (query) => {
     const ProductModel = getLocalProductModel();
-    return ProductModel.countDocuments(query);
+    return countDocs({ model: ProductModel, filter: query });
 };
 
 export { createProductService, findProductService, findOneProductService, findByIdProductService, updateProductService, deleteOneProductService, countProductService };

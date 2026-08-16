@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalWastageModel } from "../../../configs/connect.db.js";
 
 const createWastageService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneWastageService = (id) => {
 
 const countWastageService = (query) => {
     const WastageModel = getLocalWastageModel();
-    return WastageModel.countDocuments(query);
+    return countDocs({ model: WastageModel, filter: query });
 };
 
 export { createWastageService, findWastageService, findOneWastageService, findByIdWastageService, updateWastageService, deleteOneWastageService, countWastageService };

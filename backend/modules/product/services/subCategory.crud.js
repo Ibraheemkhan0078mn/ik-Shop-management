@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalSubCategoryModel } from "../../../configs/connect.db.js";
 
 const create = (data) => {
@@ -6,9 +6,9 @@ const create = (data) => {
     return createDoc({ model: SubCategoryModel, data });
 };
 
-const find = (query = {}) => {
+const find = (query = {}, options = {}) => {
     const SubCategoryModel = getLocalSubCategoryModel();
-    return findDocs({ model: SubCategoryModel, filter: query });
+    return findDocs({ model: SubCategoryModel, filter: query, options });
 };
 
 const findOne = (query) => {
@@ -33,7 +33,7 @@ const deleteOne = (id) => {
 
 const count = (query) => {
     const SubCategoryModel = getLocalSubCategoryModel();
-    return SubCategoryModel.countDocuments(query);
+    return countDocs({ model: SubCategoryModel, filter: query });
 };
 
 export { create, find, findOne, findById, update, deleteOne, count };

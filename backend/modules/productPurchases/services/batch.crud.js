@@ -6,9 +6,9 @@ const createBatchService = (data) => {
     return createDoc({ model: BatchModel, data });
 };
 
-const findBatchService = (query = {}) => {
+const findBatchService = (query = {}, options = {}) => {
     const BatchModel = getLocalBatchModel();
-    return findDocs({ model: BatchModel, filter: query });
+    return findDocs({ model: BatchModel, filter: query, options });
 };
 
 const findOneBatchService = (query) => {

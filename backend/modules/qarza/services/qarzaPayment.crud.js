@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalQarzaPaymentModel } from "../../../configs/connect.db.js";
 
 const createQarzaPaymentService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneQarzaPaymentService = (id) => {
 
 const countQarzaPaymentService = (query) => {
     const QarzaPaymentModel = getLocalQarzaPaymentModel();
-    return QarzaPaymentModel.countDocuments(query);
+    return countDocs({ model: QarzaPaymentModel, filter: query });
 };
 
 export { createQarzaPaymentService, findQarzaPaymentService, findOneQarzaPaymentService, findByIdQarzaPaymentService, updateQarzaPaymentService, deleteOneQarzaPaymentService, countQarzaPaymentService };

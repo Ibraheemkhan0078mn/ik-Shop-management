@@ -12,7 +12,7 @@ import {
     getCategoryModel,
     getQarzaAccountModel,
 } from "./dashboard.crud.js";
-import { findDocs, countDocs } from "../../common/services/db/mongodbCentralizedCrud.service.js";
+import { findDocs, countDocs, aggregateDocs } from "../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // Helper function to get date range based on filter
 const getDateRange = (range) => {
@@ -137,27 +137,33 @@ export const getDashboardData = async () => {
         findDocs({ model: PurchaseModel, options: { sort: { createdAt: -1 }, limit: 10, populate: 'supplier' } }),
         
         // Top selling products
-        OrderModel.aggregate([
-            { $match: { createdAt: { $gte: startOfMonth } } },
-            { $unwind: "$items" },
-            { $group: { _id: "$items.product", totalQuantity: { $sum: "$items.quantity" }, totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } } } },
-            { $sort: { totalQuantity: -1 } },
-            { $limit: 10 },
-            { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
-            { $unwind: "$product" },
-            { $project: { _id: 1, name: "$product.name", totalQuantity: 1, totalRevenue: 1 } }
-        ]),
+        aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                { $match: { createdAt: { $gte: startOfMonth } } },
+                { $unwind: "$items" },
+                { $group: { _id: "$items.product", totalQuantity: { $sum: "$items.quantity" }, totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } } } },
+                { $sort: { totalQuantity: -1 } },
+                { $limit: 10 },
+                { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
+                { $unwind: "$product" },
+                { $project: { _id: 1, name: "$product.name", totalQuantity: 1, totalRevenue: 1 } }
+            ]
+        }),
         
         // Top customers
-        OrderModel.aggregate([
-            { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-            { $group: { _id: "$customer", totalSpent: { $sum: "$totalAmount" }, orderCount: { $sum: 1 } } },
-            { $sort: { totalSpent: -1 } },
-            { $limit: 10 },
-            { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "customer" } },
-            { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
-            { $project: { _id: 1, name: { $ifNull: ["$customer.name", "Guest"] }, totalSpent: 1, orderCount: 1 } }
-        ]),
+        aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
+                { $group: { _id: "$customer", totalSpent: { $sum: "$totalAmount" }, orderCount: { $sum: 1 } } },
+                { $sort: { totalSpent: -1 } },
+                { $limit: 10 },
+                { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "customer" } },
+                { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+                { $project: { _id: 1, name: { $ifNull: ["$customer.name", "Guest"] }, totalSpent: 1, orderCount: 1 } }
+            ]
+        }),
         
         // Pending approvals
         countDocs({ model: WastageModel, filter: { status: "pending" } }),
@@ -165,41 +171,56 @@ export const getDashboardData = async () => {
         countDocs({ model: ProductReturnModel, filter: { returnStatus: "pending" } }),
         
         // Inventory value
-        BatchModel.aggregate([
-            { $match: { quantity: { $gt: 0 }, isActive: true } },
-            { $group: { _id: null, totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, totalQuantity: { $sum: "$quantity" } } }
-        ]),
+        aggregateDocs({
+            model: BatchModel,
+            pipeline: [
+                { $match: { quantity: { $gt: 0 }, isActive: true } },
+                { $group: { _id: null, totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, totalQuantity: { $sum: "$quantity" } } }
+            ]
+        }),
         
         // Payment method breakdown (monthly)
-        OrderModel.aggregate([
-            { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-            { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-        ]),
+        aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
+                { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+            ]
+        }),
         
         // Category-wise sales
-        OrderModel.aggregate([
-            { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-            { $unwind: "$items" },
-            { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
-            { $unwind: "$product" },
-            { $group: { _id: "$product.category", totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } }, totalQuantity: { $sum: "$items.quantity" } } },
-            { $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "category" } },
-            { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-            { $project: { _id: 1, name: { $ifNull: ["$category.name", "Uncategorized"] }, totalRevenue: 1, totalQuantity: 1 } },
-            { $sort: { totalRevenue: -1 } }
-        ]),
+        aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
+                { $unwind: "$items" },
+                { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
+                { $unwind: "$product" },
+                { $group: { _id: "$product.category", totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } }, totalQuantity: { $sum: "$items.quantity" } } },
+                { $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "category" } },
+                { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+                { $project: { _id: 1, name: { $ifNull: ["$category.name", "Uncategorized"] }, totalRevenue: 1, totalQuantity: 1 } },
+                { $sort: { totalRevenue: -1 } }
+            ]
+        }),
         
         // Receivables (customer qarza)
-        QarzaAccountModel.aggregate([
-            { $match: { type: "receivable", balance: { $gt: 0 } } },
-            { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
-        ]),
+        aggregateDocs({
+            model: QarzaAccountModel,
+            pipeline: [
+                { $match: { type: "receivable", balance: { $gt: 0 } } },
+                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
+            ]
+        }),
         
         // Payables (supplier qarza)
-        QarzaAccountModel.aggregate([
-            { $match: { type: "payable", balance: { $gt: 0 } } },
-            { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
-        ]),
+        aggregateDocs({
+            model: QarzaAccountModel,
+            pipeline: [
+                { $match: { type: "payable", balance: { $gt: 0 } } },
+                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
+            ]
+        }),
     ]);
 
     // Calculate KPIs with safe number conversion
@@ -226,23 +247,32 @@ export const getDashboardData = async () => {
     const filteredExpiringBatches = expiringBatches.filter(b => b.expiryDate && new Date(b.expiryDate) >= new Date() && new Date(b.expiryDate) <= thirtyDaysFromNow);
 
     // Chart data (last 7 days)
-    const salesChart = await OrderModel.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo } } },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
-    ]);
+    const salesChart = await aggregateDocs({
+        model: OrderModel,
+        pipeline: [
+            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]
+    });
     
-    const purchaseChart = await PurchaseModel.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo } } },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" } } },
-        { $sort: { _id: 1 } }
-    ]);
+    const purchaseChart = await aggregateDocs({
+        model: PurchaseModel,
+        pipeline: [
+            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" } } },
+            { $sort: { _id: 1 } }
+        ]
+    });
     
-    const wastageChart = await WastageModel.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo }, status: "approved" } },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalLossAmount" } } },
-        { $sort: { _id: 1 } }
-    ]);
+    const wastageChart = await aggregateDocs({
+        model: WastageModel,
+        pipeline: [
+            { $match: { createdAt: { $gte: sevenDaysAgo }, status: "approved" } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalLossAmount" } } },
+            { $sort: { _id: 1 } }
+        ]
+    });
 
     // Format payment method breakdown
     const paymentMethods = {
@@ -711,26 +741,29 @@ export const getRevenueOverTime = async (range = '30D') => {
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
-        const data = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate, $lte: endDate },
-                    status: 'completed'
-                }
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                    retail: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
-                    },
-                    wholesale: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
+        const data = await aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                {
+                    $match: {
+                        createdAt: { $gte: startDate, $lte: endDate },
+                        status: 'completed'
                     }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]);
+                },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
+                        retail: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
+                        },
+                        wholesale: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
+                        }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]
+        });
 
         return data.map(d => ({
             date: d._id,
@@ -751,26 +784,29 @@ export const getOrdersOverTime = async (range = '30D') => {
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
-        const data = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate, $lte: endDate },
-                    status: 'completed'
-                }
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                    retail: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, 1, 0] }
-                    },
-                    wholesale: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, 1, 0] }
+        const data = await aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                {
+                    $match: {
+                        createdAt: { $gte: startDate, $lte: endDate },
+                        status: 'completed'
                     }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]);
+                },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
+                        retail: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, 1, 0] }
+                        },
+                        wholesale: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, 1, 0] }
+                        }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]
+        });
 
         return data.map(d => ({
             date: d._id,
@@ -791,40 +827,44 @@ export const getTopSellingProducts = async (range = '30D', metric = 'revenue') =
 
         const sortField = metric === 'revenue' ? 'totalRevenue' : 'totalQuantity';
 
-        const data = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate, $lte: endDate },
-                    status: 'completed'
+        const data = await aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                {
+                    $match: {
+                        createdAt: { $gte: startDate, $lte: endDate },
+                        status: 'completed'
+                    }
+                },
+                { $unwind: '$items' },
+                {
+                    $group: {
+                        _id: '$items.product',
+                        totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
+                        totalQuantity: { $sum: '$items.quantity' }
+                    }
+                },
+                { $sort: { [sortField]: -1 } },
+                { $limit: 10 },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                { $unwind: '$product' },
+                {
+                    $project: {
+                        _id: 1,
+                        name: '$product.name',
+                        totalRevenue: 1,
+                        totalQuantity: 1
+                    }
                 }
-            },
-            { $unwind: '$items' },
-            {
-                $group: {
-                    _id: '$items.product',
-                    totalQuantity: { $sum: '$items.quantity' },
-                    totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } }
-                }
-            },
-            { $sort: { [sortField]: -1 } },
-            { $limit: 10 },
-            {
-                $lookup: {
-                    from: 'products',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'product'
-                }
-            },
-            { $unwind: '$product' },
-            {
-                $project: {
-                    name: '$product.name',
-                    totalQuantity: 1,
-                    totalRevenue: 1
-                }
-            }
-        ]);
+            ]
+        });
 
         return data.map(d => ({
             name: d.name,
@@ -843,48 +883,51 @@ export const getSalesByCategory = async (range = '30D') => {
         const { startDate, endDate } = getDateRange(range);
         const OrderModel = getOrderModel();
 
-        const data = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate, $lte: endDate },
-                    status: 'completed'
-                }
-            },
-            { $unwind: '$items' },
-            {
-                $lookup: {
-                    from: 'products',
-                    localField: 'items.product',
-                    foreignField: '_id',
-                    as: 'product'
-                }
-            },
-            { $unwind: '$product' },
-            {
-                $group: {
-                    _id: '$product.category',
-                    revenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
-                    orderCount: { $sum: 1 }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    name: { $ifNull: ['$category.name', 'Uncategorized'] },
-                    revenue: 1,
-                    orderCount: 1
-                }
-            },
-            { $sort: { revenue: -1 } }
-        ]);
+        const data = await aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                {
+                    $match: {
+                        createdAt: { $gte: startDate, $lte: endDate },
+                        status: 'completed'
+                    }
+                },
+                { $unwind: '$items' },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'items.product',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                { $unwind: '$product' },
+                {
+                    $group: {
+                        _id: '$product.category',
+                        revenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
+                        orderCount: { $sum: 1 }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'categories',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'category'
+                    }
+                },
+                { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+                {
+                    $project: {
+                        name: { $ifNull: ['$category.name', 'Uncategorized'] },
+                        revenue: 1,
+                        orderCount: 1
+                    }
+                },
+                { $sort: { revenue: -1 } }
+            ]
+        });
 
         return data.map(d => ({
             name: d.name,
@@ -905,26 +948,29 @@ export const getRetailVsWholesaleComparison = async (range = '30D') => {
 
         const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
 
-        const data = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate, $lte: endDate },
-                    status: 'completed'
-                }
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                    retail: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
-                    },
-                    wholesale: {
-                        $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
+        const data = await aggregateDocs({
+            model: OrderModel,
+            pipeline: [
+                {
+                    $match: {
+                        createdAt: { $gte: startDate, $lte: endDate },
+                        status: 'completed'
                     }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]);
+                },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
+                        retail: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
+                        },
+                        wholesale: {
+                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
+                        }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]
+        });
 
         return data.map(d => ({
             date: d._id,

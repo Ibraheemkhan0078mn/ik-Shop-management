@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getOnlineUserModel } from "../../../configs/onlineConnect.db.js";
 
 const createOnlineUserService = (data) => {
@@ -42,7 +42,7 @@ const deleteOneOnlineUserService = (id) => {
 const countOnlineUserService = (query) => {
     const UserModel = getOnlineUserModel();
     if (!UserModel) return null;
-    return UserModel.countDocuments(query);
+    return countDocs({ model: UserModel, filter: query });
 };
 
 export { 

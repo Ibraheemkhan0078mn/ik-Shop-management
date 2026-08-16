@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 
 const createCustomerService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneCustomerService = (id) => {
 
 const countCustomerService = (query = {}) => {
     const CustomerModel = getLocalCustomerModel();
-    return CustomerModel.countDocuments(query);
+    return countDocs({ model: CustomerModel, filter: query });
 };
 
 export {

@@ -1,4 +1,4 @@
-import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalCategoryModel } from "../../../configs/connect.db.js";
 
 const createCategoryService = (data) => {
@@ -33,7 +33,7 @@ const deleteOneCategoryService = (id) => {
 
 const countCategoryService = (query) => {
     const CategoryModel = getLocalCategoryModel();
-    return CategoryModel.countDocuments(query);
+    return countDocs({ model: CategoryModel, filter: query });
 };
 
 export { createCategoryService, findCategoryService, findOneCategoryService, findByIdCategoryService, updateCategoryService, deleteOneCategoryService, countCategoryService };
