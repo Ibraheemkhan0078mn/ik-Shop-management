@@ -395,7 +395,7 @@ export const getCustomerPayments = async (req, res) => {
 
 export const qarzaAccountUpdate = async (req, res) => {
     try {
-        let { _id, name, type, phoneNo, address, notes, isActive } = req.body;
+        let { id, _id, name, type, phoneNo, address, notes, isActive } = req.body;
         let file = null;
         let cloudinaryPublicId = null;
         if (req?.file?.filename) {
@@ -405,16 +405,19 @@ export const qarzaAccountUpdate = async (req, res) => {
 
         let QarzaAccountModel = getLocalQarzaAccountModel();
 
-        if (!_id) {
+        // Use id if _id is not provided
+        const accountId = _id || id;
+
+        if (!accountId) {
             return res.json({ success: false, msg: "Account ID is required" });
         }
 
-        let existingAcc = await findQarzaAccountByIdService(_id)
+        let existingAcc = await findQarzaAccountByIdService(accountId)
         if (!existingAcc) {
             return res.json({ success: false, msg: "The account is not found" })
         }
 
-        let updated = await qarzaAccountUpdateService(_id, {
+        let updated = await qarzaAccountUpdateService(accountId, {
             qarzaProfileImage: file,
             cloudinaryPublicId,
             name, type, phoneNo, address, notes, isActive

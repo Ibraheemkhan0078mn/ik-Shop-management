@@ -57,18 +57,20 @@ router.post("/attendance", createOrUpdateAttendanceData);
 router.get("/attendance/history", getAttendanceHistoryData);
 router.get("/active", getActiveStaffData);
 
-// Staff Salary & Payment Summary Routes (must come before /:id)
+// Staff Routes
+router.post("/", upload.single("photo"), createStaffData);
+router.get("/", getAllStaffData);
+
+// Staff Salary & Payment Summary Routes (must come after POST/GET but before wildcard /:id)
 router.get("/:id/salary-breakdown", getSalaryBreakdownData);
 router.get("/:id/payment-summary", getPaymentSummaryData);
 router.get("/:id/commission", getStaffCommissionData);
 router.get("/:id/commission/all-time", getStaffCommissionAllTimeData);
 router.get("/:id/commission/orders", getStaffCommissionOrdersData);
 
-// Staff Routes
-router.post("/", upload.any(), createStaffData);
-router.get("/", getAllStaffData);
+// Wildcard routes for single staff member (must come last)
 router.get("/:id", getStaffDataById);
-router.put("/:id", upload.any(), updateStaffData);
+router.put("/:id", upload.single("photo"), updateStaffData);
 router.delete("/:id", deleteStaffData);
 router.post("/:id/images", upload.array("images", 10), addImagesToStaffData);
 router.delete("/:id/images/:imageId", removeImageFromStaffData);

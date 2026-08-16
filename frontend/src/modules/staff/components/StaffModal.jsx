@@ -65,7 +65,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
             setForm({
                 ...EMPTY_FORM,
                 ...s,
-                id: staffData._id || "",
+                id: s._id || staffData._id || "",
             });
             if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
@@ -160,7 +160,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
     const onSubmit = useCallback(async () => {
         if (!validateForm()) return;
         const payload = new FormData();
-        const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id"];
+        const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id", "documents"];
         Object.entries(form).forEach(([key, value]) => {
             if (exclude.includes(key)) return;
             if (key === "photo" && typeof value === "string") return; // Don't send string photo, only file
@@ -174,7 +174,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                 await createStaff(payload).unwrap();
                 showSuccess("Staff created successfully 🎉");
             } else {
-                await updateStaff({ payload, id: staffData._id }).unwrap();
+                await updateStaff({ id: staffId, data: payload }).unwrap();
                 showSuccess("Staff updated successfully ✅");
             }
             onClose();
@@ -183,7 +183,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
             showError(msg);
             setBanner(`❌ ${msg}`);
         }
-    }, [form, isCreate, staffData, createStaff, updateStaff, onClose, validateForm, imageFile]);
+    }, [form, isCreate, staffId, createStaff, updateStaff, onClose, validateForm, imageFile]);
 
     if (!open) return null;
 
@@ -267,7 +267,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                                     <img src={imagePreview} alt="Preview" className="h-14 w-14 rounded-lg object-cover ring-2 ring-[var(--accent-2)]/30" />
                                 ) : (
                                     <div className="h-14 w-14 rounded-lg bg-[var(--surface)] flex items-center justify-center text-2xl shrink-0">
-                                        👤
+                                        �
                                     </div>
                                 )}
                                 <div>

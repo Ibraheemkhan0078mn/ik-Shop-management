@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AlertCircle, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateStaffRoleMutation } from "../api/staff.api.js";
@@ -54,11 +54,13 @@ export default function StaffRoleModal({ mode = "create", open, onClose }) {
     }, [form, createStaffRole, onClose, validateForm]);
 
     // Reset form when modal opens
-    if (open && isCreate && form.name !== "") {
-        setForm(EMPTY_FORM);
-        setErrors({});
-        setBanner(null);
-    }
+    useEffect(() => {
+        if (open && isCreate) {
+            setForm(EMPTY_FORM);
+            setErrors({});
+            setBanner(null);
+        }
+    }, [open, isCreate]);
 
     if (!open) return null;
 

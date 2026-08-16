@@ -160,12 +160,18 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
             payload.append(key, value);
         });
         if (form.image instanceof File) payload.append("qarzaProfileImage", form.image);
+        
+        // For update mode, append the _id to the FormData
+        if (!isCreate && account?._id) {
+            payload.append("_id", account._id);
+        }
+        
         try {
             if (isCreate) {
                 await createAccount(payload).unwrap();
                 showSuccess("Account created successfully 🎉");
             } else {
-                await updateAccount({ payload, id: account._id }).unwrap();
+                await updateAccount(payload).unwrap();
                 showSuccess("Account updated successfully ✅");
             }
             onSuccess?.();

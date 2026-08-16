@@ -32,6 +32,7 @@ export const staffApi = baseApi.injectEndpoints({
                 url: `/staff/${id}`,
                 method: "PUT",
                 body: data,
+                formData: true,
             }),
             invalidatesTags: (result, error, { id }) => [{ type: "Staff", id }, "Staff"],
         }),

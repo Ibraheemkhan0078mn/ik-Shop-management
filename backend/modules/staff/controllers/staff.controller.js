@@ -27,11 +27,8 @@ export const createStaffData = asyncHandler(async (req, res, next) => {
     const staffData = req.body;
     
     // If a photo was uploaded, add its filename to the staff data
-    if (req.files && req.files.length > 0) {
-        const photoFile = req.files.find(file => file.fieldname === 'photo');
-        if (photoFile) {
-            staffData.photo = photoFile.filename;
-        }
+    if (req.file) {
+        staffData.photo = req.file.filename;
     }
     
     const staff = await createStaff(staffData);
@@ -82,11 +79,8 @@ export const updateStaffData = asyncHandler(async (req, res, next) => {
     const existingStaff = await getStaffById(id);
     
     // If a photo was uploaded, add its filename to the update data
-    if (req.files && req.files.length > 0) {
-        const photoFile = req.files.find(file => file.fieldname === 'photo');
-        if (photoFile) {
-            updateData.photo = photoFile.filename;
-        }
+    if (req.file) {
+        updateData.photo = req.file.filename;
     }
     
     const staff = await updateStaff(id, updateData);

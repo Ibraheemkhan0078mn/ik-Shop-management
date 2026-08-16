@@ -1,21 +1,3 @@
-
-
-
-1: the max limit on item of purchase return is not on the basis of current stock of proudct so fix it.
-2: remove the description form teh brand
-3: when empty batch dleeted then it do esnot refetch te baches of product. 
-4: make the supplier nad cusotmer detial page data more detailed. like kpi for all. kpi for date filer and also paginaed data in each.
-5: when exiting then fill all the detaisl which is present in this batches means cost, tax etc and lcok it when exitng, when change then he need to be new. 
-
-
-
-3: chek the active work in all models
-4: check taht disocunt limit works or not. 
-
-
-
-
-
-1: recalculate is not working on purcahse form crud.
-2: purchases in supplier also have kpi in purcahse section. 
-3: credits and debigs amout is wrong showed. 
+1: limit the discoutn and tax input to max 100 and min 0. 
+2: tehre is input fo number. make the limit of min 0 and pleas scan the all models in frontned and place min 0 on all. does not cahnge the single other logic just make the min 0.
+3: in pos pyaemnt mehtod, when i create order via plus icon there is pos payemnt model then it created but it does not update the custoerm which is presnet in dropdown of qarza acccount and qarza accoutn also invalidates with this refetch and fit their also. 
