@@ -50,7 +50,11 @@ export default function ProductDetail() {
     };
 
     const getBatchStatus = (batch) => {
+        // Check expiry first (not handled by backend)
         if (isExpired(batch.expiryDate)) return 'expired';
+        // Use backend stockStatus if available
+        if (batch.stockStatus) return batch.stockStatus;
+        // Fallback to old logic if stockStatus not available
         if (batch.quantity <= 0) return 'empty';
         if (batch.quantity <= 10) return 'low';
         return 'in-stock';
@@ -60,10 +64,14 @@ export default function ProductDetail() {
         const statusConfig = {
             'expired': { label: 'Expired', className: 'bg-red-100 text-red-700' },
             'empty': { label: 'Empty', className: 'bg-red-100 text-red-700' },
+            'low_stock': { label: 'Low Stock', className: 'bg-amber-100 text-amber-700' },
+            'normal_stock': { label: 'In Stock', className: 'bg-green-100 text-green-700' },
+            'max_stock': { label: 'Max Stock', className: 'bg-blue-100 text-blue-700' },
+            // Fallback for old frontend status values
             'low': { label: 'Low Stock', className: 'bg-amber-100 text-amber-700' },
             'in-stock': { label: 'In Stock', className: 'bg-green-100 text-green-700' },
         };
-        const config = statusConfig[status] || statusConfig['in-stock'];
+        const config = statusConfig[status] || statusConfig['normal_stock'];
         return <span className={`px-2 py-1 text-xs rounded-full ${config.className}`}>{config.label}</span>;
     };
 

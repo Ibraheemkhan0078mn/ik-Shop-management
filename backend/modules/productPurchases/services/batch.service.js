@@ -1,19 +1,22 @@
 import { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService } from "./batch.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
+import { calculateBatchesStockStatus, calculateBatchStockStatus } from "./batchStockStatus.service.js";
 
 const getBatches = async (productId = null) => {
     const query = {};
     if (productId) {
         query.product = productId;
     }
-    return await findBatchService(query, {
+    const batches = await findBatchService(query, {
         populate: ["product", "supplier"],
         sort: { createdAt: -1 }
     });
+    return await calculateBatchesStockStatus(batches);
 };
 
 const getBatchById = async (id) => {
-    return await findByIdBatchService(id);
+    const batch = await findByIdBatchService(id);
+    return await calculateBatchStockStatus(batch);
 };
 
 const createBatch = async (batchData, ProductModel) => {
@@ -33,7 +36,7 @@ const createBatch = async (batchData, ProductModel) => {
 
     await handleProductStockQuantity(batchData.product, "create", batchData.quantity);
 
-    return batch;
+    return await calculateBatchStockStatus(batch);
 };
 
 const updateBatch = async (id, updateData, ProductModel) => {
@@ -60,7 +63,8 @@ const updateBatch = async (id, updateData, ProductModel) => {
         await handleProductStockQuantity(batch.product, "create", quantityDiff);
     }
 
-    return await updateBatchService(id, updateData);
+    const updatedBatch = await updateBatchService(id, updateData);
+    return await calculateBatchStockStatus(updatedBatch);
 };
 
 const deleteBatch = async (id, ProductModel) => {

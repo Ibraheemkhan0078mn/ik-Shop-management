@@ -253,6 +253,47 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const isExistingMode = itemForm.batchMode === "existing" && Boolean(itemForm.batchSelection);
     const selectedSupplierName = suppliersList.find(s => s._id === bill.supplier)?.name ?? "";
 
+    // Calculate stock status for purchase form
+    const getStockStatus = (productId, newQuantity) => {
+        const product = productsList.find(p => p._id === productId);
+        if (!product) return null;
+
+        const currentStock = product.currentStockLevel || 0;
+        const projectedStock = currentStock + (Number(newQuantity) || 0);
+        const minStock = product.minStockLevel || 5;
+        const maxStock = product.maxStockLevel || 10;
+
+        let status, color, label;
+
+        if (projectedStock === 0) {
+            status = 'empty';
+            color = 'red';
+            label = 'Empty';
+        } else if (projectedStock < minStock) {
+            status = 'low_stock';
+            color = 'amber';
+            label = 'Low Stock';
+        } else if (projectedStock >= maxStock) {
+            status = 'max_stock';
+            color = 'red';
+            label = 'Max Stock';
+        } else {
+            status = 'normal_stock';
+            color = 'green';
+            label = 'Normal Stock';
+        }
+
+        return {
+            currentStock,
+            projectedStock,
+            minStock,
+            maxStock,
+            status,
+            color,
+            label
+        };
+    };
+
     const handleProductCreated = () => {
         setShowProductModal(false);
         refetchProducts();
@@ -713,6 +754,27 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     </Field>
                                     <Field><Label>{labels.unit}</Label>
                                         <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl w-full flex items-center justify-center" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
+                                        {itemForm.item && (() => {
+                                            const stockStatus = getStockStatus(itemForm.item, itemForm.quantity);
+                                            if (!stockStatus) return null;
+                                            const colorClasses = {
+                                                red: 'bg-red-50 text-red-700 border-red-200',
+                                                amber: 'bg-amber-50 text-amber-700 border-amber-200',
+                                                green: 'bg-green-50 text-green-700 border-green-200',
+                                                blue: 'bg-blue-50 text-blue-700 border-blue-200'
+                                            };
+                                            return (
+                                                <div className={`mt-2 px-3 py-2 rounded-lg text-xs border ${colorClasses[stockStatus.color]}`}>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium">{stockStatus.label}</span>
+                                                        <span>Current: {stockStatus.currentStock} + New: {itemForm.quantity || 0} = {stockStatus.projectedStock}</span>
+                                                    </div>
+                                                    <div className="text-[10px] opacity-75 mt-1">
+                                                        Min: {stockStatus.minStock} | Max: {stockStatus.maxStock}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </Field>
                                 </div>
                                 <div className="grid grid-cols-1 gap-4">

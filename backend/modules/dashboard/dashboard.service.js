@@ -465,7 +465,8 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
         const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
         const { countProductService } = await import('../product/services/product.crud.js');
         const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
-        
+        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
+
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -476,24 +477,26 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
             countBatchService({ isActive: true }),
         ]);
 
-        const expiringSoon = batches.filter(b => 
-            b.expiryDate && 
-            new Date(b.expiryDate) >= now && 
+        // Calculate stock status for all batches using the service
+        const batchesWithStatus = await calculateBatchesStockStatus(batches);
+
+        const expiringSoon = batchesWithStatus.filter(b =>
+            b.expiryDate &&
+            new Date(b.expiryDate) >= now &&
             new Date(b.expiryDate) <= thirtyDaysFromNow
         );
 
-        const expiringIn7Days = batches.filter(b =>
+        const expiringIn7Days = batchesWithStatus.filter(b =>
             b.expiryDate &&
             new Date(b.expiryDate) >= now &&
             new Date(b.expiryDate) <= sevenDaysFromNow
         );
 
-        const lowStock = batches.filter(b =>
-            toNumber(b.quantity) > 0 &&
-            toNumber(b.quantity) < toNumber(b.minStock || 5)
+        const lowStock = batchesWithStatus.filter(b =>
+            b.stockStatus === 'low_stock'
         );
 
-        const outOfStock = batches.filter(b => toNumber(b.quantity) === 0);
+        const outOfStock = batchesWithStatus.filter(b => b.stockStatus === 'empty');
 
         return {
             expiringSoon: expiringSoon.length,
@@ -585,6 +588,7 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
         // Import service functions
         const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
         const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
 
         const batches = await findBatchService({
             isActive: true,
@@ -596,32 +600,43 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
             limit
         });
 
-        const lowStockBatches = batches.filter(b => 
-            toNumber(b.quantity) < toNumber(b.minStock || 5)
+        // Calculate stock status for batches using the service
+        const batchesWithStatus = await calculateBatchesStockStatus(batches);
+
+        const lowStockBatches = batchesWithStatus.filter(b =>
+            b.stockStatus === 'low_stock'
         );
 
         const total = await countBatchService({
             isActive: true,
-            quantity: { $gt: 0, $lt: 5 }
+            quantity: { $gt: 0 }
         });
+
+        // Get all batches to calculate accurate total count
+        const allBatches = await findBatchService({
+            isActive: true,
+            quantity: { $gt: 0 }
+        });
+        const allBatchesWithStatus = await calculateBatchesStockStatus(allBatches);
+        const lowStockCount = allBatchesWithStatus.filter(b => b.stockStatus === 'low_stock').length;
 
         const data = lowStockBatches.map(b => ({
             productName: b.product?.name || 'Unknown',
             sku: b.product?.productCode || 'N/A',
             batchNumber: b.batchNumber || 'N/A',
             currentStock: toNumber(b.quantity),
-            minStock: toNumber(b.minStock || 5),
-            maxStock: toNumber(b.maxStock || 10),
-            shortage: toNumber(b.minStock || 5) - toNumber(b.quantity),
+            minStock: toNumber(b.product?.minStockLevel || 5),
+            maxStock: toNumber(b.product?.maxStockLevel || 10),
+            shortage: toNumber(b.product?.minStockLevel || 5) - toNumber(b.quantity),
         }));
 
         return {
             data,
             pagination: {
-                total,
+                total: lowStockCount,
                 page,
                 limit,
-                totalPages: Math.ceil(total / limit),
+                totalPages: Math.ceil(lowStockCount / limit),
             },
         };
     } catch (error) {
@@ -639,6 +654,7 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
         // Import service functions
         const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
         const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
 
         const batches = await findBatchService({
             isActive: true,
@@ -650,17 +666,22 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
             limit
         });
 
+        // Calculate stock status for batches using the service
+        const batchesWithStatus = await calculateBatchesStockStatus(batches);
+
+        const outOfStockBatches = batchesWithStatus.filter(b => b.stockStatus === 'empty');
+
         const total = await countBatchService({
             isActive: true,
             quantity: 0
         });
 
-        const data = batches.map(b => ({
+        const data = outOfStockBatches.map(b => ({
             productName: b.product?.name || 'Unknown',
             sku: b.product?.productCode || 'N/A',
             batchNumber: b.batchNumber || 'N/A',
             lastStockDate: b.updatedAt || 'N/A',
-            minStock: toNumber(b.minStock || 5),
+            minStock: toNumber(b.product?.minStockLevel || 5),
         }));
 
         return {
