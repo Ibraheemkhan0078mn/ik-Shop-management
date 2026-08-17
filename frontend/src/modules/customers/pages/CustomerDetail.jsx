@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw } from "lucide-react";
-import { useCustomer, useCustomerOrderKPIs } from "../services/customers.service.js";
+import { useCustomer, useCustomerOrderKPIs, useCustomerOrderReturnKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateCustomer } from "../services/customers.service.js";
@@ -9,6 +9,7 @@ import { useRecalculateCustomerBalance } from "../../qarza/services/qarza.servic
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useCustomerPaymentsSummary, useCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
+import { useGetPaginatedOrderReturnsQuery } from "../../orderReturn/api/orderReturn.api.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -45,6 +46,17 @@ export default function CustomerDetail() {
         startDate, 
         endDate 
     });
+    const { data: orderReturnKPIs } = useCustomerOrderReturnKPIs({
+        customerId: id,
+        startDate,
+        endDate
+    });
+    const { data: orderReturnsData } = useGetPaginatedOrderReturnsQuery({
+        customerId: id,
+        startDate,
+        endDate
+    });
+    const orderReturns = orderReturnsData?.data || [];
 
     const customer = customerData;
     const orders = ordersData?.data || [];
@@ -181,7 +193,7 @@ export default function CustomerDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["details", "orders", "credits"].map((tab) => (
+                {["details", "orders", "returns", "credits"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -193,6 +205,7 @@ export default function CustomerDetail() {
                     >
                         {tab === "details" ? "Customer Details" : 
                          tab === "orders" ? "Orders" : 
+                         tab === "returns" ? "Order Returns" :
                          "Credits & Debits"}
                     </button>
                 ))}
@@ -510,6 +523,136 @@ export default function CustomerDetail() {
                         <div className="text-center py-8">
                             <Package size={48} className="text-[var(--muted)] mb-4 mx-auto" />
                             <p className="text-[var(--muted)]">No orders found for this customer</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Returns Tab */}
+            {activeTab === "returns" && (
+                <div className="card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--ink)]">Order Returns</h3>
+                        <div className="flex gap-2">
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
+                            />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
+                            />
+                        </div>
+                    </div>
+
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-5 gap-4 mb-6">
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Returns</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{orderReturnKPIs?.totalReturns || 0}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Refund</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {(orderReturnKPIs?.totalRefundAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Refunded</p>
+                            <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {(orderReturnKPIs?.totalRefundedAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
+                            <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {(orderReturnKPIs?.totalRemainingAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(180,83,9,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Pending</p>
+                            <p className="text-xl font-black tabular-nums text-[#d97706]">{orderReturnKPIs?.statusBreakdown?.pending || 0}</p>
+                        </div>
+                    </div>
+
+                    {orderReturns.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)" }}>
+                                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Return #</th>
+                                        <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-[var(--muted)] hidden md:table-cell">Items</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Refund Amount</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Refunded</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Remaining</th>
+                                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Date</th>
+                                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Status</th>
+                                        <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {orderReturns.map((returnItem) => {
+                                        const status = returnItem.status || 'draft';
+                                        const dateStr = returnItem.returnDate || returnItem.createdAt || "";
+                                        const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
+                                        const totalRefund = returnItem.totalRefundAmount || returnItem.totalAmount || 0;
+                                        const refunded = returnItem.refundedAmount || 0;
+                                        const remaining = totalRefund - refunded;
+
+                                        const getStatusColor = (status) => {
+                                            switch (status) {
+                                                case 'draft': return 'bg-gray-100 text-gray-800 border-gray-300';
+                                                case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                                                case 'approved': return 'bg-green-100 text-green-800 border-green-300';
+                                                case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
+                                                default: return 'bg-gray-100 text-gray-800 border-gray-300';
+                                            }
+                                        };
+
+                                        return (
+                                            <tr key={returnItem._id} className="hover:bg-[var(--surface-muted)]" style={{ borderBottom: "1px solid var(--border)" }}>
+                                                <td className="px-5 py-3.5 font-mono text-xs text-[var(--muted)]">
+                                                    {returnItem.returnNumber || returnItem.orderReturnNumber || "—"}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-center hidden md:table-cell">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(15,118,110,0.12)", color: "var(--accent-2)" }}>
+                                                        {returnItem.items?.length || 0}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-[var(--accent-2)]">
+                                                    Rs {totalRefund.toLocaleString()}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-[#10b981]">
+                                                    Rs {refunded.toLocaleString()}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right font-semibold tabular-nums text-[#ef4444]">
+                                                    Rs {remaining.toLocaleString()}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-sm text-[var(--muted)]">{date}</td>
+                                                <td className="px-5 py-3.5">
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}>
+                                                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3.5">
+                                                    <div className="flex gap-1.5 justify-center">
+                                                        <button
+                                                            onClick={() => navigate(`/order-returns/${returnItem._id}`)}
+                                                            className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye size={15} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <RotateCcw size={48} className="text-[var(--muted)] mb-4 mx-auto" />
+                            <p className="text-[var(--muted)]">No order returns found for this customer</p>
                         </div>
                     )}
                 </div>

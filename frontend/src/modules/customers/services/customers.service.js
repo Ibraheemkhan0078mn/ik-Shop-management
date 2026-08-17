@@ -45,6 +45,15 @@ export const customerApi = baseApi.injectEndpoints({
             transformResponse: (raw) => raw?.data ?? raw,
             providesTags: (_r, _e, customerId) => [{ type: "Customer", id: `kpi-${customerId}` }],
         }),
+
+        getCustomerOrderReturnKPIs: build.query({
+            query: ({ customerId, startDate, endDate }) => ({
+                url: `/customers/${customerId}/order-return-kpis`,
+                params: startDate || endDate ? { startDate, endDate } : undefined
+            }),
+            transformResponse: (raw) => raw?.data ?? raw,
+            providesTags: (_r, _e, { customerId }) => [{ type: "CustomerOrderReturnKPIs", id: customerId }],
+        }),
     }),
 });
 
@@ -56,4 +65,5 @@ export const {
     useUpdateCustomerMutation: useUpdateCustomer,
     useDeleteCustomerMutation: useDeleteCustomer,
     useGetCustomerOrderKPIsQuery: useCustomerOrderKPIs,
+    useGetCustomerOrderReturnKPIsQuery: useCustomerOrderReturnKPIs,
 } = customerApi;

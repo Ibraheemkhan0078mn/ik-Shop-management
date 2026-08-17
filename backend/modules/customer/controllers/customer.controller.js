@@ -11,9 +11,10 @@ import {
     getPaginatedCustomers as getPaginatedCustomersService,
 } from "../services/customer.service.js";
 import { calculateCustomerOrderKPIs } from "../services/customerOrderKPI.service.js";
+import { calculateCustomerOrderReturnKPIs } from "../services/customerOrderReturnKPI.service.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
-import { qarzaAccountCreate as qarzaAccountCreateService } from "../../qarza/services/qarza.service.js";
+import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
 
 const coerceCustomerBody = (body = {}) => {
     const coerced = { ...body };
@@ -168,6 +169,16 @@ export const deleteCustomer = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Customer not found", 404));
     }
 
+    // Delete associated qarza account if exists
+    if (customer.qarzaAccountId) {
+        try {
+            await qarzaAccountDeleteService(customer.qarzaAccountId);
+        } catch (qarzaError) {
+            console.error("Failed to delete qarza account for customer:", qarzaError);
+            // Continue with customer deletion even if qarza account deletion fails
+        }
+    }
+
     await customerDeleteService(id);
     res.status(200).json({ success: true, message: "Customer deleted successfully", data: {} });
 });
@@ -187,6 +198,25 @@ export const getCustomerOrderKPIs = asyncHandler(async (req, res, next) => {
     res.status(200).json({ 
         success: true, 
         message: "Customer order KPIs retrieved successfully", 
+        data: kpiData.data 
+    });
+});
+
+export const getCustomerOrderReturnKPIs = asyncHandler(async (req, res, next) => {
+    const { customerId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    const customer = await getCustomerByIdService(customerId);
+    
+    if (!customer) {
+        return next(new ErrorResponse("Customer not found", 404));
+    }
+
+    const kpiData = await calculateCustomerOrderReturnKPIs(customerId, startDate, endDate);
+    
+    res.status(200).json({ 
+        success: true, 
+        message: "Customer order return KPIs retrieved successfully", 
         data: kpiData.data 
     });
 });

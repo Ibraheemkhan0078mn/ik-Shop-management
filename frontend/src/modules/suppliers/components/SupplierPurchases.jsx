@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, Edit, Trash2, DollarSign, Check, X, RotateCcw, Copy, ShoppingCart } from "lucide-react";
 import { usePurchasesBySupplier, useDeletePurchase, useUpdatePurchaseStatus } from "../../productPurchases/services/purchases.service.js";
+import { useSupplierPurchaseKPIs } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getPurchaseLabels } from "../../productPurchases/labels/purchaseLabels.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -25,6 +26,9 @@ export default function SupplierPurchases({ supplierId }) {
     const [updateStatus] = useUpdatePurchaseStatus();
     const language = "en";
     const purchaseLabels = getPurchaseLabels(language);
+
+    // Fetch KPIs from backend
+    const { data: kpiData } = useSupplierPurchaseKPIs({ supplierId, startDate, endDate });
 
     const handleDeletePurchase = async (purchaseId) => {
         try {
@@ -101,34 +105,33 @@ export default function SupplierPurchases({ supplierId }) {
                     </div>
                 </div>
 
+                {/* KPI Section */}
+                {kpiData && (
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Purchases</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{kpiData.totalPurchases || 0}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Amount</p>
+                            <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {(kpiData.totalPurchaseAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Paid Amount</p>
+                            <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {(kpiData.totalPaidAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
+                            <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {(kpiData.totalRemainingAmount || 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+                )}
+
                 <PaginatedList
                     rtkQuery={usePurchasesBySupplier}
                     limit={20}
                     dataKey="data"
                     queryArgs={{ supplierId, startDate, endDate }}
-                    renderKPIs={(data) => {
-                        const purchases = data?.data || [];
-                        return (
-                            <div className="grid grid-cols-4 gap-4 mb-6">
-                                <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
-                                    <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Purchases</p>
-                                    <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{purchases.length}</p>
-                                </div>
-                                <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
-                                    <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Amount</p>
-                                    <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {purchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0).toLocaleString()}</p>
-                                </div>
-                                <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
-                                    <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Paid Amount</p>
-                                    <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {purchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString()}</p>
-                                </div>
-                                <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
-                                    <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
-                                    <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {purchases.reduce((sum, p) => sum + ((p.totalAmount || 0) - (p.paidAmount || 0)), 0).toLocaleString()}</p>
-                                </div>
-                            </div>
-                        );
-                    }}
                     renderItems={(items) => {
                         if (!items?.length) return null;
                         return (

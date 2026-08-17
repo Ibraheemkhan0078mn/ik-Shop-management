@@ -48,6 +48,24 @@ export const supplierApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/suppliers/${id}`, method: "DELETE" }),
             invalidatesTags: ["Supplier"],
         }),
+
+        getSupplierPurchaseKPIs: build.query({
+            query: ({ supplierId, startDate, endDate }) => ({
+                url: `/suppliers/${supplierId}/purchase-kpis`,
+                params: { startDate, endDate }
+            }),
+            transformResponse: (raw) => raw.data ?? raw,
+            providesTags: (_r, _e, { supplierId }) => [{ type: "SupplierPurchaseKPIs", id: supplierId }],
+        }),
+
+        getSupplierPurchaseReturnKPIs: build.query({
+            query: ({ supplierId, startDate, endDate }) => ({
+                url: `/suppliers/${supplierId}/purchase-return-kpis`,
+                params: { startDate, endDate }
+            }),
+            transformResponse: (raw) => raw.data ?? raw,
+            providesTags: (_r, _e, { supplierId }) => [{ type: "SupplierPurchaseReturnKPIs", id: supplierId }],
+        }),
     }),
 });
 
@@ -58,4 +76,6 @@ export const {
     useCreateSupplierMutation: useCreateSupplier,
     useUpdateSupplierMutation: useUpdateSupplier,
     useDeleteSupplierMutation: useDeleteSupplier,
+    useGetSupplierPurchaseKPIsQuery: useSupplierPurchaseKPIs,
+    useGetSupplierPurchaseReturnKPIsQuery: useSupplierPurchaseReturnKPIs,
 } = supplierApi;

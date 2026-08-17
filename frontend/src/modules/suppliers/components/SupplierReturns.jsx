@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Eye, RotateCcw } from "lucide-react";
+import { Eye, RotateCcw, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGetSupplierPurchaseReturnsQuery } from "../../purchaseReturn/services/purchaseReturn.service.js";
+import { useSupplierPurchaseReturnKPIs } from "../services/suppliers.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import PurchaseReturnPaymentModal from "../../purchaseReturn/components/PurchaseReturnPaymentModal.jsx";
 
 export default function SupplierReturns({ supplierId }) {
     const navigate = useNavigate();
@@ -12,6 +14,10 @@ export default function SupplierReturns({ supplierId }) {
         return firstDay.toISOString().split('T')[0];
     });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [paymentModal, setPaymentModal] = useState(null);
+
+    // Fetch KPIs from backend
+    const { data: kpiData } = useSupplierPurchaseReturnKPIs({ supplierId, startDate, endDate });
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -43,34 +49,37 @@ export default function SupplierReturns({ supplierId }) {
                 </div>
             </div>
 
+            {/* KPI Section */}
+            {kpiData && (
+                <div className="grid grid-cols-5 gap-4 mb-6">
+                    <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Returns</p>
+                        <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{kpiData.totalReturns || 0}</p>
+                    </div>
+                    <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Refund</p>
+                        <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {(kpiData.totalRefundAmount || 0).toLocaleString()}</p>
+                    </div>
+                    <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Refunded</p>
+                        <p className="text-xl font-black tabular-nums text-[#10b981]">Rs {(kpiData.totalRefundedAmount || 0).toLocaleString()}</p>
+                    </div>
+                    <div className="card p-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid var(--border)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Remaining</p>
+                        <p className="text-xl font-black tabular-nums text-[#ef4444]">Rs {(kpiData.totalRemainingAmount || 0).toLocaleString()}</p>
+                    </div>
+                    <div className="card p-4" style={{ background: "rgba(180,83,9,0.08)", border: "1px solid var(--border)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Pending</p>
+                        <p className="text-xl font-black tabular-nums text-[#d97706]">{kpiData.statusBreakdown?.pending || 0}</p>
+                    </div>
+                </div>
+            )}
+
             <PaginatedList
                 rtkQuery={useGetSupplierPurchaseReturnsQuery}
                 limit={20}
                 dataKey="data"
                 queryArgs={{ supplierId, startDate, endDate }}
-                renderKPIs={(data) => {
-                    if (!data?.kpis) return null;
-                    return (
-                        <div className="grid grid-cols-4 gap-4 mb-6">
-                            <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Returns</p>
-                                <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">{data.kpis.totalReturns}</p>
-                            </div>
-                            <div className="card p-4" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Total Refund</p>
-                                <p className="text-xl font-black tabular-nums text-[var(--accent-2)]">Rs {data.kpis.totalRefundAmount.toLocaleString()}</p>
-                            </div>
-                            <div className="card p-4" style={{ background: "rgba(180,83,9,0.08)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Pending</p>
-                                <p className="text-xl font-black tabular-nums text-[#d97706]">{data.kpis.pendingReturns}</p>
-                            </div>
-                            <div className="card p-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-[var(--muted)]">Approved</p>
-                                <p className="text-xl font-black tabular-nums text-[#10b981]">{data.kpis.approvedReturns}</p>
-                            </div>
-                        </div>
-                    );
-                }}
                 renderItems={(items) => {
                     if (!items?.length) return null;
                     return (
@@ -81,6 +90,8 @@ export default function SupplierReturns({ supplierId }) {
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Return #</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Items</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Refund Amount</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Refunded</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Remaining</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Status</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
@@ -91,6 +102,9 @@ export default function SupplierReturns({ supplierId }) {
                                         const status = returnItem.status || 'draft';
                                         const dateStr = returnItem.returnDate || returnItem.createdAt || "";
                                         const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
+                                        const totalRefund = returnItem.totalRefundAmount || returnItem.totalAmount || 0;
+                                        const refunded = returnItem.refundedAmount || 0;
+                                        const remaining = totalRefund - refunded;
 
                                         return (
                                             <tr key={returnItem._id} className="hover:bg-[var(--surface-muted)]">
@@ -98,8 +112,14 @@ export default function SupplierReturns({ supplierId }) {
                                                     {returnItem.purchaseReturnNumber || returnItem.returnNumber || "—"}
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-[var(--ink)]">{returnItem.items?.length || 0}</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-red-600">
-                                                    Rs {(returnItem.totalRefundAmount || returnItem.totalAmount || 0).toLocaleString()}
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--accent-2)]">
+                                                    Rs {totalRefund.toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#10b981]">
+                                                    Rs {refunded.toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#ef4444]">
+                                                    Rs {remaining.toLocaleString()}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">{date}</td>
                                                 <td className="px-4 py-3">
@@ -116,6 +136,15 @@ export default function SupplierReturns({ supplierId }) {
                                                         >
                                                             <Eye className="w-3 h-3" />
                                                         </button>
+                                                        {status === 'approved' && remaining > 0 && (
+                                                            <button 
+                                                                onClick={() => setPaymentModal(returnItem)}
+                                                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
+                                                                title="Process Refund"
+                                                            >
+                                                                <DollarSign className="w-3 h-3" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -133,6 +162,14 @@ export default function SupplierReturns({ supplierId }) {
                     </div>
                 }
             />
+
+            {paymentModal && (
+                <PurchaseReturnPaymentModal
+                    purchaseReturn={paymentModal}
+                    onClose={() => setPaymentModal(null)}
+                    onSuccess={() => setPaymentModal(null)}
+                />
+            )}
         </div>
     );
 }

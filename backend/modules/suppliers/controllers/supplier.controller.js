@@ -14,7 +14,9 @@ import {
 import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
-import { qarzaAccountCreate as qarzaAccountCreateService } from "../../qarza/services/qarza.service.js";
+import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
+import { calculateSupplierPurchaseKPIs } from "../services/supplierPurchaseKPI.service.js";
+import { calculateSupplierPurchaseReturnKPIs } from "../services/supplierPurchaseReturnKPI.service.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
     const suppliers = await getAllSuppliersService();
@@ -185,6 +187,16 @@ export const deleteSupplier = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Cannot delete supplier with ${batchCount} associated batch(es). Please delete or transfer batches first.`, 400));
     }
 
+    // Delete associated qarza account if exists
+    if (supplier.qarzaAccountId) {
+        try {
+            await qarzaAccountDeleteService(supplier.qarzaAccountId);
+        } catch (qarzaError) {
+            console.error("Failed to delete qarza account for supplier:", qarzaError);
+            // Continue with supplier deletion even if qarza account deletion fails
+        }
+    }
+
     await supplierDeleteService(id);
 
     res.status(200).json({
@@ -192,4 +204,34 @@ export const deleteSupplier = asyncHandler(async (req, res, next) => {
         message: "Supplier deleted successfully",
         data: {},
     });
+});
+
+export const getSupplierPurchaseKPIs = asyncHandler(async (req, res, next) => {
+    const { supplierId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const supplier = await getSupplierByIdService(supplierId);
+
+    if (!supplier) {
+        return next(new ErrorResponse("Supplier not found", 404));
+    }
+
+    const kpis = await calculateSupplierPurchaseKPIs(supplierId, startDate, endDate);
+
+    res.status(200).json(kpis);
+});
+
+export const getSupplierPurchaseReturnKPIs = asyncHandler(async (req, res, next) => {
+    const { supplierId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const supplier = await getSupplierByIdService(supplierId);
+
+    if (!supplier) {
+        return next(new ErrorResponse("Supplier not found", 404));
+    }
+
+    const kpis = await calculateSupplierPurchaseReturnKPIs(supplierId, startDate, endDate);
+
+    res.status(200).json(kpis);
 });
