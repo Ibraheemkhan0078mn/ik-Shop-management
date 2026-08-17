@@ -1,15 +1,17 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter } from "lucide-react";
+import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter, DollarSign } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
+import OrderReturnPaymentModal from "../components/OrderReturnPaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { useGetPaginatedOrderReturnsQuery, useDeleteOrderReturnMutation, useApproveOrderReturnMutation } from "../api/orderReturn.api.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 // Status → badge classes, built only from tokens already defined in index.css.
 const STATUS_STYLES = {
@@ -36,6 +38,8 @@ const OrderReturnList = () => {
         { key: "customerName", label: labels.customer, hideBelow: "md" },
         { key: "items", label: labels.items, align: "center", hideBelow: "sm" },
         { key: "refund", label: labels.refund, align: "right" },
+        { key: "paid", label: "Paid", align: "right" },
+        { key: "remaining", label: "Remaining", align: "right" },
         { key: "refundStatus", label: labels.refundStatus || "Refund Status", align: "center" },
         { key: "status", label: labels.status, align: "center" },
         { key: "date", label: labels.date, hideBelow: "md" },
@@ -48,6 +52,7 @@ const OrderReturnList = () => {
     const [isViewMode, setIsViewMode] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [approvalModal, setApprovalModal] = useState(false);
+    const [paymentModal, setPaymentModal] = useState(null);
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -80,14 +85,12 @@ const OrderReturnList = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm(labels.deleteConfirm)) {
-            try {
-                await deleteOrderReturn(id).unwrap();
-                showSuccess(labels.returnDeleted);
-                refetch();
-            } catch (error) {
-                showError(error?.data?.message || labels.failedToDelete);
-            }
+        try {
+            await deleteOrderReturn(id).unwrap();
+            showSuccess(labels.returnDeleted);
+            refetch();
+        } catch (error) {
+            showError(error?.data?.message || labels.failedToDelete);
         }
     };
 
@@ -161,6 +164,17 @@ const OrderReturnList = () => {
                     onClose={() => setApprovalModal(false)}
                     onApprove={handleApprove}
                     onDelete={handleDelete}
+                />
+            )}
+
+            {paymentModal && (
+                <OrderReturnPaymentModal
+                    orderReturn={paymentModal}
+                    onClose={() => setPaymentModal(null)}
+                    onSuccess={() => {
+                        setPaymentModal(null);
+                        refetch();
+                    }}
                 />
             )}
 
@@ -275,6 +289,7 @@ const OrderReturnList = () => {
                                             onView={() => handleView(returnItem)}
                                             onEdit={() => handleEdit(returnItem)}
                                             onDelete={() => handleDelete(returnItem._id)}
+                                            onPayment={() => setPaymentModal(returnItem)}
                                         />
                                     ))}
                                 </tbody>
@@ -293,7 +308,7 @@ const OrderReturnList = () => {
 
 // ---- Subcomponents ---------------------------------------------------------
 
-function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
+function ReturnRow({ returnItem, onView, onEdit, onDelete, onPayment }) {
     const refundStatusStyle = {
         pending: "bg-gray-100 text-gray-700",
         partial: "bg-yellow-100 text-yellow-700",
@@ -307,6 +322,10 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
             default: return status;
         }
     };
+
+    const isApproved = returnItem.returnStatus === 'approved';
+    const isFullyRefunded = returnItem.refundStatus === 'fully_refunded';
+    const showPaymentIcon = isApproved && !isFullyRefunded;
 
     return (
         <tr className="border-b border-edge transition-colors hover:bg-primary-hover">
@@ -322,6 +341,12 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3 text-right font-semibold text-primary">
                 Rs {(returnItem.totalRefundAmount || 0).toLocaleString()}
+            </td>
+            <td className="px-4 py-3 text-right font-semibold text-green-600">
+                Rs {(returnItem.refundedAmount || 0).toLocaleString()}
+            </td>
+            <td className="px-4 py-3 text-right font-semibold text-orange-600">
+                Rs {((returnItem.totalRefundAmount || 0) - (returnItem.refundedAmount || 0)).toLocaleString()}
             </td>
             <td className="px-4 py-3 text-center">
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${refundStatusStyle[returnItem.refundStatus] || refundStatusStyle.pending}`}>
@@ -339,6 +364,9 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete }) {
             <td className="px-4 py-3">
                 <div className="flex gap-1 justify-center">
                     <RowAction icon={Eye} title="View Details" onClick={onView} className="text-ink-subtle" />
+                    {showPaymentIcon && (
+                        <RowAction icon={DollarSign} title="Process Payment" onClick={onPayment} className="text-green-600" hoverBg="hover:bg-green-100" />
+                    )}
                     <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
                         <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
                     </PermissionGuard>
@@ -503,13 +531,14 @@ function OrderReturnApprovalModal({ onClose, onApprove, onDelete }) {
                                                     >
                                                         <Check className="w-3 h-3" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => onDelete(ret._id)}
-                                                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </button>
+                                                    <ConfirmDialog message={labels.deleteConfirm} onConfirm={() => onDelete(ret._id)}>
+                                                        <button
+                                                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </ConfirmDialog>
                                                 </div>
                                             </td>
                                         </tr>

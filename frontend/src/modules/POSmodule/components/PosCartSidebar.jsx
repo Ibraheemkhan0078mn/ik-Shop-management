@@ -3,6 +3,7 @@ import { ShoppingCart, Trash2, RotateCcw, Pause, History, ChevronUp, ChevronDown
 import { useEffect, useState } from "react";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const PORTION_LABEL = { full: "", half: " ½", custom: " custom" };
 
@@ -281,6 +282,7 @@ export default function PosCartSidebar({
             heldOrder={heldOrder}
             isCurrentlyInCart={heldOrder._id === resumedHoldId}
             canDelete={user?.permissions?.deleteOrders}
+            cart={cart}
             onResume={() => handleResumeOrder(heldOrder)}
             onDelete={() => handleDeleteHeldOrder(heldOrder._id)}
             labels={labels}
@@ -448,7 +450,7 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
 
 // ─── Held Order Card ──────────────────────────────────────────────────────────
 
-function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDelete, labels }) {
+function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, cart, onResume, onDelete, labels }) {
     return (
         <div
             className="rounded-xl p-3 flex items-center justify-between gap-2"
@@ -482,14 +484,23 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, onResume, onDe
 
             {/* Actions */}
             <div className="flex gap-1.5 shrink-0">
-                <button
-                    onClick={onResume}
-                    title={labels.resume}
-                    className="p-1.5 rounded-lg transition"
-                    style={{ background: "var(--accent-2)", color: "white" }}
+                <ConfirmDialog 
+                    message={cart.length > 0 
+                        ? (labels.language === "ur" 
+                            ? "آپ کے موجودہ کارٹ میں آئٹمز ہیں۔ جاری رکھنے سے وہ ہٹ جائیں گے۔ جاری رکھیں؟"
+                            : "Your current cart has items. Resuming will replace them. Continue?")
+                        : labels.resume
+                    }
+                    onConfirm={onResume}
                 >
-                    <RotateCcw size={13} />
-                </button>
+                    <button
+                        title={labels.resume}
+                        className="p-1.5 rounded-lg transition"
+                        style={{ background: "var(--accent-2)", color: "white" }}
+                    >
+                        <RotateCcw size={13} />
+                    </button>
+                </ConfirmDialog>
                 {canDelete && (
                     <button
                         onClick={onDelete}

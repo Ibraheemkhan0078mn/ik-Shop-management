@@ -13,6 +13,7 @@ import { useOrder } from "../../orders/services/orders.service.js";
 import OrderReturnRefundModal from "./OrderReturnRefundModal.jsx";
 import OrderReturnPdfTemplate from "../components/OrderReturnPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 // ─── Constants ────────────────────────────────────────────────
 const RETURN_REASONS = [
@@ -354,8 +355,6 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const handleClose = () => { resetForm(); onClose(); };
 
     const handleDeleteRefund = async (refundId) => {
-        if (!window.confirm("Are you sure you want to delete this refund?")) return;
-        
         try {
             const response = await fetch(`http://localhost:5001/api/product-returns/${editData._id}/refunds/${refundId}`, {
                 method: 'DELETE',
@@ -564,13 +563,14 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                                                     >
                                                                         <Edit2 size={16} />
                                                                     </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteRefund(refund._id)}
-                                                                        className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                                                        title="Delete Refund"
-                                                                    >
-                                                                        <Trash2 size={16} />
-                                                                    </button>
+                                                                    <ConfirmDialog message="Are you sure you want to delete this refund?" onConfirm={() => handleDeleteRefund(refund._id)}>
+                                                                        <button
+                                                                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                                                            title="Delete Refund"
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </ConfirmDialog>
                                                                 </div>
                                                             </td>
                                                         </tr>

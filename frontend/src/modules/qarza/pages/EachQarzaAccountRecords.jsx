@@ -18,6 +18,7 @@ import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { hasPermission } from "../../../shared/utilities/permissionUtils.js";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const STATUS_COLOR = {
     cashin: { bg: "rgba(16,185,129,0.1)", text: "#10b981", Icon: ArrowDownLeft },
@@ -58,7 +59,6 @@ export default function EachQarzaAccountRecords() {
     const hasActiveFilters = filterType !== "all";
 
     const handleDelete = async (paymentId) => {
-        if (!window.confirm("Delete this payment?")) return;
         try {
             await deletePayment({ paymentId, qarzaAccountId: id }).unwrap();
             showSuccess("Payment deleted");
@@ -140,10 +140,12 @@ export default function EachQarzaAccountRecords() {
                                     </button>
                                 )}
                                 {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
-                                    <button onClick={() => handleDelete(item._id)}
-                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
-                                        <Trash2 size={15} />
-                                    </button>
+                                    <ConfirmDialog message="Delete this payment?" onConfirm={() => handleDelete(item._id)}>
+                                        <button
+                                            className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </ConfirmDialog>
                                 )}
                             </div>
                         </div>
@@ -196,11 +198,13 @@ export default function EachQarzaAccountRecords() {
                                         </button>
                                     )}
                                     {(role === "admin" || hasPermission(permissions, "creditsAndDebitsAccounts.payment.delete")) && (
-                                        <button onClick={() => handleDelete(item._id)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
-                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <ConfirmDialog message="Delete this payment?" onConfirm={() => handleDelete(item._id)}>
+                                            <button
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
+                                                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </ConfirmDialog>
                                     )}
                                 </div>
                             </div>

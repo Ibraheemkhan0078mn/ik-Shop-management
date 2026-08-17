@@ -24,8 +24,8 @@ export default function OrderDetailsPage() {
     const payments = paymentsData?.data || paymentsData || [];
     const paymentStatus = paymentStatusData?.data || paymentStatusData || {};
 
-    const totalPaid = order?.paid ?? 0;
-    const remainingAmount = order?.remainingAmount ?? 0;
+    const totalPaid = paymentStatus?.totalPaid ?? order?.paid ?? 0;
+    const remainingAmount = paymentStatus?.remainingAmount ?? order?.remainingAmount ?? 0;
 
     const handleDeletePayment = async (paymentId) => {
         try {

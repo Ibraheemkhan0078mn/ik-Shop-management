@@ -18,6 +18,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PosCartSidebar from "../components/PosCartSidebar.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
 import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
@@ -550,15 +551,6 @@ export default function PosPage() {
       showError(isUrdu ? "اس آرڈر میں آئٹمز نہیں ہیں!" : "No items in this order!");
       return;
     }
-
-    if (
-      cartItems.length &&
-      !window.confirm(
-        isUrdu
-          ? "آپ کے موجودہ کارٹ میں آئٹمز ہیں۔ جاری رکھنے سے وہ ہٹ جائیں گے۔ جاری رکھیں؟"
-          : "Your current cart has items. Resuming will replace them. Continue?"
-      )
-    ) return;
 
     const restoredCartItems = heldOrder.items.map((orderItem) => {
       return {

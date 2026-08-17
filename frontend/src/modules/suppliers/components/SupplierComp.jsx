@@ -6,6 +6,7 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import { Edit, Trash2, Truck } from "lucide-react";
 import BigViewImage from "../../../shared/components/BigViewImage.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 
@@ -31,7 +32,6 @@ export default function SupplierComp({ setVisibility }) {
     const language = userQuery?.data?.language || userQuery?.language || "en";
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this supplier?")) return;
         try {
             await deleteSupplier(id).unwrap();
             showSuccess("Supplier deleted successfully");
@@ -113,12 +113,13 @@ export default function SupplierComp({ setVisibility }) {
                             >
                                 <Edit size={15} />
                             </button>
-                            <button 
-                                onClick={() => handleDelete(item._id)}
-                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500"
-                            >
-                                <Trash2 size={15} />
-                            </button>
+                            <ConfirmDialog message="Delete this supplier?" onConfirm={() => handleDelete(item._id)}>
+                                <button
+                                    className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500"
+                                >
+                                    <Trash2 size={15} />
+                                </button>
+                            </ConfirmDialog>
                         </div>
                     </div>
                 ))}
@@ -173,13 +174,14 @@ export default function SupplierComp({ setVisibility }) {
                                 >
                                     <Edit size={14} />
                                 </button>
-                                <button 
-                                    onClick={() => handleDelete(item._id)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
-                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                                <ConfirmDialog message="Delete this supplier?" onConfirm={() => handleDelete(item._id)}>
+                                    <button
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
+                                        style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </ConfirmDialog>
                             </div>
                         </div>
                     ))}

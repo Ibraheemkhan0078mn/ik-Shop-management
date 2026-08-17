@@ -12,6 +12,7 @@ import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import StaffModal from "../components/StaffModal.jsx";
 import BigViewImage from "../../../shared/components/BigViewImage.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 export default function StaffList() {
     const navigate = useNavigate();
@@ -33,28 +34,20 @@ export default function StaffList() {
     const [deleteStaff] = useDeleteStaffMutation();
 
     const handleDelete = async (id, name) => {
-        if (window.confirm(labels.deleteConfirm.replace("{name}", name))) {
-            try {
-                await deleteStaff(id).unwrap();
-                toast.success(labels.staffDeleted);
-                if (paginatedListRef.current) {
-                    paginatedListRef.current.refetch();
-                }
-            } catch (error) {
-                toast.error(labels.failedToDelete);
+        try {
+            await deleteStaff(id).unwrap();
+            toast.success(labels.staffDeleted);
+            if (paginatedListRef.current) {
+                paginatedListRef.current.refetch();
             }
+        } catch (error) {
+            toast.error(labels.failedToDelete);
         }
     };
 
     const handleOpenCreateModal = () => {
         setModalMode("create");
         setStaffId(null);
-        setModalOpen(true);
-    };
-
-    const handleOpenEditModal = (item) => {
-        setModalMode("edit");
-        setStaffId(item._id);
         setModalOpen(true);
     };
 
@@ -209,7 +202,6 @@ export default function StaffList() {
                                         key={item._id}
                                         item={item}
                                         onView={() => navigate(`/staff/${item._id}`)}
-                                        onEdit={() => handleOpenEditModal(item)}
                                         onDelete={() => handleDelete(item._id, item.fullName)}
                                     />
                                 ))}
@@ -252,7 +244,7 @@ export default function StaffList() {
     );
 }
 
-function StaffRow({ item, onView, onEdit, onDelete }) {
+function StaffRow({ item, onView, onDelete }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getStaffLabels(language);
@@ -330,18 +322,20 @@ function StaffRow({ item, onView, onEdit, onDelete }) {
                         className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
                         <Eye className="w-3.5 h-3.5" />
                     </button>
-                    <PermissionGuard execute={onEdit} permission="staff.update" isConfirmation={true}>
+                    <PermissionGuard permission="staff.update">
                         <button
                             className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={onDelete} permission="staff.delete" isConfirmation={true}>
-                        <button
-                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
-                            <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                    </PermissionGuard>
+                    <ConfirmDialog message={labels.deleteConfirm.replace("{name}", item.fullName)} onConfirm={onDelete}>
+                        <PermissionGuard permission="staff.delete">
+                            <button
+                                className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                        </PermissionGuard>
+                    </ConfirmDialog>
                 </div>
             </td>
         </tr>

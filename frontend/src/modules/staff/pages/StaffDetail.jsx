@@ -10,6 +10,7 @@ import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PercentageShare from "../components/PercentageShare.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
@@ -119,14 +120,12 @@ export default function StaffDetail() {
     };
 
     const handleDeletePayment = async (paymentId) => {
-        if (window.confirm(labels.deletePaymentConfirm)) {
-            try {
-                await deleteSalaryPayment(paymentId).unwrap();
-                toast.success(labels.paymentRecorded);
-                refetch();
-            } catch (error) {
-                toast.error(labels.failedToRecordPayment);
-            }
+        try {
+            await deleteSalaryPayment(paymentId).unwrap();
+            toast.success(labels.paymentRecorded);
+            refetch();
+        } catch (error) {
+            toast.error(labels.failedToRecordPayment);
         }
     };
 
@@ -157,14 +156,12 @@ export default function StaffDetail() {
     };
 
     const handleRemoveImage = async (imageId) => {
-        if (window.confirm(labels.deletePaymentConfirm)) {
-            try {
-                await removeImage({ id, imageId }).unwrap();
-                toast.success(labels.imageRemoved);
-                refetch();
-            } catch (error) {
-                toast.error(labels.failedToRemoveImage);
-            }
+        try {
+            await removeImage({ id, imageId }).unwrap();
+            toast.success(labels.imageRemoved);
+            refetch();
+        } catch (error) {
+            toast.error(labels.failedToRemoveImage);
         }
     };
 
@@ -379,13 +376,15 @@ export default function StaffDetail() {
                                                     e.target.parentElement.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-[var(--surface-muted)] text-[var(--muted)] text-sm">Image not found</div>';
                                                 }}
                                             />
-                                            <PermissionGuard execute={() => handleRemoveImage(doc._id)} permission="staff.documents.delete" isConfirmation={true}>
-                                                <button
-                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </PermissionGuard>
+                                            <ConfirmDialog message={labels.deletePaymentConfirm} onConfirm={() => handleRemoveImage(doc._id)}>
+                                                <PermissionGuard permission="staff.documents.delete">
+                                                    <button
+                                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </PermissionGuard>
+                                            </ConfirmDialog>
                                             <p className="text-xs text-[var(--muted)] mt-1">
                                                 {new Date(doc.uploadedAt).toLocaleDateString()}
                                             </p>
@@ -738,13 +737,15 @@ export default function StaffDetail() {
                                             }`}>
                                                 {payment.status === 'paid' ? labels.paid : labels.partial}
                                             </span>
-                                            <PermissionGuard execute={() => handleDeletePayment(payment._id)} permission="staff.payments.delete" isConfirmation={true}>
-                                                <button
-                                                    className="p-2 hover:bg-red-50 rounded-md"
-                                                >
-                                                    <Trash2 size={16} className="text-red-500" />
-                                                </button>
-                                            </PermissionGuard>
+                                            <ConfirmDialog message={labels.deletePaymentConfirm} onConfirm={() => handleDeletePayment(payment._id)}>
+                                                <PermissionGuard permission="staff.payments.delete">
+                                                    <button
+                                                        className="p-2 hover:bg-red-50 rounded-md"
+                                                    >
+                                                        <Trash2 size={16} className="text-red-500" />
+                                                    </button>
+                                                </PermissionGuard>
+                                            </ConfirmDialog>
                                         </div>
                                     </div>
                                 ))}

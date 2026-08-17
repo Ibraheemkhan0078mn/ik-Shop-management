@@ -8,6 +8,7 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import StaffRoleModal from "../components/StaffRoleModal.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 export default function StaffRole() {
     const { settings } = useSettings();
@@ -16,14 +17,12 @@ export default function StaffRole() {
     const [deleteStaffRole] = useDeleteStaffRoleMutation();
     const [modalOpen, setModalOpen] = useState(false);
 
-    const handleDeleteRole = async (id, name) => {
-        if (window.confirm(`Are you sure you want to delete the role "${name}"?`)) {
-            try {
-                await deleteStaffRole({ _id: id }).unwrap();
-                toast.success("Role deleted successfully");
-            } catch (error) {
-                toast.error(error?.data?.msg || "Failed to delete role");
-            }
+    const handleDeleteRole = async (id) => {
+        try {
+            await deleteStaffRole({ _id: id }).unwrap();
+            toast.success("Role deleted successfully");
+        } catch (error) {
+            toast.error(error?.data?.msg || "Failed to delete role");
         }
     };
 
@@ -47,17 +46,15 @@ export default function StaffRole() {
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex justify-center gap-2">
-                                        <PermissionGuard 
-                                            execute={() => handleDeleteRole(item._id, item.name)} 
-                                            permission="staff.delete" 
-                                            isConfirmation={true}
-                                        >
-                                            <button
-                                                className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </PermissionGuard>
+                                        <ConfirmDialog message={`Are you sure you want to delete the role "${item.name}"?`} onConfirm={() => handleDeleteRole(item._id)}>
+                                            <PermissionGuard permission="staff.delete">
+                                                <button
+                                                    className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </PermissionGuard>
+                                        </ConfirmDialog>
                                     </div>
                                 </td>
                             </tr>

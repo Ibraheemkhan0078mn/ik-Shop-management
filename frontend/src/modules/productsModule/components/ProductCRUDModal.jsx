@@ -32,7 +32,7 @@ const EMPTY_FORM = {
   taxPercent: 0,
   taxType: "percentage",
   minStockLevel: 5,
-  maxStockLevel: 10,
+  maxStockLevel: 1000,
   allowNegativeStock: false,
   isDiscountAllowed: false,
   maxDiscountPercent: 0,
@@ -195,7 +195,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     // Required inside "more options" only
     if (showMore) {
       if (!form.brandName?.trim()) newErrors.brandName = labels.brandNameRequired;
-      if (!form.description?.trim()) newErrors.description = labels.descriptionRequired;
       if (!form.countFormat) newErrors.countFormat = labels.countFormatRequired || "Counting type is required";
       const priceFields = ["defaultCostPrice", "defaultSalePrice"];
       priceFields.forEach((f) => {

@@ -5,6 +5,7 @@ import { useUpdateSupplier } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUpdate }) {
     const [modal, setModal] = useState(null);
@@ -19,7 +20,6 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
     const [recalculateSupplierBalance] = useRecalculateSupplierBalance();
 
     const handleDelete = async (paymentId) => {
-        if (!window.confirm("Delete this payment?")) return;
         try {
             await deletePayment({ paymentId, qarzaAccountId }).unwrap();
             showSuccess("Payment deleted");
@@ -189,12 +189,13 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                                         >
                                                                             <Edit size={14} />
                                                                         </button>
-                                                                        <button
-                                                                            onClick={() => handleDelete(item._id)}
-                                                                            className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
-                                                                        >
-                                                                            <ShoppingCart size={14} />
-                                                                        </button>
+                                                                        <ConfirmDialog message="Delete this payment?" onConfirm={() => handleDelete(item._id)}>
+                                                                            <button
+                                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
+                                                                            >
+                                                                                <ShoppingCart size={14} />
+                                                                            </button>
+                                                                        </ConfirmDialog>
                                                                     </>
                                                                 )}
                                                             </td>

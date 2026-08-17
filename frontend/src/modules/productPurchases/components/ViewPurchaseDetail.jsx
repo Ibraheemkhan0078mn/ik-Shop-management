@@ -4,6 +4,7 @@ import { useGetPurchasePayments } from "../services/purchases.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PurchasePaymentModal from "./PurchasePaymentModal.jsx";
 import ReceiptTemplate from "../../../shared/components/ReceiptTemplate.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 export default function ViewPurchaseDetail({ purchase, onClose, language = "en" }) {
     const formattedDate = new Date(purchase.date || purchase.createdAt).toLocaleDateString();
@@ -21,8 +22,6 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
     console.log('Payments list:', paymentsList);
 
     const handleDeletePayment = async (paymentId) => {
-        if (!window.confirm("Are you sure you want to delete this payment?")) return;
-        
         try {
             const response = await fetch(`http://localhost:5001/api/purchases/payments/${paymentId}`, {
                 method: 'DELETE',
@@ -310,13 +309,14 @@ export default function ViewPurchaseDetail({ purchase, onClose, language = "en" 
                                                         >
                                                             <Edit2 size={16} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDeletePayment(payment._id)}
-                                                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                                            title={language === "en" ? "Delete Payment" : "ادائیگی حذف کریں"}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <ConfirmDialog message="Are you sure you want to delete this payment?" onConfirm={() => handleDeletePayment(payment._id)}>
+                                                            <button
+                                                                className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                                                title={language === "en" ? "Delete Payment" : "ادائیگی حذف کریں"}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </ConfirmDialog>
                                                     </div>
                                                 </td>
                                             </tr>

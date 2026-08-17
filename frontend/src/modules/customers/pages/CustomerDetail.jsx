@@ -14,6 +14,7 @@ import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -75,7 +76,6 @@ export default function CustomerDetail() {
     const refresh = useCallback(() => {}, []);
 
     const handleDelete = async (paymentId) => {
-        if (!window.confirm("Delete this payment?")) return;
         try {
             await deletePayment({ paymentId, qarzaAccountId }).unwrap();
             showSuccess("Payment deleted");
@@ -99,13 +99,11 @@ export default function CustomerDetail() {
     };
 
     const handleDeleteOrder = async (orderId) => {
-        if (window.confirm("Delete this order?")) {
-            try {
-                await deleteOrder(orderId).unwrap();
-                showSuccess("Order deleted");
-            } catch (error) {
-                showError(error?.data?.message || "Failed to delete order");
-            }
+        try {
+            await deleteOrder(orderId).unwrap();
+            showSuccess("Order deleted");
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete order");
         }
     };
 
@@ -347,12 +345,13 @@ export default function CustomerDetail() {
                                                                             >
                                                                                 <Edit size={14} />
                                                                             </button>
-                                                                            <button
-                                                                                onClick={() => handleDelete(item._id)}
-                                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
-                                                                            >
-                                                                                <Package size={14} />
-                                                                            </button>
+                                                                            <ConfirmDialog message="Delete this payment?" onConfirm={() => handleDelete(item._id)}>
+                                                                                <button
+                                                                                    className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
+                                                                                >
+                                                                                    <Package size={14} />
+                                                                                </button>
+                                                                            </ConfirmDialog>
                                                                         </>
                                                                     )}
                                                                 </td>
@@ -506,12 +505,13 @@ export default function CustomerDetail() {
                                                     >
                                                         <RotateCcw size={15} />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDeleteOrder(order._id)}
-                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500"
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
+                                                    <ConfirmDialog message="Delete this order?" onConfirm={() => handleDeleteOrder(order._id)}>
+                                                        <button
+                                                            className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </ConfirmDialog>
                                                 </div>
                                             </td>
                                         </tr>

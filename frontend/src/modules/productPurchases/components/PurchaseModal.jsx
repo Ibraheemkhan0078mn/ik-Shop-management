@@ -251,6 +251,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
     const selectedBatch = availableBatches.find(b => b._id === itemForm.batchSelection);
     const isExistingMode = itemForm.batchMode === "existing" && Boolean(itemForm.batchSelection);
+    const isExistingProductSelected = Boolean(itemForm.item && productsList.find(p => p._id === itemForm.item));
     const selectedSupplierName = suppliersList.find(s => s._id === bill.supplier)?.name ?? "";
 
     // Calculate stock status for purchase form
@@ -466,8 +467,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                 ...p,
                 unit: prod.unit ?? "unit",
                 perItemPrice: prod.perItemPrice || prod.defaultSalePrice || "",
-                discountType: prod.discountType ?? "percentage",
-                taxType: prod.taxType ?? "percentage"
             }));
         }
     }, [itemForm.item, productsList, editingIndex]);
@@ -789,6 +788,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             onChange={handleItemChange}
                                             min="0"
                                             onWheel={e => e.target.blur()}
+                                            readOnly={isExistingProductSelected}
+                                            style={isExistingProductSelected ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                 </div>
@@ -804,6 +805,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             min="0" 
                                             max="100"
                                             onWheel={e => e.target.blur()}
+                                            readOnly={isExistingProductSelected}
+                                            style={isExistingProductSelected ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field>
@@ -829,6 +832,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             min="0" 
                                             max="100"
                                             onWheel={e => e.target.blur()}
+                                            readOnly={isExistingProductSelected}
+                                            style={isExistingProductSelected ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field>
@@ -850,8 +855,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             type="date" 
                                             value={itemForm.mfgDate} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isExistingMode || isExistingProductSelected}
+                                            style={(isExistingMode || isExistingProductSelected) ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field><Label>{labels.expiryDate}</Label>
@@ -860,8 +865,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             type="date" 
                                             value={itemForm.expiryDate} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isExistingMode || isExistingProductSelected}
+                                            style={(isExistingMode || isExistingProductSelected) ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                 </div>
@@ -876,6 +881,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             onChange={handleItemChange}
                                             min="0"
                                             onWheel={e => e.target.blur()}
+                                            readOnly={isExistingProductSelected}
+                                            style={isExistingProductSelected ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                 </div>

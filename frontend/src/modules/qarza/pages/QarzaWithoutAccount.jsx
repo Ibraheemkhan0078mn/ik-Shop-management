@@ -9,6 +9,7 @@ import { getQarzaLabels } from "../labels/qarzaLabels.js"
 import ScreenTabButton from '../../../shared/components/ScreenTabButton.jsx'
 import api from "../../../shared/services/api.js"
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js"
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx"
 
 const QarzaWithoutAccount = () => {
 
@@ -70,7 +71,6 @@ const QarzaWithoutAccount = () => {
 
 
     async function deleteQarzaAccountBtnClick(paymentId) {
-        if (!window.confirm(labels.deletePaymentConfirm)) return;
         try {
             let res = await api.delete(`/qarzaRoutes/deletePaymentWihtoutAccount`, { data: { paymentId } })
             setData(res.data.allPayments)
@@ -310,12 +310,13 @@ const QarzaWithoutAccount = () => {
                                                         )}
 
                                                         {(userPermissions?.has("qarza-without-account-delete") || loggedInUserData?.role === "admin") && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); deleteQarzaAccountBtnClick(item._id); }}
-                                                                className="w-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 transition-all active:scale-90"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
+                                                            <ConfirmDialog message={labels.deletePaymentConfirm} onConfirm={(e) => { e.stopPropagation(); deleteQarzaAccountBtnClick(item._id); }}>
+                                                                <button
+                                                                    className="w-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 transition-all active:scale-90"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </ConfirmDialog>
                                                         )}
                                                     </div>
                                                 </div>

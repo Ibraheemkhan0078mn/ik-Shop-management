@@ -376,14 +376,26 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                     <Label>{labels.quantity} *</Label>
                     <Inp
                       type="number"
-                      min="0.01"
+                      min="0"
                       step="0.01"
                       placeholder="0.00"
                       value={currentItem.quantity}
-                      onChange={e => updateCurrent("quantity", e.target.value)}
+                      onChange={e => {
+                        let val = e.target.value === "" ? 0 : Number(e.target.value);
+                        const maxAvailable = currentItem.batchNumber ? (batchOptions.find(b => b.value === currentItem.batchNumber)?.quantity || 0) : Infinity;
+                        if (val < 0) val = 0;
+                        if (val > maxAvailable) val = maxAvailable;
+                        updateCurrent("quantity", val);
+                      }}
                       disabled={!currentItem.product}
                       onWheel={e => e.target.blur()}
+                      max={currentItem.batchNumber ? (batchOptions.find(b => b.value === currentItem.batchNumber)?.quantity || 0) : undefined}
                     />
+                    {currentItem.batchNumber && (
+                      <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                        Max available: {batchOptions.find(b => b.value === currentItem.batchNumber)?.quantity || 0}
+                      </p>
+                    )}
                   </Field>
                 </div>
 

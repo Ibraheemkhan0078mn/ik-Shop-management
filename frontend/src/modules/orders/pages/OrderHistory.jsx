@@ -11,6 +11,7 @@ import {
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
+import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 // ── Payment Method Configuration ───────────────────────────────────────
 const PAYMENT_METHODS = {
@@ -384,12 +385,10 @@ export default function OrderHistory() {
     }, [filterId]);
 
     const handleDelete = async (id) => {
-        if (window.confirm(language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟")) {
-            try {
-                await deleteOrder(id).unwrap();
-            } catch (error) {
-                console.error("Failed to delete order:", error);
-            }
+        try {
+            await deleteOrder(id).unwrap();
+        } catch (error) {
+            console.error("Failed to delete order:", error);
         }
     };
 
@@ -562,7 +561,7 @@ export default function OrderHistory() {
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 <span className="font-semibold text-green-600 whitespace-nowrap">
-                                                    Rs {(order.paid ?? 0).toLocaleString()}
+                                                    Rs {(order.paidAmount ?? order.paid ?? 0).toLocaleString()}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
@@ -592,12 +591,14 @@ export default function OrderHistory() {
                                                     >
                                                         <RotateCcw size={15} />
                                                     </button>
-                                                    <PermissionGuard execute={() => handleDelete(order._id)} permission="orders.delete" isConfirmation={true}>
-                                                        <button id={`order-history-delete-${order._id}`}
-                                                            className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
-                                                            <Trash2 size={15} />
-                                                        </button>
-                                                    </PermissionGuard>
+                                                    <ConfirmDialog message={language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟"} onConfirm={() => handleDelete(order._id)}>
+                                                        <PermissionGuard permission="orders.delete">
+                                                            <button id={`order-history-delete-${order._id}`}
+                                                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                                                <Trash2 size={15} />
+                                                            </button>
+                                                        </PermissionGuard>
+                                                    </ConfirmDialog>
                                                 </div>
                                             </td>
                                         </tr>
