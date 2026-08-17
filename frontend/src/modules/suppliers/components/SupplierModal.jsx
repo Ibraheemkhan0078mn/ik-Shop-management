@@ -292,7 +292,7 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                         <Field>
                             <Label>{labels.phone}</Label>
                             <Inp type="number" value={form.phone} placeholder={labels.phonePlaceholder}
-                                onChange={e => update("phone", e.target.value)} />
+                                onChange={e => update("phone", e.target.value)} min="0" onWheel={e => e.target.blur()} />
                         </Field>
 
                         <Field>

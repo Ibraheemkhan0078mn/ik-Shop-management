@@ -382,6 +382,7 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                       value={currentItem.quantity}
                       onChange={e => updateCurrent("quantity", e.target.value)}
                       disabled={!currentItem.product}
+                      onWheel={e => e.target.blur()}
                     />
                   </Field>
                 </div>

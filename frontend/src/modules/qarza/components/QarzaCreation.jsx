@@ -208,6 +208,8 @@ const QarzaAccountCreation = ({ getqarzaAccounts, setVisibility, setQarzaAccount
                                     value={formData.phoneNo}
                                     onChange={handleChange}
                                     placeholder="Primary contact number"
+                                    min="0"
+                                    onWheel={e => e.target.blur()}
                                     className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-[#1c6f48] focus:bg-white transition-all font-bold text-slate-700 shadow-inner"
                                 />
                                 <i className="ri-phone-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1c6f48] text-xl transition-colors"></i>

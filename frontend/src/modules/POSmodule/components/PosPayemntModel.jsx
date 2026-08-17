@@ -191,6 +191,7 @@ export default function PosPaymentModal({
     const handleCustomerCreated = () => {
         setShowCustomerModal(false);
         refetchCustomers();
+        refetchQarzaAccounts();
     };
 
     const qarzaOptions = qarzaAccounts?.accounts?.filter(a => a.type === 'customer').map((a) => ({
@@ -397,6 +398,7 @@ export default function PosPaymentModal({
                                         type="number" min={0} placeholder="Rs 0"
                                         value={orderDiscount}
                                         onChange={(e) => setOrderDiscount(e.target.value)}
+                                        onWheel={e => e.target.blur()}
                                     />
                                 </FormField>
 
@@ -650,9 +652,11 @@ export default function PosPaymentModal({
                                                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--muted)" }}>Rs</span>
                                                 <input
                                                     type="number"
+                                                    min="0"
                                                     value={hybridCash}
                                                     onChange={(e) => setHybridCash(e.target.value)}
                                                     placeholder="0"
+                                                    onWheel={e => e.target.blur()}
                                                     className="w-full pl-9 pr-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200"
                                                     style={inputStyle}
                                                     {...fieldFocus}
@@ -831,6 +835,7 @@ export default function PosPaymentModal({
                                                                     min="0"
                                                                     placeholder="0"
                                                                     value={itemDiscounts[index] || ""}
+                                                                    onWheel={e => e.target.blur()}
                                                                     onChange={(e) => {
                                                                         const value = e.target.value;
                                                                         const numValue = Number(value);

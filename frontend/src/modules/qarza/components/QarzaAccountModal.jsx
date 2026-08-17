@@ -299,6 +299,8 @@ export default function QarzaAccountModal({ mode = "create", account, onClose, o
                             onChange={updateField}
                             type="number"
                             placeholder="e.g., 0300-1234567"
+                            min="0"
+                            onWheel={e => e.target.blur()}
                         />
 
                         {/* Address */}

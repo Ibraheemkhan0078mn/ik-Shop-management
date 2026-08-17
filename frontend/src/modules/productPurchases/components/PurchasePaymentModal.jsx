@@ -19,8 +19,10 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    // Filter credit accounts to show only supplier type for purchases
-    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'supplier') || [];
+    // Filter credit accounts to show only supplier type for purchases and exclude deleted ones
+    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => 
+        account.type === 'supplier' && account.isDeleted !== true
+    ) || [];
 
     // Use live payment status from API if available, otherwise fall back to purchase data
     const totalPaid = paymentStatus?.totalPaid || purchase?.paidAmount || 0;
@@ -312,6 +314,8 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
                                     }}
                                     placeholder="Enter cash amount"
                                     max={remainingAmount}
+                                    min="0"
+                                    onWheel={e => e.target.blur()}
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                                     required
                                 />

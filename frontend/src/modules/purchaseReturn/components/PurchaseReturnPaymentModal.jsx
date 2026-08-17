@@ -19,8 +19,10 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
     const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
-    // Filter credit accounts to show only supplier type for purchase returns
-    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'supplier') || [];
+    // Filter credit accounts to show only supplier type for purchase returns and exclude deleted ones
+    const supplierCreditAccounts = creditAccounts?.accounts?.filter(account => 
+        account.type === 'supplier' && account.isDeleted !== true
+    ) || [];
 
     const remainingAmount = (purchaseReturn?.totalRefundAmount || 0) - (purchaseReturn?.refundedAmount || 0);
     const editingAmount = payment?.amount || remainingAmount;
@@ -292,6 +294,8 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                                     value={cashAmount}
                                     onChange={(e) => setCashAmount(e.target.value)}
                                     placeholder="Enter cash amount"
+                                    min="0"
+                                    onWheel={e => e.target.blur()}
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                                     required
                                 />

@@ -503,7 +503,7 @@ function Field({ label, name, value, onChange, error, required, type = "text", p
                     onChange={(e) => onChange(name, e.target.value)} />
             ) : type === "number" ? (
                 <input type="number" min={0} step="any" className={`${base} ${state}`} value={value ?? 0} placeholder={placeholder}
-                    onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} />
+                    onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} onWheel={e => e.target.blur()} />
             ) : type === "date" ? (
                 <input type="date" className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
                     onChange={(e) => onChange(name, e.target.value)} />

@@ -1,10 +1,11 @@
 // src/modules/qarza/components/QarzaPaymentModal.jsx
 // Props: mode "create"|"update", qarzaAccountId, payment (for update), onClose, onSuccess
 import { useState, useEffect } from "react";
-import { X, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { X, Wallet, ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateQarzaPayment, useUpdateQarzaPayment } from "../services/qarza.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
+import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -51,7 +52,12 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
     const isSubmitting = isCreating || isUpdating;
 
     const [form, setForm] = useState(emptyForm());
+    const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
     const update = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+    const handlePaymentMethodCreated = () => {
+        setShowPaymentMethodModal(false);
+    };
 
     useEffect(() => {
         if (!isUpdate || !payment) return;
@@ -150,12 +156,22 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
 
                     <Field>
                         <Label>Payment Method</Label>
-                        <Sel value={form.paymentMethod} onChange={e => update("paymentMethod", e.target.value)}>
-                            <option value="">Select Payment Method</option>
-                            {paymentMethods.filter(pm => pm.isActive !== false).map((pm) => (
-                                <option key={pm._id} value={pm.name}>{pm.name}</option>
-                            ))}
-                        </Sel>
+                        <div className="flex gap-2">
+                            <Sel value={form.paymentMethod} onChange={e => update("paymentMethod", e.target.value)}>
+                                <option value="">Select Payment Method</option>
+                                {paymentMethods.filter(pm => pm.isActive !== false).map((pm) => (
+                                    <option key={pm._id} value={pm.name}>{pm.name}</option>
+                                ))}
+                            </Sel>
+                            <button
+                                type="button"
+                                onClick={() => setShowPaymentMethodModal(true)}
+                                className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+                                title="Create new payment method"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
                     </Field>
 
                     <Field>
@@ -171,6 +187,13 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
                         </Btn>
                     </div>
                 </div>
+                {showPaymentMethodModal && (
+                    <PaymentMethodModal
+                        mode="create"
+                        onClose={() => setShowPaymentMethodModal(false)}
+                        onSuccess={handlePaymentMethodCreated}
+                    />
+                )}
             </div>
         </div>
     );

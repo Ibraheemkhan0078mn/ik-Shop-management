@@ -105,6 +105,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                             value={details.returnQuantity || 1}
                                             onChange={(e) => onItemDetailChange(itemId, "returnQuantity", e.target.value)}
                                             className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                            onWheel={e => e.target.blur()}
                                         />
                                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                                             Max limit: {item.quantity}
@@ -129,6 +130,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                             value={details.cut || 0}
                                             onChange={(e) => onItemDetailChange(itemId, "cut", e.target.value)}
                                             className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </div>
                                 </div>

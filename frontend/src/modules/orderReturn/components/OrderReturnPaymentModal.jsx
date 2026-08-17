@@ -279,8 +279,9 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
                                         }
                                     }}
                                     placeholder="Enter cash amount"
-                                    max={remainingAmount}
                                     min="0"
+                                    onWheel={e => e.target.blur()}
+                                    max={remainingAmount}
                                     step="0.01"
                                     className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
                                     required

@@ -174,12 +174,12 @@ export default function CustomerModal({ mode = "create", customerId, onClose, on
 
                         <Field>
                             <Label>{labels.phoneNo}</Label>
-                            <Inp type="number" value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={(e) => update("phoneNo", e.target.value)} />
+                            <Inp type="number" value={form.phoneNo} placeholder={labels.phonePlaceholder} onChange={(e) => update("phoneNo", e.target.value)} min="0" onWheel={e => e.target.blur()} />
                         </Field>
 
                         <Field>
                             <Label>{labels.cnic}</Label>
-                            <Inp type="number" value={form.cnic} placeholder={labels.cnicPlaceholder} onChange={(e) => update("cnic", e.target.value)} />
+                            <Inp type="number" value={form.cnic} placeholder={labels.cnicPlaceholder} onChange={(e) => update("cnic", e.target.value)} min="0" onWheel={e => e.target.blur()} />
                         </Field>
 
                         <Field className="sm:col-span-2">

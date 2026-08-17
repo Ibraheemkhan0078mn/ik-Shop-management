@@ -865,6 +865,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                                 max={Math.min(batchStocks[batchId] || 0, item.quantity || 0)}
                                                                 value={details.returnQuantity}
                                                                 onChange={(e) => handleItemDetailChange(batchId, "returnQuantity", e.target.value)}
+                                                                onWheel={e => e.target.blur()}
                                                             />
                                                             <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                                                                 Max limit: {Math.min(batchStocks[batchId] || 0, item.quantity || 0)} (Stock: {batchStocks[batchId] || 0}, Purchase: {item.quantity || 0})
@@ -887,6 +888,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                                 min={0}
                                                                 value={details.cut}
                                                                 onChange={(e) => handleItemDetailChange(batchId, "cut", e.target.value)}
+                                                                onWheel={e => e.target.blur()}
                                                             />
                                                         </Field>
                                                     </div>

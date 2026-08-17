@@ -750,6 +750,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.quantity} 
                                             onChange={handleItemChange}
+                                            min="0"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </Field>
                                     <Field><Label>{labels.unit}</Label>
@@ -785,8 +787,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0.00" 
                                             value={itemForm.costPrice} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            min="0"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </Field>
                                 </div>
@@ -799,6 +801,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.discount} 
                                             onChange={handleItemChange}
+                                            min="0" 
+                                            max="100"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </Field>
                                     <Field>
@@ -821,6 +826,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0" 
                                             value={itemForm.tax} 
                                             onChange={handleItemChange}
+                                            min="0" 
+                                            max="100"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </Field>
                                     <Field>
@@ -866,8 +874,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             placeholder="0.00" 
                                             value={itemForm.perItemPrice} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            min="0"
+                                            onWheel={e => e.target.blur()}
                                         />
                                     </Field>
                                 </div>
@@ -1087,7 +1095,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                             <Field>
                                 <Label><DollarSign className="inline w-3 h-3 mr-1" />{labels.discount}</Label>
                                 <div className="flex gap-2">
-                                    <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} />
+                                    <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} min="0" max="100" onWheel={e => e.target.blur()} />
                                     <Sel className="w-20 sm:w-24 shrink-0" value={bill.discountType} onChange={e => setBill(p => ({ ...p, discountType: e.target.value }))}>
                                         <option value="percentage">{labels.percentage}</option>
                                         <option value="fixed">{labels.fixed}</option>
@@ -1097,14 +1105,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                             <Field>
                                 <Label>{labels.taxGst}</Label>
                                 <div className="flex gap-2">
-                                    <Inp type="number" name="gst" placeholder="0" value={bill.gst} onChange={handleBillChange} />
+                                    <Inp type="number" name="gst" placeholder="0" value={bill.gst} onChange={handleBillChange} min="0" max="100" onWheel={e => e.target.blur()} />
                                     <Sel className="w-20 sm:w-24 shrink-0" value={bill.gstType} onChange={e => setBill(p => ({ ...p, gstType: e.target.value }))}>
                                         <option value="percentage">{labels.percentage}</option>
                                         <option value="fixed">{labels.fixed}</option>
                                     </Sel>
                                 </div>
                             </Field>
-                            <Field><Label><Truck className="inline w-3 h-3 mr-1" />{labels.shipping}</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} /></Field>
+                            <Field><Label><Truck className="inline w-3 h-3 mr-1" />{labels.shipping}</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} min="0" onWheel={e => e.target.blur()} /></Field>
                             <Field className="sm:col-span-2 lg:col-span-2"><Label><File className="inline w-3 h-3 mr-1" />{labels.notes}</Label><Txt name="notes" rows={1} placeholder={labels.optionalNote} value={bill.notes} onChange={handleBillChange} /></Field>
                         </div>
                     </Card>

@@ -485,6 +485,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   error={errors.minStockLevel}
                   type="number"
                   placeholder="5"
+                  min="5"
                 />
                 <Field
                   label={labels.maxStockLevel}
@@ -494,6 +495,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   error={errors.maxStockLevel}
                   type="number"
                   placeholder="10"
+                  max="1000"
                 />
 
                 {/* Rack Location */}
@@ -635,7 +637,7 @@ function Field({ label, name, value, onChange, error, required, type = "text", p
           onChange={(e) => onChange(name, e.target.value)} />
       ) : type === "number" ? (
         <input type="number" min={0} step="any" className={`${base} ${state}`} value={value ?? 0} placeholder={placeholder}
-          onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} />
+          onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} onWheel={e => e.target.blur()} />
       ) : (
         <input type="text" className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
           onChange={(e) => onChange(name, e.target.value)} />
