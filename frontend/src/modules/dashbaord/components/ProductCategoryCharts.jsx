@@ -3,7 +3,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
-import { useGetTopSellingProductsQuery, useGetSalesByCategoryQuery } from '../services/dashboard.service.js';
+import { useGetSalesByCategoryQuery } from '../services/dashboard.service.js';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -12,15 +12,7 @@ export default function ProductCategoryCharts({ filter = '30D' }) {
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
   
-  const [topProductsMetric, setTopProductsMetric] = React.useState('revenue');
-
-  const { data: topProductsData, isLoading: topProductsLoading } = useGetTopSellingProductsQuery({ range: filter, metric: topProductsMetric });
   const { data: categoryData, isLoading: categoryLoading } = useGetSalesByCategoryQuery(filter);
-
-  const topProductsChartData = topProductsData?.map(d => ({
-    name: d.name,
-    [topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold]: topProductsMetric === 'revenue' ? d.revenue : d.unitsSold,
-  })) || [];
 
   const categoryChartData = categoryData?.map(d => ({
     name: d.name,
@@ -35,49 +27,62 @@ export default function ProductCategoryCharts({ filter = '30D' }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Top Selling Products */}
+      {/* Sales by Category - Bar Chart */}
       <ChartCard
-        title={labels.topSellingProducts}
-        loading={topProductsLoading}
-        height={300}
+        title={labels.salesByCategory}
+        loading={categoryLoading}
+        height={350}
         showFilter={false}
         emptyMessage={labels.noDataAvailable}
-        isEmpty={topProductsChartData.length === 0}
-        filterSlot={
-          <select
-            value={topProductsMetric}
-            onChange={(e) => setTopProductsMetric(e.target.value)}
-            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--app-bg)]"
-          >
-            <option value="revenue">{labels.byRevenue}</option>
-            <option value="units">{labels.byUnitsSold}</option>
-          </select>
-        }
+        isEmpty={categoryChartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={topProductsChartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis type="number" stroke="var(--muted)" />
-            <YAxis dataKey="name" type="category" width={100} stroke="var(--muted)" />
-            <Tooltip />
-            <Legend />
+          <BarChart data={categoryChartData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+            <XAxis 
+              type="number" 
+              stroke="var(--muted)"
+              tick={{ fill: 'var(--muted)', fontSize: 12 }}
+              axisLine={{ stroke: 'var(--border)' }}
+            />
+            <YAxis 
+              type="category" 
+              dataKey="name" 
+              width={90}
+              stroke="var(--muted)"
+              tick={{ fill: 'var(--text)', fontSize: 12, fontWeight: 500 }}
+              axisLine={{ stroke: 'var(--border)' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              }}
+              itemStyle={{ color: 'var(--text)' }}
+              labelStyle={{ color: 'var(--muted)' }}
+              formatter={(value) => [`Rs ${value.toLocaleString()}`, labels.revenue]}
+            />
             <Bar 
-              dataKey={topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold} 
-              fill="#10b981" 
-              name={topProductsMetric === 'revenue' ? labels.revenue : labels.unitsSold}
+              dataKey="revenue" 
+              fill="var(--accent-2)" 
+              name={labels.revenue}
+              radius={[0, 6, 6, 0]}
+              barSize={32}
             />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Sales by Category */}
+      {/* Sales by Category - Pie Chart */}
       <ChartCard
-        title={labels.salesByCategory}
+        title={`${labels.categoryDistribution} (${labels.revenue})`}
         loading={categoryLoading}
-        height={300}
+        height={350}
         showFilter={false}
         emptyMessage={labels.noDataAvailable}
-        isEmpty={categoryChartData.length === 0}
+        isEmpty={pieChartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -86,16 +91,34 @@ export default function ProductCategoryCharts({ filter = '30D' }) {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={(entry) => `${entry.name}: Rs ${entry.value.toLocaleString()}`}
-              outerRadius={80}
+              label={(entry) => `${entry.name}`}
+              outerRadius={100}
+              innerRadius={60}
               fill="#8884d8"
               dataKey="value"
+              paddingAngle={2}
             >
               {pieChartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              }}
+              itemStyle={{ color: 'var(--text)' }}
+              labelStyle={{ color: 'var(--muted)' }}
+              formatter={(value) => [`Rs ${value.toLocaleString()}`, labels.revenue]}
+            />
+            <Legend 
+              verticalAlign="bottom" 
+              height={36}
+              iconType="circle"
+              wrapperStyle={{ fontSize: '12px', color: 'var(--text)' }}
+            />
           </PieChart>
         </ResponsiveContainer>
       </ChartCard>

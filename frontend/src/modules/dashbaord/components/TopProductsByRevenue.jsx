@@ -3,33 +3,36 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
 import ChartCard from './ChartCard.jsx';
-import { useGetStockLevelByCategoryQuery } from '../services/dashboard.service.js';
+import { useGetTopSellingProductsQuery } from '../services/dashboard.service.js';
 
-export default function InventoryOverviewCharts() {
+export default function TopProductsByRevenue({ filter = '30D' }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const labels = getDashboardLabels(language);
-  
-  const { data: stockLevelData, isLoading: stockLevelLoading } = useGetStockLevelByCategoryQuery();
 
-  const stockLevelChartData = stockLevelData?.map(d => ({
+  const { data: topProductsData, isLoading } = useGetTopSellingProductsQuery({ range: filter, metric: 'revenue' });
+
+  const chartData = topProductsData?.map(d => ({
     name: d.name,
-    stockLevel: d.stockLevel,
+    value: d.revenue,
   })) || [];
 
   return (
-    <div className="grid grid-cols-1 gap-6">
-      {/* Stock Level by Category */}
+    <div className="col-span-1 lg:col-span-2">
       <ChartCard
-        title={labels.stockLevelByCategory}
-        loading={stockLevelLoading}
+        title={`${labels.topSellingProducts} (${labels.byRevenue})`}
+        loading={isLoading}
         height={350}
         showFilter={false}
         emptyMessage={labels.noDataAvailable}
-        isEmpty={stockLevelChartData.length === 0}
+        isEmpty={chartData.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={stockLevelChartData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+          <BarChart 
+            data={chartData} 
+            layout="vertical"
+            margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
             <XAxis 
               type="number" 
@@ -38,9 +41,9 @@ export default function InventoryOverviewCharts() {
               axisLine={{ stroke: 'var(--border)' }}
             />
             <YAxis 
-              dataKey="name" 
               type="category" 
-              width={90}
+              dataKey="name" 
+              width={110}
               stroke="var(--muted)"
               tick={{ fill: 'var(--text)', fontSize: 12, fontWeight: 500 }}
               axisLine={{ stroke: 'var(--border)' }}
@@ -54,12 +57,11 @@ export default function InventoryOverviewCharts() {
               }}
               itemStyle={{ color: 'var(--text)' }}
               labelStyle={{ color: 'var(--muted)' }}
-              formatter={(value) => [value, labels.stockLevel]}
+              formatter={(value) => [`Rs ${value.toLocaleString()}`, labels.revenue]}
             />
             <Bar 
-              dataKey="stockLevel" 
+              dataKey="value" 
               fill="var(--accent-2)" 
-              name={labels.stockLevel}
               radius={[0, 6, 6, 0]}
               barSize={32}
             />

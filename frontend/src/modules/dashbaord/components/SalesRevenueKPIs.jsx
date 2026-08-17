@@ -16,70 +16,43 @@ export default function SalesRevenueKPIs({ filter = '30D' }) {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.revenueOverview || "Revenue Overview"}</h2>
       
-      {/* KPI Grid - 2 rows of 3 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* KPI Grid - 4 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label={labels.totalRevenue}
+          label={labels.totalRevenue || "Total"}
           value={kpis?.totalRevenue}
-          subLabel={`${labels.retail} + ${labels.wholesale} combined`}
-          secondary={{
-            [labels.retail]: kpis?.retailRevenue,
-            [labels.wholesale]: kpis?.wholesaleRevenue,
-          }}
+          subLabel={`${labels.wholesale || "Wholesale"}: Rs ${(kpis?.wholesaleRevenue || 0).toLocaleString()} | ${labels.retail || "Retail"}: Rs ${(kpis?.retailRevenue || 0).toLocaleString()}`}
           icon={DollarSign}
           color="bg-green-500"
           loading={isLoading}
         />
 
         <KPICard
-          label={labels.retailRevenue}
-          value={kpis?.retailRevenue}
-          subLabel={`(${kpis?.retailOrders} ${labels.orders})`}
-          icon={ShoppingCart}
-          color="bg-blue-500"
-          loading={isLoading}
-        />
-
-        <KPICard
-          label={labels.wholesaleRevenue}
+          label={labels.wholesaleRevenue || "Wholesale"}
           value={kpis?.wholesaleRevenue}
-          subLabel={`(${kpis?.wholesaleOrders} ${labels.orders})`}
+          subLabel={`${kpis?.wholesaleOrders || 0} ${labels.orders || "Orders"} | ${kpis?.wholesaleReviewPercentage || 0}% ${labels.review || "Review"}`}
           icon={Package}
           color="bg-purple-500"
           loading={isLoading}
         />
 
         <KPICard
-          label={labels.totalOrders}
-          value={kpis?.totalOrders}
-          subLabel={`${labels.retail}: ${kpis?.retailOrders} | ${labels.wholesale}: ${kpis?.wholesaleOrders}`}
+          label={labels.retailRevenue || "Retail"}
+          value={kpis?.retailRevenue}
+          subLabel={`${kpis?.retailOrders || 0} ${labels.orders || "Orders"} | ${kpis?.retailReviewPercentage || 0}% ${labels.review || "Review"}`}
           icon={ShoppingCart}
-          color="bg-cyan-500"
+          color="bg-blue-500"
           loading={isLoading}
         />
 
         <KPICard
-          label={labels.averageOrderValue}
-          value={kpis?.avgOrderValue}
-          secondary={{
-            [labels.retailAOV]: kpis?.retailAvgOrderValue,
-            [labels.wholesaleAOV]: kpis?.wholesaleAvgOrderValue,
-          }}
-          icon={TrendingUp}
-          color="bg-orange-500"
-          loading={isLoading}
-        />
-
-        <KPICard
-          label={labels.grossProfit}
-          value={kpis?.grossProfit}
-          subLabel={`${kpis?.grossMargin}% ${labels.margin}`}
-          secondary={{
-            [labels.costOfGoodsSold || "COGS"]: kpis?.totalCostOfGoodsSold,
-          }}
+          label={labels.totalProfit || "Total Profit"}
+          value={kpis?.totalProfit}
+          subLabel={`${labels.retail || "Retail"}: Rs ${(kpis?.retailProfit || 0).toLocaleString()} (${kpis?.retailProfitPercentage || 0}%) | ${labels.wholesale || "Wholesale"}: Rs ${(kpis?.wholesaleProfit || 0).toLocaleString()} (${kpis?.wholesaleProfitPercentage || 0}%)`}
           icon={TrendingUp}
           color="bg-emerald-500"
           loading={isLoading}
+          isProfit={true}
         />
       </div>
     </div>

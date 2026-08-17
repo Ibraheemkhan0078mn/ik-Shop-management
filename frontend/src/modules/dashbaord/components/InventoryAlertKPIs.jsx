@@ -39,27 +39,45 @@ export default function InventoryAlertKPIs({ filter = '30D' }) {
     { header: labels.productName, key: 'productName' },
     { header: labels.sku, key: 'sku' },
     { header: labels.batchNumber, key: 'batchNumber' },
+    { header: labels.category, key: 'category' },
     { header: labels.expiryDate, key: 'expiryDate', render: (row) => new Date(row.expiryDate).toLocaleDateString() },
     { header: labels.daysRemaining, key: 'daysRemaining' },
     { header: labels.stockQty, key: 'stockQty' },
+    { header: labels.costPrice, key: 'costPrice', render: (row) => `Rs ${row.costPrice.toLocaleString()}` },
+    { header: labels.sellingPrice, key: 'sellingPrice', render: (row) => `Rs ${row.sellingPrice.toLocaleString()}` },
+    { header: labels.supplier, key: 'supplier' },
+    { header: labels.mfgDate, key: 'mfgDate', render: (row) => row.mfgDate !== 'N/A' ? new Date(row.mfgDate).toLocaleDateString() : 'N/A' },
+    { header: labels.discount, key: 'discount', render: (row) => `${row.discount}${row.discountType === 'percentage' ? '%' : ''}` },
   ];
 
   const lowStockColumns = [
     { header: labels.productName, key: 'productName' },
     { header: labels.sku, key: 'sku' },
     { header: labels.batchNumber, key: 'batchNumber' },
+    { header: labels.category, key: 'category' },
     { header: labels.currentStock, key: 'currentStock' },
     { header: labels.minStock, key: 'minStock' },
     { header: labels.maxStock, key: 'maxStock' },
     { header: labels.shortage, key: 'shortage' },
+    { header: labels.costPrice, key: 'costPrice', render: (row) => `Rs ${row.costPrice.toLocaleString()}` },
+    { header: labels.sellingPrice, key: 'sellingPrice', render: (row) => `Rs ${row.sellingPrice.toLocaleString()}` },
+    { header: labels.supplier, key: 'supplier' },
+    { header: labels.expiryDate, key: 'expiryDate', render: (row) => row.expiryDate !== 'N/A' ? new Date(row.expiryDate).toLocaleDateString() : 'N/A' },
+    { header: labels.discount, key: 'discount', render: (row) => `${row.discount}${row.discountType === 'percentage' ? '%' : ''}` },
   ];
 
   const outOfStockColumns = [
     { header: labels.productName, key: 'productName' },
     { header: labels.sku, key: 'sku' },
     { header: labels.batchNumber, key: 'batchNumber' },
-    { header: labels.lastStockDate, key: 'lastStockDate', render: (row) => new Date(row.lastStockDate).toLocaleDateString() },
+    { header: labels.category, key: 'category' },
+    { header: labels.lastStockDate, key: 'lastStockDate', render: (row) => row.lastStockDate !== 'N/A' ? new Date(row.lastStockDate).toLocaleDateString() : 'N/A' },
     { header: labels.minStock, key: 'minStock' },
+    { header: labels.costPrice, key: 'costPrice', render: (row) => `Rs ${row.costPrice.toLocaleString()}` },
+    { header: labels.sellingPrice, key: 'sellingPrice', render: (row) => `Rs ${row.sellingPrice.toLocaleString()}` },
+    { header: labels.supplier, key: 'supplier' },
+    { header: labels.expiryDate, key: 'expiryDate', render: (row) => row.expiryDate !== 'N/A' ? new Date(row.expiryDate).toLocaleDateString() : 'N/A' },
+    { header: labels.discount, key: 'discount', render: (row) => `${row.discount}${row.discountType === 'percentage' ? '%' : ''}` },
   ];
 
   const expiryRowColors = (row) => {

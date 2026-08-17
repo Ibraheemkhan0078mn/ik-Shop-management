@@ -415,10 +415,13 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
         let retailRevenue = 0;
         let wholesaleRevenue = 0;
         let totalCostOfGoodsSold = 0;
+        let retailCostOfGoodsSold = 0;
+        let wholesaleCostOfGoodsSold = 0;
 
         // Calculate revenue and cost from each order item
         for (const order of orders) {
             const orderRevenue = toNumber(order.totalAmount);
+            let orderCost = 0;
             
             if (order.orderType === 'retail') {
                 retailRevenue += orderRevenue;
@@ -441,8 +444,14 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
                         }
                     }
                     
-                    // Cost = costPrice × quantity
-                    totalCostOfGoodsSold += costPrice * toNumber(item.quantity);
+                    const itemCost = costPrice * toNumber(item.quantity);
+                    totalCostOfGoodsSold += itemCost;
+                    
+                    if (order.orderType === 'retail') {
+                        retailCostOfGoodsSold += itemCost;
+                    } else if (order.orderType === 'wholesale') {
+                        wholesaleCostOfGoodsSold += itemCost;
+                    }
                 }
             }
         }
@@ -452,9 +461,24 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
         const retailAvg = retailOrders.length > 0 ? toNumber(retailRevenue / retailOrders.length) : 0;
         const wholesaleAvg = wholesaleOrders.length > 0 ? toNumber(wholesaleRevenue / wholesaleOrders.length) : 0;
 
-        // Simple profit calculation
-        const grossProfit = totalRevenue - totalCostOfGoodsSold;
-        const grossMargin = totalRevenue > 0 ? toNumber((grossProfit / totalRevenue) * 100) : 0;
+        // Calculate profits
+        const totalProfit = totalRevenue - totalCostOfGoodsSold;
+        const retailProfit = retailRevenue - retailCostOfGoodsSold;
+        const wholesaleProfit = wholesaleRevenue - wholesaleCostOfGoodsSold;
+        
+        // Calculate profit percentages
+        const totalProfitPercentage = totalRevenue > 0 ? toNumber((totalProfit / totalRevenue) * 100) : 0;
+        const retailProfitPercentage = retailRevenue > 0 ? toNumber((retailProfit / retailRevenue) * 100) : 0;
+        const wholesaleProfitPercentage = wholesaleRevenue > 0 ? toNumber((wholesaleProfit / wholesaleRevenue) * 100) : 0;
+
+        // Calculate review percentages (assuming completed orders count as "reviewed")
+        // This can be adjusted based on actual review system
+        const retailReviewPercentage = retailOrders.length > 0 ? 100 : 0;
+        const wholesaleReviewPercentage = wholesaleOrders.length > 0 ? 100 : 0;
+
+        // Simple profit calculation for backward compatibility
+        const grossProfit = totalProfit;
+        const grossMargin = totalProfitPercentage;
 
         return {
             totalRevenue,
@@ -469,6 +493,14 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
             grossProfit,
             grossMargin,
             totalCostOfGoodsSold,
+            // New fields for the updated KPI cards
+            totalProfit: parseFloat(totalProfit.toFixed(2)),
+            retailProfit: parseFloat(retailProfit.toFixed(2)),
+            wholesaleProfit: parseFloat(wholesaleProfit.toFixed(2)),
+            retailProfitPercentage: parseFloat(retailProfitPercentage.toFixed(2)),
+            wholesaleProfitPercentage: parseFloat(wholesaleProfitPercentage.toFixed(2)),
+            retailReviewPercentage: parseFloat(retailReviewPercentage.toFixed(2)),
+            wholesaleReviewPercentage: parseFloat(wholesaleReviewPercentage.toFixed(2)),
         };
     } catch (error) {
         console.error('Error fetching sales revenue KPIs:', error);
@@ -485,6 +517,14 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
             grossProfit: 0,
             grossMargin: 0,
             totalCostOfGoodsSold: 0,
+            // New fields
+            totalProfit: 0,
+            retailProfit: 0,
+            wholesaleProfit: 0,
+            retailProfitPercentage: 0,
+            wholesaleProfitPercentage: 0,
+            retailReviewPercentage: 0,
+            wholesaleReviewPercentage: 0,
         };
     }
 };
@@ -587,6 +627,13 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
                 expiryDate: b.expiryDate,
                 daysRemaining,
                 stockQty: toNumber(b.quantity),
+                category: b.product?.category?.name || 'N/A',
+                costPrice: toNumber(b.purchasePrice) || 0,
+                supplier: b.supplier?.name || 'N/A',
+                mfgDate: b.mfgDate || 'N/A',
+                sellingPrice: toNumber(b.sellingPrice) || 0,
+                discount: b.discount?.amount || 0,
+                discountType: b.discount?.type || 'percentage',
             };
         });
 
@@ -659,6 +706,14 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
             minStock: toNumber(b.product?.minStockLevel || 5),
             maxStock: toNumber(b.product?.maxStockLevel || 10),
             shortage: toNumber(b.product?.minStockLevel || 5) - toNumber(b.quantity),
+            category: b.product?.category?.name || 'N/A',
+            costPrice: toNumber(b.purchasePrice) || 0,
+            supplier: b.supplier?.name || 'N/A',
+            mfgDate: b.mfgDate || 'N/A',
+            expiryDate: b.expiryDate || 'N/A',
+            sellingPrice: toNumber(b.sellingPrice) || 0,
+            discount: b.discount?.amount || 0,
+            discountType: b.discount?.type || 'percentage',
         }));
 
         return {
@@ -713,6 +768,14 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
             batchNumber: b.batchNumber || 'N/A',
             lastStockDate: b.updatedAt || 'N/A',
             minStock: toNumber(b.product?.minStockLevel || 5),
+            category: b.product?.category?.name || 'N/A',
+            costPrice: toNumber(b.purchasePrice) || 0,
+            supplier: b.supplier?.name || 'N/A',
+            mfgDate: b.mfgDate || 'N/A',
+            expiryDate: b.expiryDate || 'N/A',
+            sellingPrice: toNumber(b.sellingPrice) || 0,
+            discount: b.discount?.amount || 0,
+            discountType: b.discount?.type || 'percentage',
         }));
 
         return {
@@ -903,24 +966,20 @@ export const getSalesByCategory = async (range = '30D') => {
                 },
                 { $unwind: '$product' },
                 {
+                    $match: {
+                        'product.categoryName': { $exists: true, $ne: null, $ne: '' }
+                    }
+                },
+                {
                     $group: {
-                        _id: '$product.category',
+                        _id: '$product.categoryName',
                         revenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
                         orderCount: { $sum: 1 }
                     }
                 },
                 {
-                    $lookup: {
-                        from: 'categories',
-                        localField: '_id',
-                        foreignField: '_id',
-                        as: 'category'
-                    }
-                },
-                { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-                {
                     $project: {
-                        name: { $ifNull: ['$category.name', 'Uncategorized'] },
+                        name: '$_id',
                         revenue: 1,
                         orderCount: 1
                     }

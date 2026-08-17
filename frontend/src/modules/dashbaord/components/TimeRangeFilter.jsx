@@ -41,7 +41,19 @@ export default function TimeRangeFilter({
 
   const handleCustomApply = () => {
     if (customStartDate && customEndDate && onChange) {
-      onChange({ type: 'custom', startDate: customStartDate, endDate: customEndDate });
+      // Set start date to first second of the day (00:00:00)
+      const startDateTime = new Date(customStartDate);
+      startDateTime.setHours(0, 0, 0, 0);
+      
+      // Set end date to last second of the day (23:59:59)
+      const endDateTime = new Date(customEndDate);
+      endDateTime.setHours(23, 59, 59, 999);
+      
+      onChange({ 
+        type: 'custom', 
+        startDate: startDateTime.toISOString(), 
+        endDate: endDateTime.toISOString() 
+      });
     }
     setShowCustomPicker(false);
   };

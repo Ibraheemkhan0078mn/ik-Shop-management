@@ -11,6 +11,7 @@ export default function KPICard({
   borderColor = null,
   loading = false,
   onClick = null,
+  isProfit = false,
 }) {
   const safeValue = typeof value === 'number' ? value : Number(value) || 0;
   const safeSecondaryValue = typeof secondary === 'number' ? secondary : Number(secondary) || 0;
@@ -32,6 +33,16 @@ export default function KPICard({
 
   const cardStyle = borderColor ? { borderColor } : {};
 
+  // Format value - if it's profit, show with 2 decimal places
+  const formatValue = (val) => {
+    if (isProfit) {
+      return `Rs ${val.toFixed(2)}`;
+    }
+    return typeof val === 'number' && val >= 1000
+      ? `Rs ${val.toLocaleString()}`
+      : val;
+  };
+
   return (
     <div
       onClick={onClick}
@@ -44,9 +55,7 @@ export default function KPICard({
             {label}
           </p>
           <p className="text-2xl font-bold text-[var(--ink)]">
-            {typeof safeValue === 'number' && safeValue >= 1000
-              ? `Rs ${safeValue.toLocaleString()}`
-              : safeValue}
+            {formatValue(safeValue)}
           </p>
           {subLabel && (
             <p className="text-xs text-[var(--muted)] mt-1">{subLabel}</p>
