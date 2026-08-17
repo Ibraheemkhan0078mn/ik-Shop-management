@@ -28,6 +28,8 @@ import {
     getPurchaseKPIReportData,
     getSupplierKPIReportData,
     getCustomerKPIReportData,
+    getExpenseCategoryBreakdownData,
+    getExpenseTransactionsData,
 } from "../controllers/reports.controller.js";
 
 const router = express.Router();
@@ -73,6 +75,12 @@ router.get("/expenses", getExpenseReportData);
 
 // Expense KPI Report
 router.get("/expenses-kpi", getExpenseKPIReportData);
+
+// Expense Category Breakdown
+router.get("/expenses-category-breakdown", getExpenseCategoryBreakdownData);
+
+// Expense Transactions with Pagination
+router.get("/expenses-transactions", getExpenseTransactionsData);
 
 // Sales KPI Report
 router.get("/sales-kpi", getSalesKPIReportData);

@@ -80,6 +80,24 @@ export const reportsApi = baseApi.injectEndpoints({
             providesTags: ["Reports"],
         }),
 
+        // Expense Category Breakdown
+        getExpenseCategoryBreakdown: builder.query({
+            query: (params) => ({
+                url: "/reports/expenses-category-breakdown",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
+        // Expense Transactions with Pagination
+        getExpenseTransactions: builder.query({
+            query: (params) => ({
+                url: "/reports/expenses-transactions",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
         // Sales KPI Report
         getSalesKPIReport: builder.query({
             query: (params) => ({
@@ -257,6 +275,8 @@ export const {
     useGetCreditDebitReportQuery,
     useGetExpenseReportQuery,
     useGetExpenseKPIReportQuery,
+    useGetExpenseCategoryBreakdownQuery,
+    useGetExpenseTransactionsQuery,
     useGetSalesKPIReportQuery,
     useGetPurchaseKPIReportQuery,
     useGetSupplierKPIReportQuery,

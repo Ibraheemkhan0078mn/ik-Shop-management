@@ -42,9 +42,9 @@ import {
     countSupplierService,
 } from '../../suppliers/services/supplier.crud.js';
 import {
-    findExpenseService,
-    countExpenseService,
-} from '../../expenses/services/expense.crud.js';
+    findTransactionService,
+    countTransactionService,
+} from '../../transactions/services/transaction.service.js';
 import {
     findExpenseCategoryService,
 } from '../../expenses/services/expenseCategory.crud.js';
@@ -144,7 +144,7 @@ export const getDashboardSummary = async (filters = {}) => {
     const [todayOrders, todayPurchases, todayExpenses, allBatches, allQarzaAccounts] = await Promise.all([
         findOrderService({ createdAt: { $gte: startOfDay, $lt: endOfDay }, status: "completed" }),
         findPurchaseService({ createdAt: { $gte: startOfDay, $lt: endOfDay } }),
-        findExpenseService({ createdAt: { $gte: startOfDay, $lt: endOfDay } }),
+        findTransactionService({ sourceType: 'expense', isDeleted: false, transactionDate: { $gte: startOfDay, $lt: endOfDay } }),
         findBatchService({ isActive: true }),
         findQarzaAccountService({})
     ]);
@@ -1685,35 +1685,35 @@ export const getExpenseKPIReport = async (filters = {}) => {
     let dateFilter = {};
     if (period === "today") {
         const { startOfDay, endOfDay } = getTodayRange();
-        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+        dateFilter = { transactionDate: { $gte: startOfDay, $lte: endOfDay } };
     } else if (period === "week") {
         const now = new Date();
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+        dateFilter = { transactionDate: { $gte: startOfWeek, $lte: endOfWeek } };
     } else if (period === "month") {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+        dateFilter = { transactionDate: { $gte: startOfMonth, $lte: endOfMonth } };
     } else if (fromDate && toDate) {
-        dateFilter = { createdAt: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
     }
 
-    // Fetch all data using service functions
+    // Fetch all data using transaction service
     const [expenses, expenseCount] = await Promise.all([
-        findExpenseService(dateFilter),
-        countExpenseService(dateFilter)
+        findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
+        countTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false })
     ]);
 
     // Calculate total expenses
     const totalAmount = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
     const averageExpense = expenseCount > 0 ? totalAmount / expenseCount : 0;
 
-    // Calculate expenses by category
+    // Calculate expenses by category using expenseCategory from transaction
     const expensesByCategoryMap = {};
     expenses.forEach(expense => {
-        const category = expense.category || 'uncategorized';
+        const category = expense.expenseCategory || 'Uncategorized';
         if (!expensesByCategoryMap[category]) {
             expensesByCategoryMap[category] = { total: 0, count: 0 };
         }
@@ -1721,15 +1721,15 @@ export const getExpenseKPIReport = async (filters = {}) => {
         expensesByCategoryMap[category].count += 1;
     });
     const expensesByCategory = Object.entries(expensesByCategoryMap).map(([category, data]) => ({
-        _id: category,
+        category,
         total: data.total,
         count: data.count
     })).sort((a, b) => b.total - a.total);
 
-    // Calculate expenses by type
+    // Calculate expenses by type using payment method instead of expenseType
     const expensesByTypeMap = {};
     expenses.forEach(expense => {
-        const type = expense.type || 'unknown';
+        const type = expense.paymentMethodName || 'Cash';
         if (!expensesByTypeMap[type]) {
             expensesByTypeMap[type] = { total: 0, count: 0 };
         }
@@ -1737,7 +1737,7 @@ export const getExpenseKPIReport = async (filters = {}) => {
         expensesByTypeMap[type].count += 1;
     });
     const expensesByType = Object.entries(expensesByTypeMap).map(([type, data]) => ({
-        _id: type,
+        type,
         total: data.total,
         count: data.count
     })).sort((a, b) => b.total - a.total);
@@ -1747,17 +1747,17 @@ export const getExpenseKPIReport = async (filters = {}) => {
     const highestExpense = sortedByAmount[0] || null;
     const lowestExpense = sortedByAmount[sortedByAmount.length - 1] || null;
 
-    // Get expense list (limited to 100, sorted by createdAt desc)
+    // Get expense list (limited to 100, sorted by transactionDate desc)
     const expenseList = expenses
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate))
         .slice(0, 100)
         .map(expense => ({
             _id: expense._id,
             amount: expense.amount,
-            type: expense.type,
-            date: expense.date || expense.createdAt,
+            type: expense.paymentMethodName || 'Cash',
+            date: expense.transactionDate,
             notes: expense.notes,
-            category: expense.category,
+            category: expense.expenseCategory || 'Uncategorized',
             createdAt: expense.createdAt
         }));
 
@@ -1787,13 +1787,13 @@ export const getExpenseKPIReport = async (filters = {}) => {
         },
         breakdowns: {
             byCategory: expensesByCategory.map(item => ({
-                category: item._id || 'uncategorized',
+                category: item.category || 'Uncategorized',
                 total: item.total,
                 count: item.count,
                 percentage: totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0
             })),
             byType: expensesByType.map(item => ({
-                type: item._id || 'unknown',
+                type: item.type || 'other',
                 total: item.total,
                 count: item.count,
                 percentage: totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0
@@ -1805,8 +1805,153 @@ export const getExpenseKPIReport = async (filters = {}) => {
             type: expense.type,
             category: expense.category,
             notes: expense.notes,
-            date: expense.date || expense.createdAt,
+            date: expense.date,
         }))
+    };
+};
+
+// Expense Category Breakdown Report
+export const getExpenseCategoryBreakdown = async (filters = {}) => {
+    const { fromDate, toDate, period } = filters;
+
+    let dateFilter = {};
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { transactionDate: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { transactionDate: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { transactionDate: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "3month") {
+        const now = new Date();
+        const startOfThreeMonths = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { transactionDate: { $gte: startOfThreeMonths, $lte: endOfCurrentMonth } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { transactionDate: { $gte: startOfYear, $lte: endOfYear } };
+    } else if (fromDate && toDate) {
+        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+    }
+
+    // Fetch all expense transactions
+    const expenses = await findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false });
+
+    // Calculate total expenses
+    const totalAmount = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+    // Calculate expenses by category using expenseCategory from transaction
+    const expensesByCategoryMap = {};
+    expenses.forEach(expense => {
+        const category = expense.expenseCategory || 'Uncategorized';
+        if (!expensesByCategoryMap[category]) {
+            expensesByCategoryMap[category] = { total: 0, count: 0 };
+        }
+        expensesByCategoryMap[category].total += expense.amount || 0;
+        expensesByCategoryMap[category].count += 1;
+    });
+    const expensesByCategory = Object.entries(expensesByCategoryMap).map(([category, data]) => ({
+        category,
+        total: data.total,
+        count: data.count,
+        percentage: totalAmount > 0 ? ((data.total / totalAmount) * 100).toFixed(1) : 0
+    })).sort((a, b) => b.total - a.total);
+
+    // Calculate expenses by type using payment method instead of expenseType
+    const expensesByTypeMap = {};
+    expenses.forEach(expense => {
+        const type = expense.paymentMethodName || 'Cash';
+        if (!expensesByTypeMap[type]) {
+            expensesByTypeMap[type] = { total: 0, count: 0 };
+        }
+        expensesByTypeMap[type].total += expense.amount || 0;
+        expensesByTypeMap[type].count += 1;
+    });
+    const expensesByType = Object.entries(expensesByTypeMap).map(([type, data]) => ({
+        type,
+        total: data.total,
+        count: data.count,
+        percentage: totalAmount > 0 ? ((data.total / totalAmount) * 100).toFixed(1) : 0
+    })).sort((a, b) => b.total - a.total);
+
+    return {
+        summary: {
+            totalExpenses: totalAmount,
+            expenseCount: expenses.length,
+            categoryCount: expensesByCategory.length,
+            typeCount: expensesByType.length
+        },
+        breakdowns: {
+            expensesByCategory,
+            expensesByType
+        }
+    };
+};
+
+// Expense Transactions with Pagination
+export const getExpenseTransactions = async (filters = {}) => {
+    const { fromDate, toDate, period, page = 1, limit = 50, category } = filters;
+
+    let dateFilter = {};
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { transactionDate: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { transactionDate: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { transactionDate: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "3month") {
+        const now = new Date();
+        const startOfThreeMonths = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { transactionDate: { $gte: startOfThreeMonths, $lte: endOfCurrentMonth } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { transactionDate: { $gte: startOfYear, $lte: endOfYear } };
+    } else if (fromDate && toDate) {
+        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+    }
+
+    const matchQuery = { ...dateFilter, sourceType: 'expense', isDeleted: false };
+    
+    // Filter by category if provided
+    if (category && category !== 'all') {
+        matchQuery.expenseCategory = category;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        findTransactionService(matchQuery, {
+            sort: { transactionDate: -1 },
+            skip,
+            limit
+        }),
+        countTransactionService(matchQuery)
+    ]);
+
+    return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
     };
 };
 
@@ -1895,7 +2040,7 @@ export const getMainBusinessReport = async (filters = {}) => {
     const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivable, qarzaPayable, staffList] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter),
-        findExpenseService(dateFilter),
+        findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
         findWastageService(dateFilter),
         findPurchaseReturnService(dateFilter),
         findProductReturnService(dateFilter),
@@ -1909,7 +2054,7 @@ export const getMainBusinessReport = async (filters = {}) => {
     const [previousOrders, previousPurchases, previousExpenses, previousWastages, previousPurchaseReturns, previousProductReturns, previousSalaryPayments] = await Promise.all([
         findOrderService({ ...previousDateFilter, status: "completed" }),
         findPurchaseService(previousDateFilter),
-        findExpenseService(previousDateFilter),
+        findTransactionService({ ...previousDateFilter, sourceType: 'expense', isDeleted: false }),
         findWastageService(previousDateFilter),
         findPurchaseReturnService(previousDateFilter),
         findProductReturnService(previousDateFilter),
@@ -2360,7 +2505,7 @@ export const getFinancialReport = async (filters = {}) => {
     const [orders, purchaseData, expenseData] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter),
-        findExpenseService(dateFilter)
+        findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false })
     ]);
 
     // Group sales by date
@@ -3137,7 +3282,7 @@ export const getProfitLossReport = async (filters = {}) => {
     const [orders, purchases, expenses, wastages, salaryPayments, productReturns] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter),
-        findExpenseService(dateFilter),
+        findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
         findWastageService(dateFilter),
         findStaffSalaryPaymentService(dateFilter),
         findProductReturnService(dateFilter)
@@ -3226,34 +3371,30 @@ export const getExpenseReport = async (filters = {}) => {
 
     // Fetch data using service functions
     const [data, total, categoryList] = await Promise.all([
-        findExpenseService(matchQuery, { 
-            populate: "category", 
-            sort: { createdAt: -1 }, 
+        findTransactionService({ ...matchQuery, sourceType: 'expense', isDeleted: false }, { 
+            sort: { transactionDate: -1 }, 
             skip, 
             limit 
         }),
-        countExpenseService(matchQuery),
+        countTransactionService({ ...matchQuery, sourceType: 'expense', isDeleted: false }),
         findExpenseCategoryService({})
     ]);
 
-    // Calculate totals by category manually
+    // Calculate totals by category manually using expenseCategory from transaction
     const categoryTotalsMap = {};
     data.forEach(expense => {
-        const categoryId = expense.category?.toString();
-        if (!categoryId) return;
+        const categoryName = expense.expenseCategory || 'Uncategorized';
         
-        if (!categoryTotalsMap[categoryId]) {
-            const category = categoryList.find(c => c._id?.toString() === categoryId);
-            categoryTotalsMap[categoryId] = {
-                _id: categoryId,
-                category: category ? [category] : [],
+        if (!categoryTotalsMap[categoryName]) {
+            categoryTotalsMap[categoryName] = {
+                category: categoryName,
                 total: 0,
                 count: 0
             };
         }
         
-        categoryTotalsMap[categoryId].total += expense.amount || 0;
-        categoryTotalsMap[categoryId].count += 1;
+        categoryTotalsMap[categoryName].total += expense.amount || 0;
+        categoryTotalsMap[categoryName].count += 1;
     });
     
     const categoryTotals = Object.values(categoryTotalsMap);
@@ -3266,16 +3407,16 @@ export const getExpenseReport = async (filters = {}) => {
     
     // Calculate category breakdown with proper structure
     const expensesByCategory = categoryTotals.map(item => ({
-        category: item._id,
+        category: item.category,
         total: item.total,
         count: item.count,
         percentage: overallTotal > 0 ? ((item.total / overallTotal) * 100).toFixed(1) : 0
     }));
     
-    // Calculate type breakdown
+    // Calculate type breakdown using payment method instead of expenseType
     const typeTotalsMap = {};
     data.forEach(expense => {
-        const type = expense.type || 'other';
+        const type = expense.paymentMethodName || 'Cash';
         if (!typeTotalsMap[type]) {
             typeTotalsMap[type] = { total: 0, count: 0 };
         }

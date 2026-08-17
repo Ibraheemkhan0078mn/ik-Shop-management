@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Filter } from "lucide-react";
-import { useGetExpenseReportQuery, useGetExpenseKPIReportQuery } from "../services/reports.service.js";
+import { useGetExpenseKPIReportQuery, useGetExpenseCategoryBreakdownQuery, useGetExpenseTransactionsQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import ExpenseReportPdfTemplate from "../components/ExpenseReportPdfTemplate.jsx";
@@ -27,51 +27,74 @@ function BreakdownItem({ label, value, count, percentage, color }) {
 
 function ExpenseTransactionRow({ expense, index }) {
     return (
-        <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
+        <>
             <td className="py-3 px-4 text-sm text-[var(--ink)]">{index + 1}</td>
             <td className="py-3 px-4 text-sm font-medium text-[var(--ink)]">
                 Rs {expense.amount?.toLocaleString() || 0}
             </td>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.type || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.category || '—'}</td>
+            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.expenseCategory || '—'}</td>
             <td className="py-3 px-4 text-sm text-[var(--muted)]">{expense.notes || '—'}</td>
             <td className="py-3 px-4 text-sm text-[var(--muted)]">
-                {new Date(expense.date).toLocaleDateString()}
+                {new Date(expense.transactionDate).toLocaleDateString()}
             </td>
-        </tr>
+        </>
     );
 }
 
-function TransactionTable({ transactions }) {
+function TransactionTable({ transactions, labels, total, page, limit, totalPages, onPageChange }) {
     if (!transactions || transactions.length === 0) {
-        return <p className="text-sm py-4 text-center text-[var(--muted)]">No transactions in this period.</p>;
+        return (
+            <div className="rounded-lg border p-8 text-center" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                <p className="text-sm text-[var(--muted)]">{labels.noDataFound || 'No transactions in this period.'}</p>
+            </div>
+        );
     }
     return (
-        <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead style={{ background: 'var(--surface-muted)' }}>
                         <tr>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Category</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Notes</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>#</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.amount || 'Amount'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.category || 'Category'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.notes || 'Notes'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.date || 'Date'}</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                        {transactions.slice(0, 50).map((expense, idx) => (
-                            <tr key={idx} className="hover:bg-[var(--surface-muted)]">
+                    <tbody>
+                        {transactions.map((expense, idx) => (
+                            <tr key={expense._id} className="border-b hover:bg-[var(--surface-muted)] transition-colors" style={{ borderColor: 'var(--border)' }}>
                                 <ExpenseTransactionRow expense={expense} index={idx} />
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            {transactions.length > 50 && (
-                <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
-                    Showing first 50 of {transactions.length} transactions
+            {totalPages > 1 && (
+                <div className="px-4 py-3 flex items-center justify-between border-t" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
+                    <p className="text-xs text-[var(--muted)]">
+                        Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} transactions
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onPageChange(page - 1)}
+                            disabled={page === 1}
+                            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--surface)] transition-colors"
+                            style={{ borderColor: 'var(--border)' }}
+                        >
+                            Previous
+                        </button>
+                        <span className="px-3 py-1.5 text-xs font-medium text-[var(--ink)]">Page {page} of {totalPages}</span>
+                        <button
+                            onClick={() => onPageChange(page + 1)}
+                            disabled={page === totalPages}
+                            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--surface)] transition-colors"
+                            style={{ borderColor: 'var(--border)' }}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
@@ -89,6 +112,7 @@ export default function ExpenseReport() {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [category, setCategory] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
 
     const kpiFilters = { period };
     if (period === "custom" && fromDate && toDate) {
@@ -96,35 +120,47 @@ export default function ExpenseReport() {
         kpiFilters.toDate = toDate;
     }
 
-    const dataFilters = { period, limit: 50 };
+    const breakdownFilters = { period };
     if (period === "custom" && fromDate && toDate) {
-        dataFilters.fromDate = fromDate;
-        dataFilters.toDate = toDate;
-    }
-    if (category && category !== 'all') {
-        dataFilters.categoryId = category;
+        breakdownFilters.fromDate = fromDate;
+        breakdownFilters.toDate = toDate;
     }
 
+    const transactionsFilters = { period, page: currentPage, limit: 50 };
+    if (period === "custom" && fromDate && toDate) {
+        transactionsFilters.fromDate = fromDate;
+        transactionsFilters.toDate = toDate;
+    }
+    if (category && category !== 'all') {
+        transactionsFilters.category = category;
+    }
+
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
+    };
+
     const { data: kpiData, isLoading: kpiLoading, error: kpiError } = useGetExpenseKPIReportQuery(kpiFilters);
-    const { data: expenseData, isLoading: dataLoading, isFetching, error: dataError, refetch } = useGetExpenseReportQuery(dataFilters);
+    const { data: breakdownData, isLoading: breakdownLoading, error: breakdownError } = useGetExpenseCategoryBreakdownQuery(breakdownFilters);
+    const { data: transactionsData, isLoading: transactionsLoading, isFetching, error: transactionsError, refetch } = useGetExpenseTransactionsQuery(transactionsFilters);
 
     if (kpiError) {
         showError(kpiError?.data?.message || "Failed to load expense KPI data");
     }
-    if (dataError) {
-        showError(dataError?.data?.message || "Failed to load expense data");
+    if (breakdownError) {
+        showError(breakdownError?.data?.message || "Failed to load expense breakdown data");
+    }
+    if (transactionsError) {
+        showError(transactionsError?.data?.message || "Failed to load expense data");
     }
 
     const handleRefresh = () => refetch();
-    const showLoader = kpiLoading || dataLoading || isFetching;
+    const showLoader = kpiLoading || breakdownLoading || transactionsLoading || isFetching;
 
-    const summary = kpiData?.data || {};
-    const breakdowns = kpiData?.data?.expensesByCategory || [];
-    const transactions = expenseData?.data || [];
-    const totalExpenses = summary?.totalAmount || 0;
+    const summary = kpiData?.data?.summary || {};
+    const breakdowns = breakdownData?.data?.breakdowns || {};
+    const transactions = transactionsData?.data || [];
     const expenseCount = summary?.expenseCount || 0;
-    const averageExpense = summary?.averageExpense || 0;
-    const categoryCount = breakdowns?.length || 0;
+    const categoryCount = breakdowns?.expensesByCategory?.length || 0;
     const details = {
         expenseCount,
         categoryCount
@@ -185,9 +221,9 @@ export default function ExpenseReport() {
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="all">{labels.allCategories}</option>
-                            <option value="general">{labels.general}</option>
+                            <option value="Cash">Cash</option>
                             {breakdowns.expensesByCategory && breakdowns.expensesByCategory.map((cat) => (
-                                cat.category !== 'general' && <option key={cat.category} value={cat.category}>{cat.category}</option>
+                                cat.category !== 'Cash' && <option key={cat.category} value={cat.category}>{cat.category}</option>
                             ))}
                         </select>
                     </div>
@@ -294,29 +330,18 @@ export default function ExpenseReport() {
                             )}
                         </div>
 
-                        {/* Types Breakdown */}
-                        {breakdowns.expensesByType && breakdowns.expensesByType.length > 0 && (
-                            <div>
-                                <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByType}</h3>
-                                <div className="space-y-2">
-                                    {breakdowns.expensesByType.map((item, idx) => (
-                                        <BreakdownItem
-                                            key={idx}
-                                            label={item.type}
-                                            value={item.total}
-                                            count={item.count}
-                                            percentage={item.percentage}
-                                            color="#3b82f6"
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Transactions Table */}
                         <div>
                             <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.transactions}</h3>
-                            <TransactionTable transactions={transactions.expenses} />
+                            <TransactionTable 
+                                transactions={transactions} 
+                                labels={labels} 
+                                total={transactionsData?.total || 0}
+                                page={currentPage}
+                                limit={50}
+                                totalPages={transactionsData?.totalPages || 1}
+                                onPageChange={handlePageChange}
+                            />
                         </div>
                     </div>
                 </div>
@@ -330,10 +355,10 @@ export default function ExpenseReport() {
                 labels={labels}
             >
                 <ExpenseReportPdfTemplate
-                    summary={summary}
-                    details={details}
-                    breakdowns={breakdowns}
-                    transactions={transactions}
+                    summary={kpiData?.data?.summary || {}}
+                    details={breakdownData?.data?.summary || {}}
+                    breakdowns={breakdownData?.data?.breakdowns || {}}
+                    transactions={transactionsData || {}}
                     labels={labels}
                     selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : labels[period] || period}
                 />

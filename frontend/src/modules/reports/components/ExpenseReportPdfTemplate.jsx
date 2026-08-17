@@ -177,7 +177,7 @@ export default function ExpenseReportPdfTemplate({ summary = {}, details = {}, b
                     {/* Transactions Table */}
                     <div>
                         <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.transactions}</h3>
-                        <TransactionTable transactions={transactions.expenses} />
+                        <TransactionTable transactions={transactions.expenses || transactions} />
                     </div>
                 </div>
             </div>

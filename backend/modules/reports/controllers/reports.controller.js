@@ -29,6 +29,8 @@ import {
     getPurchaseKPIReport,
     getSupplierKPIReport,
     getCustomerKPIReport,
+    getExpenseCategoryBreakdown,
+    getExpenseTransactions,
 } from "../services/reports.service.js";
 
 // Dashboard Summary
@@ -372,5 +374,29 @@ export const getRecentPurchasesData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Recent purchases retrieved successfully",
         data,
+    });
+});
+
+// Expense Category Breakdown
+export const getExpenseCategoryBreakdownData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getExpenseCategoryBreakdown(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Expense category breakdown retrieved successfully",
+        data: report,
+    });
+});
+
+// Expense Transactions with Pagination
+export const getExpenseTransactionsData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getExpenseTransactions(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Expense transactions retrieved successfully",
+        ...report,
     });
 });

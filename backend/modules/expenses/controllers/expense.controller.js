@@ -50,6 +50,7 @@ export const expenseCreate = async (req, res) => {
             paymentMethodName: paymentMethodName || 'Cash',
             transactionDate: new Date(date),
             notes: notes || `Expense: ${type} - ${category || 'General'}`,
+            expenseCategory: category || null,
             createdBy: req.user?._id || null,
         });
 
@@ -125,6 +126,7 @@ export const expenseUpdate = async (req, res) => {
             amount,
             transactionDate: new Date(date),
             notes: notes || `Expense: ${type} - ${category || 'General'}`,
+            expenseCategory: category || null,
         });
 
         if (!updated) {

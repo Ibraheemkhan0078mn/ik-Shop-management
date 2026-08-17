@@ -117,12 +117,15 @@ export const reportsLabels = {
     
     // Expense Report
     expenseReport: "Expense Report",
-    expenseAnalytics: "Expense analytics and breakdown",
+    expenseAnalysis: "Expense analytics and breakdown",
     averageExpense: "Average Expense",
     highestExpense: "Highest Expense",
-    expenseByCategory: "Expense by Category",
-    expenseByType: "Expense by Type",
-    expenseTransactions: "Expense Transactions",
+    categories: "Categories",
+    expensesByCategory: "Expenses by Category",
+    expensesByType: "Expenses by Type",
+    amount: "Amount",
+    type: "Type",
+    notes: "Notes",
     
     // Staff Report
     staffReport: "Staff Report",
@@ -388,12 +391,15 @@ export const reportsLabels = {
     
     // Expense Report
     expenseReport: "اخراجات رپورٹ",
-    expenseAnalytics: "اخراجات کے تجزیات اور تفصیل",
+    expenseAnalysis: "اخراجات کے تجزیات اور تفصیل",
     averageExpense: "اوسط اخراجات",
     highestExpense: "سب سے زیادہ اخراجات",
-    expenseByCategory: "زمرہ کے لحاظ سے اخراجات",
-    expenseByType: "قسم کے لحاظ سے اخراجات",
-    expenseTransactions: "اخراجات کی لین دین",
+    categories: "زمرے",
+    expensesByCategory: "زمرہ کے لحاظ سے اخراجات",
+    expensesByType: "قسم کے لحاظ سے اخراجات",
+    amount: "رقم",
+    type: "قسم",
+    notes: "نوٹس",
     
     // Staff Report
     staffReport: "اسٹاف رپورٹ",
@@ -659,12 +665,15 @@ export const reportsLabels = {
     
     // Expense Report
     expenseReport: "اخراجات رپورٹ / Expense Report",
-    expenseAnalytics: "اخراجات کے تجزیات اور تفصیل / Expense analytics and breakdown",
+    expenseAnalysis: "اخراجات کے تجزیات اور تفصیل / Expense analytics and breakdown",
     averageExpense: "اوسط اخراجات / Average Expense",
     highestExpense: "سب سے زیادہ اخراجات / Highest Expense",
-    expenseByCategory: "زمرہ کے لحاظ سے اخراجات / Expense by Category",
-    expenseByType: "قسم کے لحاظ سے اخراجات / Expense by Type",
-    expenseTransactions: "اخراجات کی لین دین / Expense Transactions",
+    categories: "زمرے / Categories",
+    expensesByCategory: "زمرہ کے لحاظ سے اخراجات / Expenses by Category",
+    expensesByType: "قسم کے لحاظ سے اخراجات / Expenses by Type",
+    amount: "رقم / Amount",
+    type: "قسم / Type",
+    notes: "نوٹس / Notes",
     
     // Staff Report
     staffReport: "اسٹاف رپورٹ / Staff Report",

@@ -67,6 +67,11 @@ const transactionSchema = new mongoose.Schema(
             type: String,
         },
         
+        // Expense category (for expense transactions)
+        expenseCategory: {
+            type: String,
+        },
+        
         // User who created the transaction
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
