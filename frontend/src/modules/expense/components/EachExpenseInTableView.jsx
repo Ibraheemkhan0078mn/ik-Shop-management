@@ -1,6 +1,5 @@
 import React from "react";
 import { Calendar, Edit2, Trash2 } from "lucide-react";
-import axios from "axios";
 import api from "../../../shared/services/api.js";
 import { PermissionGuard } from "../../../shared/components/PermissionGuard.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
@@ -32,7 +31,7 @@ const highlightMatch = (text, search) => {
 
 
 
-export default function EachExpenseInTableView({ catagSearch, getExpensesFunc, exp, setExpenseUpdateVisibility, setCurrentToUpdateExpenseData, setExpensesData }) {
+export default function EachExpenseInTableView({ catagSearch, getExpensesFunc, exp, setExpenseUpdateVisibility, setCurrentToUpdateExpenseData }) {
 
 
 
@@ -82,15 +81,15 @@ export default function EachExpenseInTableView({ catagSearch, getExpensesFunc, e
             <div className="w-[12%] px-5 py-3 flex justify-center">
                 <div className="flex items-center gap-2 text-slate-600">
                     <Calendar className="w-3.5 h-3.5 opacity-40 group-hover:text-[#0e8dc7] group-hover:opacity-100 transition-all" />
-                    <span className="text-xs font-bold">{new Date(exp?.date).toLocaleDateString()}</span>
+                    <span className="text-xs font-bold">{new Date(exp?.transactionDate || exp?.date).toLocaleDateString()}</span>
                 </div>
             </div>
 
-            {/* CATEGORY */}
+            {/* CATEGORY - Extracted from notes for transactions */}
             <div className="w-[15%] px-5 py-3 flex justify-center">
                 <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#0e8dc7] group-hover:scale-150 transition-transform" />
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{highlightMatch(exp?.category || "General", catagSearch)}</span>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{highlightMatch(exp?.paymentMethodName || "Cash", catagSearch)}</span>
                 </div>
             </div>
 

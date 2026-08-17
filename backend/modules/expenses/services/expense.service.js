@@ -1,5 +1,6 @@
 import { createExpenseService, findExpenseService, findOneExpenseService, findByIdExpenseService, updateExpenseService, deleteOneExpenseService, countExpenseService } from "./expense.crud.js";
 import { getCustomStartEndMonthRanges } from "../../../common/services/date.js";
+import { findTransactionService, updateTransactionService, deleteOneTransactionService, countTransactionService } from "../../transactions/services/transaction.service.js";
 
 const expenseCreate = async (data) => {
     return await createExpenseService(data);
@@ -9,8 +10,11 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
     let expenses = [];
 
     if (date == "none") {
-        expenses = await findExpenseService({}, {
-            sort: { date: -1 },
+        expenses = await findTransactionService({
+            sourceType: 'expense',
+            isDeleted: false
+        }, {
+            sort: { transactionDate: -1 },
             limit,
             skip
         });
@@ -18,13 +22,15 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
         let dateObj = new Date(date);
         let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
 
-        expenses = await findExpenseService({
-            date: {
+        expenses = await findTransactionService({
+            sourceType: 'expense',
+            isDeleted: false,
+            transactionDate: {
                 $gte: startDateFormat,
                 $lte: endDateFormat
             }
         }, {
-            sort: { createdOn: -1 },
+            sort: { transactionDate: -1 },
             limit,
             skip
         });
@@ -34,37 +40,40 @@ const getExpenses = async (skip = 0, limit = 20, date = "none") => {
 };
 
 const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", category = "") => {
-    let query = {};
+    let query = {
+        sourceType: 'expense',
+        isDeleted: false
+    };
     
     if (category) {
-        query.category = { $regex: category, $options: "i" };
+        query.notes = { $regex: category, $options: "i" };
     }
 
     let expenses = [];
     let total = 0;
 
     if (date == "none") {
-        expenses = await findExpenseService(query, {
-            sort: { date: -1 },
+        expenses = await findTransactionService(query, {
+            sort: { transactionDate: -1 },
             limit,
             skip: (page - 1) * limit
         });
-        total = await countExpenseService(query);
+        total = await countTransactionService(query);
     } else {
         let dateObj = new Date(date);
         let { startDateFormat, endDateFormat } = getCustomStartEndMonthRanges(dateObj, dateObj);
 
-        query.date = {
+        query.transactionDate = {
             $gte: startDateFormat,
             $lte: endDateFormat
         };
 
-        expenses = await findExpenseService(query, {
-            sort: { createdOn: -1 },
+        expenses = await findTransactionService(query, {
+            sort: { transactionDate: -1 },
             limit,
             skip: (page - 1) * limit
         });
-        total = await countExpenseService(query);
+        total = await countTransactionService(query);
     }
 
     return {
@@ -77,21 +86,28 @@ const getPaginatedExpenses = async (page = 1, limit = 20, date = "none", categor
 };
 
 const expenseUpdate = async (id, data) => {
-    return await updateExpenseService(id, data);
+    // Update transaction instead of expense document
+    return await updateTransactionService(id, data);
 };
 
 const expenseDelete = async (id) => {
-    return await deleteOneExpenseService(id);
+    // Delete transaction instead of expense document
+    return await deleteOneTransactionService(id);
 };
 
 const getCatagBasedExpense = async (catagName) => {
-    return await findExpenseService({
-        category: { $regex: catagName, $options: "i" }
+    return await findTransactionService({
+        sourceType: 'expense',
+        isDeleted: false,
+        notes: { $regex: catagName, $options: "i" }
     });
 };
 
 const getAllExpenses = async () => {
-    return await findExpenseService({}, { sort: { createdAt: -1 } });
+    return await findTransactionService({
+        sourceType: 'expense',
+        isDeleted: false
+    }, { sort: { transactionDate: -1 } });
 };
 
 export {

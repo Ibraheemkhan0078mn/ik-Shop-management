@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema(
         },
         sourceId: {
             type: mongoose.Schema.Types.ObjectId,
-            required: true,
+            required: false, // Made optional for standalone transactions like expenses
         },
         
         // Payment method: cash, credit, or hybrid

@@ -15,6 +15,7 @@ import {
     expenseCatagGetAll as expenseCatagGetAllService,
     expenseCatagDelete as expenseCatagDeleteService,
 } from "../services/expenseCategory.service.js";
+import { createTransactionService } from "../../transactions/services/transaction.service.js";
 
 
 
@@ -27,33 +28,34 @@ export const expenseCreate = async (req, res) => {
             notes,
             category,
             isInvestment,
-            investedBy
+            investedBy,
+            paymentMethodId,
+            paymentMethodName
         } = req.body;
-
-        let expenseModel = getLocalExpensesModel();
 
         // VALIDATION
         if (!amount || !type) {
             return res.json({ success: false, msg: "Amount and type are required" });
         }
 
-        let createdExpense = await expenseCreateService({
-            amount,
-            type,
-            date: new Date(date),
-            notes: notes || "",
-            category
+        // Create only transaction for expense (no expense document)
+        await createTransactionService({
+            sourceType: 'expense',
+            sourceId: null, // No expense document, just transaction
+            method: 'cash',
+            amount: amount,
+            cashAmount: amount,
+            creditAmount: 0,
+            paymentMethod: paymentMethodId || null,
+            paymentMethodName: paymentMethodName || 'Cash',
+            transactionDate: new Date(date),
+            notes: notes || `Expense: ${type} - ${category || 'General'}`,
+            createdBy: req.user?._id || null,
         });
-
-        if (!createdExpense) {
-            return res.json({ success: false, msg: "The expense doc is nto created" })
-        }
-
-        await changeTrackDocsCreationFunc("create", expenseModel.modelName, createdExpense?._id);
 
         let expenses = await getAllExpensesService();
 
-        return res.json({ success: true, msg: "Expense created", expenses });
+        return res.json({ success: true, msg: "Expense transaction created", expenses });
     } catch (err) {
         console.log(err)
         return ApiError(err, res)
@@ -113,25 +115,27 @@ export const getPaginatedExpenses = async (req, res) => {
 export const expenseUpdate = async (req, res) => {
     try {
         let { _id, amount, type, date, notes, category } = req.body;
-        let expenseModel = getLocalExpensesModel();
 
         if (!_id) {
             return res.json({ success: false, msg: "Expense ID is required" });
         }
 
-        let updated = await expenseUpdateService(_id, { amount, type, date, notes, category });
+        // Update transaction instead of expense document
+        let updated = await expenseUpdateService(_id, {
+            amount,
+            transactionDate: new Date(date),
+            notes: notes || `Expense: ${type} - ${category || 'General'}`,
+        });
 
         if (!updated) {
-            return res.json({ success: false, msg: "Expense not found" });
+            return res.json({ success: false, msg: "Expense transaction not found" });
         }
-
-        await changeTrackDocsCreationFunc("update", expenseModel.modelName, updated?._id);
 
         let expenses = await getAllExpensesService();
 
-        return res.json({ success: true, msg: "Expense updated", expenses });
+        return res.json({ success: true, msg: "Expense transaction updated", expenses });
     } catch (err) {
-        return res.json({ success: false, msg: "Error updating expense" });
+        return res.json({ success: false, msg: "Error updating expense transaction" });
     }
 }
 
@@ -146,25 +150,23 @@ export const expenseUpdate = async (req, res) => {
 export const expenseDelete = async (req, res) => {
     try {
         let { _id } = req.body;
-        let expenseModel = getLocalExpensesModel();
 
         if (!_id) {
             return res.json({ success: false, msg: "Expense ID is required" });
         }
 
+        // Delete transaction instead of expense document
         let deleted = await expenseDeleteService(_id);
 
         if (!deleted) {
-            return res.json({ success: false, msg: "Expense not found" });
+            return res.json({ success: false, msg: "Expense transaction not found" });
         }
-
-        await changeTrackDocsCreationFunc("delete", expenseModel.modelName, _id);
 
         let expenses = await getAllExpensesService();
 
-        return res.json({ success: true, msg: "Expense deleted", expenses });
+        return res.json({ success: true, msg: "Expense transaction deleted", expenses });
     } catch (err) {
-        return res.json({ success: false, msg: "Error deleting expense" });
+        return res.json({ success: false, msg: "Error deleting expense transaction" });
     }
 }
 

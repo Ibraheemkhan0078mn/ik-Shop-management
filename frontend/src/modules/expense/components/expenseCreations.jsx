@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "../../../shared/services/api.js";
@@ -7,7 +6,7 @@ import { toInputDateFormat } from "@shared/utilities/date.utility";
 import { useHotkeys } from "react-hotkeys-hook";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
-const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) => {
+const ExpenseCreation = ({ getExpensesFunc, setVisibility }) => {
 
 
     let dispatch = useDispatch()
@@ -19,10 +18,26 @@ const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) =>
         notes: "",
         category: "general",
         isInvestment: false,
-        investedBy: ""
+        investedBy: "",
+        paymentMethodId: "",
+        paymentMethodName: "Cash"
     });
-    let [partners, setPartners] = useState([])
+    let [paymentMethods, setPaymentMethods] = useState([])
     useHotkeys("enter", (e) => { handleSubmit(e) })
+
+    useEffect(() => {
+        const fetchPaymentMethods = async () => {
+            try {
+                const res = await api.get('/paymentMethods/getAll');
+                if (res.data.success) {
+                    setPaymentMethods(res.data.paymentMethods || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch payment methods:', error);
+            }
+        };
+        fetchPaymentMethods();
+    }, []);
 
 
 
@@ -143,6 +158,33 @@ const ExpenseCreation = ({ getExpensesFunc, setVisibility, setExpensesData }) =>
                                 {
                                     expenseCatags?.map((ec, index) => (
                                         <option key={index} value={ec?.name}>{ec?.name}</option>
+                                    ))
+                                }
+                            </select>
+                        </div>
+
+                        {/* PAYMENT METHOD DROPDOWN */}
+                        <div className="group flex-1 w-full">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1 group-focus-within:text-cyan-600">
+                                Payment Method
+                            </label>
+                            <select
+                                name="paymentMethodId"
+                                value={formData.paymentMethodId}
+                                onChange={(e) => {
+                                    const selectedMethod = paymentMethods.find(pm => pm._id === e.target.value);
+                                    setFormData({
+                                        ...formData,
+                                        paymentMethodId: e.target.value,
+                                        paymentMethodName: selectedMethod?.name || 'Cash'
+                                    });
+                                }}
+                                className="w-full flex-1 p-3 bg-cyan-50/30 border border-zinc-200 rounded-xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all cursor-pointer"
+                            >
+                                <option value="">Cash</option>
+                                {
+                                    paymentMethods?.map((pm, index) => (
+                                        <option key={index} value={pm._id}>{pm?.name}</option>
                                     ))
                                 }
                             </select>

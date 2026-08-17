@@ -1,21 +1,34 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllExpenseCatags } from "../slices/expense.slice";
 import api from "../../../shared/services/api.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
-const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expenseData }) => {
+const ExpenseUpdate = ({ getExpensesFunc, setVisibility, expenseData }) => {
     const [formData, setFormData] = useState({
         amount: "",
-        type: "purchase",
-        date: "",
+        transactionDate: "",
         notes: "",
-        category: ""
+        paymentMethodId: "",
+        paymentMethodName: "Cash"
     });
     let expenseCatags = useSelector(state => state.expense.allExpenseCatags)
     let dispatch = useDispatch()
+    let [paymentMethods, setPaymentMethods] = useState([])
 
+    useEffect(() => {
+        const fetchPaymentMethods = async () => {
+            try {
+                const res = await api.get('/paymentMethods/getAll');
+                if (res.data.success) {
+                    setPaymentMethods(res.data.paymentMethods || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch payment methods:', error);
+            }
+        };
+        fetchPaymentMethods();
+    }, []);
 
     useEffect(() => {
         try {
@@ -36,10 +49,14 @@ const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expens
 
     useEffect(() => {
         setFormData({
-            ...expenseData,
-            date: new Date(expenseData.date).toISOString().split("T")[0]
+            _id: expenseData._id,
+            amount: expenseData.amount,
+            transactionDate: new Date(expenseData.transactionDate || expenseData.date).toISOString().split("T")[0],
+            notes: expenseData.notes || "",
+            paymentMethodId: expenseData.paymentMethod || "",
+            paymentMethodName: expenseData.paymentMethodName || "Cash"
         })
-    }, [])
+    }, [expenseData])
 
 
     // Handle input changes
@@ -118,45 +135,6 @@ const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expens
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* TYPE DROPDOWN */}
-                            <div className="group transition-all">
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1 group-focus-within:text-cyan-600">
-                                    Type
-                                </label>
-                                <select
-                                    name="type"
-                                    value={formData?.type}
-                                    onChange={handleChange}
-                                    className="w-full p-3 bg-cyan-50/30 border border-zinc-200 rounded-xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all cursor-pointer"
-                                >
-                                    <option value="purchase">Purchase</option>
-                                    <option value="repair">Repair</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-
-                            {/* CATEGORY DROPDOWN */}
-                            <div className="group transition-all">
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1 group-focus-within:text-cyan-600">
-                                    Category
-                                </label>
-                                <select
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    className="w-full p-3 bg-cyan-50/30 border border-zinc-200 rounded-xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all cursor-pointer"
-                                >
-                                    <option value="other">Other</option>
-                                    {
-                                        expenseCatags?.map((ec, index) => (
-                                            <option key={index} value={ec?.name} >{ec?.name}</option>
-                                        ))
-                                    }
-                                </select>
-                            </div>
-                        </div>
-
                         {/* DATE */}
                         <div className="group transition-all">
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1 group-focus-within:text-cyan-600">
@@ -164,12 +142,39 @@ const ExpenseUpdate = ({ getExpensesFunc, setVisibility, setExpensesData, expens
                             </label>
                             <input
                                 type="date"
-                                name="date"
-                                value={formData?.date}
+                                name="transactionDate"
+                                value={formData?.transactionDate}
                                 onChange={handleChange}
                                 className="w-full p-3 bg-cyan-50/30 border border-zinc-200 rounded-xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
                                 required
                             />
+                        </div>
+
+                        {/* PAYMENT METHOD DROPDOWN */}
+                        <div className="group transition-all">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1 group-focus-within:text-cyan-600">
+                                Payment Method
+                            </label>
+                            <select
+                                name="paymentMethodId"
+                                value={formData.paymentMethodId}
+                                onChange={(e) => {
+                                    const selectedMethod = paymentMethods.find(pm => pm._id === e.target.value);
+                                    setFormData({
+                                        ...formData,
+                                        paymentMethodId: e.target.value,
+                                        paymentMethodName: selectedMethod?.name || 'Cash'
+                                    });
+                                }}
+                                className="w-full p-3 bg-cyan-50/30 border border-zinc-200 rounded-xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all cursor-pointer"
+                            >
+                                <option value="">Cash</option>
+                                {
+                                    paymentMethods?.map((pm, index) => (
+                                        <option key={index} value={pm._id}>{pm?.name}</option>
+                                    ))
+                                }
+                            </select>
                         </div>
 
                         {/* NOTES */}
