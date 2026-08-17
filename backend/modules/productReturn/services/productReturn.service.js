@@ -36,6 +36,7 @@ const createProductReturn = async (returnData) => {
         items: itemsWithCalculatedRefund,
         totalRefundAmount,
         customerName: returnData.customerName,
+        customerId: returnData.customerId,
         notes: returnData.notes,
         returnStatus: returnData.returnStatus || 'pending',
     });

@@ -337,6 +337,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     referenceOrderId: fetchedOrder._id,
                     referenceOrderNumber: fetchedOrder.orderNumber,
                     customerName: fetchedOrder.customerName,
+                    customerId: fetchedOrder.customerId,
                     items: itemsPayload,
                     notes,
                 }).unwrap();

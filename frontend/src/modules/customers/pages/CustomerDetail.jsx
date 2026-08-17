@@ -29,12 +29,18 @@ export default function CustomerDetail() {
     const [activeTab, setActiveTab] = useState("details");
     const [modal, setModal] = useState(null);
     const [returnModalOrderId, setReturnModalOrderId] = useState(null);
-    const [startDate, setStartDate] = useState(() => {
+    const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        return firstDay.toISOString().split('T')[0];
+        return now.toISOString().slice(0, 7); // YYYY-MM format
     });
-    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+    // Calculate start and end dates from selected month
+    const startDate = selectedMonth ? `${selectedMonth}-01` : null;
+    const endDate = selectedMonth ? (() => {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const lastDay = new Date(year, month, 0);
+        return lastDay.toISOString().split('T')[0];
+    })() : null;
     
     const { data: customerData, isLoading, refetch: refetchCustomer } = useCustomer(id);
     const { data: ordersData } = useOrdersByCustomer({ 
@@ -397,15 +403,9 @@ export default function CustomerDetail() {
                         <h3 className="text-lg font-semibold text-[var(--ink)]">Customer Orders</h3>
                         <div className="flex gap-2">
                             <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
-                            />
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
                                 className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
                             />
                         </div>
@@ -477,7 +477,7 @@ export default function CustomerDetail() {
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 <span className="font-semibold text-green-600 whitespace-nowrap">
-                                                    Rs {(order.paid ?? 0).toLocaleString()}
+                                                    Rs {(order.paidAmount ?? 0).toLocaleString()}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
@@ -535,15 +535,9 @@ export default function CustomerDetail() {
                         <h3 className="text-lg font-semibold text-[var(--ink)]">Order Returns</h3>
                         <div className="flex gap-2">
                             <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
-                            />
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
                                 className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
                             />
                         </div>
@@ -594,7 +588,7 @@ export default function CustomerDetail() {
                                         const dateStr = returnItem.returnDate || returnItem.createdAt || "";
                                         const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
                                         const totalRefund = returnItem.totalRefundAmount || returnItem.totalAmount || 0;
-                                        const refunded = returnItem.refundedAmount || 0;
+                                        const refunded = returnItem.refundedAmount || returnItem.totalRefundedAmount || 0;
                                         const remaining = totalRefund - refunded;
 
                                         const getStatusColor = (status) => {
