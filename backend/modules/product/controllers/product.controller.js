@@ -8,6 +8,7 @@ import {
 import {
     recalculateProductStock, recalculateAllStock,
 } from "../services/stockRecalculation.service.js";
+import { getStockHistory } from "../services/stockHistory.service.js";
 import {
     getSubCategories, getPaginationSubCategories, createSubCategory,
     updateSubCategory, deleteSubCategory, getSubCategoriesById, getSubCategoriesByCatagId,
@@ -146,6 +147,20 @@ export const recalculateAllStockData = asyncHandler(async (req, res, next) => {
     try {
         const result = await recalculateAllStock();
         res.status(200).json(result);
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
+});
+
+export const getStockHistoryData = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await getStockHistory(id);
+        res.status(200).json({ 
+            success: true, 
+            message: "Stock history retrieved successfully", 
+            data: result 
+        });
     } catch (error) {
         next(new ErrorResponse(error.message, 400));
     }

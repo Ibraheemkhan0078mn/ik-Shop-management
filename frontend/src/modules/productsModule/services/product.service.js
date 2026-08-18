@@ -84,6 +84,13 @@ export const productApi = baseApi.injectEndpoints({
         checkProductCode: build.query({
             query: (productCode) => ({ url: `/products/check-code/${productCode}` }),
         }),
+
+        // Get stock history for a product
+        getStockHistory: build.query({
+            query: (productId) => ({ url: `/products/${productId}/stock-history` }),
+            transformResponse: (raw) => raw.data || raw,
+            providesTags: (result, error, productId) => [{ type: "Product", id: productId }],
+        }),
     }),
 });
 
@@ -97,4 +104,5 @@ export const {
     useUploadProductImageMutation: useUploadProductImage,
     useRecalculateProductStockMutation: useRecalculateProductStock,
     useRecalculateAllStockMutation: useRecalculateAllStock,
+    useGetStockHistoryQuery: useStockHistory,
 } = productApi;

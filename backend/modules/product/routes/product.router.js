@@ -18,6 +18,7 @@ import {
     recalculateProductStockData,
     recalculateAllStockData,
     checkProductCode,
+    getStockHistoryData,
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 import { upload } from "../../../common/middlewares/multer.middleware.js";
@@ -38,6 +39,7 @@ router.delete("/:id", authorize("admin"), deleteProductData);
 router.post("/upload-image", upload.single("image"), uploadProductImage);
 router.post("/:id/recalculate-stock", authorize("admin"), recalculateProductStockData);
 router.post("/recalculate-all-stock", authorize("admin"), recalculateAllStockData);
+router.get("/:id/stock-history", getStockHistoryData);
 
 
 
