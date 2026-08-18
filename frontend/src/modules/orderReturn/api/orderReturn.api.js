@@ -28,6 +28,12 @@ export const orderReturnApi = baseApi.injectEndpoints({
             providesTags: ["OrderReturn"],
             transformResponse: (res) => res,
         }),
+        // Get returns by order ID
+        getReturnsByOrderId: build.query({
+            query: (orderId) => ({ url: "/product-returns", params: { referenceOrderId: orderId } }),
+            providesTags: ["OrderReturn"],
+            transformResponse: (res) => res.data || [],
+        }),
         // Get order return by ID
         getOrderReturnById: build.query({
             query: (id) => ({ url: `/product-returns/${id}` }),
@@ -141,6 +147,7 @@ export const {
     useGetOrderForReturnQuery,
     useGetAllOrderReturnsQuery,
     useGetPaginatedOrderReturnsQuery,
+    useGetReturnsByOrderIdQuery,
     useGetOrderReturnByIdQuery,
     useCreateOrderReturnMutation,
     useUpdateOrderReturnMutation,

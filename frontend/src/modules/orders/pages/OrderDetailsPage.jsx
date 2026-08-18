@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useOrder, useGetOrderPayments, useGetOrderPaymentStatus, useDeleteOrderPayment, useRecalculateOrderPaidAmount } from "../services/orders.service.js";
 import { Receipt, Package, DollarSign, CreditCard, FileText, Copy, Download, Trash2, RefreshCw, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import OrderDetailsPdfTemplate from "../components/OrderDetailsPdfTemplate.jsx";
+import OrderPaymentPdfTemplate from "../components/OrderPaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { useState } from "react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -18,6 +19,8 @@ export default function OrderDetailsPage() {
     const [deletePayment] = useDeleteOrderPayment();
     const [recalculateOrderPaidAmount] = useRecalculateOrderPaidAmount();
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [showPaymentPdfModal, setShowPaymentPdfModal] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState(null);
     const [expandedItems, setExpandedItems] = useState({});
     const { hasPermission } = usePermissionGuard();
 
@@ -50,6 +53,11 @@ export default function OrderDetailsPage() {
     };
 
     const canDeletePayments = hasPermission('orders:delete');
+
+    const handlePaymentPdf = (payment) => {
+        setSelectedPayment(payment);
+        setShowPaymentPdfModal(true);
+    };
 
     const handleCopyOrderNumber = () => {
         if (order?.orderNumber) {
@@ -424,13 +432,22 @@ export default function OrderDetailsPage() {
                                                         <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
                                                         <td className="py-3 text-right text-[var(--muted)]">{payment.notes || "—"}</td>
                                                         <td className="py-3">
-                                                            <button
-                                                                onClick={() => setExpandedItems(prev => ({ ...prev, [`payment-${index}`]: !prev[`payment-${index}`] }))}
-                                                                className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
-                                                                title={isPaymentExpanded ? "Hide details" : "Show details"}
-                                                            >
-                                                                {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
-                                                            </button>
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => handlePaymentPdf(payment)}
+                                                                    className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
+                                                                    title="Download Payment Receipt"
+                                                                >
+                                                                    <Download size={15} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setExpandedItems(prev => ({ ...prev, [`payment-${index}`]: !prev[`payment-${index}`] }))}
+                                                                    className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
+                                                                    title={isPaymentExpanded ? "Hide details" : "Show details"}
+                                                                >
+                                                                    {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                     {isPaymentExpanded && (
@@ -506,6 +523,16 @@ export default function OrderDetailsPage() {
                     labels={{}}
                 >
                     <OrderDetailsPdfTemplate order={order} payments={payments} labels={{}} />
+                </PdfModal>
+            )}
+            {showPaymentPdfModal && selectedPayment && (
+                <PdfModal
+                    isOpen={showPaymentPdfModal}
+                    onClose={() => setShowPaymentPdfModal(false)}
+                    fileName={`Payment-${selectedPayment._id || 'receipt'}.pdf`}
+                    labels={{}}
+                >
+                    <OrderPaymentPdfTemplate payment={selectedPayment} order={order} labels={{}} />
                 </PdfModal>
             )}
         </>

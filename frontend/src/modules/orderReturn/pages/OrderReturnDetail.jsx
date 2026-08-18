@@ -6,6 +6,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useGetOrderReturnByIdQuery, useGetOrderReturnPaymentsQuery, useDeleteOrderReturnPaymentMutation, useRecalculateOrderReturnMutation } from "../api/orderReturn.api.js";
 import OrderReturnPaymentModal from "../components/OrderReturnPaymentModal.jsx";
 import OrderReturnPdfTemplate from "../components/OrderReturnPdfTemplate.jsx";
+import OrderReturnPaymentPdfTemplate from "../components/OrderReturnPaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
@@ -21,6 +22,8 @@ export default function OrderReturnDetail() {
     const { id } = useParams();
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [showPaymentPdfModal, setShowPaymentPdfModal] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState(null);
     const [expandedPayments, setExpandedPayments] = useState({});
     const [expandedItems, setExpandedItems] = useState({});
 
@@ -62,6 +65,11 @@ export default function OrderReturnDetail() {
         } catch (error) {
             showError(error?.data?.message || "Failed to recalculate");
         }
+    };
+
+    const handlePaymentPdf = (payment) => {
+        setSelectedPayment(payment);
+        setShowPaymentPdfModal(true);
     };
 
     const handlePaymentSuccess = async () => {
@@ -410,6 +418,13 @@ export default function OrderReturnDetail() {
                                                         <td className="py-3">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 <button
+                                                                    onClick={() => handlePaymentPdf(payment)}
+                                                                    className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
+                                                                    title="Download Refund Receipt"
+                                                                >
+                                                                    <Download size={15} />
+                                                                </button>
+                                                                <button
                                                                     onClick={() => setExpandedPayments(prev => ({ ...prev, [index]: !prev[index] }))}
                                                                     className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg"
                                                                     title={isPaymentExpanded ? "Hide details" : "Show details"}
@@ -507,6 +522,16 @@ export default function OrderReturnDetail() {
                     labels={{}}
                 >
                     <OrderReturnPdfTemplate orderReturn={orderReturn} refunds={payments} labels={{}} />
+                </PdfModal>
+            )}
+            {showPaymentPdfModal && selectedPayment && (
+                <PdfModal
+                    isOpen={showPaymentPdfModal}
+                    onClose={() => setShowPaymentPdfModal(false)}
+                    fileName={`Refund-${selectedPayment._id || 'receipt'}.pdf`}
+                    labels={{}}
+                >
+                    <OrderReturnPaymentPdfTemplate payment={selectedPayment} orderReturn={orderReturn} labels={{}} />
                 </PdfModal>
             )}
         </>

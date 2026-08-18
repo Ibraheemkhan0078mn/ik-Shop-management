@@ -1,8 +1,8 @@
 import React from "react";
 
-export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels = {} }) {
+export default function OrderPaymentPdfTemplate({ payment = {}, order = {}, labels = {} }) {
     const transactionDate = new Date(payment.transactionDate || payment.paymentDate).toLocaleString();
-    const purchaseDate = new Date(purchase?.purchaseDate ?? purchase?.date ?? purchase?.createdAt).toLocaleDateString();
+    const orderDate = new Date(order?.createdAt).toLocaleDateString();
 
     return (
         <div className="p-10 bg-white min-h-screen text-gray-800" style={{ fontFamily: "Arial, sans-serif" }}>
@@ -21,16 +21,16 @@ export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels
                 {labels.paymentReceipt || "Payment Receipt"}
             </p>
 
-            {/* Supplier / Payment Meta Row */}
+            {/* Customer / Payment Meta Row */}
             <div className="flex justify-between items-start mb-6 gap-6">
                 <div>
-                    <p className="text-xs font-semibold text-gray-500 mb-1">Paid To:</p>
-                    <p className="text-sm font-bold text-gray-900 uppercase">{purchase?.supplier?.name || "—"}</p>
-                    <p className="text-xs text-gray-600">Purchase Date: {purchaseDate}</p>
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Customer:</p>
+                    <p className="text-sm font-bold text-gray-900 uppercase">{order?.customerName || "Walk-in Customer"}</p>
+                    <p className="text-xs text-gray-600">Order Date: {orderDate}</p>
                 </div>
                 <div className="flex flex-col gap-2 min-w-[240px]">
                     <div className="border border-gray-300 px-3 py-2 flex justify-between text-sm">
-                        <span className="font-semibold">Invoice #: {purchase?.invoiceNumber || purchase?.purchaseNumber || "—"}</span>
+                        <span className="font-semibold">Order #: {order?.orderNumber || "—"}</span>
                         <span className="font-semibold">Date: {transactionDate}</span>
                     </div>
                     <div className="border border-gray-300 px-3 py-2 flex justify-between text-sm">
@@ -52,7 +52,11 @@ export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels
                 </thead>
                 <tbody>
                     <tr className="border-b border-gray-200">
-                        <td className="px-3 py-2 capitalize">{payment.method || "—"}</td>
+                        <td className="px-3 py-2 capitalize">
+                            {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
+                             payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
+                             payment.method || "—"}
+                        </td>
                         <td className="px-3 py-2">
                             {payment.creditAccount?.name || payment.paymentMethodName || "—"}
                         </td>
@@ -66,13 +70,13 @@ export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels
                 </tbody>
             </table>
 
-            {/* Invoice Summary */}
+            {/* Order Summary */}
             <div className="flex justify-between gap-6 mb-6">
                 <div className="border border-gray-300 p-3 text-sm min-w-[260px]">
-                    <p className="font-semibold mb-2">Invoice Summary:</p>
+                    <p className="font-semibold mb-2">Order Summary:</p>
                     <div className="flex justify-between py-1">
-                        <span>Purchase Total</span>
-                        <span>{(purchase?.totalAmount ?? 0).toLocaleString()}</span>
+                        <span>Order Total</span>
+                        <span>{(order?.totalAmount ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1">
                         <span>This Payment</span>
@@ -80,7 +84,7 @@ export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels
                     </div>
                     <div className="flex justify-between py-1 font-bold border-t border-gray-300 mt-1 pt-1">
                         <span>Balance After Payment</span>
-                        <span>{((purchase?.totalAmount ?? 0) - (payment.amount || 0)).toLocaleString()}</span>
+                        <span>{((order?.totalAmount ?? 0) - (payment.amount || 0)).toLocaleString()}</span>
                     </div>
                 </div>
 

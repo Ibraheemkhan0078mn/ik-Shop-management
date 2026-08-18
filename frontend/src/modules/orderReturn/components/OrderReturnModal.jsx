@@ -8,6 +8,7 @@ import {
     useCreateOrderReturnMutation,
     useUpdateOrderReturnMutation,
     useGetOrderReturnRefundsQuery,
+    useGetReturnsByOrderIdQuery,
 } from "../api/orderReturn.api.js";
 import { useOrder } from "../../orders/services/orders.service.js";
 import OrderReturnRefundModal from "./OrderReturnRefundModal.jsx";
@@ -49,7 +50,7 @@ const OrderNumberSearch = ({ value, onChange, onSearch, error, isLoading }) => (
     </div>
 );
 
-const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, expandedCalculation, onToggleCalculation }) => (
+const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, expandedCalculation, onToggleCalculation, itemLimits }) => (
     <div className="mb-6">
         <h3 className="text-lg font-semibold text-(--ink) mb-4 font-display">Order Items</h3>
         <div className="space-y-3">
@@ -57,22 +58,25 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                 const itemId = item._id || item.product || idx;
                 const isSelected = !!selectedItems[itemId];
                 const details = selectedItems[itemId] || {};
+                const limit = itemLimits[itemId] || { orderQuantity: item.quantity, returnedQuantity: 0, availableQuantity: item.quantity };
+                const isOutOfStock = limit.availableQuantity <= 0;
 
                 return (
-                    <div key={itemId} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                    <div key={itemId} className={`border rounded-xl overflow-hidden ${isOutOfStock ? 'opacity-60' : ''}`} style={{ borderColor: "var(--border)" }}>
                         {/* Item header with checkbox */}
                         <div
-                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition"
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition ${isOutOfStock ? 'cursor-not-allowed' : ''}`}
                             style={{ background: isSelected ? "rgba(15,118,110,0.04)" : "var(--surface)" }}
-                            onClick={() => onSelect(itemId, item)}
+                            onClick={() => !isOutOfStock && onSelect(itemId, item)}
                         >
                             <input
                                 type="checkbox"
                                 checked={isSelected}
+                                disabled={isOutOfStock}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => {
                                     e.stopPropagation();
-                                    onSelect(itemId, item);
+                                    if (!isOutOfStock) onSelect(itemId, item);
                                 }}
                                 className="w-4 h-4 rounded"
                                 style={{ accentColor: "var(--accent-2)" }}
@@ -82,7 +86,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                     <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.name || item.productName || "—"}</span>
                                 </div>
                                 <div style={{ color: "var(--muted)" }}>
-                                    Qty: {item.quantity}
+                                    Order Qty: {limit.orderQuantity}
                                 </div>
                                 <div style={{ color: "var(--muted)" }}>
                                     Price: Rs {Number(item.unitPrice || item.originalPrice || 0).toFixed(2)}
@@ -93,8 +97,31 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                             </div>
                         </div>
 
+                        {/* Interactive limit indicator */}
+                        <div className="px-4 py-2 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+                            <div className="flex items-center gap-4 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium" style={{ color: "var(--muted)" }}>Order:</span>
+                                    <span className="font-semibold" style={{ color: "var(--ink)" }}>{limit.orderQuantity}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium" style={{ color: "var(--muted)" }}>Returned:</span>
+                                    <span className="font-semibold" style={{ color: limit.returnedQuantity > 0 ? "#ef4444" : "var(--ink)" }}>{limit.returnedQuantity}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium" style={{ color: "var(--muted)" }}>Available:</span>
+                                    <span className={`font-semibold ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>{limit.availableQuantity}</span>
+                                </div>
+                                {isOutOfStock && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                        Fully Returned
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Inline form for selected item */}
-                        {isSelected && (
+                        {isSelected && !isOutOfStock && (
                             <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
@@ -102,14 +129,14 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                         <input
                                             type="number"
                                             min={1}
-                                            max={item.quantity}
+                                            max={limit.availableQuantity}
                                             value={details.returnQuantity || 1}
                                             onChange={(e) => onItemDetailChange(itemId, "returnQuantity", e.target.value)}
                                             className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
                                             onWheel={e => e.target.blur()}
                                         />
                                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                                            Max limit: {item.quantity}
+                                            Max limit: {limit.availableQuantity} (Order: {limit.orderQuantity}, Returned: {limit.returnedQuantity})
                                         </p>
                                     </div>
                                     <div>
@@ -184,6 +211,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const [editingRefund, setEditingRefund] = useState(null);
     const [expandedCalculation, setExpandedCalculation] = useState({});
     const [showPdfModal, setShowPdfModal] = useState(false);
+    const [itemLimits, setItemLimits] = useState({});
 
     // RTK Query hooks
     const { data: returnNumberData } = useGenerateReturnNumberQuery(undefined, { skip: isEditMode || isViewMode || !isOpen });
@@ -191,6 +219,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const { data: orderDataById } = useOrder(orderId, { skip: !orderId || isEditMode });
     const { data: refunds, refetch: refetchRefunds, isLoading: refundsLoading } = useGetOrderReturnRefundsQuery(editData?._id, { skip: !isViewMode || !editData?._id });
     const refundsList = Array.isArray(refunds) ? refunds : [];
+    const { data: previousReturnsData } = useGetReturnsByOrderIdQuery(fetchedOrder?._id, { skip: !fetchedOrder?._id });
     const [createOrderReturn] = useCreateOrderReturnMutation();
     const [updateOrderReturn] = useUpdateOrderReturnMutation();
 
@@ -229,6 +258,65 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
         setOrderNumber(orderDataById.orderNumber || "");
         showSuccess("Order loaded successfully");
     }, [isEditMode, isViewMode, orderId, orderDataById]);
+
+    // Calculate item limits based on order quantities and previous returns
+    useEffect(() => {
+        if (!fetchedOrder?.items) return;
+
+        const limits = {};
+        
+        // Initialize limits with order quantities
+        fetchedOrder.items.forEach((item) => {
+            const itemId = item._id || item.product;
+            limits[itemId] = {
+                orderQuantity: item.quantity,
+                returnedQuantity: 0,
+                availableQuantity: item.quantity,
+                batchId: item.batchId,
+                productName: item.name || item.productName,
+            };
+        });
+
+        // Subtract quantities from previous returns (excluding current return in edit mode)
+        const returnsToProcess = previousReturnsData || [];
+        returnsToProcess.forEach((returnRecord) => {
+            // Skip the current return being edited
+            if (isEditMode && editData?._id && returnRecord._id === editData._id) {
+                return;
+            }
+            
+            if (returnRecord.items) {
+                returnRecord.items.forEach((returnItem) => {
+                    // Try to match by productId first
+                    let matchedItemId = null;
+                    
+                    if (returnItem.productId) {
+                        matchedItemId = Object.keys(limits).find(key => key === returnItem.productId);
+                    }
+                    
+                    // If no match by productId, try to match by batchId
+                    if (!matchedItemId && returnItem.batchId) {
+                        matchedItemId = Object.keys(limits).find(key => limits[key].batchId === returnItem.batchId);
+                    }
+                    
+                    // If still no match, try to match by productName
+                    if (!matchedItemId && returnItem.productName) {
+                        matchedItemId = Object.keys(limits).find(key => 
+                            limits[key].productName?.toLowerCase() === returnItem.productName?.toLowerCase()
+                        );
+                    }
+                    
+                    if (matchedItemId && limits[matchedItemId]) {
+                        limits[matchedItemId].returnedQuantity += returnItem.quantity || 0;
+                        limits[matchedItemId].availableQuantity = 
+                            limits[matchedItemId].orderQuantity - limits[matchedItemId].returnedQuantity;
+                    }
+                });
+            }
+        });
+
+        setItemLimits(limits);
+    }, [fetchedOrder, previousReturnsData, isEditMode, editData]);
 
     const handleItemSelect = (itemId, item) => {
         setSelectedItems((prev) => {
@@ -302,6 +390,15 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const handleSubmit = async () => {
         const selectedItemsArray = Object.entries(selectedItems);
         if (selectedItemsArray.length === 0) return showError("Please select at least one item to return");
+        
+        // Validate return quantities against available limits
+        for (const [itemId, details] of selectedItemsArray) {
+            const limit = itemLimits[itemId];
+            const returnQty = Number(details.returnQuantity) || 0;
+            if (limit && returnQty > limit.availableQuantity) {
+                return showError(`Return quantity for item exceeds available limit. Available: ${limit.availableQuantity}, Requested: ${returnQty}`);
+            }
+        }
         
         const itemsPayload = selectedItemsArray.map(([itemId, details]) => ({
             productId: itemId,
@@ -610,6 +707,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                     onItemDetailChange={handleItemDetailChange}
                                     expandedCalculation={expandedCalculation}
                                     onToggleCalculation={toggleCalculation}
+                                    itemLimits={itemLimits}
                                 />
                             )}
 

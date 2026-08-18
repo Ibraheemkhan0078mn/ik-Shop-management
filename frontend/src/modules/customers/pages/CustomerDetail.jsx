@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw } from "lucide-react";
+import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw, DollarSign } from "lucide-react";
 import { useCustomer, useCustomerOrderKPIs, useCustomerOrderReturnKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
@@ -9,12 +9,14 @@ import { useRecalculateCustomerBalance } from "../../qarza/services/qarza.servic
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { useCustomerPaymentsSummary, useCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
-import { useGetPaginatedOrderReturnsQuery } from "../../orderReturn/api/orderReturn.api.js";
+import { useGetPaginatedOrderReturnsQuery, useDeleteOrderReturnMutation } from "../../orderReturn/api/orderReturn.api.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
+import OrderReturnPaymentModal from "../../orderReturn/components/OrderReturnPaymentModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -29,6 +31,9 @@ export default function CustomerDetail() {
     const [activeTab, setActiveTab] = useState("details");
     const [modal, setModal] = useState(null);
     const [returnModalOrderId, setReturnModalOrderId] = useState(null);
+    const [paymentModal, setPaymentModal] = useState(null);
+    const [selectedReturn, setSelectedReturn] = useState(null);
+    const [isEditMode, setIsEditMode] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
         return now.toISOString().slice(0, 7); // YYYY-MM format
@@ -78,6 +83,7 @@ export default function CustomerDetail() {
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [updateCustomer] = useUpdateCustomer();
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+    const [deleteOrderReturn] = useDeleteOrderReturnMutation();
 
     const refresh = useCallback(() => {}, []);
 
@@ -111,6 +117,26 @@ export default function CustomerDetail() {
         } catch (error) {
             showError(error?.data?.message || "Failed to delete order");
         }
+    };
+
+    const handleDeleteOrderReturn = async (returnId) => {
+        try {
+            await deleteOrderReturn(returnId).unwrap();
+            showSuccess("Return deleted successfully");
+            refetchCustomer();
+        } catch (error) {
+            showError(error?.data?.message || "Failed to delete return");
+        }
+    };
+
+    const handleEditOrderReturn = (returnItem) => {
+        setSelectedReturn(returnItem);
+        setIsEditMode(true);
+        setReturnModalOrderId(null);
+    };
+
+    const handlePaymentOrderReturn = (returnItem) => {
+        setPaymentModal(returnItem);
     };
 
     const handleCreateQarzaAccount = async () => {
@@ -168,9 +194,41 @@ export default function CustomerDetail() {
                 <OrderReturnModal
                     isOpen={!!returnModalOrderId}
                     orderId={returnModalOrderId}
-                    onClose={() => setReturnModalOrderId(null)}
+                    onClose={() => {
+                        setReturnModalOrderId(null);
+                        setSelectedReturn(null);
+                        setIsEditMode(false);
+                    }}
                     onSuccess={() => {
                         setReturnModalOrderId(null);
+                        setSelectedReturn(null);
+                        setIsEditMode(false);
+                        refresh();
+                    }}
+                />
+            )}
+            {selectedReturn && isEditMode && (
+                <OrderReturnModal
+                    isOpen={!!selectedReturn}
+                    editData={selectedReturn}
+                    isEditMode={isEditMode}
+                    onClose={() => {
+                        setSelectedReturn(null);
+                        setIsEditMode(false);
+                    }}
+                    onSuccess={() => {
+                        setSelectedReturn(null);
+                        setIsEditMode(false);
+                        refresh();
+                    }}
+                />
+            )}
+            {paymentModal && (
+                <OrderReturnPaymentModal
+                    orderReturn={paymentModal}
+                    onClose={() => setPaymentModal(null)}
+                    onSuccess={() => {
+                        setPaymentModal(null);
                         refresh();
                     }}
                 />
@@ -635,6 +693,40 @@ export default function CustomerDetail() {
                                                         >
                                                             <Eye size={15} />
                                                         </button>
+                                                        {(returnItem.returnStatus === 'approved' || returnItem.status === 'approved') && 
+                                                         (returnItem.refundStatus !== 'fully_refunded' && returnItem.refundStatus !== 'completed') && (
+                                                            <button
+                                                                onClick={() => handlePaymentOrderReturn(returnItem)}
+                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-green-400 hover:text-green-600"
+                                                                title="Process Payment"
+                                                            >
+                                                                <DollarSign size={15} />
+                                                            </button>
+                                                        )}
+                                                        <PermissionGuard 
+                                                            execute={() => handleEditOrderReturn(returnItem)} 
+                                                            permission="orderReturns.update" 
+                                                            isConfirmation={true}
+                                                        >
+                                                            <button
+                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit size={15} />
+                                                            </button>
+                                                        </PermissionGuard>
+                                                        <PermissionGuard 
+                                                            execute={() => handleDeleteOrderReturn(returnItem._id)} 
+                                                            permission="orderReturns.delete" 
+                                                            isConfirmation={true}
+                                                        >
+                                                            <button
+                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 size={15} />
+                                                            </button>
+                                                        </PermissionGuard>
                                                     </div>
                                                 </td>
                                             </tr>
