@@ -71,7 +71,7 @@ export const productApi = baseApi.injectEndpoints({
         // Recalculate stock for a single product
         recalculateProductStock: build.mutation({
             query: (id) => ({ url: `/products/${id}/recalculate-stock`, method: "POST" }),
-            invalidatesTags: (result, error, id) => [{ type: "Product", id }, "Product"],
+            invalidatesTags: (result, error, id) => [{ type: "Product", id }, "Product", "Batch"],
         }),
 
         // Recalculate stock for all products
