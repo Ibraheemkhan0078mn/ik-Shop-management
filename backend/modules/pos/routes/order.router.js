@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { protect, authorize }           from "../../auth/middlewares/auth.middleware.js";
-import { generateOrderNumber, getOrders, getPaginatedOrders, getOrdersByCustomer, getOrderById, addOrder, deleteOrder, getOrderPaymentsData, getOrderPaymentStatusData, recalculateOrderPaidAmountData } from "../controllers/order.controller.js";
+import { generateOrderNumber, getOrders, getPaginatedOrders, getOrdersByCustomer, getOrderById, addOrder, deleteOrder, getOrderPaymentsData, getOrderPaymentStatusData, recalculateOrderPaidAmountData, getOrderByNumber } from "../controllers/order.controller.js";
 
 const router = Router();
 
@@ -8,6 +8,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/generate-number",          generateOrderNumber);   // GET  /orders/generate-number
+router.get("/by-number/:orderNumber",  getOrderByNumber);      // GET  /orders/by-number/:orderNumber
 router.get("/",                         getOrders);             // GET  /orders
 router.get("/paginated",                getPaginatedOrders);    // GET  /orders/paginated
 router.get("/by-customer",              getOrdersByCustomer);   // GET  /orders/by-customer

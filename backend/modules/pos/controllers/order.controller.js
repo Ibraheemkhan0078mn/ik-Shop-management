@@ -141,6 +141,28 @@ export const getOrdersByCustomer = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  GET /orders/by-number/:orderNumber
+//  Returns a single order by order number
+// ─────────────────────────────────────────────────────────────────────────────
+export const getOrderByNumber = asyncHandler(async (req, res) => {
+    const { orderNumber } = req.params;
+    const order = await findOrderByNumberService(orderNumber);
+
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: "Order not found"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Order fetched successfully",
+        data: order
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  GET /orders/:id
 //  Returns a single order by ID
 // ─────────────────────────────────────────────────────────────────────────────

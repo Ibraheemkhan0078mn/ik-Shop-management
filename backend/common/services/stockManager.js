@@ -44,15 +44,15 @@ export function calculateStockDiff(oldItems = [], newItems = []) {
     const newMap = new Map();
 
     for (const item of oldItems) {
-        const productId = item.product?.toString() || item.product;
-        const batchId = item.batch?.toString() || item.batch || item.batchId;
+        const productId = item.product?.toString() || item.product || item.productId?.toString() || item.productId;
+        const batchId = item.batch?.toString() || item.batch || item.batchId?.toString() || item.batchId;
         const key = `${productId}-${batchId}`;
         oldMap.set(key, { ...item, productId, batchId, quantity: Number(item.quantity) || 0 });
     }
 
     for (const item of newItems) {
-        const productId = item.product?.toString() || item.product;
-        const batchId = item.batch?.toString() || item.batch || item.batchId;
+        const productId = item.product?.toString() || item.product || item.productId?.toString() || item.productId;
+        const batchId = item.batch?.toString() || item.batch || item.batchId?.toString() || item.batchId;
         const key = `${productId}-${batchId}`;
         newMap.set(key, { ...item, productId, batchId, quantity: Number(item.quantity) || 0 });
     }

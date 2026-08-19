@@ -232,19 +232,65 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     useEffect(() => {
         if ((isEditMode || isViewMode) && editData) {
             setOrderNumber(editData.referenceOrderNumber || "");
-            // Convert items array to selectedItems object
-            const selectedItemsObj = {};
-            editData.items?.forEach((item) => {
-                const itemId = item.productId || item._id;
-                selectedItemsObj[itemId] = {
-                    returnQuantity: item.quantity,
-                    returnReason: item.returnReason,
-                    cut: item.cut || 0,
-                    refundAmount: item.refundAmount,
-                    originalPrice: item.originalPrice,
-                };
-            });
-            setSelectedItems(selectedItemsObj);
+            
+            // Fetch the order data to get the order items for editing
+            const fetchOrderForEdit = async () => {
+                try {
+                    console.log("Fetching order for edit with orderNumber:", editData.referenceOrderNumber);
+                    console.log("Edit data items:", editData.items);
+                    
+                    const response = await fetch(`http://localhost:5001/api/orders/by-number/${editData.referenceOrderNumber}`, {
+                        credentials: 'include',
+                    });
+                    const data = await response.json();
+                    console.log("Fetched order data:", data);
+                    
+                    if (data.success && data.data) {
+                        setFetchedOrder(data.data);
+                        
+                        // Convert items array to selectedItems object using correct item IDs
+                        const selectedItemsObj = {};
+                        editData.items?.forEach((returnItem) => {
+                            console.log("Processing returnItem:", returnItem);
+                            
+                            // Extract the actual productId (handle both string and object)
+                            const returnProductId = returnItem.productId?._id || returnItem.productId?.toString() || returnItem.productId;
+                            console.log("Extracted returnProductId:", returnProductId);
+                            
+                            // Find the matching order item to get the correct itemId
+                            const orderItem = data.data.items?.find(oi => 
+                                oi.product === returnProductId || 
+                                oi.productId === returnProductId ||
+                                oi._id === returnProductId
+                            );
+                            
+                            console.log("Matching orderItem:", orderItem);
+                            
+                            if (orderItem) {
+                                const itemId = orderItem._id || orderItem.product;
+                                selectedItemsObj[itemId] = {
+                                    returnQuantity: returnItem.quantity,
+                                    returnReason: returnItem.returnReason,
+                                    cut: returnItem.cut || 0,
+                                    refundAmount: returnItem.refundAmount,
+                                    originalPrice: returnItem.originalPrice,
+                                };
+                                console.log("Added to selectedItems:", itemId, selectedItemsObj[itemId]);
+                            } else {
+                                console.warn("No matching orderItem found for returnItem:", returnItem);
+                            }
+                        });
+                        console.log("Final selected items for edit mode:", selectedItemsObj);
+                        setSelectedItems(selectedItemsObj);
+                    } else {
+                        console.error("Failed to fetch order - no success or data:", data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch order for edit:", error);
+                }
+            };
+            
+            fetchOrderForEdit();
             setNotes(editData.notes || "");
         } else {
             resetForm();
@@ -694,7 +740,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                 />
                             )}
 
-                            {!isEditMode && fetchedOrder?.items?.length > 0 && (
+                            {fetchedOrder?.items?.length > 0 && (
                                 <OrderItemPicker 
                                     items={fetchedOrder.items} 
                                     selectedItems={selectedItems}
