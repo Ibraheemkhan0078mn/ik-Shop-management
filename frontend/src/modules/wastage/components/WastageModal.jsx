@@ -378,13 +378,21 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                       type="number"
                       min="0"
                       step="0.01"
-                      placeholder="0.00"
-                      value={currentItem.quantity}
+                      placeholder="Enter quantity"
+                      value={currentItem.quantity || ''}
                       onChange={e => {
-                        let val = e.target.value === "" ? 0 : Number(e.target.value);
+                        let val = e.target.value === "" ? "" : Number(e.target.value);
                         const maxAvailable = currentItem.batchNumber ? (batchOptions.find(b => b.value === currentItem.batchNumber)?.quantity || 0) : Infinity;
-                        if (val < 0) val = 0;
-                        if (val > maxAvailable) val = maxAvailable;
+                        
+                        if (val !== "" && val < 0) {
+                          val = 0;
+                        }
+                        
+                        if (val !== "" && val > maxAvailable) {
+                          showError(`Cannot exceed available stock. Maximum available: ${maxAvailable}`);
+                          val = maxAvailable;
+                        }
+                        
                         updateCurrent("quantity", val);
                       }}
                       disabled={!currentItem.product}

@@ -367,9 +367,11 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete, onPayment }) {
                     {showPaymentIcon && (
                         <RowAction icon={DollarSign} title="Process Payment" onClick={onPayment} className="text-green-600" hoverBg="hover:bg-green-100" />
                     )}
-                    <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
-                        <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
-                    </PermissionGuard>
+                    {!isApproved && (
+                        <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
+                            <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
+                        </PermissionGuard>
+                    )}
                     <PermissionGuard execute={onDelete} permission="orderReturns.delete" isConfirmation={true}>
                         <RowAction icon={Trash2} title="Delete" onClick={() => {}} className="text-red-500" hoverBg="hover:bg-red-100" />
                     </PermissionGuard>

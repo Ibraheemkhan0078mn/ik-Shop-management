@@ -130,7 +130,8 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                             type="number"
                                             min={1}
                                             max={limit.availableQuantity}
-                                            value={details.returnQuantity || 1}
+                                            value={details.returnQuantity || ''}
+                                            placeholder="Enter quantity"
                                             onChange={(e) => onItemDetailChange(itemId, "returnQuantity", e.target.value)}
                                             className="w-full px-3 py-2 border border-(--border) rounded-lg bg-(--surface) text-(--ink) text-sm"
                                             onWheel={e => e.target.blur()}
@@ -436,6 +437,15 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const handleSubmit = async () => {
         const selectedItemsArray = Object.entries(selectedItems);
         if (selectedItemsArray.length === 0) return showError("Please select at least one item to return");
+        
+        // Validate that all selected items have quantity filled
+        for (const [itemId, details] of selectedItemsArray) {
+            if (!details.returnQuantity || details.returnQuantity === '' || Number(details.returnQuantity) <= 0) {
+                const item = fetchedOrder?.items?.find(oi => (oi._id === itemId || oi.product === itemId));
+                const itemName = item?.name || item?.productName || 'item';
+                return showError(`Please fill the return quantity for ${itemName}`);
+            }
+        }
         
         // Validate return quantities against available limits
         for (const [itemId, details] of selectedItemsArray) {
