@@ -400,28 +400,23 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
             }
         }
         
-        const itemsPayload = selectedItemsArray.map(([itemId, details]) => ({
-            productId: itemId,
-            productName: "", // Will be filled from fetchedOrder items
-            quantity: details.returnQuantity,
-            returnReason: details.returnReason,
-            originalPrice: details.originalPrice,
-            refundAmount: details.refundAmount,
-            cut: details.cut,
-        }));
-
-        // Fill productName from fetchedOrder items
-        if (fetchedOrder?.items) {
-            itemsPayload.forEach(item => {
-                const orderItem = fetchedOrder.items.find(oi => 
-                    (oi._id === item.productId || oi.product === item.productId)
-                );
-                if (orderItem) {
-                    item.productName = orderItem.name || orderItem.productName;
-                    item.batchId = orderItem.batchId;
-                }
-            });
-        }
+        const itemsPayload = selectedItemsArray.map(([itemId, details]) => {
+            // Find the corresponding order item to get the correct productId
+            const orderItem = fetchedOrder?.items?.find(oi => 
+                (oi._id === itemId || oi.product === itemId)
+            );
+            
+            return {
+                productId: orderItem?.product || orderItem?.productId || itemId, // Use actual product ID from order item
+                productName: orderItem?.name || orderItem?.productName || "",
+                batchId: orderItem?.batchId,
+                quantity: details.returnQuantity,
+                returnReason: details.returnReason,
+                originalPrice: details.originalPrice,
+                refundAmount: details.refundAmount,
+                cut: details.cut,
+            };
+        });
 
         setSubmitting(true);
         try {
