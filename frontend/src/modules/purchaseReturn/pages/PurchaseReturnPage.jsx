@@ -34,13 +34,16 @@ export default function PurchaseReturnPage() {
     const [paymentModal, setPaymentModal] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [filterId, setFilterId] = useState("");
+    const [filterInvoiceId, setFilterInvoiceId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
+    const [debouncedFilterInvoiceId, setDebouncedFilterInvoiceId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-    const hasActiveFilter = filterId !== "";
+    const hasActiveFilter = filterId !== "" || filterInvoiceId !== "";
 
     const clearFilter = () => {
         setFilterId("");
+        setFilterInvoiceId("");
     };
 
     // Debounce filter input
@@ -50,6 +53,13 @@ export default function PurchaseReturnPage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [filterId]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilterInvoiceId(filterInvoiceId);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [filterInvoiceId]);
 
     const usePurchaseReturnsQuery = (params = {}) => {
         const [data, setData] = useState(null);
@@ -185,7 +195,7 @@ export default function PurchaseReturnPage() {
                             <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
-                                        {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                        {language === "en" ? "Filter" : "فلٹر"}
                                     </span>
                                     {hasActiveFilter && (
                                         <button
@@ -198,16 +208,30 @@ export default function PurchaseReturnPage() {
                                     )}
                                 </div>
 
-                                {/* ID Filter */}
-                                <div>
+                                {/* Return Hash Filter */}
+                                <div className="mb-3">
                                     <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                        {language === "en" ? "Return Hash" : "ریٹرن ہیش"}
+                                        {language === "en" ? "Return Hash" : "ریٹرن ہاش"}
                                     </label>
                                     <input
                                         type="text"
                                         placeholder="Enter return hash..."
                                         value={filterId}
                                         onChange={(e) => setFilterId(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                    />
+                                </div>
+
+                                {/* Purchase Invoice ID Filter */}
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                        {language === "en" ? "Purchase Invoice ID" : "خرید انوائس آئی ڈی"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter purchase invoice ID..."
+                                        value={filterInvoiceId}
+                                        onChange={(e) => setFilterInvoiceId(e.target.value)}
                                         className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
                                     />
                                 </div>
@@ -222,7 +246,10 @@ export default function PurchaseReturnPage() {
                     limit={20}
                     dataKey="data"
                     wrapperClassName="min-h-0"
-                    queryArgs={debouncedFilterId ? { returnHash: debouncedFilterId } : {}}
+                    queryArgs={debouncedFilterId || debouncedFilterInvoiceId ? { 
+                        ...(debouncedFilterId && { returnHash: debouncedFilterId }),
+                        ...(debouncedFilterInvoiceId && { invoiceNumber: debouncedFilterInvoiceId })
+                    } : {}}
                     renderItems={(purchaseReturns) => (
                         <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                             <table className="w-full text-sm text-left">

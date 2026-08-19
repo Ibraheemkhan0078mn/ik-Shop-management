@@ -11,7 +11,7 @@ import {
     countPurchaseReturnService,
 } from "../services/purchaseReturn.crud.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
-import { findByIdPurchaseService } from "../../productPurchases/services/purchase.crud.js";
+import { findByIdPurchaseService, findOnePurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
 import { findOneProductService } from "../../product/services/product.crud.js";
 import {
@@ -96,10 +96,29 @@ export const getPurchaseReturnsData = asyncHandler(async (req, res) => {
 });
 
 export const getPaginatedPurchaseReturnsData = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, status, supplier } = req.query;
+    const { page = 1, limit = 20, status, supplier, returnHash, invoiceNumber } = req.query;
     let query = {};
     if (status) query.status = status;
     if (supplier) query.supplier = supplier;
+    if (returnHash) query.purchaseReturnNumber = returnHash;
+    
+    if (invoiceNumber) {
+        // Filter by purchase invoice number
+        const purchases = await findByIdPurchaseService({ invoiceNumber });
+        if (purchases) {
+            query.purchase = purchases._id;
+        } else {
+            // If no purchase found with this invoice number, return empty results
+            return ApiResponse(res, 200, "Purchase returns retrieved successfully", [], {
+                pagination: {
+                    total: 0,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: 0,
+                },
+            });
+        }
+    }
 
     const purchaseReturns = await findPurchaseReturnService(query, {
         sort: { createdAt: -1 },
