@@ -606,40 +606,96 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         sort: { paidAt: 1 }
     });
     
-    // Generate month-wise breakdown
-    const breakdown = [];
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
+    // Get attendance data for this staff from join date to end date
+    const attendanceData = await findStaffAttendanceService({
+        date: { $gte: new Date(joinDate), $lte: new Date(end) }
+    });
     
-    let monthStart = new Date(start);
+    // Create a map of attendance data by date for quick lookup
+    const attendanceMap = new Map();
+    attendanceData.forEach(record => {
+        const dateStr = new Date(record.date).toDateString();
+        if (record.attendance && record.attendance.length > 0) {
+            const staffAttendance = record.attendance.find(a => a.staff.toString() === staffId.toString());
+            if (staffAttendance) {
+                attendanceMap.set(dateStr, staffAttendance.status);
+            }
+        }
+    });
+    
+    // Generate month-wise breakdown from join date to current date
+    const breakdown = [];
+    const currentDate = new Date();
+    currentDate.setDate(1);
+    
+    // Start from the join date's month
+    let monthStart = new Date(joinDate);
     monthStart.setDate(1);
     
     // Track remaining payment amount for FIFO allocation
     let paymentIndex = 0;
     let remainingPaymentAmount = 0;
     
-    while (monthStart <= end) {
+    while (monthStart <= currentDate) {
         const monthEnd = new Date(monthStart);
         monthEnd.setMonth(monthEnd.getMonth() + 1);
         monthEnd.setDate(0);
         
-        // Calculate pro-rated salary for partial months
-        let daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-        let workingDays = daysInMonth;
-        let salaryForMonth = monthlySalary;
-        
-        // Check if this is the first month (joined during this month)
-        if (monthStart.getTime() === joinDate.getTime() || 
-            (monthStart > joinDate && monthStart < new Date(joinDate.getFullYear(), joinDate.getMonth() + 1, 1))) {
-            const joinDay = joinDate.getDate();
-            workingDays = daysInMonth - joinDay + 1;
-            salaryForMonth = (monthlySalary / daysInMonth) * workingDays;
+        // If month is before the requested start date, skip it
+        if (monthEnd < new Date(startDate)) {
+            monthStart.setMonth(monthStart.getMonth() + 1);
+            continue;
         }
         
-        // Check if this is the current month (not yet complete)
-        if (monthStart.getTime() === currentMonth.getTime()) {
-            const today = new Date();
-            workingDays = today.getDate();
+        // If month is after the requested end date, skip it
+        if (monthStart > new Date(endDate)) {
+            break;
+        }
+        
+        const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+        
+        // Count actual working days from attendance data
+        let workingDays = 0;
+        let presentDays = 0;
+        let absentDays = 0;
+        let leaveDays = 0;
+        let lateDays = 0;
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const currentDateCheck = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+            
+            // Skip days before join date
+            if (currentDateCheck < joinDate) {
+                continue;
+            }
+            
+            // Skip future days in current month
+            if (currentDateCheck > new Date()) {
+                break;
+            }
+            
+            const dateStr = currentDateCheck.toDateString();
+            const status = attendanceMap.get(dateStr);
+            
+            if (status === 'present') {
+                workingDays++;
+                presentDays++;
+            } else if (status === 'late') {
+                workingDays++;
+                lateDays++;
+            } else if (status === 'leave') {
+                leaveDays++;
+            } else if (status === 'absent') {
+                absentDays++;
+            } else {
+                // No attendance record - count as absent
+                absentDays++;
+            }
+        }
+        
+        // Calculate salary based on actual working days
+        let salaryForMonth = 0;
+        if (workingDays > 0) {
             salaryForMonth = (monthlySalary / daysInMonth) * workingDays;
         }
         
@@ -694,6 +750,10 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
             monthEnd: monthEnd.toISOString(),
             workingDays,
             totalDays: daysInMonth,
+            presentDays,
+            absentDays,
+            leaveDays,
+            lateDays,
             salaryForMonth: Math.round(salaryForMonth * 100) / 100,
             totalPaid: Math.round(totalPaid * 100) / 100,
             remaining: Math.round(remaining * 100) / 100,

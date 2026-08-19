@@ -573,6 +573,27 @@ export default function StaffDetail() {
                                                     </span>
                                                 </div>
                                             </div>
+                                            
+                                            {/* Attendance Breakdown */}
+                                            <div className="grid grid-cols-4 gap-2 text-xs mb-3 p-2 bg-[var(--surface-muted)] rounded">
+                                                <div className="text-center">
+                                                    <p className="text-green-600 font-semibold">{month.presentDays || 0}</p>
+                                                    <p className="text-[var(--muted)]">Present</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-red-600 font-semibold">{month.absentDays || 0}</p>
+                                                    <p className="text-[var(--muted)]">Absent</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-yellow-600 font-semibold">{month.leaveDays || 0}</p>
+                                                    <p className="text-[var(--muted)]">Leave</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-orange-600 font-semibold">{month.lateDays || 0}</p>
+                                                    <p className="text-[var(--muted)]">Late</p>
+                                                </div>
+                                            </div>
+                                            
                                             <div className="grid grid-cols-3 gap-4 text-sm">
                                                 <div>
                                                     <p className="text-[var(--muted)]">{labels.expected}</p>
