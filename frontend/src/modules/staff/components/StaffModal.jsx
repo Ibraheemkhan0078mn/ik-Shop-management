@@ -52,7 +52,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
     const [form, setForm] = useState(EMPTY_FORM);
     const [errors, setErrors] = useState({});
     const [banner, setBanner] = useState(null);
-    const [showMore, setShowMore] = useState(false);
     const fileInputRef = useRef(null);
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -77,7 +76,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
             setImagePreview(null);
             setErrors({});
             setBanner(null);
-            setShowMore(false);
             setImageFile(null);
         }
     }, [isCreate, open]);
@@ -135,27 +133,15 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
         if (!form.role?.trim()) newErrors.role = "Role is required";
         if (!form.joinDate) newErrors.joinDate = "Join date is required";
 
-        // Required inside "more options" only
-        if (showMore) {
-            if (!form.address?.trim()) newErrors.address = "Address is required";
-            if (form.salaryType === "fixed" && (form.monthlySalary === "" || form.monthlySalary === null || form.monthlySalary === undefined || isNaN(form.monthlySalary)))
-                newErrors.monthlySalary = "Monthly salary is required";
-            if (form.salaryType === "percentage" && (form.percentage === "" || form.percentage === null || form.percentage === undefined || isNaN(form.percentage)))
-                newErrors.percentage = "Commission percentage is required";
-        }
-
         setErrors(newErrors);
         const count = Object.keys(newErrors).length;
         if (count > 0) {
-            // Auto-expand if errors are in optional section
-            const optionalKeys = ["address", "monthlySalary", "percentage", "emergencyContact", "notes"];
-            if (optionalKeys.some((k) => newErrors[k])) setShowMore(true);
             setBanner(`Please fix ${count} error(s)`);
             return false;
         }
         setBanner(null);
         return true;
-    }, [form, showMore]);
+    }, [form]);
 
     const onSubmit = useCallback(async () => {
         if (!validateForm()) return;
@@ -331,6 +317,10 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             required
                             placeholder="+92 XXX XXXXXXX"
                         />
+                    </div>
+
+                    {/* ── Role & Join Date Section ── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
                         {/* Role */}
                         <SelectField
@@ -354,43 +344,10 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             type="date"
                             required
                         />
-
-                        {/* Status */}
-                        <SelectField
-                            label={labels.status || "Status"}
-                            name="status"
-                            value={form.status}
-                            onChange={updateField}
-                            options={[
-                                { label: labels.active || "Active", value: "active" },
-                                { label: labels.inactive || "Inactive", value: "inactive" },
-                            ]}
-                            placeholder="Select status"
-                        />
                     </div>
 
-                    {/* ── More Options Toggle ── */}
-                    <label className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] cursor-pointer transition-all">
-                        <span className="text-sm text-[var(--muted)]">{labels.showMoreOptions || "Show more options"}</span>
-                        <div className="relative">
-                            <input type="checkbox" checked={showMore} onChange={() => setShowMore((p) => !p)} className="sr-only peer" />
-                            <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${showMore ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
-                            <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${showMore ? 'translate-x-5' : ''}`}></div>
-                        </div>
-                    </label>
-
                     {/* ── Optional Fields ── */}
-                    {showMore && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-
-                            {/* Emergency Contact */}
-                            <Field
-                                label={labels.emergencyContact || "Emergency Contact"}
-                                name="emergencyContact"
-                                value={form.emergencyContact}
-                                onChange={updateField}
-                                placeholder="+92 XXX XXXXXXX"
-                            />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
                             {/* Address */}
                             <div className="sm:col-span-2">
@@ -452,8 +409,22 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                                     rows={3}
                                 />
                             </div>
+
+                            {/* Status Toggle */}
+                            <div className="sm:col-span-2 flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--app-bg)]">
+                                <span className="text-sm text-[var(--muted)]">{labels.status || "Status"}</span>
+                                <div className="relative">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={form.status === "active"} 
+                                        onChange={(e) => updateField("status", e.target.checked ? "active" : "inactive")} 
+                                        className="sr-only peer" 
+                                    />
+                                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${form.status === "active" ? 'bg-[var(--accent-2)]' : 'bg-[var(--muted)]'}`}></div>
+                                    <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${form.status === "active" ? 'translate-x-5' : ''}`}></div>
+                                </div>
+                            </div>
                         </div>
-                    )}
                 </div>
 
                 {/* Footer */}

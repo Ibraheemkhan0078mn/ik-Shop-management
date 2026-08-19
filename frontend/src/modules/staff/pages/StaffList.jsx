@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, Eye, Calendar, User, IdCard, Phone, Briefcase, Percent } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Eye, Calendar, User, Briefcase, Filter } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffListQuery, useDeleteStaffMutation, useGetStaffCommissionQuery, useGetStaffRolesQuery } from "../api/staff.api.js";
+import { useGetStaffListQuery, useDeleteStaffMutation, useGetStaffRolesQuery } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -14,6 +14,12 @@ import StaffModal from "../components/StaffModal.jsx";
 import BigViewImage from "../../../shared/components/BigViewImage.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
+const PlaceholderImg = ({ size = 9 }) => (
+    <div className={`w-${size} h-${size} rounded-lg bg-(--surface-muted) flex items-center justify-center`}>
+        <User className="w-4 h-4 text-(--muted)" strokeWidth={1.5} />
+    </div>
+);
+
 export default function StaffList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
@@ -23,6 +29,7 @@ export default function StaffList() {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("create");
     const [staffId, setStaffId] = useState(null);
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const paginatedListRef = useRef(null);
 
     const { settings } = useSettings();
@@ -33,7 +40,7 @@ export default function StaffList() {
     const roles = rolesData?.data || [];
     const [deleteStaff] = useDeleteStaffMutation();
 
-    const handleDelete = async (id, name) => {
+    const handleDelete = async (id) => {
         try {
             await deleteStaff(id).unwrap();
             toast.success(labels.staffDeleted);
@@ -48,6 +55,12 @@ export default function StaffList() {
     const handleOpenCreateModal = () => {
         setModalMode("create");
         setStaffId(null);
+        setModalOpen(true);
+    };
+
+    const handleOpenEditModal = (id) => {
+        setModalMode("update");
+        setStaffId(id);
         setModalOpen(true);
     };
 
@@ -113,67 +126,113 @@ export default function StaffList() {
                             </PermissionGuard>
                         </>
                     }
+                    rightActions={
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                    hasActiveFilters
+                                        ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10"
+                                        : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    {language === "en" ? "Filter" : "فلٹر"}
+                                </span>
+                                {hasActiveFilters && (
+                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                )}
+                            </button>
+
+                            {/* Filter Dropdown */}
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                            {language === "en" ? "Filter Staff" : "اسٹاف فلٹر کریں"}
+                                        </span>
+                                        {hasActiveFilters && (
+                                            <button
+                                                onClick={handleClearFilters}
+                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                            >
+                                                <Search size={12} />
+                                                {language === "en" ? "Clear" : "صاف"}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Search Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {labels.searchPlaceholder}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder={labels.searchPlaceholder}
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Role Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {labels.role}
+                                        </label>
+                                        <select
+                                            value={roleFilter}
+                                            onChange={(e) => setRoleFilter(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="">{labels.allRoles}</option>
+                                            {roles.map((role) => (
+                                                <option key={role._id} value={role.name}>
+                                                    {role.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Status Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {labels.status}
+                                        </label>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="">{labels.allStatus}</option>
+                                            <option value="active">{labels.active}</option>
+                                            <option value="inactive">{labels.inactive}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Salary Type Filter */}
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {labels.salaryType}
+                                        </label>
+                                        <select
+                                            value={salaryTypeFilter}
+                                            onChange={(e) => setSalaryTypeFilter(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="">{labels.allSalaryTypes}</option>
+                                            <option value="fixed">{labels.fixed}</option>
+                                            <option value="percentage">{labels.percentage}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    }
                 />
             </div>
-
-            {/* Filters */}
-         {/* Filters */}
-<div className="flex-none px-4 pb-3">
-    <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 p-3 rounded-2xl border border-edge bg-surface-muted">
-        <div className="relative flex-1 min-w-[160px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-            <input
-                type="text"
-                placeholder={labels.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-edge bg-surface text-ink placeholder:text-ink-muted focus:outline-none focus:border-primary transition"
-            />
-        </div>
-
-        <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="flex-1 min-w-[130px] px-3 py-2 text-sm rounded-xl border border-edge bg-surface text-ink focus:outline-none focus:border-primary transition"
-        >
-            <option value="">{labels.allRoles}</option>
-            {roles.map((role) => (
-                <option key={role._id} value={role.name}>
-                    {role.name}
-                </option>
-            ))}
-        </select>
-
-        <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 min-w-[130px] px-3 py-2 text-sm rounded-xl border border-edge bg-surface text-ink focus:outline-none focus:border-primary transition"
-        >
-            <option value="">{labels.allStatus}</option>
-            <option value="active">{labels.active}</option>
-            <option value="inactive">{labels.inactive}</option>
-        </select>
-
-        <select
-            value={salaryTypeFilter}
-            onChange={(e) => setSalaryTypeFilter(e.target.value)}
-            className="flex-1 min-w-[130px] px-3 py-2 text-sm rounded-xl border border-edge bg-surface text-ink focus:outline-none focus:border-primary transition"
-        >
-            <option value="">{labels.allSalaryTypes}</option>
-            <option value="fixed">{labels.fixed}</option>
-            <option value="percentage">{labels.percentage}</option>
-        </select>
-
-        {hasActiveFilters && (
-            <button
-                onClick={handleClearFilters}
-                className="shrink-0 px-3 py-2 text-sm rounded-xl border border-edge text-ink-muted hover:text-red-500 hover:bg-red-50 font-medium transition"
-            >
-                Clear Filters
-            </button>
-        )}
-    </div>
-</div>
             <PaginatedList
                 ref={paginatedListRef}
                 rtkQuery={useGetStaffListQuery}
@@ -182,31 +241,136 @@ export default function StaffList() {
                 queryArgs={filters}
                 wrapperClassName="flex-1"
                 renderItems={(staff) => (
-                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
-                        <table className="w-full text-sm text-left">
-                            <thead>
-                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
-                                    <th className="px-4 py-3 font-semibold">Photo</th>
-                                    <th className="px-4 py-3 font-semibold">Name</th>
-                                    <th className="px-4 py-3 font-semibold hidden md:table-cell">CNIC</th>
-                                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Phone</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Role</th>
-                                    <th className="px-4 py-3 font-semibold text-center hidden lg:table-cell">Salary Type</th>
-                                    <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                    <th className="px-4 py-3 font-semibold text-center">{labels.actions ?? "Actions"}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {staff.map((item) => (
-                                    <StaffRow
-                                        key={item._id}
-                                        item={item}
-                                        onView={() => navigate(`/staff/${item._id}`)}
-                                        onDelete={() => handleDelete(item._id, item.fullName)}
-                                    />
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="flex flex-col gap-0">
+                        {/* Desktop header */}
+                        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
+                            style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                            <div className="col-span-3">{labels.fullName || "Name"}</div>
+                            <div className="col-span-2 hidden md:block">{labels.cnic || "CNIC"}</div>
+                            <div className="col-span-2 hidden sm:block">{labels.phone || "Phone"}</div>
+                            <div className="col-span-2 text-center">{labels.role || "Role"}</div>
+                            <div className="col-span-1 hidden lg:block text-center">{labels.status || "Status"}</div>
+                            <div className="col-span-2 text-center">{labels.actions || "Actions"}</div>
+                        </div>
+
+                        {/* Desktop rows */}
+                        {staff.map((item, i) => (
+                            <div key={item._id}
+                                className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
+                                style={{ background: i % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
+                                <div className="col-span-3 flex items-center gap-3 min-w-0">
+                                    <div className="relative shrink-0">
+                                        <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
+                                            {item.photo ? (
+                                                <BigViewImage
+                                                    src={toImageUrl(item.photo)}
+                                                    alt={item.fullName}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <PlaceholderImg size={11} />
+                                            )}
+                                        </div>
+                                        {item.status === "active" && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                    </div>
+                                    <div className="font-semibold text-(--ink) truncate text-sm min-w-0">{item.fullName}</div>
+                                </div>
+                                <div className="col-span-2 text-sm text-(--muted) font-mono truncate hidden md:block">{item.cnic || "—"}</div>
+                                <div className="col-span-2 text-sm text-(--muted) truncate hidden sm:block">{item.phone || "—"}</div>
+                                <div className="col-span-2 text-center">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-tight bg-primary-hover/50 text-primary">
+                                        {item.role}
+                                    </span>
+                                </div>
+                                <div className="col-span-1 text-center hidden lg:block">
+                                    <div className="inline-flex items-center gap-1.5 text-xs font-medium">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${item.status === "active" ? "bg-primary" : "bg-red-400"}`} />
+                                        <span className={item.status === "active" ? "text-ink" : "text-ink-muted"}>
+                                            {item.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div onClick={e => e.stopPropagation()} className="col-span-2 flex items-center gap-1.5 flex-wrap justify-center">
+                                    <button
+                                        onClick={() => navigate(`/staff/${item._id}`)}
+                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    >
+                                        <Eye size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenEditModal(item._id)}
+                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    >
+                                        <Edit2 size={15} />
+                                    </button>
+                                    <ConfirmDialog message={labels.deleteConfirm.replace("{name}", item.fullName)} onConfirm={() => handleDelete(item._id)}>
+                                        <PermissionGuard permission="staff.delete">
+                                            <button className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </PermissionGuard>
+                                    </ConfirmDialog>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Mobile / Tablet cards */}
+                        <div className="lg:hidden flex flex-col gap-3 pt-1">
+                            {staff.map((item) => (
+                                <div key={`m-${item._id}`} className="rounded-2xl p-4 border transition-all duration-150 hover:shadow-md"
+                                    style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 2px 12px rgba(64,45,28,0.07)" }}>
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative shrink-0">
+                                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-muted">
+                                                {item.photo ? (
+                                                    <BigViewImage
+                                                        src={toImageUrl(item.photo)}
+                                                        alt={item.fullName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <PlaceholderImg size={16} />
+                                                )}
+                                            </div>
+                                            {item.status === "active" && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--surface)]"></div>}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-(--ink) text-sm leading-snug truncate">{item.fullName}</h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-(--muted) mt-1">
+                                                {item.cnic && <span className="truncate">CNIC: <span className="font-mono text-(--ink)">{item.cnic}</span></span>}
+                                                {item.phone && <span className="truncate">Phone: <span className="font-mono text-(--ink)">{item.phone}</span></span>}
+                                                <span>Role: <span className="font-semibold text-(--ink)">{item.role}</span></span>
+                                                <span>Status: <span className={item.status === "active" ? "text-green-600" : "text-red-500"}>{item.status}</span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div onClick={e => e.stopPropagation()} className="flex gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                                        <button
+                                            onClick={() => navigate(`/staff/${item._id}`)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
+                                        >
+                                            <Eye size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleOpenEditModal(item._id)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-(--accent-2) hover:text-(--accent-2)"
+                                            style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                        <ConfirmDialog message={labels.deleteConfirm.replace("{name}", item.fullName)} onConfirm={() => handleDelete(item._id)}>
+                                            <PermissionGuard permission="staff.delete">
+                                                <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all border hover:border-red-400 hover:text-red-500"
+                                                    style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </PermissionGuard>
+                                        </ConfirmDialog>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
                 renderEmpty={() => (
@@ -241,104 +405,6 @@ export default function StaffList() {
                 onClose={handleModalClose} 
             />
         </div>
-    );
-}
-
-function StaffRow({ item, onView, onDelete }) {
-    const { settings } = useSettings();
-    const language = settings?.language || "en";
-    const labels = getStaffLabels(language);
-    
-    return (
-        <tr className="transition border-b border-edge hover:bg-surface-muted">
-
-            <td className="px-4 py-3">
-                <div className="w-9 h-9 rounded-lg overflow-hidden bg-surface-muted shrink-0">
-                    {item.photo ? (
-                        <BigViewImage
-                            src={toImageUrl(item.photo)}
-                            alt={item.fullName}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-xs font-semibold text-primary">
-                                {item.fullName?.charAt(0) || "S"}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </td>
-
-            <td className="px-4 py-3 font-semibold text-ink">
-                {item.fullName}
-            </td>
-
-            <td className="px-4 py-3 text-xs text-ink-muted hidden md:table-cell">
-                {item.cnic || "—"}
-            </td>
-
-            <td className="px-4 py-3 text-xs text-ink-muted hidden sm:table-cell">
-                {item.phone || "—"}
-            </td>
-
-            <td className="px-4 py-3 text-center">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-tight bg-primary-hover/50 text-primary">
-                    {item.role}
-                </span>
-            </td>
-
-            <td className="px-4 py-3 text-center hidden lg:table-cell">
-                <span className="text-xs text-ink-muted capitalize">
-                    {item.salaryType}
-                </span>
-            </td>
-
-            <td className="px-4 py-3 text-center hidden xl:table-cell">
-                {item.salaryType === 'percentage' ? (
-                    <div className="flex items-center justify-center gap-1">
-                        <Percent className="w-3 h-3 text-primary" />
-                        <span className="text-xs font-semibold text-ink">
-                            {item.percentage || 0}%
-                        </span>
-                    </div>
-                ) : (
-                    <span className="text-xs text-ink-muted">—</span>
-                )}
-            </td>
-
-            <td className="px-4 py-3 text-center">
-                <div className="inline-flex items-center gap-1.5 text-xs font-medium">
-                    <span className={`w-1.5 h-1.5 rounded-full ${item.status === "active" ? "bg-primary" : "bg-red-400"}`} />
-                    <span className={item.status === "active" ? "text-ink" : "text-ink-muted"}>
-                        {item.status}
-                    </span>
-                </div>
-            </td>
-
-            <td className="px-4 py-3">
-                <div className="flex justify-center gap-2">
-                    <button onClick={onView}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
-                        <Eye className="w-3.5 h-3.5" />
-                    </button>
-                    <PermissionGuard permission="staff.update">
-                        <button
-                            className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
-                            <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                    </PermissionGuard>
-                    <ConfirmDialog message={labels.deleteConfirm.replace("{name}", item.fullName)} onConfirm={onDelete}>
-                        <PermissionGuard permission="staff.delete">
-                            <button
-                                className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        </PermissionGuard>
-                    </ConfirmDialog>
-                </div>
-            </td>
-        </tr>
     );
 }
 
