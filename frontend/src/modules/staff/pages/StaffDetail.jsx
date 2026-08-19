@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, DollarSign, FileText, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
-import { useSelector } from "react-redux";
 import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
-import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PercentageShare from "../components/PercentageShare.jsx";
@@ -444,38 +442,42 @@ export default function StaffDetail() {
 
                         <div className="flex-1 overflow-hidden">
                             <PaginatedList
-                                rtkQuery={(params) => useGetSaleBillsQuery({ staffId: id, ...params, ...dateFilter })}
+                                rtkQuery={useGetSaleBillsQuery}
                                 limit={20}
                                 dataKey="data"
+                                queryArgs={{ staffId: id, ...dateFilter }}
                                 renderItems={(orders) => (
-                                    <div className="space-y-3">
-                                        {orders.map((order) => (
-                                            <div key={order._id} className="p-4 border border-[var(--border)] rounded-md">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div>
-                                                        <p className="font-medium text-[var(--ink)]">{labels.orderNumber} {order.orderNumber}</p>
-                                                        <p className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleString()}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-[var(--accent-2)]">Rs {order.totalAmount?.toLocaleString() || 0}</p>
+                                    <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
+                                        <table className="w-full text-sm text-left">
+                                            <thead>
+                                                <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
+                                                    <th className="px-4 py-3 font-semibold">{labels.orderNumber || "Order #"}</th>
+                                                    <th className="px-4 py-3 font-semibold">{labels.date || "Date"}</th>
+                                                    <th className="px-4 py-3 font-semibold text-right">{labels.total || "Total"}</th>
+                                                    {staff.salaryType === "percentage" && (
+                                                        <th className="px-4 py-3 font-semibold text-right">{labels.earned || "Earned"}</th>
+                                                    )}
+                                                    <th className="px-4 py-3 font-semibold">{labels.items || "Items"}</th>
+                                                    <th className="px-4 py-3 font-semibold">{labels.paymentMethod || "Payment"}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {orders.map((order) => (
+                                                    <tr key={order._id} className="transition border-b border-edge hover:bg-surface-muted">
+                                                        <td className="px-4 py-3 font-mono text-xs text-ink-muted">{order.orderNumber || "—"}</td>
+                                                        <td className="px-4 py-3 text-ink-muted">{new Date(order.createdAt).toLocaleString()}</td>
+                                                        <td className="px-4 py-3 text-right font-semibold text-primary">Rs {order.totalAmount?.toLocaleString() || 0}</td>
                                                         {staff.salaryType === "percentage" && (
-                                                            <div className="flex items-center gap-2 justify-end">
-                                                                <span className="text-xs text-[var(--muted)]">
-                                                                    {labels.earned}: Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
-                                                                </span>
-                                                                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                                                    {staff.percentage}%
-                                                                </span>
-                                                            </div>
+                                                            <td className="px-4 py-3 text-right font-semibold text-green-600">
+                                                                Rs {((order.totalAmount || 0) * (staff.percentage || 0) / 100).toFixed(2)}
+                                                            </td>
                                                         )}
-                                                    </div>
-                                                </div>
-                                                <div className="text-sm text-[var(--muted)]">
-                                                    <p>{labels.items}: {order.items?.length || 0}</p>
-                                                    <p>{labels.paymentMethod}: {order.paymentMethod}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                                        <td className="px-4 py-3 text-ink-muted">{order.items?.length || 0}</td>
+                                                        <td className="px-4 py-3 text-ink-muted capitalize">{order.paymentMethod || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                                 renderEmpty={() => (

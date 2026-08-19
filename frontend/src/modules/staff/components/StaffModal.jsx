@@ -65,6 +65,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                 ...EMPTY_FORM,
                 ...s,
                 id: s._id || staffData._id || "",
+                joinDate: s.joinDate ? new Date(s.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             });
             if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
