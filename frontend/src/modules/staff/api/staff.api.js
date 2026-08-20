@@ -185,6 +185,37 @@ export const staffApi = baseApi.injectEndpoints({
             providesTags: (result, error, staffId) => [{ type: "Staff", id: staffId }],
         }),
 
+        // Salary Changes
+        getSalaryChanges: builder.query({
+            query: (staffId) => ({
+                url: `/staff/salary-change/staff/${staffId}`,
+            }),
+            providesTags: (result, error, staffId) => [{ type: "SalaryChange", id: staffId }],
+        }),
+        createSalaryChange: builder.mutation({
+            query: (data) => ({
+                url: "/staff/salary-change",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: (result, error, { staffId }) => [{ type: "SalaryChange", id: staffId }, { type: "Staff", id: staffId }],
+        }),
+        updateSalaryChange: builder.mutation({
+            query: ({ id, data }) => ({
+                url: `/staff/salary-change/${id}`,
+                method: "PUT",
+                body: data,
+            }),
+            invalidatesTags: ["SalaryChange"],
+        }),
+        deleteSalaryChange: builder.mutation({
+            query: (id) => ({
+                url: `/staff/salary-change/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["SalaryChange"],
+        }),
+
         // Staff Roles
         getStaffRoles: builder.query({
             query: (params) => ({
@@ -237,6 +268,10 @@ export const {
     useGetStaffCommissionOrdersQuery,
     useGetSalaryBreakdownQuery,
     useGetPaymentSummaryQuery,
+    useGetSalaryChangesQuery,
+    useCreateSalaryChangeMutation,
+    useUpdateSalaryChangeMutation,
+    useDeleteSalaryChangeMutation,
     useGetStaffRolesQuery,
     useCreateStaffRoleMutation,
     useDeleteStaffRoleMutation,

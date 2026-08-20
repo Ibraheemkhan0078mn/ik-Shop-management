@@ -33,6 +33,13 @@ import {
     getAllStaffRoles,
     deleteStaffRole,
 } from "../controllers/staffRole.controller.js";
+import {
+    createSalaryChangeData,
+    getSalaryChangesByStaffData,
+    getSalaryChangeByIdData,
+    updateSalaryChangeData,
+    deleteSalaryChangeData,
+} from "../controllers/staffSalaryChange.controller.js";
 
 const router = express.Router();
 
@@ -45,6 +52,13 @@ router.delete("/role", deleteStaffRole);
 router.post("/salary-payment", createSalaryPaymentData);
 router.get("/salary-payment/:staffId", getSalaryPaymentsByStaffData);
 router.delete("/salary-payment/:id", deleteSalaryPaymentData);
+
+// Staff Salary Change Routes (must come before /:id)
+router.post("/salary-change", createSalaryChangeData);
+router.get("/salary-change/staff/:staffId", getSalaryChangesByStaffData);
+router.get("/salary-change/:id", getSalaryChangeByIdData);
+router.put("/salary-change/:id", updateSalaryChangeData);
+router.delete("/salary-change/:id", deleteSalaryChangeData);
 
 // Staff Sale Bill Routes (must come before /:id)
 router.post("/sale-bill", createSaleBillData);

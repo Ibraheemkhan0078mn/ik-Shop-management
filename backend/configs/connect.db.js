@@ -28,6 +28,7 @@ import staffRoleSchema from "../modules/staff/models/staffRole.model.js";
 import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment.model.js";
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
+import staffSalaryChangeSchema from "../modules/staff/models/staffSalaryChange.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
 import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import { MONGODB_URI } from "../common/constants/constants.js";
@@ -99,6 +100,7 @@ let StaffRoleModel = null;
 let StaffSalaryPaymentModel = null;
 let StaffSaleBillModel = null;
 let StaffAttendanceModel = null;
+let StaffSalaryChangeModel = null;
 let SettingsModel = null;
 let PaymentMethodModel = null;
 let AppThemeModel = null;
@@ -147,6 +149,7 @@ export const connectDb = async () => {
         addChangeTrackingMiddleware(staffSalaryPaymentSchema, "StaffSalaryPayment");
         addChangeTrackingMiddleware(staffSaleBillSchema, "StaffSaleBill");
         addChangeTrackingMiddleware(staffAttendanceSchema, "StaffAttendance");
+        addChangeTrackingMiddleware(staffSalaryChangeSchema, "StaffSalaryChange");
         addChangeTrackingMiddleware(settingsSchema, "Settings");
         addChangeTrackingMiddleware(paymentMethodSchema, "PaymentMethods");
         addChangeTrackingMiddleware(appThemeSchema, "AppThemes");
@@ -183,6 +186,7 @@ export const connectDb = async () => {
         StaffSalaryPaymentModel = LocalConnection.model("StaffSalaryPayment", staffSalaryPaymentSchema)
         StaffSaleBillModel = LocalConnection.model("StaffSaleBill", staffSaleBillSchema)
         StaffAttendanceModel = LocalConnection.model("StaffAttendance", staffAttendanceSchema)
+        StaffSalaryChangeModel = LocalConnection.model("StaffSalaryChange", staffSalaryChangeSchema)
         SettingsModel = LocalConnection.model("Settings", settingsSchema)
         PaymentMethodModel = LocalConnection.model("PaymentMethods", paymentMethodSchema)
         AppThemeModel = LocalConnection.model("AppThemes", appThemeSchema)
@@ -224,6 +228,7 @@ export const getLocalStaffRoleModel = () => StaffRoleModel || null;
 export const getLocalStaffSalaryPaymentModel = () => StaffSalaryPaymentModel || null;
 export const getLocalStaffSaleBillModel = () => StaffSaleBillModel || null;
 export const getLocalStaffAttendanceModel = () => StaffAttendanceModel || null;
+export const getLocalStaffSalaryChangeModel = () => StaffSalaryChangeModel || null;
 export const getLocalSettingsModel = () => SettingsModel || null;
 export const getLocalPaymentMethodModel = () => PaymentMethodModel || null;
 export const getLocalTransactionModel = () => TransactionModel || null;

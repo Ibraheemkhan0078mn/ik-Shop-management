@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Upload, Trash2, Plus, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery } from "../api/staff.api.js";
+import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery, useGetSalaryChangesQuery, useCreateSalaryChangeMutation, useUpdateSalaryChangeMutation, useDeleteSalaryChangeMutation } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -30,6 +30,69 @@ export default function StaffDetail() {
     const [selectedImages, setSelectedImages] = useState([]);
     const [showImageModal, setShowImageModal] = useState(false);
     const [selectedImageForModal, setSelectedImageForModal] = useState(null);
+    const [showSalaryChangeForm, setShowSalaryChangeForm] = useState(false);
+    const [salaryChangeForm, setSalaryChangeForm] = useState({ 
+        amount: "", 
+        salaryChangeFromDate: "",
+        absenceCut: 0,
+        isAbsenceCut: false,
+        absenceCutType: "full", // "full" or "amount"
+        notes: "" 
+    });
+    const [editingSalaryChange, setEditingSalaryChange] = useState(null);
+
+    const handleCreateSalaryChange = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingSalaryChange) {
+                // Update existing salary change
+                await updateSalaryChange({ 
+                    id: editingSalaryChange._id,
+                    data: {
+                        ...salaryChangeForm, 
+                        changeType: 'set'
+                    }
+                }).unwrap();
+                toast.success("Salary change updated successfully");
+            } else {
+                // Create new salary change
+                await createSalaryChange({ 
+                    ...salaryChangeForm, 
+                    staffId: id,
+                    changeType: 'set' // Use 'set' to indicate absolute salary value
+                }).unwrap();
+                toast.success("Salary change created successfully");
+            }
+            setShowSalaryChangeForm(false);
+            setSalaryChangeForm({ 
+                amount: "", 
+                salaryChangeFromDate: "",
+                absenceCut: 0,
+                isAbsenceCut: false,
+                absenceCutType: "full",
+                notes: "" 
+            });
+            setEditingSalaryChange(null);
+            refetch();
+        } catch (error) {
+            toast.error(editingSalaryChange ? "Failed to update salary change" : "Failed to create salary change");
+        }
+    };
+
+    const handleEditSalaryChange = (change) => {
+        setEditingSalaryChange(change);
+        setSalaryChangeForm({
+            amount: change.amount,
+            salaryChangeFromDate: new Date(change.salaryChangeFromDate).toISOString().split('T')[0],
+            absenceCut: change.absenceCut || 0,
+            isAbsenceCut: change.isAbsenceCut || false,
+            absenceCutType: change.absenceCutType || "full",
+            notes: change.notes || ""
+        });
+        setShowSalaryChangeForm(true);
+    };
+    const [showCalculationDetailModal, setShowCalculationDetailModal] = useState(false);
+    const [selectedCalculationDetails, setSelectedCalculationDetails] = useState(null);
 
     const { data: staffData, isLoading, refetch } = useGetStaffByIdQuery(id);
     const { data: paymentsData } = useGetSalaryPaymentsQuery(id);
@@ -39,6 +102,7 @@ export default function StaffDetail() {
         endDate: salaryBreakdownFilter.endDate 
     }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate || staffData?.data?.salaryType !== 'fixed' });
     const { data: paymentSummaryData } = useGetPaymentSummaryQuery(id);
+    const { data: salaryChangesData } = useGetSalaryChangesQuery(id);
 
     const [addDocument] = useAddDocumentMutation();
     const [removeDocument] = useRemoveDocumentMutation();
@@ -46,6 +110,9 @@ export default function StaffDetail() {
     const [deleteSalaryPayment] = useDeleteSalaryPaymentMutation();
     const [addImages] = useAddImagesMutation();
     const [removeImage] = useRemoveImageMutation();
+    const [createSalaryChange] = useCreateSalaryChangeMutation();
+    const [updateSalaryChange] = useUpdateSalaryChangeMutation();
+    const [deleteSalaryChange] = useDeleteSalaryChangeMutation();
 
     const [paymentForm, setPaymentForm] = useState({ amount: "", month: "", notes: "" });
 
@@ -163,6 +230,21 @@ export default function StaffDetail() {
         }
     };
 
+    const handleDeleteSalaryChange = async (changeId) => {
+        try {
+            await deleteSalaryChange(changeId).unwrap();
+            toast.success("Salary change deleted successfully");
+            refetch();
+        } catch (error) {
+            toast.error("Failed to delete salary change");
+        }
+    };
+
+    const handleViewCalculationDetails = (calculationDetails) => {
+        setSelectedCalculationDetails(calculationDetails);
+        setShowCalculationDetailModal(true);
+    };
+
     const handleImageClick = (imageSrc) => {
         setSelectedImageForModal(imageSrc);
         setShowImageModal(true);
@@ -198,7 +280,7 @@ export default function StaffDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown"] : []), "paymentSummary", "staffPayments"].map((tab) => (
+                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown", "salaryChanges"] : []), "paymentSummary", "staffPayments"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -492,11 +574,6 @@ export default function StaffDetail() {
                 </div>
             )}
 
-            {/* Percentage Share Tab - Only for Percentage-based Salary */}
-            {activeTab === "percentageShare" && staff?.salaryType === "percentage" && (
-                <PercentageShare staffId={id} staffData={staff} />
-            )}
-
             {/* Salary Breakdown Tab - Only for Fixed Salary */}
             {activeTab === "salaryBreakdown" && staff?.salaryType === "fixed" && (
                 <div className="space-y-6">
@@ -608,19 +685,25 @@ export default function StaffDetail() {
                                                     <p className="font-medium text-red-500">Rs {month.remaining.toLocaleString()}</p>
                                                 </div>
                                             </div>
-                                            {month.payments.length > 0 && (
+                                            
+                                            {/* Detail Button */}
+                                            {month.calculationDetails && month.calculationDetails.length > 0 && (
+                                                <button
+                                                    onClick={() => handleViewCalculationDetails(month.calculationDetails)}
+                                                    className="mt-3 text-xs text-[var(--accent-2)] hover:underline"
+                                                >
+                                                    View Calculation Details
+                                                </button>
+                                            )}
+                                            
+                                            {month.allocatedPayments && month.allocatedPayments.length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
                                                     <p className="text-xs text-[var(--muted)] mb-2">{labels.allocatedPayments}:</p>
                                                     <div className="space-y-1">
-                                                        {month.payments.map((payment, pIndex) => (
+                                                        {month.allocatedPayments.map((payment, pIndex) => (
                                                             <div key={pIndex} className="flex justify-between text-xs items-center">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[var(--muted)]">{new Date(payment.paidAt).toLocaleDateString()}</span>
-                                                                    {payment.amount !== payment.originalAmount && (
-                                                                        <span className="text-[var(--muted)] text-xs">
-                                                                            (of Rs {payment.originalAmount?.toLocaleString()})
-                                                                        </span>
-                                                                    )}
                                                                 </div>
                                                                 <span className="text-[var(--ink)] font-medium">Rs {payment.amount.toLocaleString()}</span>
                                                             </div>
@@ -643,6 +726,196 @@ export default function StaffDetail() {
             {activeTab === "salaryBreakdown" && staff?.salaryType !== "fixed" && (
                 <div className="card p-6 text-center">
                     <p className="text-[var(--muted)]">{labels.salaryBreakdownFixedOnly}</p>
+                </div>
+            )}
+
+            {/* Salary Changes Tab - Only for Fixed Salary */}
+            {activeTab === "salaryChanges" && staff?.salaryType === "fixed" && (
+                <div className="space-y-6">
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Salary Changes</h3>
+                            <button
+                                onClick={() => setShowSalaryChangeForm(true)}
+                                className="btn-add"
+                            >
+                                <Plus size={16} /> Add Salary Change
+                            </button>
+                        </div>
+
+                        {salaryChangesData?.data && salaryChangesData.data.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead>
+                                        <tr className="text-xs uppercase tracking-wider bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--muted)]">
+                                            <th className="px-3 py-2 font-semibold">Effective From</th>
+                                            <th className="px-3 py-2 font-semibold">Amount</th>
+                                            <th className="px-3 py-2 font-semibold">Type</th>
+                                            <th className="px-3 py-2 font-semibold">Absence Cut</th>
+                                            <th className="px-3 py-2 font-semibold">Notes</th>
+                                            <th className="px-3 py-2 font-semibold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {salaryChangesData.data.map((change) => (
+                                            <tr key={change._id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                                                <td className="px-3 py-2 text-[var(--ink)]">{new Date(change.salaryChangeFromDate).toLocaleDateString()}</td>
+                                                <td className="px-3 py-2 font-medium text-[var(--accent-2)]">Rs {change.amount}</td>
+                                                <td className="px-3 py-2">
+                                                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                                                        Salary Set
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-[var(--muted)]">
+                                                    {change.isAbsenceCut ? `Rs ${change.absenceCut}` : '-'}
+                                                </td>
+                                                <td className="px-3 py-2 text-[var(--muted)]">{change.notes || '-'}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => handleEditSalaryChange(change)}
+                                                            className="p-1 hover:bg-blue-100 rounded"
+                                                        >
+                                                            <Plus size={14} className="text-blue-500" />
+                                                        </button>
+                                                        <ConfirmDialog message="Are you sure you want to delete this salary change?" onConfirm={() => handleDeleteSalaryChange(change._id)}>
+                                                            <button className="p-1 hover:bg-red-100 rounded">
+                                                                <Trash2 size={14} className="text-red-500" />
+                                                            </button>
+                                                        </ConfirmDialog>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-[var(--muted)]">No salary changes recorded</p>
+                        )}
+                    </div>
+
+                    {/* Salary Change Form Modal */}
+                    {showSalaryChangeForm && (
+                        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold">{editingSalaryChange ? 'Edit Salary Change' : 'Add Salary Change'}</h3>
+                                    <button onClick={() => {
+                                        setShowSalaryChangeForm(false);
+                                        setEditingSalaryChange(null);
+                                        setSalaryChangeForm({ 
+                                            amount: "", 
+                                            salaryChangeFromDate: "",
+                                            absenceCut: 0,
+                                            isAbsenceCut: false,
+                                            notes: "" 
+                                        });
+                                    }}>
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleCreateSalaryChange}>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Amount (absolute salary value)</label>
+                                            <input
+                                                type="number"
+                                                value={salaryChangeForm.amount}
+                                                onChange={(e) => setSalaryChangeForm(prev => ({ ...prev, amount: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Effective From</label>
+                                            <input
+                                                type="date"
+                                                value={salaryChangeForm.salaryChangeFromDate}
+                                                onChange={(e) => setSalaryChangeForm(prev => ({ ...prev, salaryChangeFromDate: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={salaryChangeForm.isAbsenceCut}
+                                                onChange={(e) => setSalaryChangeForm(prev => ({ 
+                                                    ...prev, 
+                                                    isAbsenceCut: e.target.checked,
+                                                    absenceCut: e.target.checked ? prev.absenceCut : 0
+                                                }))}
+                                            />
+                                            <label className="text-sm">Enable Absence Cut</label>
+                                        </div>
+                                        {salaryChangeForm.isAbsenceCut && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-4">
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="absenceCutType"
+                                                            value="full"
+                                                            checked={salaryChangeForm.absenceCutType === "full"}
+                                                            onChange={(e) => setSalaryChangeForm(prev => ({ 
+                                                                ...prev, 
+                                                                absenceCutType: e.target.value,
+                                                                absenceCut: 0
+                                                            }))}
+                                                        />
+                                                        <span className="text-sm">Full Cut</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="absenceCutType"
+                                                            value="amount"
+                                                            checked={salaryChangeForm.absenceCutType === "amount"}
+                                                            onChange={(e) => setSalaryChangeForm(prev => ({ 
+                                                                ...prev, 
+                                                                absenceCutType: e.target.value,
+                                                                absenceCut: 0
+                                                            }))}
+                                                        />
+                                                        <span className="text-sm">Amount Cut</span>
+                                                    </label>
+                                                </div>
+                                                {salaryChangeForm.absenceCutType === "amount" && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Absence Cut Amount</label>
+                                                        <input
+                                                            type="number"
+                                                            value={salaryChangeForm.absenceCut}
+                                                            onChange={(e) => setSalaryChangeForm(prev => ({ ...prev, absenceCut: e.target.value }))}
+                                                            className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Notes</label>
+                                            <textarea
+                                                value={salaryChangeForm.notes}
+                                                onChange={(e) => setSalaryChangeForm(prev => ({ ...prev, notes: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                rows="2"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-4">
+                                        <button type="button" onClick={() => setShowSalaryChangeForm(false)} className="flex-1 px-4 py-2 border border-[var(--border)] rounded-md">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="flex-1 px-4 py-2 bg-[var(--accent-2)] text-white rounded-md">
+                                            Save
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -860,6 +1133,52 @@ export default function StaffDetail() {
             {activeTab === "payments" && staff.salaryType !== "fixed" && (
                 <div className="card p-6 text-center text-[var(--muted)]">
                     Salary payments are only applicable for fixed salary staff
+                </div>
+            )}
+
+            {/* Calculation Detail Modal */}
+            {showCalculationDetailModal && selectedCalculationDetails && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">Salary Calculation Details</h3>
+                            <button onClick={() => setShowCalculationDetailModal(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead>
+                                    <tr className="text-xs uppercase tracking-wider bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--muted)]">
+                                        <th className="px-3 py-2 font-semibold">Date</th>
+                                        <th className="px-3 py-2 font-semibold">Status</th>
+                                        <th className="px-3 py-2 font-semibold">Effective Salary</th>
+                                        <th className="px-3 py-2 font-semibold text-right">Daily Salary</th>
+                                        <th className="px-3 py-2 font-semibold text-right">Absence Cut</th>
+                                        <th className="px-3 py-2 font-semibold text-right">Cut Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedCalculationDetails.map((detail, index) => (
+                                        <tr key={index} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                                            <td className="px-3 py-2 text-[var(--ink)]">{new Date(detail.date).toLocaleDateString()}</td>
+                                            <td className="px-3 py-2 capitalize text-[var(--muted)]">{detail.status}</td>
+                                            <td className="px-3 py-2 text-[var(--accent-2)]">
+                                                Rs {detail.effectiveSalary?.toFixed(2) || 0}
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-medium text-[var(--ink)]">Rs {detail.dailySalary?.toFixed(2) || 0}</td>
+                                            <td className="px-3 py-2 text-right text-red-500">
+                                                {detail.absenceCutAmount > 0 ? `-Rs ${detail.absenceCutAmount.toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="px-3 py-2 text-right text-[var(--muted)]">
+                                                {detail.isAbsenceCutEnabled ? (detail.absenceCutType === 'full' ? 'Full' : 'Amount') : '-'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
