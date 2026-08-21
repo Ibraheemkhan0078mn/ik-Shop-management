@@ -22,7 +22,7 @@ export default function StaffDetail() {
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [showStaffPaymentModal, setShowStaffPaymentModal] = useState(false);
     const [dateFilter, setDateFilter] = useState({ startDate: "", endDate: "" });
-    const [salaryBreakdownFilter, setSalaryBreakdownFilter] = useState({ 
+    const [salaryBreakdownFilter] = useState({ 
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
     });
@@ -108,13 +108,12 @@ export default function StaffDetail() {
         staffId: id, 
         startDate: salaryBreakdownFilter.startDate, 
         endDate: salaryBreakdownFilter.endDate 
-    }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate || staffData?.data?.salaryType !== 'fixed' });
+    });
     
-    const [paymentSummaryFilter, setPaymentSummaryFilter] = useState({ dateRange: 'all', startDate: '', endDate: '' });
     const { data: paymentSummaryData } = useGetPaymentSummaryQuery({ 
         staffId: id, 
-        startDate: paymentSummaryFilter.dateRange === 'custom' ? paymentSummaryFilter.startDate : undefined, 
-        endDate: paymentSummaryFilter.dateRange === 'custom' ? paymentSummaryFilter.endDate : undefined 
+        startDate: undefined, 
+        endDate: undefined 
     });
     const { data: salaryChangesData } = useGetSalaryChangesQuery(id);
     const { data: percentageChangesData } = useGetPercentageChangesQuery(id);
@@ -678,33 +677,7 @@ export default function StaffDetail() {
                             <TrendingUp size={20} className="text-[var(--accent-2)]" />
                         </div>
 
-                        {/* Date Filter */}
-                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]">
-                            <Filter size={16} className="text-[var(--muted)]" />
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                    <Calendar size={14} className="text-[var(--muted)]" />
-                                    <input
-                                        type="date"
-                                        value={salaryBreakdownFilter.startDate}
-                                        onChange={(e) => setSalaryBreakdownFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
-                                    />
-                                </div>
-                                <span className="text-[var(--muted)]">{labels.to}</span>
-                                <div className="flex items-center gap-1">
-                                    <Calendar size={14} className="text-[var(--muted)]" />
-                                    <input
-                                        type="date"
-                                        value={salaryBreakdownFilter.endDate}
-                                        onChange={(e) => setSalaryBreakdownFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                                        className="px-2 py-1 text-sm border border-[var(--border)] rounded-md"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {salaryBreakdownData?.data ? (
+                        {salaryBreakdownData?.data && salaryBreakdownData.data.breakdown && salaryBreakdownData.data.breakdown.length > 0 ? (
                             <div className="space-y-4">
                                 <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -719,10 +692,6 @@ export default function StaffDetail() {
                                         <div>
                                             <p className="text-sm text-[var(--muted)]">{labels.totalExpected}</p>
                                             <p className="font-medium text-[var(--ink)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.salaryForMonth, 0).toLocaleString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-[var(--muted)]">{labels.totalPaid}</p>
-                                            <p className="font-medium text-[var(--accent-2)]">Rs {salaryBreakdownData.data.breakdown.reduce((sum, m) => sum + m.totalPaid, 0).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -771,14 +740,6 @@ export default function StaffDetail() {
                                                     <p className="text-[var(--muted)]">{labels.expected}</p>
                                                     <p className="font-medium text-[var(--ink)]">Rs {month.salaryForMonth.toLocaleString()}</p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[var(--muted)]">{labels.paid}</p>
-                                                    <p className="font-medium text-[var(--accent-2)]">Rs {month.totalPaid.toLocaleString()}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[var(--muted)]">{labels.remaining}</p>
-                                                    <p className="font-medium text-red-500">Rs {month.remaining.toLocaleString()}</p>
-                                                </div>
                                             </div>
                                             
                                             {/* Detail Button */}
@@ -790,28 +751,12 @@ export default function StaffDetail() {
                                                     View Calculation Details
                                                 </button>
                                             )}
-                                            
-                                            {month.allocatedPayments && month.allocatedPayments.length > 0 && (
-                                                <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                                                    <p className="text-xs text-[var(--muted)] mb-2">{labels.allocatedPayments}:</p>
-                                                    <div className="space-y-1">
-                                                        {month.allocatedPayments.map((payment, pIndex) => (
-                                                            <div key={pIndex} className="flex justify-between text-xs items-center">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[var(--muted)]">{new Date(payment.paidAt).toLocaleDateString()}</span>
-                                                                </div>
-                                                                <span className="text-[var(--ink)] font-medium">Rs {payment.amount.toLocaleString()}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-[var(--muted)]">{labels.selectDateRange}</p>
+                            <p className="text-[var(--muted)]">No salary breakdown data available</p>
                         )}
                     </div>
                 </div>
@@ -1166,42 +1111,6 @@ export default function StaffDetail() {
                             <PieChart size={20} className="text-[var(--accent-2)]" />
                         </div>
 
-                        {/* Date Filter */}
-                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]">
-                            <Filter size={16} className="text-[var(--muted)]" />
-                            <select
-                                value={paymentSummaryFilter.dateRange}
-                                onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, dateRange: e.target.value }))}
-                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                            >
-                                <option value="all">All Time</option>
-                                <option value="custom">Custom Range</option>
-                            </select>
-                            {paymentSummaryFilter.dateRange === "custom" && (
-                                <div className="flex items-center gap-2">
-                                    <div className="relative">
-                                        <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
-                                        <input
-                                            type="date"
-                                            value={paymentSummaryFilter.startDate}
-                                            onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                                            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                                        />
-                                    </div>
-                                    <span className="text-[var(--muted)]">to</span>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
-                                        <input
-                                            type="date"
-                                            value={paymentSummaryFilter.endDate}
-                                            onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                                            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
                         {paymentSummaryData?.data ? (
                             <div className="space-y-4">
                                 <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
@@ -1235,47 +1144,27 @@ export default function StaffDetail() {
                                     </div>
                                 </div>
 
-                                {/* Earnings Breakdown */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {paymentSummaryData.data.totalSalaryEarnings > 0 && (
-                                        <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                            <p className="text-sm text-[var(--muted)] mb-1">Salary Earnings</p>
-                                            <p className="text-2xl font-bold text-blue-600">Rs {paymentSummaryData.data.totalSalaryEarnings.toLocaleString()}</p>
-                                        </div>
-                                    )}
-                                    {paymentSummaryData.data.totalCommissionEarnings > 0 && (
-                                        <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                            <p className="text-sm text-[var(--muted)] mb-1">Commission Earnings</p>
-                                            <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalCommissionEarnings.toLocaleString()}</p>
-                                        </div>
-                                    )}
+                                {/* 5 KPIs */}
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalEarnings}</p>
-                                        <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {paymentSummaryData.data.totalEarnings.toLocaleString()}</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">Commission</p>
+                                        <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalCommissionEarnings.toLocaleString()}</p>
                                     </div>
-                                </div>
-
-                                {/* Payment Breakdown */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalPaid}</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">Salary</p>
+                                        <p className="text-2xl font-bold text-blue-600">Rs {paymentSummaryData.data.totalSalaryEarnings.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                        <p className="text-sm text-[var(--muted)] mb-1">Paid</p>
                                         <p className="text-2xl font-bold text-green-600">Rs {paymentSummaryData.data.totalPaid.toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">{labels.totalRemaining}</p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">Remaining</p>
                                         <p className="text-2xl font-bold text-red-500">Rs {paymentSummaryData.data.totalRemaining.toLocaleString()}</p>
                                     </div>
-                                    {paymentSummaryData.data.totalAdvance > 0 && (
-                                        <div className="p-4 border border-[var(--border)] rounded-md text-center bg-purple-50">
-                                            <p className="text-sm text-[var(--muted)] mb-1">Advance</p>
-                                            <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalAdvance.toLocaleString()}</p>
-                                        </div>
-                                    )}
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
-                                        <p className="text-sm text-[var(--muted)] mb-1">Balance</p>
-                                        <p className={`text-2xl font-bold ${paymentSummaryData.data.totalRemaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                                            Rs {(paymentSummaryData.data.totalRemaining - paymentSummaryData.data.totalAdvance).toLocaleString()}
-                                        </p>
+                                        <p className="text-sm text-[var(--muted)] mb-1">Advance</p>
+                                        <p className="text-2xl font-bold text-orange-600">Rs {paymentSummaryData.data.totalAdvance.toLocaleString()}</p>
                                     </div>
                                 </div>
 
@@ -1318,32 +1207,47 @@ export default function StaffDetail() {
                             </button>
                         </div>
                         {payments.length ? (
-                            <div className="space-y-2">
-                                {payments.map((payment) => (
-                                    <div key={payment._id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md bg-[var(--app-bg)]">
-                                        <div>
-                                            <p className="font-medium text-[var(--ink)]">Rs {payment.amount}</p>
-                                            <p className="text-sm text-[var(--muted)]">{payment.month} - {new Date(payment.paidAt).toLocaleDateString()}</p>
-                                            {payment.notes && <p className="text-xs text-[var(--muted)]">{payment.notes}</p>}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                                {payment.status === 'paid' ? labels.paid : labels.partial}
-                                            </span>
-                                            <ConfirmDialog message={labels.deletePaymentConfirm} onConfirm={() => handleDeletePayment(payment._id)}>
-                                                <PermissionGuard permission="staff.payments.delete">
-                                                    <button
-                                                        className="p-2 hover:bg-red-50 rounded-md"
-                                                    >
-                                                        <Trash2 size={16} className="text-red-500" />
-                                                    </button>
-                                                </PermissionGuard>
-                                            </ConfirmDialog>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead>
+                                        <tr className="text-xs uppercase tracking-wider bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--muted)]">
+                                            <th className="px-3 py-2 font-semibold">Date</th>
+                                            <th className="px-3 py-2 font-semibold">Amount</th>
+                                            <th className="px-3 py-2 font-semibold">Month</th>
+                                            <th className="px-3 py-2 font-semibold">Notes</th>
+                                            <th className="px-3 py-2 font-semibold">Status</th>
+                                            <th className="px-3 py-2 font-semibold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {payments.map((payment) => (
+                                            <tr key={payment._id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                                                <td className="px-3 py-2 text-[var(--ink)]">{new Date(payment.paidAt).toLocaleDateString()}</td>
+                                                <td className="px-3 py-2 font-medium text-[var(--accent-2)]">Rs {payment.amount}</td>
+                                                <td className="px-3 py-2 text-[var(--ink)]">{payment.month || '-'}</td>
+                                                <td className="px-3 py-2 text-[var(--muted)]">{payment.notes || '-'}</td>
+                                                <td className="px-3 py-2">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                                    }`}>
+                                                        {payment.status === 'paid' ? labels.paid : labels.partial}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <ConfirmDialog message={labels.deletePaymentConfirm} onConfirm={() => handleDeletePayment(payment._id)}>
+                                                        <PermissionGuard permission="staff.payments.delete">
+                                                            <button
+                                                                className="p-2 hover:bg-red-50 rounded-md"
+                                                            >
+                                                                <Trash2 size={16} className="text-red-500" />
+                                                            </button>
+                                                        </PermissionGuard>
+                                                    </ConfirmDialog>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         ) : (
                             <p className="text-[var(--muted)]">{labels.noStaffFound}</p>

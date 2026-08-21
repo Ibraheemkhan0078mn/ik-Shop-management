@@ -751,22 +751,8 @@ const calculateDaySalary = (date, status, applicableSalaryChange, daysInMonth, a
     const absenceCutType = applicableSalaryChange?.absenceCutType || 'full';
     const absenceCutAmount = applicableSalaryChange?.absenceCut || 0;
     
-    // Apply percentage change if applicable
-    if (applicablePercentageChange) {
-        const percentage = applicablePercentageChange.percentage || 0;
-        const changeType = applicablePercentageChange.changeType || 'inc';
-        
-        if (changeType === 'inc') {
-            // Increase by percentage
-            salaryAmount = salaryAmount + (salaryAmount * (percentage / 100));
-        } else if (changeType === 'decr') {
-            // Decrease by percentage
-            salaryAmount = salaryAmount - (salaryAmount * (percentage / 100));
-        } else if (changeType === 'set') {
-            // Set to percentage of original
-            salaryAmount = salaryAmount * (percentage / 100);
-        }
-    }
+    // Do NOT apply percentage changes - salary changes already contain the final amount
+    // The percentage changes are for commission-based staff, not salary-based staff
     
     let dailySalary = salaryAmount / daysInMonth;
     let finalDailySalary = dailySalary;
@@ -1056,7 +1042,7 @@ const staffFullSalaryCalculation = async (staffId, staff, salaryChanges, percent
     return monthlyBreakdown;
 };
 
-export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
+export const getSalaryBreakdown = async (staffId, startDate, endDate) => {
     const StaffModel = getLocalStaffModel();
     
     const staff = await findOneDoc({
@@ -1067,21 +1053,8 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         throw new Error('Staff not found');
     }
     
-    if (staff.salaryType !== 'fixed') {
-        throw new Error('Salary breakdown is only applicable for fixed salary staff');
-    }
-    
-    const baseMonthlySalary = staff.monthlySalary || 0;
-    const joinDate = new Date(staff.joinDate);
     const requestStartDate = new Date(startDate);
     const requestEndDate = new Date(endDate);
-    
-    // Get ALL payments for this staff (not just within date range) for FIFO allocation
-    const allPayments = await findStaffSalaryPaymentService({
-        staffId
-    }, {
-        sort: { paidAt: 1 }
-    });
     
     // Get salary changes for this staff
     const salaryChanges = await findStaffSalaryChangeService({
@@ -1090,24 +1063,24 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         sort: { salaryChangeFromDate: 1 }
     });
     
+    // If no salary changes, return empty breakdown
+    if (salaryChanges.length === 0) {
+        return {
+            staffId,
+            staffName: staff.fullName,
+            monthlySalary: 0,
+            startDate: requestStartDate.toISOString(),
+            endDate: requestEndDate.toISOString(),
+            breakdown: []
+        };
+    }
+    
     // Get percentage changes for this staff
     const percentageChanges = await findStaffPercentageChangeService({
         staffId
     }, {
         sort: { percentageChangeFromDate: 1 }
     });
-    
-    // If no salary changes, return empty breakdown
-    if (salaryChanges.length === 0) {
-        return {
-            staffId,
-            staffName: staff.fullName,
-            monthlySalary: baseMonthlySalary,
-            startDate: requestStartDate.toISOString(),
-            endDate: requestEndDate.toISOString(),
-            breakdown: []
-        };
-    }
     
     // Get attendance data for this staff from first salary change date to end date
     const firstSalaryChangeDate = new Date(salaryChanges[0].salaryChangeFromDate);
@@ -1134,27 +1107,23 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         salaryChanges,
         percentageChanges,
         attendanceMap,
-        baseMonthlySalary
+        0 // baseMonthlySalary - will use salary changes values
     );
     
-    // Filter months within the requested date range and add payment allocation
+    // Filter months within the requested date range
     const breakdown = [];
     
-    // Track remaining payment amount for FIFO allocation
-    let paymentIndex = 0;
-    let remainingPaymentAmount = 0;
-    
     for (const monthResult of monthlyCalculationResults) {
+        // Parse the month string to get the first day of the month
         const monthDate = new Date(monthResult.month);
+        const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+        const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
         
-        // If month is before the requested start date, skip it
-        if (monthDate < requestStartDate) {
+        // Check if month overlaps with the requested date range
+        // Include month if month end >= request start AND month start <= request end
+        if (monthEnd < requestStartDate || monthStart > requestEndDate) {
             continue;
-        }
-        
-        // If month is after the requested end date, skip it
-        if (monthDate > requestEndDate) {
-            break;
         }
         
         // Calculate attendance counts from calculation details
@@ -1182,59 +1151,11 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         const daysInMonth = monthResult.calculationDetails.length;
         const salaryForMonth = monthResult.totalSalary;
         
-        // Allocate payments using FIFO method
-        let allocatedPayments = [];
-        let totalPaid = 0;
-        let remainingForMonth = salaryForMonth;
-        
-        const monthEnd = new Date(monthDate);
-        monthEnd.setMonth(monthEnd.getMonth() + 1);
-        monthEnd.setDate(0);
-        
-        while (remainingForMonth > 0 && paymentIndex < allPayments.length) {
-            const payment = allPayments[paymentIndex];
-            const paymentDate = new Date(payment.paidAt);
-            
-            // Skip payments that are after the current month
-            if (paymentDate > monthEnd) {
-                break;
-            }
-            
-            // Use remaining payment amount if available
-            const paymentToUse = Math.min(remainingForMonth, remainingPaymentAmount || payment.amount);
-            
-            if (paymentToUse > 0) {
-                allocatedPayments.push({
-                    paymentId: payment._id,
-                    amount: paymentToUse,
-                    paidAt: payment.paidAt,
-                    notes: payment.notes
-                });
-                totalPaid += paymentToUse;
-                remainingForMonth -= paymentToUse;
-            }
-            
-            // Move to next payment if current one is fully used
-            if (remainingPaymentAmount === null || remainingPaymentAmount <= paymentToUse) {
-                paymentIndex++;
-                remainingPaymentAmount = null;
-            } else {
-                remainingPaymentAmount -= paymentToUse;
-            }
-        }
-        
-        const remaining = salaryForMonth - totalPaid;
-        const paymentStatus = remaining <= 0 ? 'paid' : 'pending';
-        
         breakdown.push({
             month: monthResult.month,
             workingDays,
             totalDays: daysInMonth,
             salaryForMonth,
-            totalPaid,
-            remaining,
-            paymentStatus,
-            allocatedPayments,
             presentDays,
             absentDays,
             leaveDays,
@@ -1246,7 +1167,7 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
     return {
         staffId,
         staffName: staff.fullName,
-        monthlySalary: baseMonthlySalary,
+        monthlySalary: salaryChanges[salaryChanges.length - 1]?.amount || 0,
         startDate: requestStartDate.toISOString(),
         endDate: requestEndDate.toISOString(),
         breakdown
@@ -1256,7 +1177,6 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
 // Calculate payment summary for staff
 export const calculatePaymentSummary = async (staffId, startDate = null, endDate = null) => {
     const StaffModel = getLocalStaffModel();
-    const OrderModel = getLocalOrderModel();
     
     const staff = await findOneDoc({
         model: StaffModel,
@@ -1266,49 +1186,34 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
         throw new Error('Staff not found');
     }
     
-    // Determine salary type based on salaryChange or percentageChange documents
-    const salaryChanges = await findStaffSalaryChangeService({
-        staffId,
-        isDeleted: false
-    }, {
-        sort: { salaryChangeFromDate: -1 },
-        limit: 1
-    });
+    // Determine date range
+    let effectiveStartDate = startDate;
+    let effectiveEndDate = endDate || new Date();
     
-    const percentageChanges = await findStaffPercentageChangeService({
-        staffId
-    }, {
-        sort: { percentageChangeFromDate: -1 },
-        limit: 1
-    });
-    
-    const hasSalaryChanges = salaryChanges && salaryChanges.length > 0;
-    const hasPercentageChanges = percentageChanges && percentageChanges.length > 0;
-    
-    let salaryType = hasSalaryChanges ? 'fixed' : (hasPercentageChanges ? 'percentage' : 'none');
-    
-    // Get current salary change for fixed salary staff
-    let currentSalaryChange = null;
-    let currentMonthlySalary = 0;
-    let absenceCutInfo = null;
-    
-    if (hasSalaryChanges) {
-        currentSalaryChange = salaryChanges[0];
-        currentMonthlySalary = currentSalaryChange.amount || 0;
+    if (!effectiveStartDate) {
+        // Use earliest change date as start date
+        const salaryChanges = await findStaffSalaryChangeService({
+            staffId,
+            isDeleted: false
+        }, {
+            sort: { salaryChangeFromDate: 1 },
+            limit: 1
+        });
         
-        if (currentSalaryChange.isAbsenceCut) {
-            absenceCutInfo = {
-                enabled: true,
-                type: currentSalaryChange.absenceCutType || 'full',
-                amount: currentSalaryChange.absenceCut || 0
-            };
+        const percentageChanges = await findStaffPercentageChangeService({
+            staffId
+        }, {
+            sort: { percentageChangeFromDate: 1 },
+            limit: 1
+        });
+        
+        if (salaryChanges && salaryChanges.length > 0) {
+            effectiveStartDate = new Date(salaryChanges[0].salaryChangeFromDate);
+        } else if (percentageChanges && percentageChanges.length > 0) {
+            effectiveStartDate = new Date(percentageChanges[0].percentageChangeFromDate);
+        } else {
+            effectiveStartDate = new Date(staff.joinDate || staff.createdAt);
         }
-    }
-    
-    // Get current percentage for percentage-based staff
-    let currentPercentage = 0;
-    if (hasPercentageChanges) {
-        currentPercentage = percentageChanges[0].percentage || 0;
     }
     
     let totalSalaryEarnings = 0;
@@ -1318,119 +1223,53 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
     let totalRemaining = 0;
     let totalAdvance = 0;
     let paymentStatus = 'remaining';
+    let salaryType = 'none';
+    let currentPercentage = 0;
+    let currentMonthlySalary = 0;
     
-    // Determine date range
-    let effectiveStartDate = startDate;
-    let effectiveEndDate = endDate || new Date();
+    // Use salary breakdown function to get salary earnings
+    let salaryBreakdown = null;
+    try {
+        salaryBreakdown = await getSalaryBreakdown(staffId, effectiveStartDate.toISOString(), effectiveEndDate.toISOString());
+        console.log('Salary breakdown received:', JSON.stringify(salaryBreakdown, null, 2));
+    } catch (error) {
+        console.log('Salary breakdown error:', error.message);
+    }
     
-    if (!effectiveStartDate) {
-        // Use earliest change date as start date
-        if (hasSalaryChanges) {
-            const earliestSalaryChange = await findStaffSalaryChangeService({
-                staffId,
-                isDeleted: false
-            }, {
-                sort: { salaryChangeFromDate: 1 },
-                limit: 1
-            });
-            if (earliestSalaryChange && earliestSalaryChange.length > 0) {
-                effectiveStartDate = new Date(earliestSalaryChange[0].salaryChangeFromDate);
-            }
-        } else if (hasPercentageChanges) {
-            const earliestPercentageChange = await findStaffPercentageChangeService({
-                staffId
-            }, {
-                sort: { percentageChangeFromDate: 1 },
-                limit: 1
-            });
-            if (earliestPercentageChange && earliestPercentageChange.length > 0) {
-                effectiveStartDate = new Date(earliestPercentageChange[0].percentageChangeFromDate);
-            }
-        }
-        
-        if (!effectiveStartDate) {
-            effectiveStartDate = new Date(staff.joinDate || staff.createdAt);
+    if (salaryBreakdown && salaryBreakdown.breakdown && salaryBreakdown.breakdown.length > 0) {
+        totalSalaryEarnings = salaryBreakdown.breakdown.reduce((sum, month) => sum + (month.salaryForMonth || 0), 0);
+        currentMonthlySalary = salaryBreakdown.monthlySalary || 0;
+        console.log('Total salary earnings from breakdown:', totalSalaryEarnings);
+        if (salaryType === 'none') {
+            salaryType = 'fixed';
         }
     }
     
-    // Calculate salary earnings for fixed salary staff
-    if (salaryType === 'fixed' && effectiveStartDate) {
-        const joinDate = new Date(effectiveStartDate);
-        const currentDate = new Date(effectiveEndDate);
-        
-        let monthStart = new Date(joinDate);
-        monthStart.setDate(1);
-        
-        while (monthStart <= currentDate) {
-            const monthEnd = new Date(monthStart);
-            monthEnd.setMonth(monthEnd.getMonth() + 1);
-            monthEnd.setDate(0);
-            
-            const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-            let workingDays = daysInMonth;
-            let salaryForMonth = currentMonthlySalary;
-            
-            // First month pro-ration
-            if (monthStart.getTime() === joinDate.getTime() || 
-                (monthStart > joinDate && monthStart < new Date(joinDate.getFullYear(), joinDate.getMonth() + 1, 1))) {
-                const joinDay = joinDate.getDate();
-                workingDays = daysInMonth - joinDay + 1;
-                salaryForMonth = (currentMonthlySalary / daysInMonth) * workingDays;
-            }
-            
-            // Current month pro-ration
-            const currentMonthStart = new Date(currentDate);
-            currentMonthStart.setDate(1);
-            if (monthStart.getTime() === currentMonthStart.getTime()) {
-                workingDays = currentDate.getDate();
-                salaryForMonth = (currentMonthlySalary / daysInMonth) * workingDays;
-            }
-            
-            totalSalaryEarnings += salaryForMonth;
-            
-            monthStart.setMonth(monthStart.getMonth() + 1);
+    // Use percentage breakdown function to get commission earnings
+    let percentageBreakdown = null;
+    try {
+        percentageBreakdown = await getPercentageBreakdown(staffId, effectiveStartDate.toISOString(), effectiveEndDate.toISOString());
+        console.log('Percentage breakdown received:', JSON.stringify(percentageBreakdown, null, 2));
+    } catch (error) {
+        console.log('Percentage breakdown error:', error.message);
+    }
+    
+    if (percentageBreakdown && percentageBreakdown.breakdown && percentageBreakdown.breakdown.length > 0) {
+        totalCommissionEarnings = percentageBreakdown.breakdown.reduce((sum, month) => sum + (month.totalCommission || 0), 0);
+        currentPercentage = percentageBreakdown.percentage || 0;
+        console.log('Total commission earnings from breakdown:', totalCommissionEarnings);
+        if (salaryType === 'none') {
+            salaryType = 'percentage';
         }
     }
     
-    // Calculate commission earnings for percentage-based staff
-    if (salaryType === 'percentage' && effectiveStartDate) {
-        const orderQuery = {
-            staffId: staffId,
-            status: 'completed',
-            createdAt: {
-                $gte: new Date(effectiveStartDate),
-                $lte: new Date(effectiveEndDate)
-            }
-        };
-        
-        const orders = await findDocs({
-            model: OrderModel,
-            filter: orderQuery
-        });
-        
-        totalCommissionEarnings = orders.reduce((sum, order) => {
-            const orderDate = new Date(order.createdAt);
-            orderDate.setHours(0, 0, 0, 0);
-            
-            // Find applicable percentage for this order
-            let applicablePercentage = currentPercentage;
-            
-            if (percentageChanges && percentageChanges.length > 0) {
-                for (const change of percentageChanges) {
-                    const changeDate = new Date(change.percentageChangeFromDate);
-                    changeDate.setHours(0, 0, 0, 0);
-                    
-                    if (orderDate.getTime() >= changeDate.getTime()) {
-                        applicablePercentage = change.percentage;
-                    }
-                }
-            }
-            
-            return sum + ((order.totalAmount || 0) * applicablePercentage / 100);
-        }, 0);
+    // If both exist, set to mixed
+    if (totalSalaryEarnings > 0 && totalCommissionEarnings > 0) {
+        salaryType = 'mixed';
     }
     
     totalEarnings = totalSalaryEarnings + totalCommissionEarnings;
+    console.log('Final totals - Salary:', totalSalaryEarnings, 'Commission:', totalCommissionEarnings, 'Total:', totalEarnings);
     
     // Get payments within date range
     const paymentQuery = { staffId };
@@ -1469,9 +1308,7 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
         totalPaid: Math.round(totalPaid * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
         totalAdvance: Math.round(totalAdvance * 100) / 100,
-        paymentStatus,
-        currentSalaryChange,
-        absenceCutInfo
+        paymentStatus
     };
 };
 

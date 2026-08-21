@@ -1,26 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { Calendar, Download, TrendingUp, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState } from "react";
+import { Download, TrendingUp, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import { useGetPercentageBreakdownQuery } from "../api/staff.api.js";
 
 export default function PercentageShare({ staffId, staffData }) {
-    const [dateRange, setDateRange] = useState("currentMonth"); // currentMonth, custom
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
     const [expandedMonths, setExpandedMonths] = useState(new Set());
-
-    // Set default to current month
-    useEffect(() => {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        setStartDate(firstDay.toISOString().split('T')[0]);
-        setEndDate(lastDay.toISOString().split('T')[0]);
-    }, []);
 
     // Month-wise percentage breakdown (auto-calculates from first percentage change date if no dates provided)
     const { data: percentageBreakdownResponse } = useGetPercentageBreakdownQuery(
-        { id: staffId, startDate: dateRange === 'custom' ? startDate : undefined, endDate: dateRange === 'custom' ? endDate : undefined },
+        { id: staffId, startDate: undefined, endDate: undefined },
         { skip: !staffId }
     );
     const percentageBreakdown = percentageBreakdownResponse?.data;
@@ -33,17 +20,6 @@ export default function PercentageShare({ staffId, staffData }) {
             newExpanded.add(monthIndex);
         }
         setExpandedMonths(newExpanded);
-    };
-
-    const handleDateRangeChange = (value) => {
-        setDateRange(value);
-        if (value === "currentMonth") {
-            const now = new Date();
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            setStartDate(firstDay.toISOString().split('T')[0]);
-            setEndDate(lastDay.toISOString().split('T')[0]);
-        }
     };
 
     if (!staffData) {
@@ -59,49 +35,9 @@ export default function PercentageShare({ staffId, staffData }) {
         <div className="space-y-6">
             {/* KPI Section */}
             <div className="bg-[var(--surface)] rounded-xl p-5 border border-[var(--border)]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-[var(--accent-2)]" />
-                        <h3 className="text-sm font-semibold text-[var(--ink)]">Commission Summary</h3>
-                        <span className="text-xs text-[var(--muted)] ml-auto">
-                            {percentageBreakdown?.startDate ? `From: ${new Date(percentageBreakdown.startDate).toLocaleDateString()}` : 'All time'}
-                        </span>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2">
-                        <select
-                            value={dateRange}
-                            onChange={(e) => handleDateRangeChange(e.target.value)}
-                            className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                        >
-                            <option value="currentMonth">From First Percentage Change</option>
-                            <option value="custom">Custom Range</option>
-                        </select>
-
-                        {dateRange === "custom" && (
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                                    />
-                                </div>
-                                <span className="text-[var(--muted)]">to</span>
-                                <div className="relative">
-                                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-[var(--accent-2)]" />
+                    <h3 className="text-sm font-semibold text-[var(--ink)]">Commission Summary</h3>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">

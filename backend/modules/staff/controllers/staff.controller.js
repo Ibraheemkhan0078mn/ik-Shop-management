@@ -13,7 +13,7 @@ import {
     createOrUpdateAttendance,
     getAttendanceHistory,
     getActiveStaff,
-    calculateSalaryBreakdown,
+    getSalaryBreakdown,
     calculatePaymentSummary,
     calculateStaffCommission,
     calculateStaffCommissionAllTime,
@@ -225,7 +225,7 @@ export const getSalaryBreakdownData = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Start date and end date are required", 400));
     }
 
-    const breakdown = await calculateSalaryBreakdown(id, startDate, endDate);
+    const breakdown = await getSalaryBreakdown(id, startDate, endDate);
 
     res.status(200).json({
         success: true,
