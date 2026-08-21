@@ -7,7 +7,7 @@ import {
     deleteOneCategoryService,
     countCategoryService,
 } from "./category.crud.js";
-import { paginateModel } from '../../../common/services/common.service.js';
+import { findDocs, countDocs } from '../../../common/services/db/mongodbCentralizedCrud.service.js';
 import { getLocalCategoryModel } from '../../../configs/connect.db.js';
 
 export const getCategories = async () => {
@@ -17,15 +17,30 @@ export const getCategories = async () => {
 export const getPaginationCategories = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const CategoryModel = getLocalCategoryModel();
-    
-    const result = await paginateModel({
-        model: CategoryModel,
-        page,
-        limit,
-        sort: { createdAt: -1 }
-    });
-    
-    return result;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [data, total] = await Promise.all([
+        findDocs({
+            model: CategoryModel,
+            filter: { isDeleted: { $ne: true } },
+            options: { sort: { createdAt: -1 }, skip, limit: limitNum, lean: false }
+        }),
+        countDocs({
+            model: CategoryModel,
+            filter: { isDeleted: { $ne: true } }
+        })
+    ]);
+
+    return {
+        data,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasMore: pageNum * limitNum < total
+    };
 };
 
 export const getCategoryById = async (id) => {

@@ -673,6 +673,9 @@ const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendance
                 if (nextChange) {
                     periodEndDate = new Date(nextChange.salaryChangeFromDate);
                     periodEndDate.setHours(0, 0, 0, 0);
+                    // Subtract one day to include the next change date in the current period
+                    periodEndDate.setDate(periodEndDate.getDate() - 1);
+                    periodEndDate.setHours(23, 59, 59, 999);
                 } else {
                     // For the last period, extend to end of month
                     periodEndDate = new Date(monthEndCopy);

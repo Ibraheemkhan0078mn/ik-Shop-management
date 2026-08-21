@@ -1,18 +1,21 @@
+import { findDocs, countDocs } from "./db/mongodbCentralizedCrud.service.js";
+
 export const paginateModel = async ({ model, page = 1, limit = 20, populate = [], sort = { createdAt: -1 }, includeDeleted = false }) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // Filter out deleted documents unless explicitly requested
-    const filter = includeDeleted ? {} : { isDeleted: { $ne: true } };
-
-    let query = model.find(filter).sort(sort).skip(skip).limit(limitNum);
-
-    populate.forEach(p => { query = query.populate(p); });
-
+    // Use centralized db service functions
     const [data, total] = await Promise.all([
-        query,
-        model.countDocuments(filter)
+        findDocs({
+            model,
+            filter: includeDeleted ? {} : { isDeleted: { $ne: true } },
+            options: { sort, skip, limit: limitNum, populate, lean: false }
+        }),
+        countDocs({
+            model,
+            filter: includeDeleted ? {} : { isDeleted: { $ne: true } }
+        })
     ]);
 
     return {

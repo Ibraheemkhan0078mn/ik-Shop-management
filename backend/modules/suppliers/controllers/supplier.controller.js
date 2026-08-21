@@ -1,7 +1,7 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import { getLocalSupplierModel } from "../../../configs/connect.db.js";
-import { paginateModel } from "../../../common/services/common.service.js";
+import { findDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import {
     supplierCreate as supplierCreateService,
     getAllSuppliers as getAllSuppliersService,
@@ -31,21 +31,30 @@ export const getSuppliers = asyncHandler(async (req, res, next) => {
 
 export const getPaginatedSuppliers = asyncHandler(async (req, res) => {
     const SupplierModel = getLocalSupplierModel();
-    const result = await paginateModel({
-        model: SupplierModel,
-        page:  req.query.page  || 1,
-        limit: req.query.limit || 20,
-        sort:  { createdAt: -1 },
-    });
+    const pageNum = parseInt(req.query.page) || 1;
+    const limitNum = parseInt(req.query.limit) || 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [data, total] = await Promise.all([
+        findDocs({
+            model: SupplierModel,
+            filter: { isDeleted: { $ne: true } },
+            options: { sort: { createdAt: -1 }, skip, limit: limitNum, lean: false }
+        }),
+        countDocs({
+            model: SupplierModel,
+            filter: { isDeleted: { $ne: true } }
+        })
+    ]);
 
     return res.status(200).json({
         success:    true,
         message:    "Suppliers retrieved successfully",
-        data:       result.data,
-        total:      result.total,
-        page:       result.page,
-        limit:      result.limit,
-        totalPages: result.totalPages,
+        data:       data,
+        total:      total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
     });
 })
 

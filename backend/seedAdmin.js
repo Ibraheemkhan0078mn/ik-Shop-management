@@ -1,5 +1,5 @@
 import { connectDb } from "./configs/connect.db.js";
-import { createUserService } from "./modules/auth/services/user.crud.js";
+import { createUserService, findUserByEmailService } from "./modules/auth/services/user.crud.js";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PERMISSIONS } from "./common/constants/permissions.constant.js";
 
@@ -12,8 +12,7 @@ const seedAdmin = async () => {
         const adminPassword = "admin123";
 
         // Check if admin already exists
-        const UserModel = (await import("./configs/connect.db.js")).getLocalUserModel();
-        const existingAdmin = await UserModel.findOne({ email: adminEmail });
+        const existingAdmin = await findUserByEmailService(adminEmail);
 
         if (existingAdmin) {
             console.log("Admin user already exists");
