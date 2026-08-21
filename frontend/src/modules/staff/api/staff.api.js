@@ -171,6 +171,13 @@ export const staffApi = baseApi.injectEndpoints({
             }),
             providesTags: (result, error, { id }) => [{ type: "Staff", id }],
         }),
+        getPercentageBreakdown: builder.query({
+            query: ({ id, startDate, endDate }) => ({
+                url: `/staff/${id}/percentage-breakdown`,
+                params: { startDate, endDate },
+            }),
+            providesTags: (result, error, { id }) => [{ type: "Staff", id }],
+        }),
         getSalaryBreakdown: builder.query({
             query: ({ staffId, startDate, endDate }) => ({
                 url: `/staff/${staffId}/salary-breakdown`,
@@ -179,10 +186,11 @@ export const staffApi = baseApi.injectEndpoints({
             providesTags: (result, error, { staffId }) => [{ type: "Staff", id: staffId }],
         }),
         getPaymentSummary: builder.query({
-            query: (staffId) => ({
+            query: ({ staffId, startDate, endDate }) => ({
                 url: `/staff/${staffId}/payment-summary`,
+                params: { startDate, endDate },
             }),
-            providesTags: (result, error, staffId) => [{ type: "Staff", id: staffId }],
+            providesTags: (result, error, { staffId }) => [{ type: "Staff", id: staffId }],
         }),
 
         // Salary Changes
@@ -297,6 +305,7 @@ export const {
     useGetStaffCommissionQuery,
     useGetStaffCommissionAllTimeQuery,
     useGetStaffCommissionOrdersQuery,
+    useGetPercentageBreakdownQuery,
     useGetSalaryBreakdownQuery,
     useGetPaymentSummaryQuery,
     useGetSalaryChangesQuery,

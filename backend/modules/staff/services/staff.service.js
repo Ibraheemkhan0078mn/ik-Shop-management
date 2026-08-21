@@ -23,6 +23,9 @@ import {
     findStaffSalaryChangeService
 } from "./staffSalaryChange.crud.js";
 import {
+    findStaffPercentageChangeService
+} from "./staffPercentageChange.crud.js";
+import {
     createStaffSaleBillService,
     findByIdStaffSaleBillService,
     updateStaffSaleBillService
@@ -218,6 +221,163 @@ export const getStaffCommissionOrders = async (staffId, startDate, endDate, page
             total,
             totalPages
         }
+    };
+};
+
+// Get percentage breakdown with month-wise calculation and order-wise details
+export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
+    const OrderModel = getLocalOrderModel();
+    const StaffModel = getLocalStaffModel();
+    
+    // Get staff details
+    const staff = await findOneDoc({
+        model: StaffModel,
+        filter: { _id: staffId }
+    });
+    if (!staff) {
+        throw new Error('Staff not found');
+    }
+    
+    // Get percentage changes for this staff
+    const percentageChanges = await findStaffPercentageChangeService({
+        staffId
+    }, {
+        sort: { percentageChangeFromDate: 1 }
+    });
+    
+    // If no percentage changes and no custom startDate, return empty breakdown
+    if (!startDate && (!percentageChanges || percentageChanges.length === 0)) {
+        return {
+            staffId,
+            staffName: staff.fullName,
+            basePercentage: staff.percentage || 0,
+            startDate,
+            endDate,
+            breakdown: [],
+            message: "No percentage changes found for this staff"
+        };
+    }
+    
+    // Determine start date: use provided startDate or first percentage change date
+    let effectiveStartDate = startDate;
+    if (!effectiveStartDate && percentageChanges && percentageChanges.length > 0) {
+        effectiveStartDate = new Date(percentageChanges[0].percentageChangeFromDate);
+        effectiveStartDate.setHours(0, 0, 0, 0);
+        effectiveStartDate = effectiveStartDate.toISOString().split('T')[0];
+    }
+    
+    // Build query for orders
+    const matchQuery = {
+        staffId: staffId,
+        status: 'completed'
+    };
+    
+    if (effectiveStartDate || endDate) {
+        matchQuery.createdAt = {};
+        if (effectiveStartDate) matchQuery.createdAt.$gte = new Date(effectiveStartDate);
+        if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+    }
+    
+    const orders = await findDocs({
+        model: OrderModel,
+        filter: matchQuery,
+        options: { sort: { createdAt: 1 } }
+    });
+    
+    // If no orders, return empty breakdown
+    if (orders.length === 0) {
+        return {
+            staffId,
+            staffName: staff.fullName,
+            basePercentage: staff.percentage || 0,
+            startDate: effectiveStartDate,
+            endDate,
+            breakdown: []
+        };
+    }
+    
+    // Group orders by month
+    const ordersByMonth = new Map();
+    
+    orders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`;
+        
+        if (!ordersByMonth.has(monthKey)) {
+            ordersByMonth.set(monthKey, []);
+        }
+        
+        ordersByMonth.get(monthKey).push(order);
+    });
+    
+    // Calculate breakdown for each month
+    const breakdown = [];
+    
+    for (const [monthKey, monthOrders] of ordersByMonth) {
+        const [year, month] = monthKey.split('-').map(Number);
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
+        
+        // Calculate commission for each order with applicable percentage
+        const orderDetails = monthOrders.map(order => {
+            const orderDate = new Date(order.createdAt);
+            orderDate.setHours(0, 0, 0, 0);
+            
+            // Find applicable percentage for this order
+            let applicablePercentage = staff.percentage;
+            let applicablePercentageChange = null;
+            
+            if (percentageChanges && percentageChanges.length > 0) {
+                for (const change of percentageChanges) {
+                    const changeDate = new Date(change.percentageChangeFromDate);
+                    changeDate.setHours(0, 0, 0, 0);
+                    
+                    if (orderDate.getTime() >= changeDate.getTime()) {
+                        applicablePercentage = change.percentage;
+                        applicablePercentageChange = change;
+                    }
+                }
+            }
+            
+            // Calculate commission
+            const commissionAmount = (order.totalAmount * applicablePercentage) / 100;
+            
+            return {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                date: order.createdAt,
+                totalAmount: order.totalAmount,
+                percentage: applicablePercentage,
+                percentageChange: applicablePercentageChange ? {
+                    changeType: applicablePercentageChange.changeType,
+                    percentage: applicablePercentageChange.percentage,
+                    effectiveFrom: applicablePercentageChange.percentageChangeFromDate
+                } : null,
+                commission: commissionAmount
+            };
+        });
+        
+        const totalCommission = orderDetails.reduce((sum, detail) => sum + detail.commission, 0);
+        const totalSales = orderDetails.reduce((sum, detail) => sum + detail.totalAmount, 0);
+        
+        breakdown.push({
+            month: monthStart.toLocaleString('default', { month: 'long', year: 'numeric' }),
+            monthStart: monthStart.toISOString(),
+            monthEnd: monthEnd.toISOString(),
+            totalOrders: orderDetails.length,
+            totalSales,
+            totalCommission,
+            orderDetails
+        });
+    }
+    
+    return {
+        staffId,
+        staffName: staff.fullName,
+        basePercentage: staff.percentage,
+        startDate,
+        endDate,
+        breakdown
     };
 };
 
@@ -585,11 +745,28 @@ export const getActiveStaff = async () => {
 // Calculate salary breakdown for fixed salary staff
 
 // Helper function to calculate salary for a single day
-const calculateDaySalary = (date, status, applicableSalaryChange, daysInMonth) => {
-    const salaryAmount = applicableSalaryChange?.amount || 0;
+const calculateDaySalary = (date, status, applicableSalaryChange, daysInMonth, applicablePercentageChange = null) => {
+    let salaryAmount = applicableSalaryChange?.amount || 0;
     const isAbsenceCutEnabled = applicableSalaryChange?.isAbsenceCut === true;
     const absenceCutType = applicableSalaryChange?.absenceCutType || 'full';
     const absenceCutAmount = applicableSalaryChange?.absenceCut || 0;
+    
+    // Apply percentage change if applicable
+    if (applicablePercentageChange) {
+        const percentage = applicablePercentageChange.percentage || 0;
+        const changeType = applicablePercentageChange.changeType || 'inc';
+        
+        if (changeType === 'inc') {
+            // Increase by percentage
+            salaryAmount = salaryAmount + (salaryAmount * (percentage / 100));
+        } else if (changeType === 'decr') {
+            // Decrease by percentage
+            salaryAmount = salaryAmount - (salaryAmount * (percentage / 100));
+        } else if (changeType === 'set') {
+            // Set to percentage of original
+            salaryAmount = salaryAmount * (percentage / 100);
+        }
+    }
     
     let dailySalary = salaryAmount / daysInMonth;
     let finalDailySalary = dailySalary;
@@ -623,7 +800,7 @@ const calculateDaySalary = (date, status, applicableSalaryChange, daysInMonth) =
 };
 
 // Helper function to calculate salary for a month
-const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendanceMap, baseSalary) => {
+const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, allPercentageChanges, attendanceMap, baseSalary) => {
     const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
     let monthCalculationDetails = [];
     let totalSalaryForMonth = 0;
@@ -631,12 +808,16 @@ const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendance
     // Build salary change map for this month
     const salaryChangeMap = new Map();
     
+    // Build percentage change map for this month
+    const percentageChangeMap = new Map();
+    
     // Normalize month dates for comparison
     const monthStartCopy = new Date(monthStart);
     monthStartCopy.setHours(0, 0, 0, 0);
     const monthEndCopy = new Date(monthEnd);
     monthEndCopy.setHours(23, 59, 59, 999);
     
+    // Process salary changes
     if (allSalaryChanges && allSalaryChanges.length > 0) {
         // Sort salary changes by date
         allSalaryChanges.sort((a, b) => new Date(a.salaryChangeFromDate) - new Date(b.salaryChangeFromDate));
@@ -689,6 +870,58 @@ const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendance
         }
     }
     
+    // Process percentage changes (same logic as salary changes)
+    if (allPercentageChanges && allPercentageChanges.length > 0) {
+        // Sort percentage changes by date
+        allPercentageChanges.sort((a, b) => new Date(a.percentageChangeFromDate) - new Date(b.percentageChangeFromDate));
+        
+        // Filter percentage changes that are relevant for this month
+        const relevantPercentageChanges = allPercentageChanges.filter(change => {
+            const changeDate = new Date(change.percentageChangeFromDate);
+            changeDate.setHours(0, 0, 0, 0);
+            return changeDate <= monthEndCopy;
+        });
+        
+        if (relevantPercentageChanges.length > 0) {
+            // Check if first change is on or before month start
+            const firstChangeDate = new Date(relevantPercentageChanges[0].percentageChangeFromDate);
+            firstChangeDate.setHours(0, 0, 0, 0);
+            
+            const isFirstChangeOnOrBeforeMonthStart = firstChangeDate.getTime() <= monthStartCopy.getTime();
+            
+            // Add each percentage change period
+            for (let i = 0; i < relevantPercentageChanges.length; i++) {
+                const change = relevantPercentageChanges[i];
+                const nextChange = relevantPercentageChanges[i + 1];
+                
+                let periodStartDate = new Date(change.percentageChangeFromDate);
+                periodStartDate.setHours(0, 0, 0, 0);
+                
+                // If this is the first change and it's before month start, use month start as period start
+                if (i === 0 && isFirstChangeOnOrBeforeMonthStart) {
+                    periodStartDate = new Date(monthStartCopy);
+                }
+                
+                let periodEndDate;
+                if (nextChange) {
+                    periodEndDate = new Date(nextChange.percentageChangeFromDate);
+                    periodEndDate.setHours(0, 0, 0, 0);
+                    // Subtract one day to include the next change date in the current period
+                    periodEndDate.setDate(periodEndDate.getDate() - 1);
+                    periodEndDate.setHours(23, 59, 59, 999);
+                } else {
+                    // For the last period, extend to end of month
+                    periodEndDate = new Date(monthEndCopy);
+                }
+                
+                percentageChangeMap.set({
+                    startDate: periodStartDate,
+                    endDate: periodEndDate
+                }, change);
+            }
+        }
+    }
+    
     // Calculate salary for each day
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
@@ -726,14 +959,35 @@ const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendance
             }
         }
         
+        // Find applicable percentage change for this day
+        let applicablePercentageChange = null;
+        for (const [period, change] of percentageChangeMap) {
+            // Normalize period dates for comparison
+            const periodStart = new Date(period.startDate);
+            periodStart.setHours(0, 0, 0, 0);
+            const periodEnd = new Date(period.endDate);
+            
+            // Keep the end time as is for proper comparison (could be 23:59:59 for month end)
+            // Only normalize if it's a start of day (like from a change date)
+            if (periodEnd.getHours() === 0 && periodEnd.getMinutes() === 0) {
+                periodEnd.setHours(0, 0, 0, 0);
+            }
+            
+            // Use <= for end date to include the end date in the period
+            if (currentDateCheck.getTime() >= periodStart.getTime() && currentDateCheck.getTime() <= periodEnd.getTime()) {
+                applicablePercentageChange = change;
+                break;
+            }
+        }
+        
         // Only calculate salary if there's an applicable salary change for this day
         // This ensures we don't calculate for days before the first salary change
         if (!applicableSalaryChange) {
             continue;
         }
         
-        // Calculate day salary
-        const dayCalculation = calculateDaySalary(dateStr, status, applicableSalaryChange, daysInMonth);
+        // Calculate day salary (pass percentage change if applicable)
+        const dayCalculation = calculateDaySalary(dateStr, status, applicableSalaryChange, daysInMonth, applicablePercentageChange);
         monthCalculationDetails.push(dayCalculation);
         totalSalaryForMonth += dayCalculation.dailySalary;
     }
@@ -746,13 +1000,18 @@ const calculateMonthSalary = (monthStart, monthEnd, allSalaryChanges, attendance
 };
 
 // Main service function for full salary calculation
-const staffFullSalaryCalculation = async (staffId, staff, salaryChanges, attendanceMap, baseSalary) => {
+const staffFullSalaryCalculation = async (staffId, staff, salaryChanges, percentageChanges, attendanceMap, baseSalary) => {
     if (!salaryChanges || salaryChanges.length === 0) {
         return [];
     }
     
     // Sort salary changes by date
     salaryChanges.sort((a, b) => new Date(a.salaryChangeFromDate) - new Date(b.salaryChangeFromDate));
+    
+    // Sort percentage changes by date if they exist
+    if (percentageChanges && percentageChanges.length > 0) {
+        percentageChanges.sort((a, b) => new Date(a.percentageChangeFromDate) - new Date(b.percentageChangeFromDate));
+    }
     
     // Start from the first salary change date
     const firstSalaryChangeDate = new Date(salaryChanges[0].salaryChangeFromDate);
@@ -779,13 +1038,14 @@ const staffFullSalaryCalculation = async (staffId, staff, salaryChanges, attenda
     // Calculate salary for each month
     const monthlyBreakdown = [];
     for (const month of months) {
-        // Pass ALL salary changes to calculateMonthSalary
+        // Pass ALL salary changes and percentage changes to calculateMonthSalary
         // The function will determine which changes are active for each day
         // Calculate month salary
         const monthResult = calculateMonthSalary(
             month.start,
             month.end,
             salaryChanges,
+            percentageChanges,
             attendanceMap,
             baseSalary
         );
@@ -830,6 +1090,13 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         sort: { salaryChangeFromDate: 1 }
     });
     
+    // Get percentage changes for this staff
+    const percentageChanges = await findStaffPercentageChangeService({
+        staffId
+    }, {
+        sort: { percentageChangeFromDate: 1 }
+    });
+    
     // If no salary changes, return empty breakdown
     if (salaryChanges.length === 0) {
         return {
@@ -865,6 +1132,7 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
         staffId,
         staff,
         salaryChanges,
+        percentageChanges,
         attendanceMap,
         baseMonthlySalary
     );
@@ -986,7 +1254,7 @@ export const calculateSalaryBreakdown = async (staffId, startDate, endDate) => {
 };
 
 // Calculate payment summary for staff
-export const calculatePaymentSummary = async (staffId) => {
+export const calculatePaymentSummary = async (staffId, startDate = null, endDate = null) => {
     const StaffModel = getLocalStaffModel();
     const OrderModel = getLocalOrderModel();
     
@@ -1007,8 +1275,17 @@ export const calculatePaymentSummary = async (staffId) => {
         limit: 1
     });
     
+    const percentageChanges = await findStaffPercentageChangeService({
+        staffId
+    }, {
+        sort: { percentageChangeFromDate: -1 },
+        limit: 1
+    });
+    
     const hasSalaryChanges = salaryChanges && salaryChanges.length > 0;
-    let salaryType = hasSalaryChanges ? 'fixed' : null;
+    const hasPercentageChanges = percentageChanges && percentageChanges.length > 0;
+    
+    let salaryType = hasSalaryChanges ? 'fixed' : (hasPercentageChanges ? 'percentage' : 'none');
     
     // Get current salary change for fixed salary staff
     let currentSalaryChange = null;
@@ -1028,26 +1305,58 @@ export const calculatePaymentSummary = async (staffId) => {
         }
     }
     
+    // Get current percentage for percentage-based staff
+    let currentPercentage = 0;
+    if (hasPercentageChanges) {
+        currentPercentage = percentageChanges[0].percentage || 0;
+    }
+    
+    let totalSalaryEarnings = 0;
+    let totalCommissionEarnings = 0;
     let totalEarnings = 0;
     let totalPaid = 0;
     let totalRemaining = 0;
     let totalAdvance = 0;
     let paymentStatus = 'remaining';
     
-    if (salaryType === 'fixed') {
-        // Get the earliest salary change date as join date for calculation
-        const earliestSalaryChange = await findStaffSalaryChangeService({
-            staffId,
-            isDeleted: false
-        }, {
-            sort: { salaryChangeFromDate: 1 },
-            limit: 1
-        });
+    // Determine date range
+    let effectiveStartDate = startDate;
+    let effectiveEndDate = endDate || new Date();
+    
+    if (!effectiveStartDate) {
+        // Use earliest change date as start date
+        if (hasSalaryChanges) {
+            const earliestSalaryChange = await findStaffSalaryChangeService({
+                staffId,
+                isDeleted: false
+            }, {
+                sort: { salaryChangeFromDate: 1 },
+                limit: 1
+            });
+            if (earliestSalaryChange && earliestSalaryChange.length > 0) {
+                effectiveStartDate = new Date(earliestSalaryChange[0].salaryChangeFromDate);
+            }
+        } else if (hasPercentageChanges) {
+            const earliestPercentageChange = await findStaffPercentageChangeService({
+                staffId
+            }, {
+                sort: { percentageChangeFromDate: 1 },
+                limit: 1
+            });
+            if (earliestPercentageChange && earliestPercentageChange.length > 0) {
+                effectiveStartDate = new Date(earliestPercentageChange[0].percentageChangeFromDate);
+            }
+        }
         
-        const joinDate = earliestSalaryChange && earliestSalaryChange.length > 0 
-            ? new Date(earliestSalaryChange[0].salaryChangeFromDate)
-            : new Date();
-        const currentDate = new Date();
+        if (!effectiveStartDate) {
+            effectiveStartDate = new Date(staff.joinDate || staff.createdAt);
+        }
+    }
+    
+    // Calculate salary earnings for fixed salary staff
+    if (salaryType === 'fixed' && effectiveStartDate) {
+        const joinDate = new Date(effectiveStartDate);
+        const currentDate = new Date(effectiveEndDate);
         
         let monthStart = new Date(joinDate);
         monthStart.setDate(1);
@@ -1070,26 +1379,69 @@ export const calculatePaymentSummary = async (staffId) => {
             }
             
             // Current month pro-ration
-            const currentMonthStart = new Date();
+            const currentMonthStart = new Date(currentDate);
             currentMonthStart.setDate(1);
             if (monthStart.getTime() === currentMonthStart.getTime()) {
                 workingDays = currentDate.getDate();
                 salaryForMonth = (currentMonthlySalary / daysInMonth) * workingDays;
             }
             
-            totalEarnings += salaryForMonth;
+            totalSalaryEarnings += salaryForMonth;
             
             monthStart.setMonth(monthStart.getMonth() + 1);
         }
-        
-        // Get payments
-        const payments = await findStaffSalaryPaymentService({ staffId });
-        totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    } else {
-        // No salary type set - return zero values
-        totalEarnings = 0;
-        totalPaid = 0;
     }
+    
+    // Calculate commission earnings for percentage-based staff
+    if (salaryType === 'percentage' && effectiveStartDate) {
+        const orderQuery = {
+            staffId: staffId,
+            status: 'completed',
+            createdAt: {
+                $gte: new Date(effectiveStartDate),
+                $lte: new Date(effectiveEndDate)
+            }
+        };
+        
+        const orders = await findDocs({
+            model: OrderModel,
+            filter: orderQuery
+        });
+        
+        totalCommissionEarnings = orders.reduce((sum, order) => {
+            const orderDate = new Date(order.createdAt);
+            orderDate.setHours(0, 0, 0, 0);
+            
+            // Find applicable percentage for this order
+            let applicablePercentage = currentPercentage;
+            
+            if (percentageChanges && percentageChanges.length > 0) {
+                for (const change of percentageChanges) {
+                    const changeDate = new Date(change.percentageChangeFromDate);
+                    changeDate.setHours(0, 0, 0, 0);
+                    
+                    if (orderDate.getTime() >= changeDate.getTime()) {
+                        applicablePercentage = change.percentage;
+                    }
+                }
+            }
+            
+            return sum + ((order.totalAmount || 0) * applicablePercentage / 100);
+        }, 0);
+    }
+    
+    totalEarnings = totalSalaryEarnings + totalCommissionEarnings;
+    
+    // Get payments within date range
+    const paymentQuery = { staffId };
+    if (effectiveStartDate || effectiveEndDate) {
+        paymentQuery.paidAt = {};
+        if (effectiveStartDate) paymentQuery.paidAt.$gte = new Date(effectiveStartDate);
+        if (effectiveEndDate) paymentQuery.paidAt.$lte = new Date(effectiveEndDate);
+    }
+    
+    const payments = await findStaffSalaryPaymentService(paymentQuery);
+    totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     
     totalRemaining = Math.max(0, totalEarnings - totalPaid);
     totalAdvance = Math.max(0, totalPaid - totalEarnings);
@@ -1105,10 +1457,14 @@ export const calculatePaymentSummary = async (staffId) => {
     return {
         staffId,
         staffName: staff.fullName,
-        salaryType: salaryType || 'none',
-        percentage: 0,
+        salaryType,
+        percentage: currentPercentage,
         monthlySalary: currentMonthlySalary,
-        joinDate: null,
+        joinDate: effectiveStartDate,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
+        totalSalaryEarnings: Math.round(totalSalaryEarnings * 100) / 100,
+        totalCommissionEarnings: Math.round(totalCommissionEarnings * 100) / 100,
         totalEarnings: Math.round(totalEarnings * 100) / 100,
         totalPaid: Math.round(totalPaid * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,

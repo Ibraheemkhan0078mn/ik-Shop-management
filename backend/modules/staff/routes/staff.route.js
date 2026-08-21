@@ -17,6 +17,7 @@ import {
     getStaffCommissionData,
     getStaffCommissionAllTimeData,
     getStaffCommissionOrdersData,
+    getPercentageBreakdownData,
 } from "../controllers/staff.controller.js";
 import {
     createSalaryPaymentData,
@@ -95,6 +96,7 @@ router.get("/:id/payment-summary", getPaymentSummaryData);
 router.get("/:id/commission", getStaffCommissionData);
 router.get("/:id/commission/all-time", getStaffCommissionAllTimeData);
 router.get("/:id/commission/orders", getStaffCommissionOrdersData);
+router.get("/:id/percentage-breakdown", getPercentageBreakdownData);
 
 // Wildcard routes for single staff member (must come last)
 router.get("/:id", getStaffDataById);

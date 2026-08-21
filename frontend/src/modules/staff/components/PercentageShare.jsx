@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Filter, Download, TrendingUp, ShoppingCart, DollarSign, Percent } from "lucide-react";
-import { useGetStaffCommissionAllTimeQuery, useGetStaffCommissionQuery, useGetStaffCommissionOrdersQuery } from "../api/staff.api.js";
+import { Calendar, Download, TrendingUp, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { useGetPercentageBreakdownQuery } from "../api/staff.api.js";
 
 export default function PercentageShare({ staffId, staffData }) {
     const [dateRange, setDateRange] = useState("currentMonth"); // currentMonth, custom
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
-    const [page, setPage] = useState(1);
+    const [expandedMonths, setExpandedMonths] = useState(new Set());
 
     // Set default to current month
     useEffect(() => {
@@ -18,27 +18,25 @@ export default function PercentageShare({ staffId, staffData }) {
         setEndDate(lastDay.toISOString().split('T')[0]);
     }, []);
 
-    // All-time KPI (from join date to current)
-    const { data: allTimeResponse } = useGetStaffCommissionAllTimeQuery(staffId, { skip: !staffId });
-    const allTimeData = allTimeResponse?.data;
-
-    // Filtered KPI (with date range)
-    const { data: filteredResponse } = useGetStaffCommissionQuery(
-        { id: staffId, startDate, endDate },
-        { skip: !staffId || !startDate || !endDate }
+    // Month-wise percentage breakdown (auto-calculates from first percentage change date if no dates provided)
+    const { data: percentageBreakdownResponse } = useGetPercentageBreakdownQuery(
+        { id: staffId, startDate: dateRange === 'custom' ? startDate : undefined, endDate: dateRange === 'custom' ? endDate : undefined },
+        { skip: !staffId }
     );
-    const filteredData = filteredResponse?.data;
+    const percentageBreakdown = percentageBreakdownResponse?.data;
 
-    // Paginated orders (with date range)
-    const { data: ordersResponse } = useGetStaffCommissionOrdersQuery(
-        { id: staffId, startDate, endDate, page, limit: 10 },
-        { skip: !staffId || !startDate || !endDate }
-    );
-    const ordersData = ordersResponse?.data;
+    const toggleMonth = (monthIndex) => {
+        const newExpanded = new Set(expandedMonths);
+        if (newExpanded.has(monthIndex)) {
+            newExpanded.delete(monthIndex);
+        } else {
+            newExpanded.add(monthIndex);
+        }
+        setExpandedMonths(newExpanded);
+    };
 
     const handleDateRangeChange = (value) => {
         setDateRange(value);
-        setPage(1); // Reset to page 1 when date range changes
         if (value === "currentMonth") {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -48,61 +46,26 @@ export default function PercentageShare({ staffId, staffData }) {
         }
     };
 
-    if (!staffData || staffData.salaryType !== 'percentage') {
+    if (!staffData) {
         return null;
     }
 
+    // Calculate totals from breakdown
+    const totalCommission = percentageBreakdown?.breakdown?.reduce((sum, month) => sum + month.totalCommission, 0) || 0;
+    const totalOrders = percentageBreakdown?.breakdown?.reduce((sum, month) => sum + month.totalOrders, 0) || 0;
+    const totalSales = percentageBreakdown?.breakdown?.reduce((sum, month) => sum + month.totalSales, 0) || 0;
+
     return (
         <div className="space-y-6">
-            {/* Section 1: All-Time KPI (from join date to current) */}
-            <div className="bg-[var(--surface)] rounded-xl p-5 border border-[var(--border)]">
-                <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-5 h-5 text-[var(--accent-2)]" />
-                    <h3 className="text-sm font-semibold text-[var(--ink)]">All-Time Commission</h3>
-                    <span className="text-xs text-[var(--muted)] ml-auto">
-                        Since: {allTimeData?.joinDate ? new Date(allTimeData.joinDate).toLocaleDateString() : 'N/A'}
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-[var(--app-bg)] rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="w-4 h-4 text-green-500" />
-                            <span className="text-xs text-[var(--muted)]">Total Commission</span>
-                        </div>
-                        <p className="text-lg font-bold text-[var(--ink)]">
-                            Rs {(allTimeData?.totalCommission || 0).toFixed(2)}
-                        </p>
-                    </div>
-
-                    <div className="bg-[var(--app-bg)] rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <ShoppingCart className="w-4 h-4 text-blue-500" />
-                            <span className="text-xs text-[var(--muted)]">Total Orders</span>
-                        </div>
-                        <p className="text-lg font-bold text-[var(--ink)]">
-                            {allTimeData?.totalOrders || 0}
-                        </p>
-                    </div>
-
-                    <div className="bg-[var(--app-bg)] rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Percent className="w-4 h-4 text-purple-500" />
-                            <span className="text-xs text-[var(--muted)]">Commission Rate</span>
-                        </div>
-                        <p className="text-lg font-bold text-[var(--ink)]">
-                            {allTimeData?.percentage || staffData.percentage || 0}%
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Section 2: Filtered KPI with Date Filters */}
+            {/* KPI Section */}
             <div className="bg-[var(--surface)] rounded-xl p-5 border border-[var(--border)]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-[var(--accent-2)]" />
-                        <h3 className="text-sm font-semibold text-[var(--ink)]">Filtered Commission</h3>
+                        <TrendingUp className="w-5 h-5 text-[var(--accent-2)]" />
+                        <h3 className="text-sm font-semibold text-[var(--ink)]">Commission Summary</h3>
+                        <span className="text-xs text-[var(--muted)] ml-auto">
+                            {percentageBreakdown?.startDate ? `From: ${new Date(percentageBreakdown.startDate).toLocaleDateString()}` : 'All time'}
+                        </span>
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2">
@@ -111,7 +74,7 @@ export default function PercentageShare({ staffId, staffData }) {
                             onChange={(e) => handleDateRangeChange(e.target.value)}
                             className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
                         >
-                            <option value="currentMonth">Current Month</option>
+                            <option value="currentMonth">From First Percentage Change</option>
                             <option value="custom">Custom Range</option>
                         </select>
 
@@ -145,108 +108,113 @@ export default function PercentageShare({ staffId, staffData }) {
                     <div className="bg-[var(--app-bg)] rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
                             <DollarSign className="w-4 h-4 text-green-500" />
-                            <span className="text-xs text-[var(--muted)]">Commission</span>
+                            <span className="text-xs text-[var(--muted)]">Total Commission</span>
                         </div>
                         <p className="text-lg font-bold text-[var(--ink)]">
-                            Rs {(filteredData?.totalCommission || 0).toFixed(2)}
+                            Rs {totalCommission.toFixed(2)}
                         </p>
                     </div>
 
                     <div className="bg-[var(--app-bg)] rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
                             <ShoppingCart className="w-4 h-4 text-blue-500" />
-                            <span className="text-xs text-[var(--muted)]">Orders</span>
+                            <span className="text-xs text-[var(--muted)]">Total Orders</span>
                         </div>
                         <p className="text-lg font-bold text-[var(--ink)]">
-                            {filteredData?.totalOrders || 0}
+                            {totalOrders}
                         </p>
                     </div>
 
                     <div className="bg-[var(--app-bg)] rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
                             <TrendingUp className="w-4 h-4 text-purple-500" />
-                            <span className="text-xs text-[var(--muted)]">Sales</span>
+                            <span className="text-xs text-[var(--muted)]">Total Sales</span>
                         </div>
                         <p className="text-lg font-bold text-[var(--ink)]">
-                            Rs {(filteredData?.totalSales || 0).toFixed(2)}
+                            Rs {totalSales.toFixed(2)}
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Section 3: Paginated Orders Table */}
+            {/* Month-wise Percentage Breakdown */}
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
                 <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[var(--ink)]">Order Payments</h3>
+                    <h3 className="text-sm font-semibold text-[var(--ink)]">Month-wise Breakdown</h3>
                     <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition">
                         <Download className="w-4 h-4" />
                         Export
                     </button>
                 </div>
 
-                {!ordersData?.orders || ordersData.orders.length === 0 ? (
-                    <div className="p-8 text-center text-[var(--muted)]">No orders found for this period</div>
+                {!percentageBreakdown?.breakdown || percentageBreakdown.breakdown.length === 0 ? (
+                    <div className="p-8 text-center text-[var(--muted)]">No breakdown data for this period</div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-[var(--app-bg)]">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Order #</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Total Amount</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Commission ({staffData.percentage}%)</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border)]">
-                                {ordersData.orders.map((order) => (
-                                    <tr key={order._id} className="hover:bg-[var(--app-bg)] transition">
-                                        <td className="px-4 py-3 text-sm font-medium text-[var(--ink)]">
-                                            {order.orderNumber}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-[var(--muted)]">
-                                            {new Date(order.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-right font-medium text-[var(--ink)]">
-                                            Rs {order.totalAmount.toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                                            Rs {order.staffCommission.toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                {order.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                    <div className="divide-y divide-[var(--border)]">
+                        {percentageBreakdown.breakdown.map((monthData, index) => (
+                            <div key={index} className="p-4">
+                                <div 
+                                    className="flex items-center justify-between cursor-pointer hover:bg-[var(--app-bg)] p-2 rounded-lg transition"
+                                    onClick={() => toggleMonth(index)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {expandedMonths.has(index) ? (
+                                            <ChevronUp className="w-4 h-4 text-[var(--muted)]" />
+                                        ) : (
+                                            <ChevronDown className="w-4 h-4 text-[var(--muted)]" />
+                                        )}
+                                        <div>
+                                            <h4 className="font-semibold text-[var(--ink)]">{monthData.month}</h4>
+                                            <p className="text-xs text-[var(--muted)]">{monthData.totalOrders} orders</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-[var(--accent-2)]">Rs {monthData.totalCommission.toFixed(2)}</p>
+                                        <p className="text-xs text-[var(--muted)]">from Rs {monthData.totalSales.toFixed(2)} sales</p>
+                                    </div>
+                                </div>
 
-                {/* Pagination */}
-                {ordersData?.pagination && ordersData.pagination.totalPages > 1 && (
-                    <div className="p-4 border-t border-[var(--border)] flex items-center justify-between">
-                        <span className="text-sm text-[var(--muted)]">
-                            Page {ordersData.pagination.page} of {ordersData.pagination.totalPages}
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={ordersData.pagination.page === 1}
-                                className="px-3 py-1 text-sm rounded-lg border border-[var(--border)] text-[var(--ink)] hover:bg-[var(--app-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() => setPage(p => Math.min(ordersData.pagination.totalPages, p + 1))}
-                                disabled={ordersData.pagination.page === ordersData.pagination.totalPages}
-                                className="px-3 py-1 text-sm rounded-lg border border-[var(--border)] text-[var(--ink)] hover:bg-[var(--app-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Next
-                            </button>
-                        </div>
+                                {expandedMonths.has(index) && (
+                                    <div className="mt-4 ml-8 border-l-2 border-[var(--border)] pl-4">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="text-xs text-[var(--muted)] uppercase">
+                                                    <th className="text-left pb-2">Order #</th>
+                                                    <th className="text-left pb-2">Date</th>
+                                                    <th className="text-right pb-2">Amount</th>
+                                                    <th className="text-right pb-2">%</th>
+                                                    <th className="text-right pb-2">Commission</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {monthData.orderDetails.map((order, orderIndex) => (
+                                                    <tr key={orderIndex} className="border-t border-[var(--border)]">
+                                                        <td className="py-2 text-[var(--ink)]">{order.orderNumber}</td>
+                                                        <td className="py-2 text-[var(--muted)]">{new Date(order.date).toLocaleDateString()}</td>
+                                                        <td className="py-2 text-right text-[var(--ink)]">Rs {order.totalAmount.toFixed(2)}</td>
+                                                        <td className="py-2 text-right">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                                                order.percentageChange?.changeType === 'inc' ? 'bg-green-100 text-green-700' :
+                                                                order.percentageChange?.changeType === 'decr' ? 'bg-red-100 text-red-700' :
+                                                                'bg-blue-100 text-blue-700'
+                                                            }`}>
+                                                                {order.percentage}%
+                                                                {order.percentageChange && (
+                                                                    <span className="ml-1 opacity-70">
+                                                                        ({order.percentageChange.changeType === 'inc' ? '+' : order.percentageChange.changeType === 'decr' ? '-' : ''}{order.percentageChange.percentage}%)
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-2 text-right font-semibold text-green-600">Rs {order.commission.toFixed(2)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

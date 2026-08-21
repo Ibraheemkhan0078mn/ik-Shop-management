@@ -17,7 +17,8 @@ import {
     calculatePaymentSummary,
     calculateStaffCommission,
     calculateStaffCommissionAllTime,
-    getStaffCommissionOrders
+    getStaffCommissionOrders,
+    getPercentageBreakdown
 } from "../services/staff.service.js";
 import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
 
@@ -236,8 +237,9 @@ export const getSalaryBreakdownData = asyncHandler(async (req, res, next) => {
 // Calculate Payment Summary
 export const getPaymentSummaryData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
+    const { startDate, endDate } = req.query;
 
-    const summary = await calculatePaymentSummary(id);
+    const summary = await calculatePaymentSummary(id, startDate, endDate);
 
     res.status(200).json({
         success: true,
@@ -278,11 +280,25 @@ export const getStaffCommissionOrdersData = asyncHandler(async (req, res, next) 
     const { id } = req.params;
     const { startDate, endDate, page = 1, limit = 20 } = req.query;
 
-    const result = await getStaffCommissionOrders(id, startDate, endDate, parseInt(page), parseInt(limit));
+    const orders = await getStaffCommissionOrders(id, startDate, endDate, parseInt(page), parseInt(limit));
 
     res.status(200).json({
         success: true,
         message: "Staff commission orders retrieved successfully",
-        data: result,
+        data: orders,
+    });
+});
+
+// Get Percentage Breakdown (month-wise with order details)
+export const getPercentageBreakdownData = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const breakdown = await getPercentageBreakdown(id, startDate, endDate);
+
+    res.status(200).json({
+        success: true,
+        message: "Percentage breakdown calculated successfully",
+        data: breakdown,
     });
 });

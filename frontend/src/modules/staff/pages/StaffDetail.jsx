@@ -109,7 +109,13 @@ export default function StaffDetail() {
         startDate: salaryBreakdownFilter.startDate, 
         endDate: salaryBreakdownFilter.endDate 
     }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate || staffData?.data?.salaryType !== 'fixed' });
-    const { data: paymentSummaryData } = useGetPaymentSummaryQuery(id);
+    
+    const [paymentSummaryFilter, setPaymentSummaryFilter] = useState({ dateRange: 'all', startDate: '', endDate: '' });
+    const { data: paymentSummaryData } = useGetPaymentSummaryQuery({ 
+        staffId: id, 
+        startDate: paymentSummaryFilter.dateRange === 'custom' ? paymentSummaryFilter.startDate : undefined, 
+        endDate: paymentSummaryFilter.dateRange === 'custom' ? paymentSummaryFilter.endDate : undefined 
+    });
     const { data: salaryChangesData } = useGetSalaryChangesQuery(id);
     const { data: percentageChangesData } = useGetPercentageChangesQuery(id);
 
@@ -255,20 +261,37 @@ export default function StaffDetail() {
     const handleCreatePercentageChange = async (e) => {
         e.preventDefault();
         try {
+            // Auto-detect change type if not editing
+            if (!editingPercentageChange) {
+                const sortedChanges = percentageChangesData?.data?.sort((a, b) => 
+                    new Date(a.percentageChangeFromDate) - new Date(b.percentageChangeFromDate)
+                ) || [];
+                
+                if (sortedChanges.length > 0) {
+                    const lastChange = sortedChanges[sortedChanges.length - 1];
+                    const newPercentage = parseFloat(percentageChangeForm.percentage);
+                    const lastPercentage = lastChange.percentage;
+                    
+                    if (newPercentage > lastPercentage) {
+                        percentageChangeForm.changeType = 'inc';
+                    } else if (newPercentage < lastPercentage) {
+                        percentageChangeForm.changeType = 'decr';
+                    } else {
+                        percentageChangeForm.changeType = 'set';
+                    }
+                }
+            }
+            
             if (editingPercentageChange) {
                 await updatePercentageChange({ 
                     id: editingPercentageChange._id,
-                    data: {
-                        ...percentageChangeForm, 
-                        changeType: 'set'
-                    }
+                    data: percentageChangeForm
                 }).unwrap();
                 toast.success("Percentage change updated successfully");
             } else {
                 await createPercentageChange({ 
                     ...percentageChangeForm, 
-                    staffId: id,
-                    changeType: 'set'
+                    staffId: id
                 }).unwrap();
                 toast.success("Percentage change created successfully");
             }
@@ -347,7 +370,7 @@ export default function StaffDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare", "percentageChanges"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown", "salaryChanges"] : []), "paymentSummary", "staffPayments"].map((tab) => (
+                {["profile", "documents", "percentageChanges", "percentageShare", "saleOrders", "salaryChanges", "salaryBreakdown", "staffPayments", "paymentSummary"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -546,6 +569,11 @@ export default function StaffDetail() {
                 </div>
             )}
 
+            {/* Percentage Share Tab */}
+            {activeTab === "percentageShare" && (
+                <PercentageShare staffId={id} staffData={staff} />
+            )}
+
             {/* Sale Orders Tab - POS Orders */}
             {activeTab === "saleOrders" && (
                 <div className="h-[calc(100vh-200px)] flex flex-col">
@@ -641,8 +669,8 @@ export default function StaffDetail() {
                 </div>
             )}
 
-            {/* Salary Breakdown Tab - Only for Fixed Salary */}
-            {activeTab === "salaryBreakdown" && staff?.salaryType === "fixed" && (
+            {/* Salary Breakdown Tab */}
+            {activeTab === "salaryBreakdown" && (
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -789,15 +817,8 @@ export default function StaffDetail() {
                 </div>
             )}
 
-            {/* Salary Breakdown Tab - Not applicable for percentage salary */}
-            {activeTab === "salaryBreakdown" && staff?.salaryType !== "fixed" && (
-                <div className="card p-6 text-center">
-                    <p className="text-[var(--muted)]">{labels.salaryBreakdownFixedOnly}</p>
-                </div>
-            )}
-
-            {/* Salary Changes Tab - Only for Fixed Salary */}
-            {activeTab === "salaryChanges" && staff?.salaryType === "fixed" && (
+            {/* Salary Changes Tab */}
+            {activeTab === "salaryChanges" && (
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -986,8 +1007,8 @@ export default function StaffDetail() {
                 </div>
             )}
 
-            {/* Percentage Changes Tab - Only for Percentage Salary */}
-            {activeTab === "percentageChanges" && staff?.salaryType === "percentage" && (
+            {/* Percentage Changes Tab */}
+            {activeTab === "percentageChanges" && (
                 <div className="space-y-6">
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -1018,8 +1039,14 @@ export default function StaffDetail() {
                                                 <td className="px-3 py-2 text-[var(--ink)]">{new Date(change.percentageChangeFromDate).toLocaleDateString()}</td>
                                                 <td className="px-3 py-2 font-medium text-[var(--accent-2)]">{change.percentage}%</td>
                                                 <td className="px-3 py-2">
-                                                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-                                                        Percentage Set
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        change.changeType === 'inc' ? 'bg-green-100 text-green-700' :
+                                                        change.changeType === 'decr' ? 'bg-red-100 text-red-700' :
+                                                        'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {change.changeType === 'inc' ? 'Increase' :
+                                                         change.changeType === 'decr' ? 'Decrease' :
+                                                         'Set'}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-2 text-[var(--muted)]">{change.notes || '-'}</td>
@@ -1093,6 +1120,19 @@ export default function StaffDetail() {
                                             />
                                         </div>
                                         <div>
+                                            <label className="block text-sm font-medium mb-1">Change Type</label>
+                                            <select
+                                                value={percentageChangeForm.changeType}
+                                                onChange={(e) => setPercentageChangeForm(prev => ({ ...prev, changeType: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                required
+                                            >
+                                                <option value="set">Set to % of salary</option>
+                                                <option value="inc">Increase by %</option>
+                                                <option value="decr">Decrease by %</option>
+                                            </select>
+                                        </div>
+                                        <div>
                                             <label className="block text-sm font-medium mb-1">Notes</label>
                                             <textarea
                                                 value={percentageChangeForm.notes}
@@ -1126,6 +1166,42 @@ export default function StaffDetail() {
                             <PieChart size={20} className="text-[var(--accent-2)]" />
                         </div>
 
+                        {/* Date Filter */}
+                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]">
+                            <Filter size={16} className="text-[var(--muted)]" />
+                            <select
+                                value={paymentSummaryFilter.dateRange}
+                                onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, dateRange: e.target.value }))}
+                                className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
+                            >
+                                <option value="all">All Time</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                            {paymentSummaryFilter.dateRange === "custom" && (
+                                <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                        <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
+                                        <input
+                                            type="date"
+                                            value={paymentSummaryFilter.startDate}
+                                            onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                                            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
+                                        />
+                                    </div>
+                                    <span className="text-[var(--muted)]">to</span>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
+                                        <input
+                                            type="date"
+                                            value={paymentSummaryFilter.endDate}
+                                            onChange={(e) => setPaymentSummaryFilter(prev => ({ ...prev, endDate: e.target.value }))}
+                                            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--app-bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent-2)]"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {paymentSummaryData?.data ? (
                             <div className="space-y-4">
                                 <div className="p-4 bg-[var(--surface-muted)] rounded-lg">
@@ -1151,17 +1227,36 @@ export default function StaffDetail() {
                                             </div>
                                         )}
                                         <div>
-                                            <p className="text-sm text-[var(--muted)]">{labels.joinDate}</p>
-                                            <p className="font-medium text-[var(--ink)]">{new Date(paymentSummaryData.data.joinDate).toLocaleDateString()}</p>
+                                            <p className="text-sm text-[var(--muted)]">Period</p>
+                                            <p className="font-medium text-[var(--ink)]">
+                                                {paymentSummaryData.data.startDate ? `${new Date(paymentSummaryData.data.startDate).toLocaleDateString()} - ${new Date(paymentSummaryData.data.endDate).toLocaleDateString()}` : 'All Time'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {/* Earnings Breakdown */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {paymentSummaryData.data.totalSalaryEarnings > 0 && (
+                                        <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                            <p className="text-sm text-[var(--muted)] mb-1">Salary Earnings</p>
+                                            <p className="text-2xl font-bold text-blue-600">Rs {paymentSummaryData.data.totalSalaryEarnings.toLocaleString()}</p>
+                                        </div>
+                                    )}
+                                    {paymentSummaryData.data.totalCommissionEarnings > 0 && (
+                                        <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                            <p className="text-sm text-[var(--muted)] mb-1">Commission Earnings</p>
+                                            <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalCommissionEarnings.toLocaleString()}</p>
+                                        </div>
+                                    )}
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
                                         <p className="text-sm text-[var(--muted)] mb-1">{labels.totalEarnings}</p>
                                         <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {paymentSummaryData.data.totalEarnings.toLocaleString()}</p>
                                     </div>
+                                </div>
+
+                                {/* Payment Breakdown */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div className="p-4 border border-[var(--border)] rounded-md text-center">
                                         <p className="text-sm text-[var(--muted)] mb-1">{labels.totalPaid}</p>
                                         <p className="text-2xl font-bold text-green-600">Rs {paymentSummaryData.data.totalPaid.toLocaleString()}</p>
@@ -1176,6 +1271,12 @@ export default function StaffDetail() {
                                             <p className="text-2xl font-bold text-purple-600">Rs {paymentSummaryData.data.totalAdvance.toLocaleString()}</p>
                                         </div>
                                     )}
+                                    <div className="p-4 border border-[var(--border)] rounded-md text-center">
+                                        <p className="text-sm text-[var(--muted)] mb-1">Balance</p>
+                                        <p className={`text-2xl font-bold ${paymentSummaryData.data.totalRemaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                            Rs {(paymentSummaryData.data.totalRemaining - paymentSummaryData.data.totalAdvance).toLocaleString()}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="p-4 border border-[var(--border)] rounded-md">
