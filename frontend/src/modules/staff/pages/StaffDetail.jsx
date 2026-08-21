@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Upload, Trash2, Plus, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
 import { toast } from "sonner";
-import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery, useGetSalaryChangesQuery, useCreateSalaryChangeMutation, useUpdateSalaryChangeMutation, useDeleteSalaryChangeMutation } from "../api/staff.api.js";
+import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery, useGetSalaryChangesQuery, useCreateSalaryChangeMutation, useUpdateSalaryChangeMutation, useDeleteSalaryChangeMutation, useGetPercentageChangesQuery, useCreatePercentageChangeMutation, useUpdatePercentageChangeMutation, useDeletePercentageChangeMutation } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -40,6 +40,14 @@ export default function StaffDetail() {
         notes: "" 
     });
     const [editingSalaryChange, setEditingSalaryChange] = useState(null);
+    const [showPercentageChangeForm, setShowPercentageChangeForm] = useState(false);
+    const [percentageChangeForm, setPercentageChangeForm] = useState({ 
+        percentage: "", 
+        percentageChangeFromDate: "",
+        changeType: "set",
+        notes: "" 
+    });
+    const [editingPercentageChange, setEditingPercentageChange] = useState(null);
 
     const handleCreateSalaryChange = async (e) => {
         e.preventDefault();
@@ -103,6 +111,7 @@ export default function StaffDetail() {
     }, { skip: !salaryBreakdownFilter.startDate || !salaryBreakdownFilter.endDate || staffData?.data?.salaryType !== 'fixed' });
     const { data: paymentSummaryData } = useGetPaymentSummaryQuery(id);
     const { data: salaryChangesData } = useGetSalaryChangesQuery(id);
+    const { data: percentageChangesData } = useGetPercentageChangesQuery(id);
 
     const [addDocument] = useAddDocumentMutation();
     const [removeDocument] = useRemoveDocumentMutation();
@@ -113,6 +122,9 @@ export default function StaffDetail() {
     const [createSalaryChange] = useCreateSalaryChangeMutation();
     const [updateSalaryChange] = useUpdateSalaryChangeMutation();
     const [deleteSalaryChange] = useDeleteSalaryChangeMutation();
+    const [createPercentageChange] = useCreatePercentageChangeMutation();
+    const [updatePercentageChange] = useUpdatePercentageChangeMutation();
+    const [deletePercentageChange] = useDeletePercentageChangeMutation();
 
     const [paymentForm, setPaymentForm] = useState({ amount: "", month: "", notes: "" });
 
@@ -240,6 +252,61 @@ export default function StaffDetail() {
         }
     };
 
+    const handleCreatePercentageChange = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingPercentageChange) {
+                await updatePercentageChange({ 
+                    id: editingPercentageChange._id,
+                    data: {
+                        ...percentageChangeForm, 
+                        changeType: 'set'
+                    }
+                }).unwrap();
+                toast.success("Percentage change updated successfully");
+            } else {
+                await createPercentageChange({ 
+                    ...percentageChangeForm, 
+                    staffId: id,
+                    changeType: 'set'
+                }).unwrap();
+                toast.success("Percentage change created successfully");
+            }
+            setShowPercentageChangeForm(false);
+            setPercentageChangeForm({ 
+                percentage: "", 
+                percentageChangeFromDate: "",
+                changeType: "set",
+                notes: "" 
+            });
+            setEditingPercentageChange(null);
+            refetch();
+        } catch (error) {
+            toast.error(editingPercentageChange ? "Failed to update percentage change" : "Failed to create percentage change");
+        }
+    };
+
+    const handleEditPercentageChange = (change) => {
+        setEditingPercentageChange(change);
+        setPercentageChangeForm({
+            percentage: change.percentage,
+            percentageChangeFromDate: new Date(change.percentageChangeFromDate).toISOString().split('T')[0],
+            changeType: change.changeType || "set",
+            notes: change.notes || ""
+        });
+        setShowPercentageChangeForm(true);
+    };
+
+    const handleDeletePercentageChange = async (changeId) => {
+        try {
+            await deletePercentageChange(changeId).unwrap();
+            toast.success("Percentage change deleted successfully");
+            refetch();
+        } catch (error) {
+            toast.error("Failed to delete percentage change");
+        }
+    };
+
     const handleViewCalculationDetails = (calculationDetails) => {
         setSelectedCalculationDetails(calculationDetails);
         setShowCalculationDetailModal(true);
@@ -280,7 +347,7 @@ export default function StaffDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
-                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown", "salaryChanges"] : []), "paymentSummary", "staffPayments"].map((tab) => (
+                {["profile", "documents", "saleOrders", ...(staff?.salaryType === 'percentage' ? ["percentageShare", "percentageChanges"] : []), ...(staff?.salaryType === 'fixed' ? ["salaryBreakdown", "salaryChanges"] : []), "paymentSummary", "staffPayments"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -906,6 +973,137 @@ export default function StaffDetail() {
                                     </div>
                                     <div className="flex gap-2 mt-4">
                                         <button type="button" onClick={() => setShowSalaryChangeForm(false)} className="flex-1 px-4 py-2 border border-[var(--border)] rounded-md">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="flex-1 px-4 py-2 bg-[var(--accent-2)] text-white rounded-md">
+                                            Save
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Percentage Changes Tab - Only for Percentage Salary */}
+            {activeTab === "percentageChanges" && staff?.salaryType === "percentage" && (
+                <div className="space-y-6">
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[var(--ink)]">Percentage Changes</h3>
+                            <button
+                                onClick={() => setShowPercentageChangeForm(true)}
+                                className="btn-add"
+                            >
+                                <Plus size={16} /> Add Percentage Change
+                            </button>
+                        </div>
+
+                        {percentageChangesData?.data && percentageChangesData.data.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead>
+                                        <tr className="text-xs uppercase tracking-wider bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--muted)]">
+                                            <th className="px-3 py-2 font-semibold">Effective From</th>
+                                            <th className="px-3 py-2 font-semibold">Percentage</th>
+                                            <th className="px-3 py-2 font-semibold">Type</th>
+                                            <th className="px-3 py-2 font-semibold">Notes</th>
+                                            <th className="px-3 py-2 font-semibold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {percentageChangesData.data.map((change) => (
+                                            <tr key={change._id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                                                <td className="px-3 py-2 text-[var(--ink)]">{new Date(change.percentageChangeFromDate).toLocaleDateString()}</td>
+                                                <td className="px-3 py-2 font-medium text-[var(--accent-2)]">{change.percentage}%</td>
+                                                <td className="px-3 py-2">
+                                                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                                                        Percentage Set
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-[var(--muted)]">{change.notes || '-'}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => handleEditPercentageChange(change)}
+                                                            className="p-1 hover:bg-blue-100 rounded"
+                                                        >
+                                                            <Plus size={14} className="text-blue-500" />
+                                                        </button>
+                                                        <ConfirmDialog message="Are you sure you want to delete this percentage change?" onConfirm={() => handleDeletePercentageChange(change._id)}>
+                                                            <button className="p-1 hover:bg-red-100 rounded">
+                                                                <Trash2 size={14} className="text-red-500" />
+                                                            </button>
+                                                        </ConfirmDialog>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-[var(--muted)]">No percentage changes recorded</p>
+                        )}
+                    </div>
+
+                    {/* Percentage Change Form Modal */}
+                    {showPercentageChangeForm && (
+                        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold">{editingPercentageChange ? 'Edit Percentage Change' : 'Add Percentage Change'}</h3>
+                                    <button onClick={() => {
+                                        setShowPercentageChangeForm(false);
+                                        setEditingPercentageChange(null);
+                                        setPercentageChangeForm({ 
+                                            percentage: "", 
+                                            percentageChangeFromDate: "",
+                                            changeType: "set",
+                                            notes: "" 
+                                        });
+                                    }}>
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleCreatePercentageChange}>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Percentage (%)</label>
+                                            <input
+                                                type="number"
+                                                value={percentageChangeForm.percentage}
+                                                onChange={(e) => setPercentageChangeForm(prev => ({ ...prev, percentage: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                required
+                                                min="0"
+                                                max="100"
+                                                step="0.1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Effective From</label>
+                                            <input
+                                                type="date"
+                                                value={percentageChangeForm.percentageChangeFromDate}
+                                                onChange={(e) => setPercentageChangeForm(prev => ({ ...prev, percentageChangeFromDate: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Notes</label>
+                                            <textarea
+                                                value={percentageChangeForm.notes}
+                                                onChange={(e) => setPercentageChangeForm(prev => ({ ...prev, notes: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+                                                rows="2"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-4">
+                                        <button type="button" onClick={() => setShowPercentageChangeForm(false)} className="flex-1 px-4 py-2 border border-[var(--border)] rounded-md">
                                             Cancel
                                         </button>
                                         <button type="submit" className="flex-1 px-4 py-2 bg-[var(--accent-2)] text-white rounded-md">

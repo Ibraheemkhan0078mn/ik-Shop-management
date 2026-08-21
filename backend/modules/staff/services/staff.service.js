@@ -67,6 +67,7 @@ export const calculateStaffCommission = async (staffId, startDate, endDate) => {
     });
     
     // Calculate commission for orders that don't have it yet (for percentage-based staff)
+    // Only process if staff has salaryType and percentage fields (for backward compatibility)
     if (staff.salaryType === 'percentage' && staff.percentage > 0) {
         for (const order of orders) {
             if (!order.staffCommission || order.staffCommission === 0) {
@@ -994,33 +995,55 @@ export const calculatePaymentSummary = async (staffId) => {
         throw new Error('Staff not found');
     }
     
+    // Determine salary type based on salaryChange or percentageChange documents
+    const salaryChanges = await findStaffSalaryChangeService({
+        staffId,
+        isDeleted: false
+    }, {
+        sort: { salaryChangeFromDate: -1 },
+        limit: 1
+    });
+    
+    const hasSalaryChanges = salaryChanges && salaryChanges.length > 0;
+    let salaryType = hasSalaryChanges ? 'fixed' : null;
+    
+    // Get current salary change for fixed salary staff
+    let currentSalaryChange = null;
+    let currentMonthlySalary = 0;
+    let absenceCutInfo = null;
+    
+    if (hasSalaryChanges) {
+        currentSalaryChange = salaryChanges[0];
+        currentMonthlySalary = currentSalaryChange.amount || 0;
+        
+        if (currentSalaryChange.isAbsenceCut) {
+            absenceCutInfo = {
+                enabled: true,
+                type: currentSalaryChange.absenceCutType || 'full',
+                amount: currentSalaryChange.absenceCut || 0
+            };
+        }
+    }
+    
     let totalEarnings = 0;
     let totalPaid = 0;
     let totalRemaining = 0;
     let totalAdvance = 0;
     let paymentStatus = 'remaining';
     
-    if (staff.salaryType === 'percentage') {
-        // Calculate from all completed orders (all-time)
-        const orders = await findDocs({
-            model: OrderModel,
-            filter: {
-                staffId,
-                status: 'completed'
-            }
+    if (salaryType === 'fixed') {
+        // Get the earliest salary change date as join date for calculation
+        const earliestSalaryChange = await findStaffSalaryChangeService({
+            staffId,
+            isDeleted: false
+        }, {
+            sort: { salaryChangeFromDate: 1 },
+            limit: 1
         });
         
-        totalEarnings = orders.reduce((sum, order) => {
-            return sum + (order.staffCommission || 0);
-        }, 0);
-        
-        // Get all payments (all-time)
-        const payments = await findStaffSalaryPaymentService({ staffId });
-        totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-        
-    } else if (staff.salaryType === 'fixed') {
-        // Calculate from join date to now
-        const joinDate = new Date(staff.joinDate);
+        const joinDate = earliestSalaryChange && earliestSalaryChange.length > 0 
+            ? new Date(earliestSalaryChange[0].salaryChangeFromDate)
+            : new Date();
         const currentDate = new Date();
         
         let monthStart = new Date(joinDate);
@@ -1033,14 +1056,14 @@ export const calculatePaymentSummary = async (staffId) => {
             
             const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
             let workingDays = daysInMonth;
-            let salaryForMonth = staff.monthlySalary || 0;
+            let salaryForMonth = currentMonthlySalary;
             
             // First month pro-ration
             if (monthStart.getTime() === joinDate.getTime() || 
                 (monthStart > joinDate && monthStart < new Date(joinDate.getFullYear(), joinDate.getMonth() + 1, 1))) {
                 const joinDay = joinDate.getDate();
                 workingDays = daysInMonth - joinDay + 1;
-                salaryForMonth = (staff.monthlySalary / daysInMonth) * workingDays;
+                salaryForMonth = (currentMonthlySalary / daysInMonth) * workingDays;
             }
             
             // Current month pro-ration
@@ -1048,7 +1071,7 @@ export const calculatePaymentSummary = async (staffId) => {
             currentMonthStart.setDate(1);
             if (monthStart.getTime() === currentMonthStart.getTime()) {
                 workingDays = currentDate.getDate();
-                salaryForMonth = (staff.monthlySalary / daysInMonth) * workingDays;
+                salaryForMonth = (currentMonthlySalary / daysInMonth) * workingDays;
             }
             
             totalEarnings += salaryForMonth;
@@ -1059,6 +1082,10 @@ export const calculatePaymentSummary = async (staffId) => {
         // Get payments
         const payments = await findStaffSalaryPaymentService({ staffId });
         totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    } else {
+        // No salary type set - return zero values
+        totalEarnings = 0;
+        totalPaid = 0;
     }
     
     totalRemaining = Math.max(0, totalEarnings - totalPaid);
@@ -1075,15 +1102,17 @@ export const calculatePaymentSummary = async (staffId) => {
     return {
         staffId,
         staffName: staff.fullName,
-        salaryType: staff.salaryType,
-        percentage: staff.percentage,
-        monthlySalary: staff.monthlySalary,
-        joinDate: staff.joinDate,
+        salaryType: salaryType || 'none',
+        percentage: 0,
+        monthlySalary: currentMonthlySalary,
+        joinDate: null,
         totalEarnings: Math.round(totalEarnings * 100) / 100,
         totalPaid: Math.round(totalPaid * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
         totalAdvance: Math.round(totalAdvance * 100) / 100,
-        paymentStatus
+        paymentStatus,
+        currentSalaryChange,
+        absenceCutInfo
     };
 };
 

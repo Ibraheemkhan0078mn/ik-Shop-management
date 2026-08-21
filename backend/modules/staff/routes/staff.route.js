@@ -40,6 +40,13 @@ import {
     updateSalaryChangeData,
     deleteSalaryChangeData,
 } from "../controllers/staffSalaryChange.controller.js";
+import {
+    createPercentageChangeData,
+    getPercentageChangesByStaffData,
+    getPercentageChangeByIdData,
+    updatePercentageChangeData,
+    deletePercentageChangeData,
+} from "../controllers/staffPercentageChange.controller.js";
 
 const router = express.Router();
 
@@ -59,6 +66,13 @@ router.get("/salary-change/staff/:staffId", getSalaryChangesByStaffData);
 router.get("/salary-change/:id", getSalaryChangeByIdData);
 router.put("/salary-change/:id", updateSalaryChangeData);
 router.delete("/salary-change/:id", deleteSalaryChangeData);
+
+// Staff Percentage Change Routes (must come before /:id)
+router.post("/percentage-change", createPercentageChangeData);
+router.get("/percentage-change/staff/:staffId", getPercentageChangesByStaffData);
+router.get("/percentage-change/:id", getPercentageChangeByIdData);
+router.put("/percentage-change/:id", updatePercentageChangeData);
+router.delete("/percentage-change/:id", deletePercentageChangeData);
 
 // Staff Sale Bill Routes (must come before /:id)
 router.post("/sale-bill", createSaleBillData);

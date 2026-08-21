@@ -216,6 +216,37 @@ export const staffApi = baseApi.injectEndpoints({
             invalidatesTags: ["SalaryChange"],
         }),
 
+        // Percentage Changes
+        getPercentageChanges: builder.query({
+            query: (staffId) => ({
+                url: `/staff/percentage-change/staff/${staffId}`,
+            }),
+            providesTags: (result, error, staffId) => [{ type: "PercentageChange", id: staffId }],
+        }),
+        createPercentageChange: builder.mutation({
+            query: (data) => ({
+                url: "/staff/percentage-change",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: (result, error, { staffId }) => [{ type: "PercentageChange", id: staffId }, { type: "Staff", id: staffId }],
+        }),
+        updatePercentageChange: builder.mutation({
+            query: ({ id, data }) => ({
+                url: `/staff/percentage-change/${id}`,
+                method: "PUT",
+                body: data,
+            }),
+            invalidatesTags: ["PercentageChange"],
+        }),
+        deletePercentageChange: builder.mutation({
+            query: (id) => ({
+                url: `/staff/percentage-change/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["PercentageChange"],
+        }),
+
         // Staff Roles
         getStaffRoles: builder.query({
             query: (params) => ({
@@ -272,6 +303,10 @@ export const {
     useCreateSalaryChangeMutation,
     useUpdateSalaryChangeMutation,
     useDeleteSalaryChangeMutation,
+    useGetPercentageChangesQuery,
+    useCreatePercentageChangeMutation,
+    useUpdatePercentageChangeMutation,
+    useDeletePercentageChangeMutation,
     useGetStaffRolesQuery,
     useCreateStaffRoleMutation,
     useDeleteStaffRoleMutation,

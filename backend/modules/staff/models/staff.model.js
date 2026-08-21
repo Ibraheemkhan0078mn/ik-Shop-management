@@ -21,16 +21,6 @@ const staffSchema = new mongoose.Schema({
         required: true,
         default: 'other'
     },
-    salaryType: {
-        type: String,
-        required: true,
-        default: 'fixed'
-    },
-    joinDate: {
-        type: Date,
-        required: true,
-        default: Date.now
-    },
     address: {
         type: String,
         trim: true
@@ -49,14 +39,6 @@ const staffSchema = new mongoose.Schema({
     notes: {
         type: String,
         trim: true
-    },
-    monthlySalary: {
-        type: Number,
-        default: 0
-    },
-    percentage: {
-        type: Number,
-        default: 0
     },
     documents: [{
         documentType: {

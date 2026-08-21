@@ -21,9 +21,9 @@ export default function StaffForm({ isEdit = false }) {
     const labels = getStaffLabels(language);
 
     const [formData, setFormData] = useState({
-        fullName: "", cnic: "", phone: "", role: "other", salaryType: "fixed",
-        joinDate: new Date().toISOString().split("T")[0], address: "", emergencyContact: "",
-        notes: "", monthlySalary: 0, percentage: 0, status: "active",
+        fullName: "", cnic: "", phone: "", role: "other",
+        address: "", emergencyContact: "",
+        notes: "", status: "active",
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -40,10 +40,9 @@ export default function StaffForm({ isEdit = false }) {
             const s = staffData.data;
             setFormData({
                 fullName: s.fullName || "", cnic: s.cnic || "", phone: s.phone || "",
-                role: s.role || "other", salaryType: s.salaryType || "fixed",
-                joinDate: s.joinDate ? new Date(s.joinDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                role: s.role || "other",
                 address: s.address || "", emergencyContact: s.emergencyContact || "", notes: s.notes || "",
-                monthlySalary: s.monthlySalary || 0, percentage: s.percentage || 0, status: s.status || "active",
+                status: s.status || "active",
             });
             if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
@@ -159,25 +158,6 @@ export default function StaffForm({ isEdit = false }) {
                                 <input type="text" name="cnic" value={formData.cnic} onChange={handleChange} required className={inputCls} placeholder="XXXXX-XXXXXXX-X" />
                             </div>
                             <div>
-                                <label className={labelCls}>{labels.phone} <span className="text-red-500">*</span></label>
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className={inputCls} placeholder="+92 XXX XXXXXXX" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>{labels.emergencyContact || "Emergency Contact"}</label>
-                                <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className={inputCls} placeholder="+92 XXX XXXXXXX" />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className={labelCls}>{labels.address}</label>
-                                <input type="text" name="address" value={formData.address} onChange={handleChange} className={inputCls} placeholder="Enter complete address" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Employment Info */}
-                    <div className={sectionCls}>
-                        <h3 className="text-sm font-semibold text-ink">Employment Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
                                 <label className={labelCls}>{labels.role} <span className="text-red-500">*</span></label>
                                 <select name="role" value={formData.role} onChange={handleChange} required className={inputCls}>
                                     {roles.length > 0 ? (
@@ -197,8 +177,12 @@ export default function StaffForm({ isEdit = false }) {
                                 </select>
                             </div>
                             <div>
-                                <label className={labelCls}>{labels.joinDate} <span className="text-red-500">*</span></label>
-                                <input type="date" name="joinDate" value={formData.joinDate} onChange={handleChange} required className={inputCls} />
+                                <label className={labelCls}>{labels.phone} <span className="text-red-500">*</span></label>
+                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className={inputCls} placeholder="+92 XXX XXXXXXX" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>{labels.emergencyContact || "Emergency Contact"}</label>
+                                <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className={inputCls} placeholder="+92 XXX XXXXXXX" />
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.status}</label>
@@ -207,33 +191,13 @@ export default function StaffForm({ isEdit = false }) {
                                     <option value="inactive">{labels.inactive}</option>
                                 </select>
                             </div>
+                            <div className="md:col-span-2">
+                                <label className={labelCls}>{labels.address}</label>
+                                <input type="text" name="address" value={formData.address} onChange={handleChange} className={inputCls} placeholder="Enter complete address" />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Salary Info */}
-                    <div className={sectionCls}>
-                        <h3 className="text-sm font-semibold text-ink">Salary Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className={labelCls}>{labels.salaryType} <span className="text-red-500">*</span></label>
-                                <select name="salaryType" value={formData.salaryType} onChange={handleChange} required className={inputCls}>
-                                    <option value="fixed">Fixed Monthly Salary</option>
-                                    <option value="percentage">Percentage Based</option>
-                                </select>
-                            </div>
-                            {formData.salaryType === "fixed" ? (
-                                <div>
-                                    <label className={labelCls}>{labels.monthlySalary || "Monthly Salary (Rs)"}</label>
-                                    <input type="number" name="monthlySalary" value={formData.monthlySalary} onChange={handleChange} min="0" className={inputCls} placeholder="Enter monthly salary" />
-                                </div>
-                            ) : (
-                                <div>
-                                    <label className={labelCls}>{labels.commissionRate || "Commission Percentage (%)"}</label>
-                                    <input type="number" name="percentage" value={formData.percentage} onChange={handleChange} min="0" max="100" step="0.1" className={inputCls} placeholder="Enter percentage" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
                     {/* Notes */}
                     <div className={sectionCls}>

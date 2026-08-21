@@ -16,14 +16,10 @@ const EMPTY_FORM = {
     cnic: "",
     phone: "",
     role: "other",
-    salaryType: "fixed",
-    joinDate: new Date().toISOString().split('T')[0],
     address: "",
     emergencyContact: "",
     photo: "",
     notes: "",
-    monthlySalary: 0,
-    percentage: 0,
     status: "active",
 };
 
@@ -65,7 +61,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                 ...EMPTY_FORM,
                 ...s,
                 id: s._id || staffData._id || "",
-                joinDate: s.joinDate ? new Date(s.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             });
             if (s.photo) setImagePreview(toImageUrl(s.photo));
         }
@@ -132,7 +127,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
         if (!form.cnic?.trim()) newErrors.cnic = "CNIC is required";
         if (!form.phone?.trim()) newErrors.phone = "Phone is required";
         if (!form.role?.trim()) newErrors.role = "Role is required";
-        if (!form.joinDate) newErrors.joinDate = "Join date is required";
 
         setErrors(newErrors);
         const count = Object.keys(newErrors).length;
@@ -318,10 +312,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             required
                             placeholder="+92 XXX XXXXXXX"
                         />
-                    </div>
-
-                    {/* ── Role & Join Date Section ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
                         {/* Role */}
                         <SelectField
@@ -333,17 +323,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             error={errors.role}
                             required
                             placeholder="Select role"
-                        />
-
-                        {/* Join Date */}
-                        <Field
-                            label={labels.joinDate || "Join Date"}
-                            name="joinDate"
-                            value={form.joinDate}
-                            onChange={updateField}
-                            error={errors.joinDate}
-                            type="date"
-                            required
                         />
                     </div>
 
@@ -362,42 +341,6 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                                 />
                             </div>
 
-                            {/* Salary Type */}
-                            <SelectField
-                                label={labels.salaryType || "Salary Type"}
-                                name="salaryType"
-                                value={form.salaryType}
-                                onChange={updateField}
-                                options={[
-                                    { label: "Fixed Monthly Salary", value: "fixed" },
-                                    { label: "Percentage Based", value: "percentage" },
-                                ]}
-                                placeholder="Select salary type"
-                            />
-
-                            {/* Monthly Salary or Percentage */}
-                            {form.salaryType === "fixed" ? (
-                                <Field
-                                    label={labels.monthlySalary || "Monthly Salary (Rs)"}
-                                    name="monthlySalary"
-                                    value={form.monthlySalary}
-                                    onChange={updateField}
-                                    error={errors.monthlySalary}
-                                    type="number"
-                                    placeholder="0.00"
-                                />
-                            ) : (
-                                <Field
-                                    label={labels.commissionRate || "Commission Percentage (%)"}
-                                    name="percentage"
-                                    value={form.percentage}
-                                    onChange={updateField}
-                                    error={errors.percentage}
-                                    type="number"
-                                    placeholder="0.00"
-                                />
-                            )}
-
                             {/* Notes */}
                             <div className="sm:col-span-2">
                                 <Field
@@ -410,6 +353,16 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                                     rows={3}
                                 />
                             </div>
+
+                            {/* Emergency Contact */}
+                            <Field
+                                label={labels.emergencyContact || "Emergency Contact"}
+                                name="emergencyContact"
+                                value={form.emergencyContact}
+                                onChange={updateField}
+                                error={errors.emergencyContact}
+                                placeholder="+92 XXX XXXXXXX"
+                            />
 
                             {/* Status Toggle */}
                             <div className="sm:col-span-2 flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--app-bg)]">
