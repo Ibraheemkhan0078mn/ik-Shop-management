@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Truck, DollarSign, RefreshCw, Filter, Eye, Star, AlertCircle, X } from "lucide-react";
 import { useGetSupplierReportQuery } from "../services/reports.service.js";
-import { useSuppliers } from "../../suppliers/services/suppliers.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import SupplierReportPdfTemplate from "../components/SupplierReportPdfTemplate.jsx";
@@ -13,14 +12,9 @@ export default function SupplierReport() {
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
-    const [supplierId, setSupplierId] = useState("");
-    const [sortBy, setSortBy] = useState("totalPurchases");
-    const [sortOrder, setSortOrder] = useState("desc");
+    const [supplierName, setSupplierName] = useState("");
     const [paymentStatus, setPaymentStatus] = useState("all");
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-    const [search, setSearch] = useState("");
     const [selectedSupplier, setSelectedSupplier] = useState(null);
 
     // Calculate date range based on period
@@ -55,21 +49,22 @@ export default function SupplierReport() {
                     from: yearStart.toISOString().split('T')[0],
                     to: yearEnd.toISOString().split('T')[0]
                 };
-            case "custom":
             default:
-                return { from: fromDate, to: toDate };
+                return {
+                    from: today.toISOString().split('T')[0],
+                    to: today.toISOString().split('T')[0]
+                };
         }
     };
 
-    const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
+    const dates = useMemo(() => getDatesFromPeriod(period), [period]);
     const filters = useMemo(() => ({ 
-        fromDate: period === "custom" ? fromDate : dates.from, 
-        toDate: period === "custom" ? toDate : dates.to, 
-        supplierId, sortBy, sortOrder, paymentStatus, search 
-    }), [period, fromDate, toDate, dates.from, dates.to, supplierId, sortBy, sortOrder, paymentStatus, search]);
+        fromDate: dates.from, 
+        toDate: dates.to, 
+        supplierName, paymentStatus
+    }), [dates.from, dates.to, supplierName, paymentStatus]);
     
     const { data, isLoading, isFetching, error, refetch } = useGetSupplierReportQuery(filters);
-    const { data: suppliersData } = useSuppliers();
 
     if (error) {
         showError(error?.data?.message || "Failed to load supplier report");
@@ -95,8 +90,6 @@ export default function SupplierReport() {
             default: return 'bg-gray-100 text-gray-800 border-gray-300';
         }
     };
-
-    const suppliersList = suppliersData?.data || [];
 
     return (
         <div className="p-6 min-h-screen bg-[var(--app-bg)]">
@@ -129,7 +122,7 @@ export default function SupplierReport() {
                     <Filter size={16} className="text-[var(--accent-2)]" />
                     <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
                         <select
@@ -141,68 +134,17 @@ export default function SupplierReport() {
                             <option value="month">{labels.thisMonth}</option>
                             <option value="3month">{labels.last3Months}</option>
                             <option value="year">{labels.thisYear}</option>
-                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
-                    {period === "custom" && (
-                        <>
-                            <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
-                                <input
-                                    type="date"
-                                    value={fromDate}
-                                    onChange={(e) => setFromDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
-                                <input
-                                    type="date"
-                                    value={toDate}
-                                    onChange={(e) => setToDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                                />
-                            </div>
-                        </>
-                    )}
                     <div>
                         <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.supplier}</label>
-                        <select
-                            value={supplierId}
-                            onChange={(e) => setSupplierId(e.target.value)}
+                        <input
+                            type="text"
+                            placeholder="Supplier name..."
+                            value={supplierName}
+                            onChange={(e) => setSupplierName(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        >
-                            <option value="">{labels.allSuppliers}</option>
-                            {suppliersList.map((supplier) => (
-                                <option key={supplier._id} value={supplier._id}>
-                                    {supplier.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortBy}</label>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        >
-                            <option value="totalPurchases">{labels.totalPurchases}</option>
-                            <option value="dueAmount">{labels.dueAmount}</option>
-                            <option value="lastPurchase">{labels.lastPurchase}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.sortOrder}</label>
-                        <select
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                        >
-                            <option value="desc">{labels.descending}</option>
-                            <option value="asc">{labels.ascending}</option>
-                        </select>
+                        />
                     </div>
                     <div>
                         <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.status}</label>
@@ -217,16 +159,6 @@ export default function SupplierReport() {
                             <option value="partial">{labels.partial}</option>
                         </select>
                     </div>
-                </div>
-                <div className="mt-4">
-                    <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.search}</label>
-                    <input
-                        type="text"
-                        placeholder="Supplier name..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
-                    />
                 </div>
             </div>
 
@@ -324,7 +256,7 @@ export default function SupplierReport() {
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPurchases}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalBills}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.lastPurchase}</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
@@ -343,7 +275,7 @@ export default function SupplierReport() {
                                                 <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{supplier.rank}</td>
                                                 <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{supplier.name}</td>
                                                 <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(supplier.totalPurchases || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right text-green-600 font-medium">Rs {(supplier.totalPaid || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right text-blue-600 font-medium">{supplier.totalOrders || 0}</td>
                                                 <td className="px-4 py-3 text-right text-red-600 font-medium">Rs {(supplier.totalDue || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">{formatDate(supplier.lastPurchase)}</td>
                                                 <td className="px-4 py-3 text-center">
@@ -482,7 +414,7 @@ export default function SupplierReport() {
                     summary={summary}
                     suppliers={suppliers}
                     labels={labels}
-                    selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
+                    selectedPeriodLabel={period}
                 />
             </PdfModal>
         </div>

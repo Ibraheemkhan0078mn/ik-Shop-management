@@ -6,7 +6,7 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getExpenseLabels } from "../labels/expenseLabels.js";
 import { useCreateExpense, useUpdateExpense, useExpenseCategories } from "../services/expense.service.js";
-
+ 
 const today = () => new Date().toISOString().split("T")[0];
 const emptyForm = (categories = []) => ({ amount: "", category: categories[0]?.name || "", date: today(), notes: "" });
 
@@ -87,7 +87,7 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
             } else {
                 await createExpense(payload).unwrap();
                 showSuccess(labels.expenseCreated);
-                setForm(emptyForm());
+                setForm(emptyForm(categories));
             }
             onSuccess?.();
             onClose();

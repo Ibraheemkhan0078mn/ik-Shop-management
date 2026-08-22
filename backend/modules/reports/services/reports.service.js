@@ -49,6 +49,9 @@ import {
     findExpenseCategoryService,
 } from '../../expenses/services/expenseCategory.crud.js';
 import {
+    findPurchaseReturnService,
+} from '../../purchaseReturn/services/purchaseReturn.crud.js';
+import {
     findWastageService,
     countWastageService,
 } from '../../wastage/services/wastage.crud.js';
@@ -81,10 +84,6 @@ import {
     findProductReturnService,
     countProductReturnService,
 } from '../../productReturn/services/productReturn.crud.js';
-import {
-    findPurchaseReturnService,
-    countPurchaseReturnService,
-} from '../../purchaseReturn/services/purchaseReturn.crud.js';
 
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
@@ -3034,69 +3033,190 @@ export const getCustomerReport = async (filters = {}) => {
 
 // Supplier Report
 export const getSupplierReport = async (filters = {}) => {
-    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
+    const { search, page = 1, limit = 20, fromDate, toDate, supplierName, paymentStatus } = filters;
 
     const matchQuery = {};
-    if (search) {
+    
+    // Combine search and supplierName for filtering
+    const searchTerm = supplierName || search;
+    if (searchTerm) {
         matchQuery.$or = [
-            { name: { $regex: search, $options: "i" } },
-            { phone: { $regex: search, $options: "i" } }
+            { name: { $regex: searchTerm, $options: "i" } },
+            { phone: { $regex: searchTerm, $options: "i" } }
         ];
     }
 
     const skip = (page - 1) * limit;
 
+    // Build date filter for purchases
+    const purchaseFilter = {};
+    if (fromDate || toDate) {
+        const dateFilter = buildDateFilter(fromDate, toDate);
+        purchaseFilter.createdAt = dateFilter.createdAt;
+    }
+
+    // Apply payment status filter
+    if (paymentStatus && paymentStatus !== "all") {
+        if (paymentStatus === "paid") {
+            purchaseFilter.paymentStatus = "full";
+        } else if (paymentStatus === "unpaid") {
+            purchaseFilter.paymentStatus = { $in: ["partial", "unpaid"] };
+            purchaseFilter.paidAmount = { $eq: 0 };
+        } else if (paymentStatus === "partial") {
+            purchaseFilter.paymentStatus = "partial";
+        }
+    }
+
     // Fetch data using service functions
-    const [data, total] = await Promise.all([
-        findSupplierService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    const [data, initialTotal] = await Promise.all([
+        findSupplierService(matchQuery, { sort: { createdAt: -1 }, skip, limit }),
         countSupplierService(matchQuery)
     ]);
+    
+    let total = initialTotal;
 
-    // Get all purchases to calculate supplier statistics
-    const allPurchases = await findPurchaseService({});
-    const allPurchaseReturns = await findPurchaseReturnService({});
+    // Get all purchases, returns, and qarza data to calculate supplier statistics
+    const [allPurchases, allPurchaseReturns, allQarzaAccounts, allQarzaPayments] = await Promise.all([
+        findPurchaseService(purchaseFilter),
+        findPurchaseReturnService(purchaseFilter),
+        findQarzaAccountService({ type: 'supplier' }),
+        findQarzaPaymentService({})
+    ]);
 
     // Calculate statistics for each supplier
     const suppliersWithStats = data.map(supplier => {
         const supplierId = supplier._id.toString();
         const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
         const supplierReturns = allPurchaseReturns.filter(r => r.supplier?.toString() === supplierId);
+        
+        // Find associated qarza account
+        const qarzaAccount = allQarzaAccounts.find(qa => qa._id.toString() === supplier.qarzaAccountId?.toString());
+        const qarzaPayments = qarzaAccount 
+            ? allQarzaPayments.filter(qp => qp.qarzaAccountId?.toString() === qarzaAccount._id.toString())
+            : [];
 
+        // Financial KPIs
         const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-        const totalPaid = supplierPurchases.reduce((sum, p) => {
-            if (p.paymentStatus === "full") {
-                return sum + (p.totalAmount || 0);
-            }
-            return sum + (p.paidAmount || 0);
-        }, 0);
-        const totalDue = supplierPurchases.reduce((sum, p) => {
-            if (p.paymentStatus !== "full") {
-                return sum + ((p.totalAmount || 0) - (p.paidAmount || 0));
-            }
-            return sum;
-        }, 0);
-        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+        const totalPaid = supplierPurchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+        const totalDue = supplierPurchases.reduce((sum, p) => sum + ((p.totalAmount || 0) - (p.paidAmount || 0)), 0);
+        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalRefundAmount || 0), 0);
+        const netPurchaseValue = totalPurchases - totalReturns;
+        const paymentCompletionRate = totalPurchases > 0 ? ((totalPaid / totalPurchases) * 100).toFixed(2) : 0;
+        const averageOrderValue = supplierPurchases.length > 0 ? (totalPurchases / supplierPurchases.length).toFixed(2) : 0;
+
+        // Operational KPIs
+        const totalOrders = supplierPurchases.length;
+        const totalReturnsCount = supplierReturns.length;
+        const returnRate = totalOrders > 0 ? ((totalReturnsCount / totalOrders) * 100).toFixed(2) : 0;
+        
+        const orderStatusDistribution = {
+            ordered: supplierPurchases.filter(p => p.status === 'ordered').length,
+            delivered: supplierPurchases.filter(p => p.status === 'delivered').length,
+            rejected: supplierPurchases.filter(p => p.status === 'rejected').length
+        };
+        
+        const paymentStatusDistribution = {
+            pending: supplierPurchases.filter(p => p.paymentStatus === 'pending').length,
+            partial: supplierPurchases.filter(p => p.paymentStatus === 'partial').length,
+            full: supplierPurchases.filter(p => p.paymentStatus === 'full').length
+        };
+
+        // Credit/Debit KPIs
+        const creditPayments = qarzaPayments.filter(qp => qp.type === 'credit' || qp.type === 'cashin');
+        const debitPayments = qarzaPayments.filter(qp => qp.type === 'debit' || qp.type === 'cashout');
+        
+        const totalCreditAmount = creditPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
+        const totalDebitAmount = debitPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
+        const netBalance = totalDebitAmount - totalCreditAmount;
+        const totalCreditTransactions = creditPayments.length;
+        const totalDebitTransactions = debitPayments.length;
 
         return {
-            ...supplier.toObject(),
+            ...supplier,
+            // Financial KPIs
             totalPurchases,
             totalPaid,
             totalDue,
-            totalReturns
+            totalReturns,
+            netPurchaseValue,
+            paymentCompletionRate,
+            averageOrderValue,
+            // Operational KPIs
+            totalOrders,
+            totalReturnsCount,
+            returnRate,
+            orderStatusDistribution,
+            paymentStatusDistribution,
+            // Credit/Debit KPIs
+            totalCreditAmount,
+            totalDebitAmount,
+            netBalance,
+            totalCreditTransactions,
+            totalDebitTransactions,
+            hasQarzaAccount: !!qarzaAccount,
+            // Purchase history for detail modal
+            purchases: supplierPurchases.map(p => ({
+                _id: p._id,
+                createdAt: p.createdAt,
+                invoiceNumber: p.invoiceNumber,
+                totalAmount: p.totalAmount,
+                paidAmount: p.paidAmount,
+                status: p.status
+            }))
         };
     });
 
-    // Sort based on sortBy parameter
-    const sortField = sortBy === 'purchases' ? 'totalPurchases' : 
-                      sortBy === 'due' ? 'totalDue' : 'name';
-    const sortDirection = sortOrder === 'asc' ? 1 : -1;
-    
-    suppliersWithStats.sort((a, b) => {
-        if (sortField === 'name') {
-            return a.name.localeCompare(b.name) * sortDirection;
+    // Add lastPurchase date for display
+    suppliersWithStats.forEach(supplier => {
+        const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplier._id.toString());
+        if (supplierPurchases.length > 0) {
+            supplier.lastPurchase = new Date(Math.max(...supplierPurchases.map(p => new Date(p.createdAt))));
+        } else {
+            supplier.lastPurchase = null;
         }
-        return (a[sortField] - b[sortField]) * sortDirection;
     });
+
+    // Sort by totalPurchases descending by default
+    suppliersWithStats.sort((a, b) => (b.totalPurchases || 0) - (a.totalPurchases || 0));
+
+    // Filter out suppliers with no purchases when payment status filter is applied
+    // When paymentStatus is "all", show all suppliers including those with no purchases
+    if (paymentStatus && paymentStatus !== "all") {
+        const filteredSuppliers = suppliersWithStats.filter(s => s.totalOrders > 0);
+        // Update total count based on filtered results
+        total = filteredSuppliers.length;
+        suppliersWithStats.length = 0;
+        suppliersWithStats.push(...filteredSuppliers);
+    } else {
+        // When "all" is selected, ensure total reflects the initial count
+        total = initialTotal;
+    }
+
+    // Add rank to each supplier
+    suppliersWithStats.forEach((supplier, index) => {
+        supplier.rank = skip + index + 1;
+    });
+
+    // Calculate summary statistics
+    const topSupplier = suppliersWithStats.length > 0 
+        ? suppliersWithStats.reduce((max, s) => (s.totalPurchases || 0) > (max.totalPurchases || 0) ? s : max, suppliersWithStats[0])
+        : null;
+
+    const summary = {
+        totalSuppliers: total,
+        totalPurchases: suppliersWithStats.reduce((sum, s) => sum + (s.totalPurchases || 0), 0),
+        totalPaid: suppliersWithStats.reduce((sum, s) => sum + (s.totalPaid || 0), 0),
+        totalDue: suppliersWithStats.reduce((sum, s) => sum + (s.totalDue || 0), 0),
+        totalReturns: suppliersWithStats.reduce((sum, s) => sum + (s.totalReturns || 0), 0),
+        totalOrders: suppliersWithStats.reduce((sum, s) => sum + (s.totalOrders || 0), 0),
+        totalReturnsCount: suppliersWithStats.reduce((sum, s) => sum + (s.totalReturnsCount || 0), 0),
+        averageReturnRate: total > 0 ? (suppliersWithStats.reduce((sum, s) => sum + parseFloat(s.returnRate || 0), 0) / total).toFixed(2) : 0,
+        totalCreditAmount: suppliersWithStats.reduce((sum, s) => sum + (s.totalCreditAmount || 0), 0),
+        totalDebitAmount: suppliersWithStats.reduce((sum, s) => sum + (s.totalDebitAmount || 0), 0),
+        netBalance: suppliersWithStats.reduce((sum, s) => sum + (s.netBalance || 0), 0),
+        suppliersWithQarzaAccount: suppliersWithStats.filter(s => s.hasQarzaAccount).length,
+        topSupplier: topSupplier ? { name: topSupplier.name, amount: topSupplier.totalPurchases } : null
+    };
 
     return {
         data: suppliersWithStats,
@@ -3104,11 +3224,7 @@ export const getSupplierReport = async (filters = {}) => {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        summary: {
-            totalSuppliers: total,
-            totalPurchases: suppliersWithStats.reduce((sum, s) => sum + s.totalPurchases, 0),
-            totalDue: suppliersWithStats.reduce((sum, s) => sum + s.totalDue, 0)
-        }
+        summary
     };
 };
 

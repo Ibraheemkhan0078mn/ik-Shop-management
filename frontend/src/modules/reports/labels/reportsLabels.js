@@ -114,6 +114,7 @@ export const reportsLabels = {
     totalSuppliers: "Total Suppliers",
     totalBills: "Total Bills",
     supplierDetails: "Supplier Details",
+    lastPurchase: "Last Purchase",
     
     // Expense Report
     expenseReport: "Expense Report",
@@ -388,6 +389,7 @@ export const reportsLabels = {
     totalSuppliers: "کل سپلائرز",
     totalBills: "کل بلز",
     supplierDetails: "سپلائر کی تفصیلات",
+    lastPurchase: "آخری خریداری",
     
     // Expense Report
     expenseReport: "اخراجات رپورٹ",
@@ -662,6 +664,7 @@ export const reportsLabels = {
     totalSuppliers: "کل سپلائرز / Total Suppliers",
     totalBills: "کل بلز / Total Bills",
     supplierDetails: "سپلائر کی تفصیلات / Supplier Details",
+    lastPurchase: "آخری خریداری / Last Purchase",
     
     // Expense Report
     expenseReport: "اخراجات رپورٹ / Expense Report",
