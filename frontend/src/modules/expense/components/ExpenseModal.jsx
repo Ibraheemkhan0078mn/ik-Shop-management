@@ -8,7 +8,7 @@ import { getExpenseLabels } from "../labels/expenseLabels.js";
 import { useCreateExpense, useUpdateExpense, useExpenseCategories } from "../services/expense.service.js";
 
 const today = () => new Date().toISOString().split("T")[0];
-const emptyForm = () => ({ amount: "", category: "general", date: today(), notes: "" });
+const emptyForm = (categories = []) => ({ amount: "", category: categories[0]?.name || "", date: today(), notes: "" });
 
 // ─── atoms ────────────────────────────────────────────────────────────────────
 const Label = ({ children }) => (
@@ -54,18 +54,24 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
     const [updateExpense, { isLoading: isUpdating }] = useUpdateExpense();
     const isSubmitting = isCreating || isUpdating;
 
-    const [form, setForm] = useState(emptyForm());
+    const [form, setForm] = useState(emptyForm(categories));
     const update = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
     useEffect(() => {
         if (!isUpdate || !expense) return;
         setForm({
             amount:   expense.amount   ?? "",
-            category: expense.category ?? "general",
-            date:     expense.date ? new Date(expense.date).toISOString().split("T")[0] : today(),
+            category: expense.expenseCategory ?? expense.category ?? (categories[0]?.name || ""),
+            date:     expense.transactionDate ? new Date(expense.transactionDate).toISOString().split("T")[0] : (expense.date ? new Date(expense.date).toISOString().split("T")[0] : today()),
             notes:    expense.notes    ?? "",
         });
-    }, [expense, isUpdate]);
+    }, [expense, isUpdate, categories]);
+
+    useEffect(() => {
+        if (!isUpdate && categories.length > 0 && !form.category) {
+            setForm(p => ({ ...p, category: categories[0]?.name || "" }));
+        }
+    }, [categories, isUpdate, form.category]);
 
     const handleSubmit = async () => {
         if (!form.amount || Number(form.amount) <= 0) return showError("Enter valid amount");
@@ -132,7 +138,6 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
                         <Field>
                             <Label>{labels.category}</Label>
                             <Sel value={form.category} onChange={e => update("category", e.target.value)}>
-                                <option value="general">{language === "en" ? "General" : "عام"}</option>
                                 {categories.map((c, i) => (
                                     <option key={c._id ?? i} value={c.name}>{c.name}</option>
                                 ))}

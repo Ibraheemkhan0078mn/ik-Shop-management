@@ -124,7 +124,7 @@ function ExpenseRow({ expense: exp, onEdit, onDelete }) {
 
             <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-                    {new Date(exp.date).toLocaleDateString()}
+                    {exp.transactionDate ? new Date(exp.transactionDate).toLocaleDateString() : '—'}
                 </div>
             </td>
 
@@ -132,7 +132,7 @@ function ExpenseRow({ expense: exp, onEdit, onDelete }) {
                 <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-primary" />
                     <span className="text-xs font-semibold uppercase tracking-tight text-ink">
-                        {exp.category || "General"}
+                        {exp.expenseCategory || "—"}
                     </span>
                 </div>
             </td>
