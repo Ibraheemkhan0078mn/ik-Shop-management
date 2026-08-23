@@ -1,25 +1,3 @@
-import {
-    getOrderModel,
-    getHoldOrderModel,
-    getProductModel,
-    getBatchModel,
-    getPurchaseModel,
-    getSupplierModel,
-    getExpenseModel,
-    getExpenseCategoryModel,
-    getWastageModel,
-    getPurchaseReturnModel,
-    getQarzaAccountModel,
-    getQarzaPaymentModel,
-    getActivityLogModel,
-    getCategoryModel,
-    getProductReturnModel,
-    getCustomerModel,
-    getStaffModel,
-    getStaffSalaryPaymentModel,
-    getStaffSaleBillModel,
-    getStaffAttendanceModel,
-} from "./reports.crud.js";
 import { findDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // Service function imports
@@ -3075,6 +3053,9 @@ export const getSupplierReport = async (filters = {}) => {
     
     let total = initialTotal;
 
+    // Fetch ALL suppliers for KPI calculations (without pagination)
+    const allSuppliers = await findSupplierService(matchQuery);
+
     // Get all purchases, returns, and qarza data to calculate supplier statistics
     const [allPurchases, allPurchaseReturns, allQarzaAccounts, allQarzaPayments] = await Promise.all([
         findPurchaseService(purchaseFilter),
@@ -3083,7 +3064,7 @@ export const getSupplierReport = async (filters = {}) => {
         findQarzaPaymentService({})
     ]);
 
-    // Calculate statistics for each supplier
+    // Calculate statistics for each supplier (paginated data for table)
     const suppliersWithStats = data.map(supplier => {
         const supplierId = supplier._id.toString();
         const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
@@ -3197,25 +3178,63 @@ export const getSupplierReport = async (filters = {}) => {
         supplier.rank = skip + index + 1;
     });
 
-    // Calculate summary statistics
-    const topSupplier = suppliersWithStats.length > 0 
-        ? suppliersWithStats.reduce((max, s) => (s.totalPurchases || 0) > (max.totalPurchases || 0) ? s : max, suppliersWithStats[0])
-        : null;
+    // Calculate statistics for ALL suppliers (for KPI summary)
+    const allSuppliersWithStats = allSuppliers.map(supplier => {
+        const supplierId = supplier._id.toString();
+        const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
+        const supplierReturns = allPurchaseReturns.filter(r => r.supplier?.toString() === supplierId);
+        
+        const qarzaAccount = allQarzaAccounts.find(qa => qa._id.toString() === supplier.qarzaAccountId?.toString());
+        const qarzaPayments = qarzaAccount 
+            ? allQarzaPayments.filter(qp => qp.qarzaAccountId?.toString() === qarzaAccount._id.toString())
+            : [];
+
+        const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+        const totalPaid = supplierPurchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+        const totalDue = totalPurchases - totalPaid;
+        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+        const totalOrders = supplierPurchases.length;
+        const totalReturnsCount = supplierReturns.length;
+        const returnRate = totalOrders > 0 ? ((totalReturnsCount / totalOrders) * 100).toFixed(2) : 0;
+        
+        const totalCreditAmount = qarzaPayments.reduce((sum, qp) => sum + (qp.creditAmount || 0), 0);
+        const totalDebitAmount = qarzaPayments.reduce((sum, qp) => sum + (qp.debitAmount || 0), 0);
+        const netBalance = totalCreditAmount - totalDebitAmount;
+
+        return {
+            totalPurchases,
+            totalPaid,
+            totalDue,
+            totalReturns,
+            totalOrders,
+            totalReturnsCount,
+            returnRate,
+            totalCreditAmount,
+            totalDebitAmount,
+            netBalance,
+            hasQarzaAccount: !!qarzaAccount
+        };
+    });
+
+    // Calculate summary statistics from ALL suppliers
+    const topSupplierIndex = allSuppliersWithStats.length > 0 
+        ? allSuppliersWithStats.reduce((maxIdx, s, idx, arr) => s.totalPurchases > arr[maxIdx].totalPurchases ? idx : maxIdx, 0)
+        : -1;
 
     const summary = {
         totalSuppliers: total,
-        totalPurchases: suppliersWithStats.reduce((sum, s) => sum + (s.totalPurchases || 0), 0),
-        totalPaid: suppliersWithStats.reduce((sum, s) => sum + (s.totalPaid || 0), 0),
-        totalDue: suppliersWithStats.reduce((sum, s) => sum + (s.totalDue || 0), 0),
-        totalReturns: suppliersWithStats.reduce((sum, s) => sum + (s.totalReturns || 0), 0),
-        totalOrders: suppliersWithStats.reduce((sum, s) => sum + (s.totalOrders || 0), 0),
-        totalReturnsCount: suppliersWithStats.reduce((sum, s) => sum + (s.totalReturnsCount || 0), 0),
-        averageReturnRate: total > 0 ? (suppliersWithStats.reduce((sum, s) => sum + parseFloat(s.returnRate || 0), 0) / total).toFixed(2) : 0,
-        totalCreditAmount: suppliersWithStats.reduce((sum, s) => sum + (s.totalCreditAmount || 0), 0),
-        totalDebitAmount: suppliersWithStats.reduce((sum, s) => sum + (s.totalDebitAmount || 0), 0),
-        netBalance: suppliersWithStats.reduce((sum, s) => sum + (s.netBalance || 0), 0),
-        suppliersWithQarzaAccount: suppliersWithStats.filter(s => s.hasQarzaAccount).length,
-        topSupplier: topSupplier ? { name: topSupplier.name, amount: topSupplier.totalPurchases } : null
+        totalPurchases: allSuppliersWithStats.reduce((sum, s) => sum + s.totalPurchases, 0),
+        totalPaid: allSuppliersWithStats.reduce((sum, s) => sum + s.totalPaid, 0),
+        totalDue: allSuppliersWithStats.reduce((sum, s) => sum + s.totalDue, 0),
+        totalReturns: allSuppliersWithStats.reduce((sum, s) => sum + s.totalReturns, 0),
+        totalOrders: allSuppliersWithStats.reduce((sum, s) => sum + s.totalOrders, 0),
+        totalReturnsCount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalReturnsCount, 0),
+        averageReturnRate: total > 0 ? (allSuppliersWithStats.reduce((sum, s) => sum + parseFloat(s.returnRate || 0), 0) / total).toFixed(2) : 0,
+        totalCreditAmount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalCreditAmount, 0),
+        totalDebitAmount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalDebitAmount, 0),
+        netBalance: allSuppliersWithStats.reduce((sum, s) => sum + s.netBalance, 0),
+        suppliersWithQarzaAccount: allSuppliersWithStats.filter(s => s.hasQarzaAccount).length,
+        topSupplier: topSupplierIndex >= 0 ? { name: allSuppliers[topSupplierIndex]?.name || 'N/A', amount: allSuppliersWithStats[topSupplierIndex].totalPurchases } : null
     };
 
     return {
@@ -3266,9 +3285,12 @@ export const getStaffReport = async (filters = {}) => {
 
     // Fetch staff using service functions
     const [data, total] = await Promise.all([
-        findStaffService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        findStaffService(matchQuery, { sort: { createdAt: -1 }, skip, limit }),
         countStaffService(matchQuery)
     ]);
+
+    // Fetch ALL staff for KPI calculations (without pagination)
+    const allStaff = await findStaffService(matchQuery);
 
     const staffWithStats = await Promise.all(
         data.map(async (staff) => {
@@ -3327,12 +3349,31 @@ export const getStaffReport = async (filters = {}) => {
                 }
             });
 
+            // Calculate expected salary based on salary type
+            let expectedSalary = 0;
+            if (staff.salaryType === 'fixed') {
+                expectedSalary = staff.monthlySalary || 0;
+            } else if (staff.salaryType === 'daily') {
+                // For daily wage, calculate based on present days
+                let presentDays = 0;
+                attendanceRecords.forEach(record => {
+                    const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
+                    if (staffAttendance && (staffAttendance.status === 'present' || staffAttendance.status === 'late')) {
+                        presentDays++;
+                    }
+                });
+                expectedSalary = (staff.dailyRate || 0) * presentDays;
+            }
+
+            // Calculate remaining salary
+            const remainingSalary = expectedSalary - totalPaid;
+
             // Calculate net payable
             const monthlySalary = staff.salaryType === 'fixed' ? (staff.monthlySalary || 0) : 0;
             const netPayable = monthlySalary - totalPaid - deductions + advance;
 
             return {
-                ...staff.toObject(),
+                ...staff,
                 totalOrders,
                 totalSales,
                 retailSales,
@@ -3340,7 +3381,9 @@ export const getStaffReport = async (filters = {}) => {
                 totalPresentDays,
                 totalAbsentDays,
                 totalWorkingHours,
+                expectedSalary,
                 salaryPaid: totalPaid,
+                remainingSalary,
                 advance,
                 deductions,
                 netPayable,
@@ -3349,10 +3392,94 @@ export const getStaffReport = async (filters = {}) => {
         })
     );
 
-    // Calculate summary totals
-    const grandTotalSales = staffWithStats.reduce((sum, staff) => sum + staff.totalSales, 0);
-    const grandTotalOrders = staffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
-    const grandTotalSalaryPaid = staffWithStats.reduce((sum, staff) => sum + staff.salaryPaid, 0);
+    // Calculate statistics for ALL staff (for KPI summary)
+    const allStaffWithStats = await Promise.all(
+        allStaff.map(async (staff) => {
+            const salaryPayments = await findStaffSalaryPaymentService({ 
+                staffId: staff._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            });
+            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
+            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
+
+            const orderFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
+                ...orderTypeFilter,
+                'staffId': staff._id
+            };
+            
+            const orders = await findOrderService(orderFilter);
+            const totalOrders = orders.length;
+            const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+            const attendanceFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            
+            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
+            let totalPresentDays = 0;
+            let totalAbsentDays = 0;
+            let totalWorkingHours = 0;
+
+            attendanceRecords.forEach(record => {
+                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
+                if (staffAttendance) {
+                    if (staffAttendance.status === 'present') {
+                        totalPresentDays++;
+                    } else if (staffAttendance.status === 'absent') {
+                        totalAbsentDays++;
+                    }
+                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
+                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
+                    }
+                }
+            });
+
+            return {
+                totalSales,
+                totalOrders,
+                totalPaid,
+                advance,
+                totalPresentDays,
+                totalAbsentDays,
+                totalWorkingHours
+            };
+        })
+    );
+
+    // Calculate summary totals from ALL staff
+    const grandTotalSales = allStaffWithStats.reduce((sum, staff) => sum + staff.totalSales, 0);
+    const grandTotalOrders = allStaffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
+    const grandTotalSalaryPaid = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPaid, 0);
+    const totalAdvances = allStaffWithStats.reduce((sum, staff) => sum + staff.advance, 0);
+    const totalWorkingHours = allStaffWithStats.reduce((sum, staff) => sum + staff.totalWorkingHours, 0);
+    const totalPresentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPresentDays, 0);
+    const totalAbsentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalAbsentDays, 0);
+    
+    // Calculate average salary
+    const averageSalary = total > 0 ? grandTotalSalaryPaid / total : 0;
+    
+    // Calculate average attendance percentage
+    const totalDaysPossible = totalPresentDays + totalAbsentDays;
+    const avgAttendancePercent = totalDaysPossible > 0 ? (totalPresentDays / totalDaysPossible) * 100 : 0;
+    
+    // Calculate average working hours per staff
+    const avgWorkingHours = total > 0 ? totalWorkingHours / total : 0;
+    
+    // Find top performer (highest sales) from ALL staff
+    const topPerformerIndex = allStaffWithStats.length > 0 
+        ? allStaffWithStats.reduce((maxIdx, s, idx, arr) => s.totalSales > arr[maxIdx].totalSales ? idx : maxIdx, 0)
+        : -1;
+    const topPerformer = topPerformerIndex >= 0 ? allStaff[topPerformerIndex] : null;
+    
+    // Find highest attendance from ALL staff
+    const highestAttendance = allStaffWithStats.length > 0 
+        ? Math.max(...allStaffWithStats.map(s => {
+            const days = s.totalPresentDays + s.totalAbsentDays;
+            return days > 0 ? (s.totalPresentDays / days) * 100 : 0;
+        }))
+        : 0;
 
     // Calculate performance rank based on total sales
     const rankedStaff = [...staffWithStats].sort((a, b) => b.totalSales - a.totalSales);
@@ -3366,17 +3493,202 @@ export const getStaffReport = async (filters = {}) => {
     );
 
     return {
-        data: finalData,
+        data: {
+            staffMetrics: finalData,
+            details: {
+                totalStaff: total
+            },
+            summary: {
+                totalSalariesPaid: grandTotalSalaryPaid,
+                averageSalary,
+                totalAdvances,
+                totalWorkingHours,
+                avgAttendancePercent,
+                totalPresentDays,
+                totalAbsentDays,
+                topPerformer: topPerformer ? (topPerformer.name || topPerformer.fullName || 'N/A') : 'N/A',
+                avgWorkingHours,
+                highestAttendance
+            }
+        },
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        summary: {
-            totalStaff: total,
-            grandTotalSales,
-            grandTotalOrders,
-            grandTotalSalaryPaid,
-        },
+    };
+};
+
+// Staff KPI Report (for summary cards only - no pagination)
+export const getStaffKPIReport = async (filters = {}) => {
+    const { 
+        role, 
+        status, 
+        fromDate,
+        toDate,
+        staffId,
+        orderType 
+    } = filters;
+
+    const matchQuery = {};
+    if (role) matchQuery.role = role;
+    if (status) matchQuery.status = status;
+    if (staffId) matchQuery._id = staffId;
+
+    // Build date filter for orders and attendance
+    let dateFilter = {};
+    if (fromDate && toDate) {
+        const startDate = new Date(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
+    }
+
+    // Build order type filter
+    let orderTypeFilter = {};
+    if (orderType && orderType !== 'both') {
+        orderTypeFilter = { orderType: orderType };
+    }
+
+    // Fetch ALL staff for KPI calculations
+    const allStaff = await findStaffService(matchQuery);
+    const total = allStaff.length;
+
+    // Calculate statistics for ALL staff
+    const allStaffWithStats = await Promise.all(
+        allStaff.map(async (staff) => {
+            const salaryPayments = await findStaffSalaryPaymentService({ 
+                staffId: staff._id,
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            });
+            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
+            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
+
+            // Calculate expected salary based on salary type
+            let expectedSalary = 0;
+            if (staff.salaryType === 'fixed') {
+                expectedSalary = staff.monthlySalary || 0;
+            } else if (staff.salaryType === 'daily') {
+                // For daily wage, calculate based on present days
+                const attendanceFilter = {
+                    ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+                };
+                const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
+                let presentDays = 0;
+                attendanceRecords.forEach(record => {
+                    const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
+                    if (staffAttendance && (staffAttendance.status === 'present' || staffAttendance.status === 'late')) {
+                        presentDays++;
+                    }
+                });
+                expectedSalary = (staff.dailyRate || 0) * presentDays;
+            }
+
+            const orderFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
+                ...orderTypeFilter,
+                'staffId': staff._id
+            };
+            
+            const orders = await findOrderService(orderFilter);
+            const totalOrders = orders.length;
+            const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+            const attendanceFilter = {
+                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
+            };
+            
+            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
+            let totalPresentDays = 0;
+            let totalAbsentDays = 0;
+            let totalWorkingHours = 0;
+
+            attendanceRecords.forEach(record => {
+                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
+                if (staffAttendance) {
+                    if (staffAttendance.status === 'present') {
+                        totalPresentDays++;
+                    } else if (staffAttendance.status === 'absent') {
+                        totalAbsentDays++;
+                    }
+                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
+                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
+                    }
+                }
+            });
+
+            return {
+                totalSales,
+                totalOrders,
+                totalPaid,
+                advance,
+                expectedSalary,
+                totalPresentDays,
+                totalAbsentDays,
+                totalWorkingHours
+            };
+        })
+    );
+
+    // Calculate summary totals from ALL staff
+    const grandTotalSales = allStaffWithStats.reduce((sum, staff) => sum + staff.totalSales, 0);
+    const grandTotalOrders = allStaffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
+    const grandTotalSalaryPaid = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPaid, 0);
+    const totalExpectedSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.expectedSalary, 0);
+    const totalAdvances = allStaffWithStats.reduce((sum, staff) => sum + staff.advance, 0);
+    const totalWorkingHours = allStaffWithStats.reduce((sum, staff) => sum + staff.totalWorkingHours, 0);
+    const totalPresentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPresentDays, 0);
+    const totalAbsentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalAbsentDays, 0);
+    
+    // Calculate remaining salary
+    const remainingSalary = totalExpectedSalary - grandTotalSalaryPaid;
+    
+    // Calculate average salary
+    const averageSalary = total > 0 ? grandTotalSalaryPaid / total : 0;
+    
+    // Calculate average attendance percentage
+    const totalDaysPossible = totalPresentDays + totalAbsentDays;
+    const avgAttendancePercent = totalDaysPossible > 0 ? (totalPresentDays / totalDaysPossible) * 100 : 0;
+    
+    // Calculate average working hours per staff
+    const avgWorkingHours = total > 0 ? totalWorkingHours / total : 0;
+    
+    // Find top performer (highest sales) from ALL staff
+    const topPerformerIndex = allStaffWithStats.length > 0 
+        ? allStaffWithStats.reduce((maxIdx, s, idx, arr) => s.totalSales > arr[maxIdx].totalSales ? idx : maxIdx, 0)
+        : -1;
+    const topPerformer = topPerformerIndex >= 0 ? allStaff[topPerformerIndex] : null;
+    
+    // Find highest attendance from ALL staff
+    const highestAttendance = allStaffWithStats.length > 0 
+        ? Math.max(...allStaffWithStats.map(s => {
+            const days = s.totalPresentDays + s.totalAbsentDays;
+            return days > 0 ? (s.totalPresentDays / days) * 100 : 0;
+        }))
+        : 0;
+
+    return {
+        data: {
+            details: {
+                totalStaff: total
+            },
+            summary: {
+                totalStaff: total,
+                totalExpectedSalary,
+                totalSalariesPaid: grandTotalSalaryPaid,
+                remainingSalary,
+                totalAdvances,
+                topPerformer: topPerformer ? (topPerformer.name || topPerformer.fullName || 'N/A') : 'N/A',
+                averageSalary,
+                totalWorkingHours,
+                avgAttendancePercent,
+                totalPresentDays,
+                totalAbsentDays,
+                avgWorkingHours,
+                highestAttendance
+            }
+        }
     };
 };
 
