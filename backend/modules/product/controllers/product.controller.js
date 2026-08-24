@@ -3,7 +3,7 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getProducts, getPaginationProduct, getProductById,
-    createProduct, updateProduct, deleteProduct, deleteProductWithBatches,
+    createProduct, updateProduct, deleteProduct, deleteProductWithBatches, checkProductCodeAvailability,
 } from "../services/product.service.js";
 import {
     recalculateProductStock, recalculateAllStock,
@@ -30,9 +30,8 @@ export const getPaginationProductData = asyncHandler(async (req, res) => {
 
 export const checkProductCode = asyncHandler(async (req, res) => {
     const { productCode } = req.params;
-    const product = await getProducts({ productCode });
-    const exists = product && product.length > 0;
-    res.status(200).json({ success: true, exists, productCode });
+    const available = await checkProductCodeAvailability(productCode, req.query.excludeId);
+    res.status(200).json({ success: true, available, exists: !available, productCode });
 });
 
 export const getProductDataById = asyncHandler(async (req, res, next) => {

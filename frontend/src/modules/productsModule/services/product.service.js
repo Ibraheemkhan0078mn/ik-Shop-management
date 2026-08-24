@@ -82,7 +82,10 @@ export const productApi = baseApi.injectEndpoints({
 
         // Check if product code exists
         checkProductCode: build.query({
-            query: (productCode) => ({ url: `/products/check-code/${productCode}` }),
+            query: ({ productCode, excludeId } = {}) => ({
+                url: `/products/check-code/${encodeURIComponent(productCode)}`,
+                params: excludeId ? { excludeId } : undefined,
+            }),
         }),
 
         // Get stock history for a product
@@ -105,4 +108,5 @@ export const {
     useRecalculateProductStockMutation: useRecalculateProductStock,
     useRecalculateAllStockMutation: useRecalculateAllStock,
     useGetStockHistoryQuery: useStockHistory,
+    useLazyCheckProductCodeQuery,
 } = productApi;

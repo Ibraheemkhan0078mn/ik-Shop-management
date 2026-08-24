@@ -1,7 +1,7 @@
 // src/components/ProductCRUDModal.jsx
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Scan, Plus, AlertCircle, Check, X } from "lucide-react";
-import { useCreateProduct, useUpdateProduct, useProduct } from "../services/product.service";
+import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock } from "lucide-react";
+import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery } from "../services/product.service";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
 import Scanner from "../../../shared/components/Scanner.jsx";
@@ -57,6 +57,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const isCreate = mode === "create";
   const [createProduct, { isLoading: isCreating }] = useCreateProduct();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProduct();
+  const [checkProductCode] = useLazyCheckProductCodeQuery();
   const isSaving = isCreating || isUpdating;
 
   const UNITS = useMemo(() => [
@@ -77,6 +78,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [imagePreview, setImagePreview] = useState(null);
   const [showMore, setShowMore] = useState(false);
   const [showTax, setShowTax] = useState(false);
+  const [isProductCodeLocked, setIsProductCodeLocked] = useState(true);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
@@ -96,6 +98,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         subCategoryName: productData.subCategoryName || "",
       });
       setShowTax(productData.taxPercent > 0);
+      setIsProductCodeLocked(true);
       setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
     }
   }, [isCreate, productData]);
@@ -107,6 +110,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       setErrors({});
       setBanner(null);
       setShowMore(false);
+      setIsProductCodeLocked(true);
     }
   }, [isCreate, open]);
 
@@ -123,8 +127,42 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     }
   }, [productError, catError]);
 
+  useEffect(() => {
+    const productCode = form.productCode?.trim();
+    if (!productCode) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await checkProductCode({ productCode, excludeId: productData?._id }).unwrap();
+        if (!result.available) {
+          setErrors((prev) => ({ ...prev, productCode: "Product code already exists" }));
+        } else {
+          setErrors((prev) => prev.productCode ? { ...prev, productCode: undefined } : prev);
+        }
+      } catch {
+        setErrors((prev) => ({ ...prev, productCode: "Unable to verify product code" }));
+      }
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [form.productCode, productData?._id, checkProductCode]);
+
   const updateField = useCallback((name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      if (name === "taxType") {
+        return { ...prev, taxType: value, taxPercent: 0 };
+      }
+      if (name === "discountLimitType") {
+        return { ...prev, discountLimitType: value, maxDiscountPercent: 0 };
+      }
+      if (name === "taxPercent" && prev.taxType === "percentage") {
+        return { ...prev, [name]: Math.min(100, Math.max(0, Number(value) || 0)) };
+      }
+      if (name === "maxDiscountPercent" && prev.discountLimitType === "percentage") {
+        return { ...prev, [name]: Math.min(100, Math.max(0, Number(value) || 0)) };
+      }
+      return { ...prev, [name]: value };
+    });
     setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
     
     // Reset subcategory when category changes
@@ -195,6 +233,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     // Required inside "more options" only
     if (showMore) {
       if (!form.brandName?.trim()) newErrors.brandName = labels.brandNameRequired;
+      if (form.productCode?.trim() && errors.productCode) newErrors.productCode = errors.productCode;
       if (!form.countFormat) newErrors.countFormat = labels.countFormatRequired || "Counting type is required";
       const priceFields = ["defaultCostPrice", "defaultSalePrice"];
       priceFields.forEach((f) => {
@@ -214,7 +253,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     if (count > 0) {
       // Auto-expand if errors are in optional section
       const optionalKeys = ["brandName", "description", "countFormat", "defaultCostPrice",
-        "defaultSalePrice", "minStockLevel", "maxStockLevel", "maxDiscountPercent", "discountLimitType"];
+        "defaultSalePrice", "minStockLevel", "maxStockLevel", "maxDiscountPercent", "discountLimitType", "productCode"];
       if (optionalKeys.some((k) => newErrors[k])) setShowMore(true);
       setBanner(labels.fixErrors.replace('{count}', count));
       return false;
@@ -382,6 +421,12 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 onChange={updateField}
                 error={errors.productCode}
                 placeholder="e.g., PROD-001"
+                disabled={isProductCodeLocked}
+                action={{
+                  label: isProductCodeLocked ? "Unlock" : "Lock",
+                  icon: isProductCodeLocked ? Unlock : Lock,
+                  onClick: () => setIsProductCodeLocked((locked) => !locked),
+                }}
               />
 
               {/* Category */}
@@ -528,6 +573,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                       error={errors.maxDiscountPercent}
                       type="number"
                       placeholder="e.g., 10"
+                      max={form.discountLimitType === "percentage" ? 100 : undefined}
                     />
                     <SelectField
                       label={labels.discountLimitType || "Discount Limit Type"}
@@ -564,6 +610,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                       onChange={updateField}
                       type="number"
                       placeholder="0"
+                      max={form.taxType === "percentage" ? 100 : undefined}
                     />
                     <SelectField
                       label={labels.taxType}
@@ -614,7 +661,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
 // ─── Sub Components ────────────────────────────────────────────────────
 
-function Field({ label, name, value, onChange, error, required, type = "text", placeholder, rows, action }) {
+function Field({ label, name, value, onChange, error, required, type = "text", placeholder, rows, action, max, disabled }) {
   const base = `w-full rounded-lg border px-3 py-2 text-sm bg-[var(--app-bg)] text-[var(--ink)] placeholder:text-[var(--muted)] outline-none transition-colors`;
   const state = error
     ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
@@ -635,10 +682,10 @@ function Field({ label, name, value, onChange, error, required, type = "text", p
         <textarea rows={rows || 3} className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
           onChange={(e) => onChange(name, e.target.value)} />
       ) : type === "number" ? (
-        <input type="number" min={0} step="any" className={`${base} ${state}`} value={value ?? 0} placeholder={placeholder}
+        <input type="number" min={0} max={max} step="any" className={`${base} ${state}`} value={value ?? 0} placeholder={placeholder}
           onChange={(e) => onChange(name, e.target.valueAsNumber ?? 0)} onWheel={e => e.target.blur()} />
       ) : (
-        <input type="text" className={`${base} ${state}`} value={value || ""} placeholder={placeholder}
+        <input type="text" disabled={disabled} className={`${base} ${state} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`} value={value || ""} placeholder={placeholder}
           onChange={(e) => onChange(name, e.target.value)} />
       )}
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

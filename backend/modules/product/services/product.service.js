@@ -10,6 +10,7 @@ import {
 import { findBatchService, countBatchService, deleteManyBatchService } from "../../productPurchases/services/batch.crud.js";
 import { filterEmptyValues } from "../../../common/services/filterEmptyFromObject.js";
 import { deleteProductImage } from "./productImage.service.js";
+import { getNextSequence } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 
 // ───────────────────────────────────────────────────────────────────
 // Helpers
@@ -62,6 +63,17 @@ const findConflictingUnique = async (id, { hotKeySku, productCode, barcode }) =>
     const query = { _id: { $ne: id }, $or: or };
     const existing = await findOneProductService(query);
     return existing || null;
+};
+
+const createNextProductCode = async () => {
+    let attempts = 0;
+    while (attempts < 100) {
+        const sequence = await getNextSequence({ sequenceName: "productCode" });
+        const productCode = `PROD-${String(sequence).padStart(5, "0")}`;
+        if (!(await findConflictingUnique(null, { productCode }))) return productCode;
+        attempts += 1;
+    }
+    throw new Error("Unable to generate a unique Product Code");
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -204,7 +216,8 @@ const getProductById = async (id) => {
 
 const createProduct = async (productData) => {
     const cleaned = filterEmptyValues(productData);
-    const { hotKeySku, productCode } = cleaned;
+    const { hotKeySku } = cleaned;
+    const productCode = cleaned.productCode || await createNextProductCode();
 
     // SKU is the primary uniqueness key; productCode is secondary when present.
     const conflict = await findConflictingUnique(null, { hotKeySku, productCode });
@@ -212,7 +225,7 @@ const createProduct = async (productData) => {
         throw new Error("Product with this SKU or Product Code already exists");
     }
 
-    return await createProductService(cleaned);
+    return await createProductService({ ...cleaned, productCode });
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -286,6 +299,15 @@ const deleteProductWithBatches = async (id) => {
     };
 };
 
+const checkProductCodeAvailability = async (productCode, excludeId = null) => {
+    if (!productCode?.trim()) return false;
+    const conflict = await findOneProductService({
+        productCode: productCode.trim(),
+        ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    });
+    return !conflict;
+};
+
 export {
     getProducts,
     getPaginationProduct,
@@ -294,4 +316,5 @@ export {
     updateProduct,
     deleteProduct,
     deleteProductWithBatches,
+    checkProductCodeAvailability,
 };

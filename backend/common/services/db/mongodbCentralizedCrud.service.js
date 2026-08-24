@@ -7,6 +7,23 @@ const resolveModel = ({ model, modelName }) => {
   throw new Error(`Model "${modelName}" not registered`);
 };
 
+export const getNextSequence = async ({ sequenceName }) => {
+  if (!sequenceName) throw new Error("sequenceName required");
+  if (!mongoose.connection.db) throw new Error("MongoDB connection is not ready");
+
+  const result = await mongoose.connection.db.collection("sequences").findOneAndUpdate(
+    { _id: sequenceName },
+    {
+      $inc: { value: 1 },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  const sequence = result?.value || result;
+  return sequence.value;
+};
+
 export const createDoc = async ({ model, modelName, data }) => {
   const Model = resolveModel({ model, modelName });
   // Add sync timestamps for create operations
