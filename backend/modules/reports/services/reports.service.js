@@ -62,6 +62,7 @@ import {
     findProductReturnService,
     countProductReturnService,
 } from '../../productReturn/services/productReturn.crud.js';
+import { getLocalPurchaseReturnModel } from '../../../configs/connect.db.js';
 
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
@@ -2754,130 +2755,123 @@ export const getSaleReturnReport = async (filters = {}) => {
 };
 
 // Inventory Report
-export const getInventoryReport = async (filters = {}) => {
-    const { tag, category, search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
+const getInventoryContext = async (filters = {}) => {
+    const { fromDate, toDate, categoryId, category, productName, search, productCode, tag } = filters;
+    const productFilter = {};
+    const nameSearch = productName || search;
 
-    const matchQuery = {};
-
-    // Tag filter
-    if (tag) {
-        matchQuery.tags = tag;
-    }
-
-    // Category filter
-    if (category) {
-        matchQuery.category = category;
-    }
-
-    // Search filter
-    if (search) {
-        matchQuery.$or = [
-            { name: { $regex: search, $options: "i" } },
-            { sku: { $regex: search, $options: "i" } }
+    if (categoryId || category) productFilter.categoryName = categoryId || category;
+    if (nameSearch || productCode) {
+        productFilter.$or = [
+            ...(nameSearch ? [{ name: { $regex: nameSearch, $options: "i" } }] : []),
+            ...(productCode ? [
+                { productCode: { $regex: productCode, $options: "i" } },
+                { hotKeySku: { $regex: productCode, $options: "i" } },
+                { barcode: { $regex: productCode, $options: "i" } },
+            ] : []),
         ];
     }
+    if (tag) productFilter.tags = tag;
 
-    const skip = (page - 1) * limit;
-
-    // Fetch data using service functions
-    const [data, total] = await Promise.all([
-        findProductService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        countProductService(matchQuery)
+    const dateFilter = buildDateFilter(fromDate, toDate);
+    const transactionDate = dateFilter.createdAt;
+    const withActive = (filter) => ({ ...filter, isDeleted: { $ne: true } });
+    const [products, batches, purchases, orders, purchaseReturns, orderReturns, wastages] = await Promise.all([
+        findProductService(withActive(productFilter)),
+        findBatchService({ isActive: true }),
+        findPurchaseService(withActive(transactionDate ? { date: transactionDate } : {})),
+        findOrderService(withActive({ ...(transactionDate ? { createdAt: transactionDate } : {}), status: "completed" })),
+        findDocs({ model: getLocalPurchaseReturnModel(), filter: withActive(transactionDate ? { returnDate: transactionDate } : {}) }),
+        findProductReturnService(withActive(transactionDate ? { returnDate: transactionDate } : {})),
+        findWastageService(withActive(transactionDate ? { wastageDate: transactionDate } : {})),
     ]);
+    return { products, batches, purchases, orders, purchaseReturns, orderReturns, wastages };
+};
 
-    // Get all batches to calculate stock levels
-    const allBatches = await findBatchService({ isActive: true });
+const sumMatchingItems = (documents, productId, getProductId, getQuantity, getRevenue) => documents.reduce((result, document) => {
+    const items = (document.items || []).filter(item => getProductId(item)?.toString() === productId);
+    if (!items.length) return result;
+    result.quantity += items.reduce((sum, item) => sum + Number(getQuantity(item) || 0), 0);
+    result.frequency += 1;
+    if (getRevenue) result.revenue += items.reduce((sum, item) => sum + Number(getRevenue(item) || 0), 0);
+    return result;
+}, { quantity: 0, frequency: 0, revenue: 0 });
 
-    // Get all orders to calculate sales
-    const allOrders = await findOrderService({ status: "completed" });
-
-    // Get all purchases to calculate purchases
-    const allPurchases = await findPurchaseService({});
-
-    // Get all returns to calculate returns
-    const allReturns = await findProductReturnService({});
-
-    // Calculate statistics for each product
-    const productsWithStats = await Promise.all(
-        data.map(async (product) => {
-            const productId = product._id.toString();
-
-            // Calculate total stock from batches
-            const productBatches = allBatches.filter(b => b.product?.toString() === productId);
-            const totalStock = productBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-
-            // Calculate total purchased
-            const productPurchases = allPurchases.filter(p => 
-                p.items?.some(i => i.product?.toString() === productId)
-            );
-            const totalPurchased = productPurchases.reduce((sum, p) => {
-                const item = p.items?.find(i => i.product?.toString() === productId);
-                return sum + (item ? item.quantity : 0);
-            }, 0);
-
-            // Calculate total sold
-            const productOrders = allOrders.filter(o => 
-                o.items?.some(i => i.product?.toString() === productId)
-            );
-            const totalSold = productOrders.reduce((sum, o) => {
-                const item = o.items?.find(i => i.product?.toString() === productId);
-                return sum + (item ? item.quantity : 0);
-            }, 0);
-
-            // Calculate total returned
-            const productReturns = allReturns.filter(r => 
-                r.items?.some(i => i.product?.toString() === productId)
-            );
-            const totalReturned = productReturns.reduce((sum, r) => {
-                const item = r.items?.find(i => i.product?.toString() === productId);
-                return sum + (item ? item.quantity : 0);
-            }, 0);
-
-            return {
-                ...product.toObject(),
-                totalStock,
-                totalPurchased,
-                totalSold,
-                totalReturned
-            };
-        })
-    );
-
-    // Calculate tag counts
-    const tagCounts = {};
-    data.forEach(product => {
-        if (product.tags && Array.isArray(product.tags)) {
-            product.tags.forEach(tag => {
-                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            });
-        }
-    });
-
-    // Sort based on sortBy parameter
-    const sortField = sortBy === 'stock' ? 'totalStock' : 
-                      sortBy === 'sales' ? 'totalSold' : 
-                      sortBy === 'returns' ? 'totalReturned' : 'name';
-    const sortDirection = sortOrder === 'asc' ? 1 : -1;
-    
-    productsWithStats.sort((a, b) => {
-        if (sortField === 'name') {
-            return a.name.localeCompare(b.name) * sortDirection;
-        }
-        return (a[sortField] - b[sortField]) * sortDirection;
-    });
+const getInventoryProductStats = (product, context) => {
+    const productId = product._id.toString();
+    const purchase = sumMatchingItems(context.purchases, productId, item => item.product, item => item.quantity);
+    const purchaseReturn = sumMatchingItems(context.purchaseReturns, productId, item => item.product, item => item.quantity);
+    const order = sumMatchingItems(context.orders, productId, item => item.product, item => item.quantity,
+        item => item.itemTotal ?? item.lineTotal ?? (Number(item.quantity || 0) * Number(item.unitPrice || 0)));
+    const orderReturn = sumMatchingItems(context.orderReturns, productId, item => item.productId, item => item.quantity);
+    const wastage = context.wastages.reduce((result, document) => {
+        const items = (document.items || []).filter(item => item.product?.toString() === productId);
+        if (!items.length) return result;
+        result.quantity += items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        result.frequency += 1;
+        return result;
+    }, { quantity: 0, frequency: 0 });
+    const currentStock = context.batches
+        .filter(batch => batch.product?.toString() === productId)
+        .reduce((sum, batch) => sum + Number(batch.quantity || 0), 0);
 
     return {
-        data: productsWithStats,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        summary: {
-            totalProducts: total,
-            tagCounts,
-        }
+        ...product,
+        currentStock,
+        totalPurchased: purchase.quantity,
+        purchaseFrequency: purchase.frequency,
+        purchaseReturnQuantity: purchaseReturn.quantity,
+        purchaseReturnFrequency: purchaseReturn.frequency,
+        totalSold: order.quantity,
+        orderQuantity: order.quantity,
+        orderFrequency: order.frequency,
+        orderReturnQuantity: orderReturn.quantity,
+        orderReturnFrequency: orderReturn.frequency,
+        totalWasted: wastage.quantity,
+        wastageQuantity: wastage.quantity,
+        wastageFrequency: wastage.frequency,
+        totalRevenue: order.revenue,
     };
 };
+
+export const getInventoryReportData = async (filters = {}) => {
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 20);
+    const context = await getInventoryContext(filters);
+    const stats = context.products.map(product => getInventoryProductStats(product, context));
+    const sortBy = filters.sortBy || "name";
+    const sortField = { highest_sales: "totalRevenue", lowest_sales: "totalRevenue", most_returned: "orderReturnQuantity", stock_level: "currentStock" }[sortBy];
+    stats.sort((a, b) => sortField
+        ? (Number(a[sortField] || 0) - Number(b[sortField] || 0)) * (sortBy === "lowest_sales" ? 1 : -1)
+        : String(a.name || "").localeCompare(String(b.name || "")));
+    const start = (page - 1) * limit;
+    return { data: stats.slice(start, start + limit), total: stats.length, page, limit, totalPages: Math.max(1, Math.ceil(stats.length / limit)) };
+};
+
+export const getInventoryKPIReport = async (filters = {}) => {
+    const context = await getInventoryContext(filters);
+    const stats = context.products.map(product => getInventoryProductStats(product, context));
+    return {
+        totalProducts: stats.length,
+        currentStock: stats.reduce((sum, item) => sum + item.currentStock, 0),
+        purchasedQuantity: stats.reduce((sum, item) => sum + item.totalPurchased, 0),
+        purchaseFrequency: stats.reduce((sum, item) => sum + item.purchaseFrequency, 0),
+        purchaseReturnQuantity: stats.reduce((sum, item) => sum + item.purchaseReturnQuantity, 0),
+        purchaseReturnFrequency: stats.reduce((sum, item) => sum + item.purchaseReturnFrequency, 0),
+        orderQuantity: stats.reduce((sum, item) => sum + item.orderQuantity, 0),
+        orderFrequency: stats.reduce((sum, item) => sum + item.orderFrequency, 0),
+        orderReturnQuantity: stats.reduce((sum, item) => sum + item.orderReturnQuantity, 0),
+        orderReturnFrequency: stats.reduce((sum, item) => sum + item.orderReturnFrequency, 0),
+        wastageQuantity: stats.reduce((sum, item) => sum + item.wastageQuantity, 0),
+        wastageFrequency: stats.reduce((sum, item) => sum + item.wastageFrequency, 0),
+        totalRevenue: stats.reduce((sum, item) => sum + item.totalRevenue, 0),
+    };
+};
+
+export const getInventoryReport = async (filters = {}) => ({
+    ...(await getInventoryReportData(filters)),
+    summary: await getInventoryKPIReport(filters),
+});
 
 // Product Wastage Report
 export const getProductWastageReport = async (filters = {}) => {

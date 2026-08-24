@@ -44,6 +44,14 @@ export const reportsApi = baseApi.injectEndpoints({
             providesTags: ["Reports"],
         }),
 
+        getInventoryKPIReport: builder.query({
+            query: (params) => ({
+                url: "/reports/inventory-kpi",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
+
         // Financial Report
         getFinancialReport: builder.query({
             query: (params) => ({
@@ -303,6 +311,7 @@ export const {
     useGetPurchaseReturnReportQuery,
     useGetSaleReturnReportQuery,
     useGetInventoryReportQuery,
+    useGetInventoryKPIReportQuery,
     useGetProductWastageReportQuery,
     useGetCustomerReportQuery,
     useGetCustomerReportKPIQuery,

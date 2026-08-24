@@ -13,7 +13,8 @@ import {
     getMainBusinessReport,
     getPurchaseReturnReport,
     getSaleReturnReport,
-    getInventoryReport,
+    getInventoryReportData as getInventoryReportRows,
+    getInventoryKPIReport,
     getProductWastageReport,
     getCustomerReport,
     getCustomerReportKPI,
@@ -262,12 +263,22 @@ export const getSaleReturnReportData = asyncHandler(async (req, res, next) => {
 // Inventory Report
 export const getInventoryReportData = asyncHandler(async (req, res, next) => {
     const filters = req.query;
-    const report = await getInventoryReport(filters);
+    const report = await getInventoryReportRows(filters);
 
     res.status(200).json({
         success: true,
         message: "Inventory report retrieved successfully",
         ...report,
+    });
+});
+
+export const getInventoryKPIReportData = asyncHandler(async (req, res, next) => {
+    const report = await getInventoryKPIReport(req.query);
+
+    res.status(200).json({
+        success: true,
+        message: "Inventory KPI report retrieved successfully",
+        data: report,
     });
 });
 
