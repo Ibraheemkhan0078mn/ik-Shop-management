@@ -6,6 +6,7 @@ import {
     countOrderService,
     findByIdOrderService,
 } from '../../pos/services/order.crud.js';
+import { calculateOrderPaymentStatus } from '../../pos/services/orderPayment.service.js';
 import {
     findPurchaseService,
     countPurchaseService,
@@ -213,17 +214,6 @@ export const getSalesReport = async (filters = {}) => {
     }
 
     // Payment status filter
-    if (paymentStatus && paymentStatus !== "all") {
-        if (paymentStatus === "paid") {
-            matchQuery.paymentStatus = "full";
-        } else if (paymentStatus === "unpaid") {
-            matchQuery.paymentStatus = { $in: ["partial", "unpaid"] };
-            matchQuery.paidAmount = { $eq: 0 };
-        } else if (paymentStatus === "partial") {
-            matchQuery.paymentStatus = "partial";
-        }
-    }
-
     // Search filter
     if (search) {
         matchQuery.$or = [
@@ -232,32 +222,41 @@ export const getSalesReport = async (filters = {}) => {
         ];
     }
 
-    const skip = (page - 1) * limit;
+    const allOrders = await findOrderService(matchQuery, { sort: { createdAt: -1 } });
+    const ordersWithStats = await Promise.all(allOrders.map(async (order) => {
+        const payment = await calculateOrderPaymentStatus(order._id, order.totalAmount || 0);
+        return {
+            ...(order.toObject ? order.toObject() : order),
+            itemsCount: order.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || 0,
+            paidAmount: payment.totalPaid,
+            dueAmount: payment.remainingAmount,
+            paymentStatus: payment.paymentStatus,
+            totalCash: payment.totalCash,
+            totalCredit: payment.totalCredit,
+        };
+    }));
 
-    // Sort configuration
-    const sortField = sortBy === "amount" ? "totalAmount" : 
-                      sortBy === "date" ? "createdAt" : 
-                      sortBy === "items" ? "itemsCount" : "createdAt";
+    const filteredOrders = paymentStatus && paymentStatus !== "all"
+        ? ordersWithStats.filter(order => paymentStatus === "unpaid"
+            ? order.paymentStatus === "pending"
+            : order.paymentStatus === (paymentStatus === "paid" ? "full" : "partial"))
+        : ordersWithStats;
+
+    // Sort after payment status and item totals are available.
+    const sortField = sortBy === "amount" ? "totalAmount" : sortBy === "items" ? "itemsCount" : "createdAt";
     const sortDirection = sortOrder === "asc" ? 1 : -1;
-
-    // Get orders using service function
-    const orders = await findOrderService(matchQuery, {
-        sort: { [sortField]: sortDirection },
-        skip,
-        limit
+    filteredOrders.sort((left, right) => {
+        const leftValue = sortField === "createdAt" ? new Date(left.createdAt).getTime() : Number(left[sortField] || 0);
+        const rightValue = sortField === "createdAt" ? new Date(right.createdAt).getTime() : Number(right[sortField] || 0);
+        return (leftValue - rightValue) * sortDirection;
     });
 
-    // Calculate items count and add fields
-    const ordersWithStats = orders.map(order => ({
-        ...order,
-        itemsCount: order.items?.length || 0,
-        paidAmount: order.paidAmount || 0,
-        dueAmount: (order.totalAmount || 0) - (order.paidAmount || 0)
-    }));
+    const skip = (page - 1) * limit;
+    const orders = filteredOrders.slice(skip, skip + limit);
 
     // Populate products for each order using service
     const populatedOrders = await Promise.all(
-        ordersWithStats.map(async (order) => {
+        orders.map(async (order) => {
             const populatedOrder = await findByIdOrderService(order._id, { populate: ['items.product'] });
             return {
                 ...order,
@@ -266,15 +265,17 @@ export const getSalesReport = async (filters = {}) => {
         })
     );
 
-    // Get total count using service
-    const total = await countOrderService(matchQuery);
+    const total = filteredOrders.length;
 
-    // Calculate KPIs from the data
-    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    const totalPaid = orders.reduce((sum, order) => sum + (order.paidAmount || 0), 0);
-    const totalDue = orders.reduce((sum, order) => sum + ((order.totalAmount || 0) - (order.paidAmount || 0)), 0);
-    const totalItems = orders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
-    const totalOrders = orders.length;
+    // KPIs describe every order matching the active filters, not only the current page.
+    const totalSales = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalPaid = filteredOrders.reduce((sum, order) => sum + (order.paidAmount || 0), 0);
+    const totalDue = filteredOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+    const totalItems = filteredOrders.reduce((sum, order) => sum + (order.itemsCount || 0), 0);
+    const totalOrders = filteredOrders.length;
+    const totalCash = filteredOrders.reduce((sum, order) => sum + (order.totalCash || 0), 0);
+    const totalCredit = filteredOrders.reduce((sum, order) => sum + (order.totalCredit || 0), 0);
+    const totalCustomers = new Set(filteredOrders.map(order => order.customerId?.toString() || order.customerName).filter(Boolean)).size;
 
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
 
@@ -296,7 +297,12 @@ export const getSalesReport = async (filters = {}) => {
             totalPaid,
             totalDue,
             averageOrderValue,
-            totalItems
+            totalItems,
+            totalCash,
+            totalCredit,
+            totalCustomers,
+            totalPendingOrders: filteredOrders.filter(order => order.paymentStatus === "pending").length,
+            totalPartialOrders: filteredOrders.filter(order => order.paymentStatus === "partial").length,
         }
     };
 };

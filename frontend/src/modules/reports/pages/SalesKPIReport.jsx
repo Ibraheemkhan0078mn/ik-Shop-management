@@ -23,6 +23,8 @@ export default function SalesKPIReport() {
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [selectedSale, setSelectedSale] = useState(null);
+    const [page, setPage] = useState(1);
+    const limit = 20;
 
     // Calculate date range based on period
     const getDatesFromPeriod = (periodValue) => {
@@ -42,6 +44,13 @@ export default function SalesKPIReport() {
                     from: monthStart.toISOString().split('T')[0],
                     to: monthEnd.toISOString().split('T')[0]
                 };
+            case "week": {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                return { from: weekStart.toISOString().split('T')[0], to: weekEnd.toISOString().split('T')[0] };
+            }
             case "3month":
                 const threeMonthStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
                 const threeMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -67,8 +76,8 @@ export default function SalesKPIReport() {
     const filters = useMemo(() => ({ 
         fromDate: period === "custom" ? fromDate : dates.from, 
         toDate: period === "custom" ? toDate : dates.to, 
-        customerType, customerId, paymentStatus, sortBy, sortOrder, search 
-    }), [period, fromDate, toDate, dates.from, dates.to, customerType, customerId, paymentStatus, sortBy, sortOrder, search]);
+        customerType, customerId, paymentStatus, sortBy, sortOrder, search, page, limit
+    }), [period, fromDate, toDate, dates.from, dates.to, customerType, customerId, paymentStatus, sortBy, sortOrder, search, page]);
 
     const { data, isLoading, isFetching, error, refetch } = useGetSalesReportQuery(filters);
     const { data: customersData } = useCustomers();
@@ -81,8 +90,12 @@ export default function SalesKPIReport() {
 
     const summary = data?.summary || {};
     const sales = data?.data || [];
+    const total = data?.total || 0;
+    const totalPages = Math.max(1, data?.totalPages || Math.ceil(total / limit));
 
     const showLoader = isLoading || isFetching;
+
+    useEffect(() => setPage(1), [period, fromDate, toDate, customerType, customerId, paymentStatus, sortBy, sortOrder, search]);
 
     const formatDate = (dateStr) => {
         if (!dateStr) return "—";
@@ -102,6 +115,7 @@ export default function SalesKPIReport() {
         switch (status) {
             case 'full': return labels.paid;
             case 'partial': return labels.partial;
+            case 'pending': return labels.unpaid;
             case 'unpaid': return labels.unpaid;
             default: return status;
         }
@@ -149,6 +163,7 @@ export default function SalesKPIReport() {
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="today">{labels.today}</option>
+                            <option value="week">{labels.thisWeek}</option>
                             <option value="month">{labels.thisMonth}</option>
                             <option value="3month">{labels.last3Months}</option>
                             <option value="year">{labels.thisYear}</option>
@@ -260,7 +275,7 @@ export default function SalesKPIReport() {
             ) : (
                 <div>
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div className="card p-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
@@ -344,6 +359,56 @@ export default function SalesKPIReport() {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="card p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <CreditCard size={20} className="text-blue-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Cash Collected</p>
+                                    <p className="font-semibold text-[var(--ink)]">Rs {Number(summary.totalCash || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="card p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                                    <AlertCircle size={20} className="text-orange-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Credit Collected</p>
+                                    <p className="font-semibold text-[var(--ink)]">Rs {Number(summary.totalCredit || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="card p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                    <Package size={20} className="text-slate-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">Customers</p>
+                                    <p className="font-semibold text-[var(--ink)]">{summary.totalCustomers || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card p-4 mb-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold text-[var(--ink)]">Payment collection</h2>
+                                <p className="text-xs text-[var(--muted)]">Collected amount by payment source for the selected filters</p>
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-sm">
+                                <span className="text-[var(--ink)]"><strong className="text-blue-600">Cash</strong> Rs {Number(summary.totalCash || 0).toLocaleString()}</span>
+                                <span className="text-[var(--ink)]"><strong className="text-orange-600">Credit</strong> Rs {Number(summary.totalCredit || 0).toLocaleString()}</span>
+                                <span className="text-[var(--ink)]"><strong>{summary.totalPendingOrders || 0}</strong> unpaid invoices</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Sales Table */}
@@ -406,6 +471,14 @@ export default function SalesKPIReport() {
                             </table>
                         </div>
                     </div>
+                    <div className="px-4 py-3 flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface-muted)]">
+                        <span className="text-xs text-[var(--muted)]">{total ? `${(page - 1) * limit + 1}-${Math.min(page * limit, total)} of ${total} invoices` : "0 invoices"}</span>
+                        <div className="flex items-center gap-2">
+                            <button disabled={page === 1} onClick={() => setPage(value => value - 1)} className="px-3 py-1.5 text-xs rounded border border-[var(--border)] disabled:opacity-40">Previous</button>
+                            <span className="text-xs text-[var(--muted)]">Page {page} of {totalPages}</span>
+                            <button disabled={page === totalPages} onClick={() => setPage(value => value + 1)} className="px-3 py-1.5 text-xs rounded border border-[var(--border)] disabled:opacity-40">Next</button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -462,8 +535,8 @@ export default function SalesKPIReport() {
                                                     <tr key={index}>
                                                         <td className="px-3 py-2 text-[var(--ink)]">{item.product?.name || "—"}</td>
                                                         <td className="px-3 py-2 text-right text-[var(--ink)]">{item.quantity || 0}</td>
-                                                        <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {(item.price || 0).toLocaleString()}</td>
-                                                        <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {((item.quantity || 0) * (item.price || 0)).toLocaleString()}</td>
+                                                        <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {Number(item.unitPrice || 0).toLocaleString()}</td>
+                                                        <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {Number(item.itemTotal ?? item.lineTotal ?? 0).toLocaleString()}</td>
                                                     </tr>
                                                 ))
                                             ) : (
