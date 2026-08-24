@@ -1,6 +1,6 @@
 import { getLocalExpensesModel, getLocalExpenseCategoryModel } from "../../../configs/connect.db.js";
 import { ApiError } from "../../../common/services/apiResponses.js";
-import { changeTrackDocsCreationFunc } from "../../../common/ikSync/changeTrackModelCreation.js";
+import { changeTrackDocsCreationFunc } from "../../../common/services/onlineSync/changeTrackModelCreation.js";
 import {
     expenseCreate as expenseCreateService,
     getExpenses as getExpensesService,

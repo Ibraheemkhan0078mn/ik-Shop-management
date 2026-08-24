@@ -32,7 +32,6 @@ import settingsSchema from "../modules/settings/models/settings.model.js";
 import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import appThemeSchema from "../modules/settings/models/appTheme.model.js";
 import transactionSchema from "../modules/transactions/models/transaction.model.js";
-import { startChangeStreamTracking } from "../common/services/onlineSync/changeStreamTracker.js";
 
 let OnlineUserModel = null;
 let OnlineUserRoleModel = null;

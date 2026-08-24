@@ -20,7 +20,7 @@ import {
     getStaffCommissionOrders,
     getPercentageBreakdown
 } from "../services/staff.service.js";
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
 // Create Staff
 export const createStaffData = asyncHandler(async (req, res, next) => {

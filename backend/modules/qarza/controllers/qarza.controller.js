@@ -4,8 +4,8 @@ import { findByIdQarzaAccountService as getQarzaAccountByIdService, updateQarzaA
 import { recalculateCustomerBalance } from "../services/recalculateCustomerBalance.service.js";
 import { recalculateSupplierBalance } from "../services/recalculateSupplierBalance.service.js";
 import { recalculateGeneralAccountBalance } from "../services/recalculateGeneralAccountBalance.service.js";
-import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { changeTrackDocsCreationFunc } from '../../../common/services/onlineSync/changeTrackModelCreation.js'
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 import {
     qarzaAccountCreate as qarzaAccountCreateService,
     getAllQarzaAccounts as getAllQarzaAccountsService,

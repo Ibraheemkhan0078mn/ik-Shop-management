@@ -13,7 +13,7 @@ import {
 } from "../services/supplier.service.js";
 import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
 import { calculateSupplierPurchaseKPIs } from "../services/supplierPurchaseKPI.service.js";
 import { calculateSupplierPurchaseReturnKPIs } from "../services/supplierPurchaseReturnKPI.service.js";

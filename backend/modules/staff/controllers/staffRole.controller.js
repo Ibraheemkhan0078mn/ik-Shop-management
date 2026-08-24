@@ -1,4 +1,4 @@
-import { changeTrackDocsCreationFunc } from '../../../common/ikSync/changeTrackModelCreation.js'
+import { changeTrackDocsCreationFunc } from '../../../common/services/onlineSync/changeTrackModelCreation.js'
 import {
     createStaffRole as createStaffRoleService,
     getAllStaffRoles as getAllStaffRolesService,

@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { changeTrackDocsCreationFunc } from "../../../common/ikSync/changeTrackModelCreation.js";
+import { changeTrackDocsCreationFunc } from "../../../common/services/onlineSync/changeTrackModelCreation.js";
 import {
     createUserRoleService,
     findUserRoleService,

@@ -1,4 +1,4 @@
-import { getLocalImageChangeTrackModel } from "../../configs/connect.db.js";
+import { getLocalImageChangeTrackModel } from "../../../configs/connect.db.js";
 
 export async function imageChangeTrackDocsCreation(
     operation,

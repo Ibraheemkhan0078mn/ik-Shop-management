@@ -14,7 +14,7 @@ import {
     updateSubCategory, deleteSubCategory, getSubCategoriesById, getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
 import { getLocalProductModel } from "../../../configs/connect.db.js";
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
 // ─── Product Controllers ───────────────────────────────────────────────────────
 

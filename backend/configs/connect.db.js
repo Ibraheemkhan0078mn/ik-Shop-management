@@ -42,34 +42,146 @@ import transactionSchema from "../modules/transactions/models/transaction.model.
 
 
 
-// Function to add change tracking middleware to a schema
-const addChangeTrackingMiddleware = (schema, modelName) => {
-    // Skip tracking for ChangeTrack model itself to avoid infinite loops
-    if (modelName === "ChangeTracks") return;
+let LocalConnectionInstance = null;
 
-    schema.post('save', function (doc) {
-        const operation = this.isNew ? 'create' : 'update';
-        console.log(`[changeTrack] ${operation} triggered for ${modelName}, _id: ${doc._id}`);
-        console.log(`[changeTrack] isNew: ${this.isNew}, doc._id: ${doc._id}`);
-        
-        // Non-blocking - don't await, let it run in background
-        changeTrackDocsCreationFunc(operation, modelName, doc._id.toString(), null)
-            .then(() => console.log(`[changeTrack] Successfully tracked ${operation} for ${modelName}`))
-            .catch(error => {
-                console.error(`[changeTrack] Error tracking ${modelName} save:`, error);
-                console.error(`[changeTrack] Error details:`, error.message, error.stack);
-            });
+const internallyManagedModels = new Set([
+    "ChangeTracks",
+    "ActivityLogs",
+    "ImageChangeTracks",
+]);
+
+const queryTrackingOperations = [
+    "updateOne",
+    "updateMany",
+    "findOneAndUpdate",
+    "replaceOne",
+    "findOneAndReplace",
+    "deleteOne",
+    "deleteMany",
+    "findOneAndDelete",
+    "findOneAndRemove",
+];
+
+const isLocalModel = (model) => model?.db === LocalConnectionInstance;
+
+const normalizeDocumentId = (documentId) => {
+    if (!documentId) return null;
+    return documentId.toString();
+};
+
+const trackDocument = (operation, modelName, documentId) => {
+    const normalizedId = normalizeDocumentId(documentId);
+    if (!normalizedId) return;
+
+    changeTrackDocsCreationFunc(operation, modelName, normalizedId, null)
+        .then(() => console.log(`[changeTrack] Successfully tracked ${operation} for ${modelName} (${normalizedId})`))
+        .catch(error => {
+            console.error(`[changeTrack] Error tracking ${operation} for ${modelName}:`, error);
+        });
+};
+
+const findMatchingDocumentIds = async (model, filter, many = false) => {
+    if (!model || !filter) return [];
+
+    const query = model.find(filter).select({ _id: 1 });
+    if (!many) query.limit(1);
+
+    const documents = await query.lean();
+    return documents.map(doc => doc._id.toString());
+};
+
+// Mongoose middleware only sees writes made through this connection's models.
+const addChangeTrackingMiddleware = (schema, modelName) => {
+    if (internallyManagedModels.has(modelName)) return;
+
+    schema.pre('save', function (next) {
+        if (!isLocalModel(this.constructor)) return next();
+        this.$locals = this.$locals || {};
+        this.$locals.changeTrackOperation = this.isNew ? 'create' : 'update';
+        next();
     });
 
-    schema.post('deleteOne', function (doc) {
-        console.log(`[changeTrack] delete triggered for ${modelName}, _id: ${doc._id}`);
-        // Non-blocking - don't await, let it run in background
-        changeTrackDocsCreationFunc('delete', modelName, doc._id.toString(), null)
-            .then(() => console.log(`[changeTrack] Successfully tracked delete for ${modelName}`))
-            .catch(error => {
-                console.error(`[changeTrack] Error tracking ${modelName} delete:`, error);
-                console.error(`[changeTrack] Error details:`, error.message, error.stack);
+    schema.post('save', function (doc) {
+        if (!isLocalModel(this.constructor)) return;
+        trackDocument(this.$locals?.changeTrackOperation || 'update', modelName, doc?._id);
+    });
+
+    schema.post('insertMany', function (documents) {
+        if (!isLocalModel(this)) return;
+        for (const document of documents || []) {
+            trackDocument('create', modelName, document?._id);
+        }
+    });
+
+    schema.pre(queryTrackingOperations, async function () {
+        if (!isLocalModel(this.model)) return;
+
+        const operation = this.op;
+        const isMany = operation === 'updateMany' || operation === 'deleteMany';
+        this.$locals = this.$locals || {};
+        this.$locals.changeTrackDocumentIds = await findMatchingDocumentIds(
+            this.model,
+            this.getFilter(),
+            isMany,
+        );
+    });
+
+    schema.post(queryTrackingOperations, function (result) {
+        if (!isLocalModel(this.model)) return;
+
+        const operation = this.op === 'deleteOne' || this.op === 'deleteMany' ||
+            this.op === 'findOneAndDelete' || this.op === 'findOneAndRemove'
+            ? 'delete'
+            : 'update';
+        const documentIds = new Set(this.$locals?.changeTrackDocumentIds || []);
+        const resultId = normalizeDocumentId(result?._id);
+        if (resultId) documentIds.add(resultId);
+
+        for (const documentId of documentIds) {
+            trackDocument(operation, modelName, documentId);
+        }
+    });
+
+    schema.pre('bulkWrite', async function (operations) {
+        if (!isLocalModel(this)) return;
+
+        const trackedOperations = [];
+        for (const operation of operations || []) {
+            const [operationName, operationData] = Object.entries(operation)[0] || [];
+            if (!operationName || !operationData) continue;
+
+            if (operationName === 'insertOne') {
+                trackedOperations.push({ operation: 'create', documentIds: [operationData.document?._id] });
+                continue;
+            }
+
+            const isDelete = operationName === 'deleteOne' || operationName === 'deleteMany';
+            const isMany = operationName === 'updateMany' || operationName === 'deleteMany';
+            const filter = operationData.filter;
+            const documentIds = await findMatchingDocumentIds(this, filter, isMany);
+
+            trackedOperations.push({
+                operation: isDelete ? 'delete' : 'update',
+                documentIds,
             });
+        }
+
+        this.$locals = this.$locals || {};
+        this.$locals.changeTrackBulkOperations = trackedOperations;
+    });
+
+    schema.post('bulkWrite', function (result) {
+        if (!isLocalModel(this)) return;
+
+        for (const trackedOperation of this.$locals?.changeTrackBulkOperations || []) {
+            for (const documentId of trackedOperation.documentIds) {
+                trackDocument(trackedOperation.operation, modelName, documentId);
+            }
+        }
+
+        for (const documentId of Object.values(result?.upsertedIds || {})) {
+            trackDocument('create', modelName, documentId);
+        }
     });
 };
 
@@ -116,6 +228,7 @@ export const connectDb = async () => {
         const LocalConnection = await mongoose
             .createConnection("mongodb://127.0.0.1:27017", { dbName: "IMS-NEW" })
             .asPromise();
+        LocalConnectionInstance = LocalConnection;
 
         console.log("The db is connected.")
         if (LocalConnection.host) {

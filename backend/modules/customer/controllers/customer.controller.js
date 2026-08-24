@@ -13,7 +13,7 @@ import {
 import { calculateCustomerOrderKPIs } from "../services/customerOrderKPI.service.js";
 import { calculateCustomerOrderReturnKPIs } from "../services/customerOrderReturnKPI.service.js";
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
 
 const coerceCustomerBody = (body = {}) => {

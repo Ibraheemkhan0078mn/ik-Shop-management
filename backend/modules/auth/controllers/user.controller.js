@@ -11,7 +11,7 @@ import {
 } from "../services/user.service.js";
 import { findOneUserService, createUserService } from "../services/user.crud.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
-import { imageChangeTrackDocsCreation } from "../../../common/ikSync/imageChangeTrackModelCreation.js";
+import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
 export const getAllUsersController = asyncHandler(async (req, res, next) => {
     const users = await getAllUsers();
