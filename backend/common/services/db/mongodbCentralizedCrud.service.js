@@ -74,7 +74,8 @@ export const deleteDocs = async ({ model, modelName, filter, options = {} }) => 
   if (!hardDelete) {
     const updateData = {
       isDeleted: true,
-      deletedAt: new Date()
+      deletedAt: new Date(),
+      updateTimeForSync: new Date()
     };
 
     if (many) {

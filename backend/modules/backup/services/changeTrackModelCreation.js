@@ -4,76 +4,25 @@ import mongoose from "mongoose";
 import {
   getLocalActivityLogModel,
   getLocalChangeTrackModel,
-  getLocalUserModel,
-  getLocalUserRoleModel,
-  getLocalProductModel,
-  getLocalCategoryModel,
-  getLocalSubCategoryModel,
-  getLocalBrandModel,
-  getLocalBatchModel,
-  getLocalSupplierModel,
-  getLocalPurchaseModel,
-  getLocalPurchasePaymentModel,
-  getLocalOrderModel,
-  getLocalHoldOrderModel,
-  getLocalExpensesModel,
-  getLocalExpenseCategoryModel,
-  getLocalImageChangeTrackModel,
-  getLocalQarzaAccountModel,
-  getLocalQarzaPaymentModel,
-  getLocalWastageModel,
-  getLocalPurchaseReturnModel,
-  getLocalProductReturnModel,
-  getLocalCustomerModel,
-  getLocalStaffModel,
-  getLocalStaffRoleModel,
-  getLocalStaffSalaryPaymentModel,
-  getLocalStaffSaleBillModel,
-  getLocalStaffAttendanceModel,
-  getLocalSettingsModel,
-  getLocalPaymentMethodModel,
-  getLocalAppThemeModel,
-  getLocalTransactionModel,
+  getLocalDbInstance,
 } from "../../../configs/connect.db.js";
 import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 
-const localModelGetters = {
-  Users: () => getLocalUserModel(),
-  UserRoles: () => getLocalUserRoleModel(),
-  Products: () => getLocalProductModel(),
-  Categories: () => getLocalCategoryModel(),
-  SubCategories: () => getLocalSubCategoryModel(),
-  Brands: () => getLocalBrandModel(),
-  Batches: () => getLocalBatchModel(),
-  Suppliers: () => getLocalSupplierModel(),
-  Purchases: () => getLocalPurchaseModel(),
-  PurchasePayments: () => getLocalPurchasePaymentModel(),
-  Orders: () => getLocalOrderModel(),
-  HoldOrders: () => getLocalHoldOrderModel(),
-  Expenses: () => getLocalExpensesModel(),
-  ExpensesCategory: () => getLocalExpenseCategoryModel(),
-  ActivityLogs: () => getLocalActivityLogModel(),
-  ImageChangeTracks: () => getLocalImageChangeTrackModel(),
-  QarzaAccount: () => getLocalQarzaAccountModel(),
-  QarzaPayment: () => getLocalQarzaPaymentModel(),
-  Wastages: () => getLocalWastageModel(),
-  PurchaseReturn: () => getLocalPurchaseReturnModel(),
-  ProductReturn: () => getLocalProductReturnModel(),
-  Customers: () => getLocalCustomerModel(),
-  Staff: () => getLocalStaffModel(),
-  StaffRole: () => getLocalStaffRoleModel(),
-  StaffSalaryPayment: () => getLocalStaffSalaryPaymentModel(),
-  StaffSaleBill: () => getLocalStaffSaleBillModel(),
-  StaffAttendance: () => getLocalStaffAttendanceModel(),
-  Settings: () => getLocalSettingsModel(),
-  PaymentMethods: () => getLocalPaymentMethodModel(),
-  AppThemes: () => getLocalAppThemeModel(),
-  Transactions: () => getLocalTransactionModel(),
-};
+const ignoredModelNames = new Set([
+  "Users",
+  "UserRoles",
+  "ChangeTracks",
+  "ActivityLogs",
+  "ImageChangeTracks",
+]);
 
-const onlineModelNames = {
-  StaffRole: "StaffRoles",
-};
+function getOnlineModel(modelName, onlineDbInstance, localModel) {
+  if (onlineDbInstance.models[modelName]) return onlineDbInstance.models[modelName];
+
+  return Object.values(onlineDbInstance.models).find(
+    model => model.collection.name === localModel?.collection.name,
+  );
+}
 
 export async function liveUpload(operation, modelName, documentId) {
   const onlineDbInstance = getOnlineDbInstance();
@@ -81,13 +30,17 @@ export async function liveUpload(operation, modelName, documentId) {
     return false;
   }
 
-  const getLocalModel = localModelGetters[modelName];
-  const onlineModel = onlineDbInstance.models[onlineModelNames[modelName] || modelName];
-  if (!getLocalModel || !onlineModel) {
+  if (ignoredModelNames.has(modelName)) {
     return false;
   }
 
-  const localModel = getLocalModel();
+  const localDbInstance = getLocalDbInstance();
+  const localModel = localDbInstance?.models?.[modelName];
+  const onlineModel = getOnlineModel(modelName, onlineDbInstance, localModel);
+  if (!localModel || !onlineModel) {
+    return false;
+  }
+
   const localDocument = await localModel?.findById(documentId);
 
   if (operation === "delete") {
@@ -265,9 +218,9 @@ export async function changeTrackDocsCreationFunc(
     }
     // ────────────────────────────────────────────────────────────────────────
 
-    // liveUpload(operation, modelName, documentId).catch((syncErr) => {
-    //   console.log("Error while uploading live change to online DB: ", syncErr);
-    // });
+    liveUpload(operation, modelName, documentId).catch((syncErr) => {
+      console.log("Error while uploading live change to online DB: ", syncErr);
+    });
 
 
   } catch (error) {

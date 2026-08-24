@@ -44,6 +44,8 @@ import transactionSchema from "../modules/transactions/models/transaction.model.
 
 let LocalConnectionInstance = null;
 
+export const getLocalDbInstance = () => LocalConnectionInstance;
+
 const internallyManagedModels = new Set([
     "ChangeTracks",
     "ActivityLogs",
