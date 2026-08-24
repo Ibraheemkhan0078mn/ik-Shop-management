@@ -14,6 +14,10 @@ export async function permissionChangedDeletionFromLocal(modelArray, loggedInUse
         let userPermissions = loggedInUserData?.permissions;
 
         for (let eachModelCollection of modelArray) {
+            if (eachModelCollection.syncAlways) {
+                continue;
+            }
+
             // 2: When not admin, in local instead of his data on this _id, delete all the user from this local
             if (eachModelCollection.local.modelName === "user") {
                 await eachModelCollection?.local?.deleteMany({ _id: { $ne: loggedInUserData?._id } });

@@ -265,9 +265,9 @@ export async function changeTrackDocsCreationFunc(
     }
     // ────────────────────────────────────────────────────────────────────────
 
-    liveUpload(operation, modelName, documentId).catch((syncErr) => {
-      console.log("Error while uploading live change to online DB: ", syncErr);
-    });
+    // liveUpload(operation, modelName, documentId).catch((syncErr) => {
+    //   console.log("Error while uploading live change to online DB: ", syncErr);
+    // });
 
 
   } catch (error) {

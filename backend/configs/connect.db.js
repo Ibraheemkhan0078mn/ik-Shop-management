@@ -94,11 +94,11 @@ const findMatchingDocumentIds = async (model, filter, many = false) => {
 const addChangeTrackingMiddleware = (schema, modelName) => {
     if (internallyManagedModels.has(modelName)) return;
 
-    schema.pre('save', function (next) {
-        if (!isLocalModel(this.constructor)) return next();
+    schema.pre('save', async function () {
+        if (!isLocalModel(this.constructor)) return;
         this.$locals = this.$locals || {};
         this.$locals.changeTrackOperation = this.isNew ? 'create' : 'update';
-        next();
+        if (!this.isNew) this.updateTimeForSync = new Date();
     });
 
     schema.post('save', function (doc) {
@@ -124,6 +124,12 @@ const addChangeTrackingMiddleware = (schema, modelName) => {
             this.getFilter(),
             isMany,
         );
+
+        if (operation === 'updateOne' || operation === 'updateMany' ||
+            operation === 'findOneAndUpdate' || operation === 'replaceOne' ||
+            operation === 'findOneAndReplace') {
+            this.set({ updateTimeForSync: new Date() });
+        }
     });
 
     schema.post(queryTrackingOperations, function (result) {

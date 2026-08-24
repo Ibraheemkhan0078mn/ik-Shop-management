@@ -13,7 +13,8 @@ export async function downloadOnlineSync(modelsArray, downloadType = "required",
         if (!isPermitted(eachCollectionObject, loggedInUserData)) continue;
 
         const docs = await fetchAllowedDocs(eachCollectionObject, loggedInUserData);
-        await upsertToLocal(eachCollectionObject, docs);
+        const newerDocs = await filterDocsNewerThanLocal(eachCollectionObject, docs);
+        await upsertToLocal(eachCollectionObject, newerDocs);
       }
     } else {
       const allChangeTrackDocs = await onlineChangeTrackModel.find();
@@ -35,6 +36,7 @@ export async function downloadOnlineSync(modelsArray, downloadType = "required",
 
         let orgDocs = await eachCollectionObject.online.find({ _id: { $in: changedDocsIds } });
         orgDocs = filterDocsByAllowedClasses(eachCollectionObject, orgDocs, loggedInUserData);
+        orgDocs = await filterDocsNewerThanLocal(eachCollectionObject, orgDocs);
 
         const allowedIds = new Set(orgDocs.map((d) => d._id.toString()));
         const relevantChangeTrackDocs = filteredChangeTrackDocs.filter((doc) =>
@@ -130,6 +132,27 @@ async function upsertToLocal(eachCollectionObject, docs) {
   }));
 
   return eachCollectionObject.local.bulkWrite(operations);
+}
+
+async function filterDocsNewerThanLocal(eachCollectionObject, docs) {
+  if (!eachCollectionObject?.local || !docs?.length) return [];
+
+  const documentIds = docs.map(doc => doc._id);
+  const localDocs = await eachCollectionObject.local.find(
+    { _id: { $in: documentIds } },
+    { _id: 1, updateTimeForSync: 1 },
+  ).lean();
+  const localTimes = new Map(
+    localDocs.map(doc => [doc._id.toString(), new Date(doc.updateTimeForSync || 0).getTime()]),
+  );
+
+  return docs.filter(doc => {
+    const localTime = localTimes.get(doc._id.toString());
+    if (localTime === undefined) return true;
+
+    const onlineTime = new Date(doc.updateTimeForSync || 0).getTime();
+    return onlineTime > localTime;
+  });
 }
 
 function isBulkWriteComplete(bulkWriteResult, expectedCount) {

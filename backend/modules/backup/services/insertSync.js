@@ -42,7 +42,7 @@ async function classifyDocsForSync(eachModel, localDocs) {
     if (onlineUpdateTime === undefined) {
       // Not present online -> insert
       insertIds.push(localDoc._id);
-    } else if (localDoc.updateTimeForSync > onlineUpdateTime) {
+    } else if (new Date(localDoc.updateTimeForSync || 0).getTime() > new Date(onlineUpdateTime || 0).getTime()) {
       // Present online but local is newer -> update
       updateIds.push(localDoc._id);
     }
@@ -93,15 +93,12 @@ async function allInsertUpload(modelsArray) {
         const bulkWriteResult = await eachModel.online.bulkWrite(operations);
         if (isBulkWriteComplete(bulkWriteResult, operations.length)) {
           await localChangeTrackModel.deleteMany({
-            documentId: { $in: localDocs.map(doc => doc._id.toString()) },
+            documentId: { $in: [...insertIds, ...updateIds].map(id => id.toString()) },
             modelName: eachModel.local.modelName,
           });
         }
       } else {
-        await localChangeTrackModel.deleteMany({
-          documentId: { $in: localDocs.map(doc => doc._id.toString()) },
-          modelName: eachModel.local.modelName,
-        });
+        continue;
       }
 
       console.log(`All insert upload completed for model: ${eachModel.local.modelName}`);

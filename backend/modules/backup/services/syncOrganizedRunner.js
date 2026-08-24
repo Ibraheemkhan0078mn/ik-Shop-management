@@ -1,6 +1,5 @@
-import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel, getLocalProductModel, getLocalCategoryModel, getLocalSubCategoryModel, getLocalBatchModel, getLocalSupplierModel, getLocalPurchaseModel, getLocalPurchasePaymentModel, getLocalOrderModel, getLocalHoldOrderModel, getLocalWastageModel, getLocalPurchaseReturnModel, getLocalProductReturnModel, getLocalCustomerModel, getLocalStaffModel, getLocalStaffSalaryPaymentModel, getLocalStaffSaleBillModel, getLocalStaffAttendanceModel, getLocalSettingsModel, getLocalPaymentMethodModel, getLocalAppThemeModel, getLocalBrandModel, getLocalUserRoleModel, getLocalStaffRoleModel } from "../../../configs/connect.db.js"
-import { getOnlineActivityLogModel, getOnlineExpenseCategoryModel, getOnlineExpensesModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineUserModel, getOnlineProductModel, getOnlineCategoryModel, getOnlineSubCategoryModel, getOnlineBatchModel, getOnlineSupplierModel, getOnlinePurchaseModel, getOnlinePurchasePaymentModel, getOnlineOrderModel, getOnlineHoldOrderModel, getOnlineWastageModel, getOnlinePurchaseReturnModel, getOnlineProductReturnModel, getOnlineCustomerModel, getOnlineStaffModel, getOnlineStaffSalaryPaymentModel, getOnlineStaffSaleBillModel, getOnlineStaffAttendanceModel, getOnlineSettingsModel, getOnlinePaymentMethodModel, getOnlineAppThemeModel, getOnlineBrandModel, getOnlineUserRoleModel, getOnlineStaffRoleModel } from '../../../configs/onlineConnect.db.js'
-import { deleteOnlineSync } from "./deleteOnlineSync.js";
+import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel, getLocalProductModel, getLocalCategoryModel, getLocalSubCategoryModel, getLocalBatchModel, getLocalSupplierModel, getLocalPurchaseModel, getLocalPurchasePaymentModel, getLocalOrderModel, getLocalHoldOrderModel, getLocalWastageModel, getLocalPurchaseReturnModel, getLocalProductReturnModel, getLocalCustomerModel, getLocalStaffModel, getLocalStaffSalaryPaymentModel, getLocalStaffSaleBillModel, getLocalStaffAttendanceModel, getLocalSettingsModel, getLocalPaymentMethodModel, getLocalAppThemeModel, getLocalBrandModel, getLocalUserRoleModel, getLocalStaffRoleModel, getLocalTransactionModel } from "../../../configs/connect.db.js"
+import { getOnlineActivityLogModel, getOnlineExpenseCategoryModel, getOnlineExpensesModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineUserModel, getOnlineProductModel, getOnlineCategoryModel, getOnlineSubCategoryModel, getOnlineBatchModel, getOnlineSupplierModel, getOnlinePurchaseModel, getOnlinePurchasePaymentModel, getOnlineOrderModel, getOnlineHoldOrderModel, getOnlineWastageModel, getOnlinePurchaseReturnModel, getOnlineProductReturnModel, getOnlineCustomerModel, getOnlineStaffModel, getOnlineStaffSalaryPaymentModel, getOnlineStaffSaleBillModel, getOnlineStaffAttendanceModel, getOnlineSettingsModel, getOnlinePaymentMethodModel, getOnlineAppThemeModel, getOnlineBrandModel, getOnlineUserRoleModel, getOnlineStaffRoleModel, getOnlineTransactionModel } from '../../../configs/onlineConnect.db.js'
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
 import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
 import { imageDownloadSync } from "./imageDownloadSync.js";
@@ -49,7 +48,8 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
             { local: getLocalActivityLogModel(), online: getOnlineActivityLogModel(), permissionString: ["dashboard.view"] },
             { local: getLocalSettingsModel(), online: getOnlineSettingsModel(), permissionString: ["settings.view"] },
             { local: getLocalPaymentMethodModel(), online: getOnlinePaymentMethodModel(), permissionString: ["settings.paymentMethods"] },
-            { local: getLocalAppThemeModel(), online: getOnlineAppThemeModel(), permissionString: ["settings.theme"] }
+            { local: getLocalAppThemeModel(), online: getOnlineAppThemeModel(), permissionString: ["settings.theme"] },
+            { local: getLocalTransactionModel(), online: getOnlineTransactionModel(), permissionString: [], syncAlways: true }
         ];
 
 
@@ -67,6 +67,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         // IDEA: what if i filter the all the modesl here so the load is reduce on other utilities of it.
         if (loggedInUserData.role != "admin") {
             modelArray = modelArray.filter(mObject => {
+                if (mObject.syncAlways) return true;
                 // Check if user has any of the required permissions for this model
                 const hasPermission = mObject.permissionString.some(permission => 
                     loggedInUserData.permissions?.includes(permission)
@@ -77,7 +78,6 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
 
 
-        // await deleteOnlineSync(modelArray, loggedInUserData)  // do not remove this comment
         await onlineDocsUploadSyncInsert(modelArray, syncType, loggedInUserData)
         await onlineDocsUploadSyncUpdate(modelArray, syncType, loggedInUserData)
         await downloadOnlineSync(modelArray, syncType, loggedInUserData)

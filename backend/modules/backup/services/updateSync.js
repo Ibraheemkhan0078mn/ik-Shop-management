@@ -41,7 +41,7 @@ async function classifyDocsForSync(eachModel, localDocs) {
     if (onlineUpdateTime === undefined) {
       // Not present online -> insert
       insertIds.push(localDoc._id);
-    } else if (localDoc.updateTimeForSync > onlineUpdateTime) {
+    } else if (new Date(localDoc.updateTimeForSync || 0).getTime() > new Date(onlineUpdateTime || 0).getTime()) {
       // Present online but local is newer -> update
       updateIds.push(localDoc._id);
     }
@@ -90,15 +90,12 @@ async function allUpdateUpload(modelsArray) {
         const bulkWriteResult = await eachModel.online.bulkWrite(operations);
         if (isBulkWriteComplete(bulkWriteResult, operations.length)) {
           await localChangeTrackModel.deleteMany({
-            documentId: { $in: localDocs.map(doc => doc._id.toString()) },
+            documentId: { $in: [...insertIds, ...updateIds].map(id => id.toString()) },
             modelName: eachModel.local.modelName,
           });
         }
       } else {
-        await localChangeTrackModel.deleteMany({
-          documentId: { $in: localDocs.map(doc => doc._id.toString()) },
-          modelName: eachModel.local.modelName,
-        });
+        continue;
       }
 
       console.log(`All update upload completed for model: ${eachModel.local.modelName}`);
@@ -135,7 +132,14 @@ async function requiredUpdateUpload(modelsArray) {
       if (operations.length > 0) {
         const bulkWriteResult = await eachModel.online.bulkWrite(operations);
 
-        const changeTrackOperations = modelChangeTrackDocs.map(doc => ({
+        const syncedDocumentIds = new Set(
+          [...insertIds, ...updateIds].map(id => id.toString())
+        );
+        const syncedChangeTrackDocs = modelChangeTrackDocs.filter(doc =>
+          syncedDocumentIds.has(doc.documentId?.toString())
+        );
+
+        const changeTrackOperations = syncedChangeTrackDocs.map(doc => ({
           updateOne: {
             filter: { _id: doc._id },
             update: { $set: { ...doc.toObject(), updatedUsers: [deviceId] } },
@@ -149,10 +153,10 @@ async function requiredUpdateUpload(modelsArray) {
           isBulkWriteComplete(bulkWriteResult, operations.length) &&
           isBulkWriteComplete(changeTrackResult, changeTrackOperations.length)
         ) {
-          await localChangeTrackModel.deleteMany({ _id: { $in: modelChangeTrackDocs.map(doc => doc._id) } });
+          await localChangeTrackModel.deleteMany({ _id: { $in: syncedChangeTrackDocs.map(doc => doc._id) } });
         }
       } else {
-        await localChangeTrackModel.deleteMany({ _id: { $in: modelChangeTrackDocs.map(doc => doc._id) } });
+        continue;
       }
 
       console.log(`Required update upload completed for model: ${eachModel.local.modelName}`);
