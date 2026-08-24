@@ -185,8 +185,8 @@ export default function SalesKPIReport() {
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
                             <option value="all">{labels.allTypes}</option>
-                            <option value="walk-in">{labels.walkIn}</option>
-                            <option value="registered">{labels.registered}</option>
+                            <option value="walkin">{labels.walkIn}</option>
+                            <option value="regular">{labels.registered}</option>
                         </select>
                     </div>
                     <div>

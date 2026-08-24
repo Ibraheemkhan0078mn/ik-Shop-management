@@ -30,6 +30,11 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+        customerType: {
+            type: String,
+            enum: ["walkin", "regular"],
+            default: "walkin",
+        },
         isActive: {
             type: Boolean,
             default: true,

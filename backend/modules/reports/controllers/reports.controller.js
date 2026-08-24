@@ -16,6 +16,7 @@ import {
     getInventoryReport,
     getProductWastageReport,
     getCustomerReport,
+    getCustomerReportKPI,
     getStaffReport,
     getStaffKPIReport,
     getProfitLossReport,
@@ -122,6 +123,18 @@ export const getCustomerKPIReportData = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Customer KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+// Customer Report KPI (for Customer Report page)
+export const getCustomerReportKPIData = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const report = await getCustomerReportKPI(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Customer Report KPI retrieved successfully",
         data: report,
     });
 });

@@ -31,7 +31,7 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
     };
 
     const getCustomerTypeColor = (type) => {
-        return type === "registered" ? "bg-blue-100 text-blue-800 border-blue-300" : "bg-gray-100 text-gray-800 border-gray-300";
+        return type === "regular" ? "bg-blue-100 text-blue-800 border-blue-300" : "bg-gray-100 text-gray-800 border-gray-300";
     };
 
     return (
@@ -110,7 +110,7 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
                                         <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{customer.name}</td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getCustomerTypeColor(customer.customerType)}`}>
-                                                {customer.customerType || "walk-in"}
+                                                {customer.customerType || "walkin"}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right text-sm text-[var(--ink)]">{customer.totalOrders || 0}</td>

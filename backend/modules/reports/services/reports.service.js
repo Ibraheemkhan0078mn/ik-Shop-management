@@ -202,6 +202,7 @@ export const getSalesReport = async (filters = {}) => {
 
     // Customer type filter
     if (customerType && customerType !== "all") {
+        // Use frontend values directly (walkin, regular) as database now uses same values
         matchQuery.customerType = customerType;
     }
 
@@ -2938,7 +2939,7 @@ export const getProductWastageReport = async (filters = {}) => {
 
 // Customer Report
 export const getCustomerReport = async (filters = {}) => {
-    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20 } = filters;
+    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20, customerType } = filters;
 
     const matchQuery = {};
     if (search) {
@@ -2949,11 +2950,34 @@ export const getCustomerReport = async (filters = {}) => {
         ];
     }
 
+    if (customerType && customerType !== 'all') {
+        // Use frontend values directly (walkin, regular) as database now uses same values
+        // Handle missing customerType field - treat as walkin for backward compatibility
+        if (customerType === 'walkin') {
+            const typeCondition = [
+                { customerType: 'walkin' },
+                { customerType: { $exists: false } }
+            ];
+            if (matchQuery.$or) {
+                // Combine with existing $or (search)
+                matchQuery.$and = [
+                    { $or: matchQuery.$or },
+                    { $or: typeCondition }
+                ];
+                delete matchQuery.$or;
+            } else {
+                matchQuery.$or = typeCondition;
+            }
+        } else {
+            matchQuery.customerType = customerType;
+        }
+    }
+
     const skip = (page - 1) * limit;
 
     // Fetch data using service functions
     const [data, total] = await Promise.all([
-        findCustomerService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        findCustomerService(matchQuery, { sort: { createdAt: -1 }, skip, limit }),
         countCustomerService(matchQuery)
     ]);
 
@@ -2970,7 +2994,7 @@ export const getCustomerReport = async (filters = {}) => {
         const lastOrderDate = customerOrders.length > 0 ? customerOrders[0].createdAt : null;
 
         return {
-            ...customer.toObject(),
+            ...customer,
             totalOrders,
             totalSpent,
             lastOrderDate
@@ -3005,6 +3029,126 @@ export const getCustomerReport = async (filters = {}) => {
             totalCustomers: total,
             totalOrders: customersWithStats.reduce((sum, c) => sum + c.totalOrders, 0),
             totalSpent: customersWithStats.reduce((sum, c) => sum + c.totalSpent, 0)
+        }
+    };
+};
+
+// Customer Report KPI (for Customer Report page - full data without pagination)
+export const getCustomerReportKPI = async (filters = {}) => {
+    const { search, customerType, fromDate, toDate } = filters;
+
+    const matchQuery = {};
+    if (search) {
+        matchQuery.$or = [
+            { name: { $regex: search, $options: "i" } },
+            { phone: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } }
+        ];
+    }
+
+    if (customerType && customerType !== 'all') {
+        // Use frontend values directly (walkin, regular) as database now uses same values
+        // Handle missing customerType field - treat as walkin for backward compatibility
+        if (customerType === 'walkin') {
+            const typeCondition = [
+                { customerType: 'walkin' },
+                { customerType: { $exists: false } }
+            ];
+            if (matchQuery.$or) {
+                // Combine with existing $or (search)
+                matchQuery.$and = [
+                    { $or: matchQuery.$or },
+                    { $or: typeCondition }
+                ];
+                delete matchQuery.$or;
+            } else {
+                matchQuery.$or = typeCondition;
+            }
+        } else {
+            matchQuery.customerType = customerType;
+        }
+    }
+
+    // Build date filter for orders and new customers
+    let dateFilter = {};
+    if (fromDate && toDate) {
+        const startDate = new Date(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
+    }
+
+    // Fetch ALL customers for KPI calculations
+    const allCustomers = await findCustomerService(matchQuery);
+    const total = allCustomers.length;
+
+    // Get all orders to calculate customer statistics
+    const allOrders = await findOrderService({ status: "completed" });
+
+    // Filter orders by date range if provided
+    const filteredOrders = Object.keys(dateFilter).length > 0 
+        ? allOrders.filter(o => {
+            const orderDate = new Date(o.createdAt);
+            return orderDate >= dateFilter.createdAt.$gte && orderDate <= dateFilter.createdAt.$lte;
+        })
+        : allOrders;
+
+    // Calculate statistics for ALL customers
+    const allCustomersWithStats = allCustomers.map(customer => {
+        const customerId = customer._id.toString();
+        const customerOrders = filteredOrders.filter(o => o.customerId?.toString() === customerId);
+
+        const totalOrders = customerOrders.length;
+        const totalSpent = customerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const dueAmount = customerOrders.filter(o => o.paymentMethod === 'credit').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const lastOrderDate = customerOrders.length > 0 ? customerOrders[0].createdAt : null;
+
+        return {
+            ...customer,
+            totalOrders,
+            totalSpent,
+            dueAmount,
+            lastOrderDate
+        };
+    });
+
+    // Calculate KPI summary from ALL customers
+    const totalCustomers = total;
+    const totalOrders = allCustomersWithStats.reduce((sum, c) => sum + c.totalOrders, 0);
+    const totalSales = allCustomersWithStats.reduce((sum, c) => sum + c.totalSpent, 0);
+    const totalDue = allCustomersWithStats.reduce((sum, c) => sum + c.dueAmount, 0);
+    const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+    // Find top customer (highest sales)
+    const topCustomerIndex = allCustomersWithStats.length > 0 
+        ? allCustomersWithStats.reduce((maxIdx, c, idx, arr) => c.totalSpent > arr[maxIdx].totalSpent ? idx : maxIdx, 0)
+        : -1;
+    const topCustomer = topCustomerIndex >= 0 ? allCustomersWithStats[topCustomerIndex] : null;
+
+    // Count new customers (created in the date range)
+    const newCustomers = Object.keys(dateFilter).length > 0
+        ? allCustomers.filter(c => {
+            const createdDate = new Date(c.createdAt);
+            return createdDate >= dateFilter.createdAt.$gte && createdDate <= dateFilter.createdAt.$lte;
+        }).length
+        : 0;
+
+    return {
+        data: {
+            details: {
+                totalCustomers
+            },
+            summary: {
+                totalCustomers,
+                totalSales,
+                totalOrders,
+                avgOrderValue,
+                totalDue,
+                topCustomer: topCustomer ? (topCustomer.name || 'N/A') : 'N/A',
+                topCustomerAmount: topCustomer?.totalSpent || 0,
+                newCustomers
+            }
         }
     };
 };

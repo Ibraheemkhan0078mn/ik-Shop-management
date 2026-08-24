@@ -15,6 +15,7 @@ import {
     getInventoryReportData,
     getProductWastageReportData,
     getCustomerReportData,
+    getCustomerReportKPIData,
     getStaffReportData,
     getStaffKPIReportData,
     getProfitLossReportData,
@@ -61,6 +62,9 @@ router.get("/product-wastage", getProductWastageReportData);
 
 // Customer Report
 router.get("/customers", getCustomerReportData);
+
+// Customer Report KPI
+router.get("/customers-kpi", getCustomerReportKPIData);
 
 // Staff Report
 router.get("/staff", getStaffReportData);
