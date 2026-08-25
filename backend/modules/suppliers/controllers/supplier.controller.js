@@ -17,6 +17,7 @@ import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSyn
 import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
 import { calculateSupplierPurchaseKPIs } from "../services/supplierPurchaseKPI.service.js";
 import { calculateSupplierPurchaseReturnKPIs } from "../services/supplierPurchaseReturnKPI.service.js";
+import { syncSupplierToQarzaAccount } from "../services/syncSupplierQarza.service.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
     const suppliers = await getAllSuppliersService();
@@ -158,6 +159,9 @@ export const updateSupplier = asyncHandler(async (req, res, next) => {
     }
 
     supplier = await supplierUpdateService(id, supplierData);
+    
+    // Sync supplier data to associated qarza account
+    await syncSupplierToQarzaAccount(supplier);
     
     // Track image changes
     if (req.file?.filename) {

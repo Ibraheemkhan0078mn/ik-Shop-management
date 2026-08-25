@@ -15,6 +15,7 @@ import { calculateCustomerOrderReturnKPIs } from "../services/customerOrderRetur
 import { getLocalCustomerModel } from "../../../configs/connect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
+import { syncCustomerToQarzaAccount } from "../services/syncCustomerQarza.service.js";
 
 const coerceCustomerBody = (body = {}) => {
     const coerced = { ...body };
@@ -148,6 +149,9 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
     }
 
     customer = await customerUpdateService(id, validatedData);
+    
+    // Sync customer data to associated qarza account
+    await syncCustomerToQarzaAccount(customer);
     
     // Track image changes
     if (req.file?.filename) {
