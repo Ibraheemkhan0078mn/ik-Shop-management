@@ -439,6 +439,9 @@ export const getPurchaseReport = async (filters = {}) => {
 };
 
 // Main Business Report
+const preparedMainBusinessReports = new Map();
+const MAIN_BUSINESS_CACHE_TTL_MS = 2000;
+
 // Sales KPI Report
 export const getSalesKPIReport = async (filters = {}) => {
     const { fromDate, toDate, period, compareWithPrevious } = filters;
@@ -1940,7 +1943,7 @@ export const getExpenseTransactions = async (filters = {}) => {
     };
 };
 
-export const getMainBusinessReport = async (filters = {}) => {
+const prepareMainBusinessReport = async (filters = {}) => {
     const { fromDate, toDate, period = "today" } = filters;
 
     let dateFilter = {};
@@ -1969,6 +1972,8 @@ export const getMainBusinessReport = async (filters = {}) => {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+    } else if (period === "all") {
+        dateFilter = {};
     } else {
         // Default to current month if period is unrecognized
         const { startOfMonth, endOfMonth } = getMonthRange();
@@ -2477,6 +2482,40 @@ export const getMainBusinessReport = async (filters = {}) => {
                 date: payment.paidAt
             }))
         }
+    };
+};
+
+const getPreparedMainBusinessReport = async (filters = {}) => {
+    const cacheKey = JSON.stringify(filters);
+    const cached = preparedMainBusinessReports.get(cacheKey);
+    if (cached && Date.now() - cached.createdAt < MAIN_BUSINESS_CACHE_TTL_MS) {
+        return cached.promise;
+    }
+
+    const promise = prepareMainBusinessReport(filters).catch((error) => {
+        preparedMainBusinessReports.delete(cacheKey);
+        throw error;
+    });
+    preparedMainBusinessReports.set(cacheKey, { createdAt: Date.now(), promise });
+    return promise;
+};
+
+export const getMainBusinessReport = (filters = {}) => getPreparedMainBusinessReport(filters);
+
+export const getMainBusinessReportKPI = async (filters = {}) => {
+    const report = await getPreparedMainBusinessReport(filters);
+    return {
+        summary: report.summary,
+        details: report.details,
+        comparison: report.comparison,
+    };
+};
+
+export const getMainBusinessReportData = async (filters = {}) => {
+    const report = await getPreparedMainBusinessReport(filters);
+    return {
+        breakdowns: report.breakdowns,
+        transactions: report.transactions,
     };
 };
 

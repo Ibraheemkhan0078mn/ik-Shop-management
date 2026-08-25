@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter, ArrowDownRight, ArrowUpRight, HandCoins } from "lucide-react";
-import { useGetMainBusinessReportQuery } from "../services/reports.service.js";
+import { useGetMainBusinessReportKPIQuery, useGetMainBusinessReportDataQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import MainBusinessReportPdfTemplate from "../components/MainBusinessReportPdfTemplate.jsx";
@@ -267,6 +267,7 @@ export default function MainBusinessReport() {
     const labels = getReportsLabels(language);
 
     const PERIOD_OPTIONS = useMemo(() => [
+        { value: "all", label: "All time" },
         { value: "today", label: labels.today },
         { value: "month", label: labels.thisMonth },
         { value: "3month", label: labels.last3Months },
@@ -275,7 +276,7 @@ export default function MainBusinessReport() {
     ], [labels]);
 
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-    const [period, setPeriod] = useState("today");
+    const [period, setPeriod] = useState("all");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [expandedSections, setExpandedSections] = useState({});
@@ -286,13 +287,20 @@ export default function MainBusinessReport() {
         filters.toDate = toDate;
     }
 
-    const { data, isLoading, isFetching, error, refetch } = useGetMainBusinessReportQuery(filters);
+    const kpiQuery = useGetMainBusinessReportKPIQuery(filters);
+    const dataQuery = useGetMainBusinessReportDataQuery(filters);
+    const isLoading = kpiQuery.isLoading || dataQuery.isLoading;
+    const isFetching = kpiQuery.isFetching || dataQuery.isFetching;
+    const error = kpiQuery.error || dataQuery.error;
 
     if (error) {
         showError(error?.data?.message || "Failed to load report");
     }
 
-    const handleRefresh = () => refetch();
+    const handleRefresh = () => {
+        kpiQuery.refetch();
+        dataQuery.refetch();
+    };
     const showLoader = isLoading || isFetching;
 
     const toggleSection = (key) => {
@@ -309,10 +317,10 @@ export default function MainBusinessReport() {
         setExpandedSections({});
     };
 
-    const summary = data?.summary || {};
-    const details = data?.details || {};
-    const breakdowns = data?.breakdowns || {};
-    const transactions = data?.transactions || {};
+    const summary = kpiQuery.data?.summary || {};
+    const details = kpiQuery.data?.details || {};
+    const breakdowns = dataQuery.data?.breakdowns || {};
+    const transactions = dataQuery.data?.transactions || {};
 
     const qarzaNet = (summary.totalReceivable || 0) - (summary.totalPayable || 0);
     const isProfit = summary.netProfit >= 0;
@@ -327,13 +335,13 @@ export default function MainBusinessReport() {
                     <p className="text-sm text-[var(--muted)]">{labels.businessOverview}</p>
                 </div>
                 <div className="flex gap-2 no-print">
-                    {/* <button
+                    <button
                         onClick={handleRefresh}
                         className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
                     >
                         <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
                         {labels.refresh}
-                    </button> */}
+                    </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
                         className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"

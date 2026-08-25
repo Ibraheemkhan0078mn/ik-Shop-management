@@ -12,7 +12,7 @@ export default function SalesKPIReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [period, setPeriod] = useState("today");
+    const [period, setPeriod] = useState("all");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [customerType, setCustomerType] = useState("all");
@@ -32,6 +32,8 @@ export default function SalesKPIReport() {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
         switch (periodValue) {
+            case "all":
+                return { from: "", to: "" };
             case "today":
                 return {
                     from: today.toISOString().split('T')[0],
@@ -74,8 +76,8 @@ export default function SalesKPIReport() {
     const dates = useMemo(() => getDatesFromPeriod(period), [period, fromDate, toDate]);
     
     const filters = useMemo(() => ({ 
-        fromDate: period === "custom" ? fromDate : dates.from, 
-        toDate: period === "custom" ? toDate : dates.to, 
+        fromDate: period === "custom" ? fromDate : dates.from,
+        toDate: period === "custom" ? toDate : dates.to,
         customerType, customerId, paymentStatus, sortBy, sortOrder, search, page, limit
     }), [period, fromDate, toDate, dates.from, dates.to, customerType, customerId, paymentStatus, sortBy, sortOrder, search, page]);
 
@@ -162,6 +164,7 @@ export default function SalesKPIReport() {
                             onChange={(e) => setPeriod(e.target.value)}
                             className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
                         >
+                            <option value="all">All time</option>
                             <option value="today">{labels.today}</option>
                             <option value="week">{labels.thisWeek}</option>
                             <option value="month">{labels.thisMonth}</option>

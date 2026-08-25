@@ -11,6 +11,8 @@ import {
     getWastageReport,
     getActivityReport,
     getMainBusinessReport,
+    getMainBusinessReportKPI,
+    getMainBusinessReportData as getMainBusinessReportDataService,
     getPurchaseReturnReport,
     getSaleReturnReport,
     getInventoryReportData as getInventoryReportRows,
@@ -57,6 +59,24 @@ export const getMainBusinessReportData = asyncHandler(async (req, res, next) => 
         success: true,
         message: "Main business report retrieved successfully",
         ...report,
+    });
+});
+
+export const getMainBusinessReportKPIData = asyncHandler(async (req, res) => {
+    const report = await getMainBusinessReportKPI(req.query);
+    res.status(200).json({
+        success: true,
+        message: "Main business KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+export const getMainBusinessReportRowsData = asyncHandler(async (req, res) => {
+    const report = await getMainBusinessReportDataService(req.query);
+    res.status(200).json({
+        success: true,
+        message: "Main business report data retrieved successfully",
+        data: report,
     });
 });
 

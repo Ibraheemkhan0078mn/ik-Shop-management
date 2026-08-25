@@ -2,6 +2,8 @@ import express from "express";
 import {
     getDashboardSummaryData,
     getMainBusinessReportData,
+    getMainBusinessReportKPIData,
+    getMainBusinessReportRowsData,
     getSalesReportData,
     getPurchaseReportData,
     getFinancialReportData,
@@ -42,6 +44,8 @@ router.get("/dashboard/summary", getDashboardSummaryData);
 
 // Main Business Report
 router.get("/main-business", getMainBusinessReportData);
+router.get("/main-business/kpi", getMainBusinessReportKPIData);
+router.get("/main-business/data", getMainBusinessReportRowsData);
 
 // Sales Report
 router.get("/sales", getSalesReportData);
