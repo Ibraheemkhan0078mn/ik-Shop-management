@@ -18,6 +18,7 @@ import {
     recalculateProductStockData,
     recalculateAllStockData,
     checkProductCode,
+    generateProductCodeData,
     getStockHistoryData,
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
@@ -30,6 +31,7 @@ router.use(protect);
 router.get("/", getProductsData);
 router.get("/pagination", getPaginationProductData);
 router.get("/check-code/:productCode", checkProductCode);
+router.get("/generate-code", generateProductCodeData);
 router.get("/:id", getProductDataById);
 router.post("/", authorize("admin"), upload.single("image"), createProductData);
 router.put("/:id", authorize("admin"), upload.single("image"), updateProductData);

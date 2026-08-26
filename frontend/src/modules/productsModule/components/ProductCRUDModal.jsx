@@ -1,7 +1,7 @@
 // src/components/ProductCRUDModal.jsx
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock } from "lucide-react";
-import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery } from "../services/product.service";
+import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery, useLazyGenerateProductCodeQuery } from "../services/product.service";
 import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
 import Scanner from "../../../shared/components/Scanner.jsx";
@@ -58,6 +58,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [createProduct, { isLoading: isCreating }] = useCreateProduct();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProduct();
   const [checkProductCode] = useLazyCheckProductCodeQuery();
+  const [generateProductCode] = useLazyGenerateProductCodeQuery();
   const isSaving = isCreating || isUpdating;
 
   const UNITS = useMemo(() => [
@@ -111,8 +112,18 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       setBanner(null);
       setShowMore(false);
       setIsProductCodeLocked(true);
+      
+      // Generate product code when opening create form
+      generateProductCode()
+        .unwrap()
+        .then((code) => {
+          setForm((prev) => ({ ...prev, productCode: code }));
+        })
+        .catch((error) => {
+          console.error("Failed to generate product code:", error);
+        });
     }
-  }, [isCreate, open]);
+  }, [isCreate, open, generateProductCode]);
 
   useEffect(() => {
     return () => {
@@ -295,7 +306,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   if (!isCreate && isFetching && !productData) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
-        <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm animate-pulse">
+        <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm">
           {labels.loadingProduct}
         </div>
       </div>
@@ -318,7 +329,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         }}
       >
         <div 
-          className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
 
@@ -341,7 +352,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
           {/* Banner */}
           {banner && (
-            <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">
+            <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <span className="flex-1">{banner}</span>
               <button
@@ -420,7 +431,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 value={form.productCode}
                 onChange={updateField}
                 error={errors.productCode}
-                placeholder="e.g., PROD-001"
+                placeholder="e.g., 1"
                 disabled={isProductCodeLocked}
                 action={{
                   label: isProductCodeLocked ? "Unlock" : "Lock",
@@ -800,7 +811,7 @@ function ToggleField({ label, name, value, onChange }) {
 //         { name: "genericName", label: "Generic Name", type: "text", required: true, placeholder: "e.g., Paracetamol" },
 //         { name: "brandName", label: "Brand Name", type: "text", placeholder: "e.g., Panadol" },
 //         { name: "hotKeySku", label: "Hot Key / SKU", type: "text", required: true, placeholder: "SKU-XXXXXXXX", action: { label: "Generate", icon: Sparkles, onClick: generateSKU } },
-//         { name: "productCode", label: "Product Code", type: "text", placeholder: "e.g., PROD-001" },
+//         { name: "productCode", label: "Product Code", type: "text", placeholder: "e.g., 1" },
 //         { name: "barcode", label: "Barcode", type: "text", placeholder: "Scan or type barcode", action: { label: "Scan", icon: Scan, onClick: openScanner } },
 //         { name: "description", label: "Description", type: "textarea", rows: 3, span: "full", placeholder: "Product description likhein" },
 //       ],

@@ -88,6 +88,12 @@ export const productApi = baseApi.injectEndpoints({
             }),
         }),
 
+        // Generate product code
+        generateProductCode: build.query({
+            query: () => ({ url: "/products/generate-code" }),
+            transformResponse: (raw) => raw.productCode,
+        }),
+
         // Get stock history for a product
         getStockHistory: build.query({
             query: (productId) => ({ url: `/products/${productId}/stock-history` }),
@@ -109,4 +115,5 @@ export const {
     useRecalculateAllStockMutation: useRecalculateAllStock,
     useGetStockHistoryQuery: useStockHistory,
     useLazyCheckProductCodeQuery,
+    useLazyGenerateProductCodeQuery,
 } = productApi;

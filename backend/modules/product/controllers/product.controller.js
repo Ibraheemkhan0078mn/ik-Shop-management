@@ -4,6 +4,7 @@ import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getProducts, getPaginationProduct, getProductById,
     createProduct, updateProduct, deleteProduct, deleteProductWithBatches, checkProductCodeAvailability,
+    generateProductCode,
 } from "../services/product.service.js";
 import {
     recalculateProductStock, recalculateAllStock,
@@ -32,6 +33,11 @@ export const checkProductCode = asyncHandler(async (req, res) => {
     const { productCode } = req.params;
     const available = await checkProductCodeAvailability(productCode, req.query.excludeId);
     res.status(200).json({ success: true, available, exists: !available, productCode });
+});
+
+export const generateProductCodeData = asyncHandler(async (req, res) => {
+    const productCode = await generateProductCode();
+    res.status(200).json({ success: true, message: "Product code generated successfully", productCode });
 });
 
 export const getProductDataById = asyncHandler(async (req, res, next) => {

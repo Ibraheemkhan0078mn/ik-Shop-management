@@ -69,7 +69,7 @@ const createNextProductCode = async () => {
     let attempts = 0;
     while (attempts < 100) {
         const sequence = await getNextSequence({ sequenceName: "productCode" });
-        const productCode = `PROD-${String(sequence).padStart(5, "0")}`;
+        const productCode = `${String(sequence).padStart(2, "0")}`;
         if (!(await findConflictingUnique(null, { productCode }))) return productCode;
         attempts += 1;
     }
@@ -308,6 +308,52 @@ const checkProductCodeAvailability = async (productCode, excludeId = null) => {
     return !conflict;
 };
 
+/**
+ * Check if a product code exists in the database
+ * @param {string} productCode - The product code to check
+ * @returns {Promise<boolean>} - true if code exists, false otherwise
+ */
+const checkProductCodeExists = async (productCode) => {
+    if (!productCode?.trim()) return false;
+    const existing = await findOneProductService({
+        productCode: productCode.trim()
+    });
+    return !!existing;
+};
+
+/**
+ * Generate a unique product code
+ * Gets the count of products, increments it, and checks if the code exists
+ * If it exists, continues incrementing until a unique code is found
+ * @returns {Promise<string>} - A unique product code
+ */
+const generateProductCode = async () => {
+    // Get the current count of products using existing service
+    const currentCount = await countProductService({});
+    
+    // Start with count + 1
+    let nextNumber = currentCount + 1;
+    let attempts = 0;
+    const maxAttempts = 1000;
+    
+    while (attempts < maxAttempts) {
+        const productCode = `${String(nextNumber).padStart(2, "0")}`;
+        
+        // Check if this product code exists in the database using existing service
+        const codeExists = await checkProductCodeExists(productCode);
+        
+        if (!codeExists) {
+            return productCode;
+        }
+        
+        // If code exists, increment and try again
+        nextNumber++;
+        attempts++;
+    }
+    
+    throw new Error("Unable to generate a unique Product Code after maximum attempts");
+};
+
 export {
     getProducts,
     getPaginationProduct,
@@ -317,4 +363,6 @@ export {
     deleteProduct,
     deleteProductWithBatches,
     checkProductCodeAvailability,
+    checkProductCodeExists,
+    generateProductCode,
 };
