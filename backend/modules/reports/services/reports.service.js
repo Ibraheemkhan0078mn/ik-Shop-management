@@ -2056,14 +2056,57 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
     const salesCount = orders.length;
 
+    // Calculate retail vs wholesale sales
+    const retailSales = orders
+        .filter(order => order.orderType === 'retail' || order.customerType === 'regular')
+        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    const wholesaleSales = orders
+        .filter(order => order.orderType === 'wholesale' || order.customerType === 'wholesale')
+        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+    // Calculate average order value
+    const avgOrderValue = salesCount > 0 ? totalSales / salesCount : 0;
+
+    // Calculate sales margin (revenue - cost of goods sold)
+    let totalCostOfGoodsSold = 0;
+    for (const order of orders) {
+        if (order.items) {
+            for (const item of order.items) {
+                let costPrice = 0;
+                if (item.batchId) {
+                    const batch = await findByIdBatchService(item.batchId);
+                    if (batch && batch.purchasePrice) {
+                        costPrice = batch.purchasePrice;
+                    }
+                }
+                totalCostOfGoodsSold += costPrice * (item.quantity || 0);
+            }
+        }
+    }
+    const salesMargin = totalSales - totalCostOfGoodsSold;
+
     const totalPurchases = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
     const purchaseCount = purchases.length;
+
+    // Calculate unique supplier count
+    const uniqueSuppliers = new Set(purchases.map(p => p.supplier?.toString()).filter(Boolean));
+    const supplierCount = uniqueSuppliers.size;
+
+    // Calculate average purchase value
+    const avgPurchaseValue = purchaseCount > 0 ? totalPurchases / purchaseCount : 0;
 
     const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
     const expenseCount = expenses.length;
 
+    // Calculate average expense value
+    const avgExpenseValue = expenseCount > 0 ? totalExpenses / expenseCount : 0;
+
     const totalWastage = wastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
     const wastageCount = wastages.length;
+
+    // Calculate wastage as percentage of purchases
+    const wastagePercentOfPurchases = totalPurchases > 0 ? ((totalWastage / totalPurchases) * 100).toFixed(1) : 0;
 
     const totalPurchaseReturns = purchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
     const purchaseReturnCount = purchaseReturns.length;
@@ -2073,6 +2116,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
 
     const totalSalaries = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     const salaryPaymentCount = salaryPayments.length;
+
+    // Calculate average salary per staff
+    const uniqueStaffPaid = new Set(salaryPayments.map(p => p.staffId?.toString()).filter(Boolean));
+    const avgSalaryPerStaff = uniqueStaffPaid.size > 0 ? totalSalaries / uniqueStaffPaid.size : 0;
 
     const totalReceivable = qarzaReceivable.reduce((sum, q) => sum + (q.balance || 0), 0);
     const qarzaReceivableCount = qarzaReceivable.length;
@@ -2336,6 +2383,9 @@ const prepareMainBusinessReport = async (filters = {}) => {
             grossMarginPercentage,
             netProfit,
             netMarginPercentage,
+            retailSales,
+            wholesaleSales,
+            salesMargin,
         },
         details: {
             salesCount,
@@ -2347,6 +2397,12 @@ const prepareMainBusinessReport = async (filters = {}) => {
             salaryPaymentCount,
             qarzaReceivableCount,
             qarzaPayableCount,
+            avgOrderValue,
+            supplierCount,
+            avgPurchaseValue,
+            avgExpenseValue,
+            avgSalaryPerStaff,
+            wastagePercentOfPurchases,
         },
         comparison: {
             previous: {
