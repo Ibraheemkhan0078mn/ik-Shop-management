@@ -275,7 +275,7 @@ export const staffApi = baseApi.injectEndpoints({
             query: (data) => ({
                 url: "/staff/role",
                 method: "DELETE",
-                body: data,
+                params: data,
             }),
             invalidatesTags: ["StaffRole"],
         }),

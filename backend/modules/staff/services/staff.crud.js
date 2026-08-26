@@ -6,9 +6,9 @@ const createStaffService = (data) => {
     return createDoc({ model: StaffModel, data });
 };
 
-const findStaffService = (query = {}) => {
+const findStaffService = (query = {}, options = {}) => {
     const StaffModel = getLocalStaffModel();
-    return findDocs({ model: StaffModel, filter: query });
+    return findDocs({ model: StaffModel, filter: query, options });
 };
 
 const findOneStaffService = (query) => {

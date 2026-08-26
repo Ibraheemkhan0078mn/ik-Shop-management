@@ -75,30 +75,34 @@ export const getAllStaffRoles = async (req, res) => {
 
 export const deleteStaffRole = async (req, res) => {
     try {
-        const { _id } = req.body;
+        // Get _id from body or query parameters
+        const { _id } = req.body || {};
+        const _idFromQuery = req.query._id;
+        const roleId = _id || _idFromQuery;
+        
         let StaffRoleModel = getLocalStaffRoleModel();
         let StaffModel = getLocalStaffModel();
 
-        if (!_id) {
+        if (!roleId) {
             return res.json({ success: false, msg: "Role ID is required" });
         }
 
         // Check if any staff member has this role
         const staffWithRole = await findOneDoc({
             model: StaffModel,
-            filter: { role: _id, isDeleted: false }
+            filter: { role: roleId, isDeleted: false }
         });
         if (staffWithRole) {
             return res.json({ success: false, msg: "This role is already integrated with staff. Cannot delete." });
         }
 
-        let deleted = await deleteStaffRoleService(_id);
+        let deleted = await deleteStaffRoleService(roleId);
 
         if (!deleted) {
             return res.json({ success: false, msg: "Role not found" });
         }
 
-        await changeTrackDocsCreationFunc("delete", StaffRoleModel.modelName, _id)
+        await changeTrackDocsCreationFunc("delete", StaffRoleModel.modelName, roleId)
 
         let roles = await getAllStaffRolesService({ isDeleted: false });
 

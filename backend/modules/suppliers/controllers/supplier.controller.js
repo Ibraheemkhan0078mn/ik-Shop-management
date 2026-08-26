@@ -35,16 +35,30 @@ export const getPaginatedSuppliers = asyncHandler(async (req, res) => {
     const pageNum = parseInt(req.query.page) || 1;
     const limitNum = parseInt(req.query.limit) || 20;
     const skip = (pageNum - 1) * limitNum;
+    const { searchText } = req.query;
+
+    // Build filter
+    const filter = { isDeleted: { $ne: true } };
+
+    // Add search filter if provided
+    if (searchText) {
+        const searchRegex = new RegExp(searchText, 'i');
+        filter.$or = [
+            { name: searchRegex },
+            { phone: searchRegex },
+            { address: searchRegex }
+        ];
+    }
 
     const [data, total] = await Promise.all([
         findDocs({
             model: SupplierModel,
-            filter: { isDeleted: { $ne: true } },
+            filter: filter,
             options: { sort: { createdAt: -1 }, skip, limit: limitNum, lean: false }
         }),
         countDocs({
             model: SupplierModel,
-            filter: { isDeleted: { $ne: true } }
+            filter: filter
         })
     ]);
 

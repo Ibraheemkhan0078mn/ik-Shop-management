@@ -11,6 +11,8 @@ import ProductCRUDModal from "../../productsModule/components/ProductCRUDModal.j
 import SupplierModal from "../../suppliers/components/SupplierModal.jsx";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
+import { ProductService } from "../../productsModule/api/productsApi.js";
+import { SupplierService } from "../../suppliers/services/suppliers.service.js";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
@@ -109,7 +111,183 @@ const Btn = ({ children, variant = "primary", size = "md", className = "", ...p 
     </button>
 );
 
-// ─── searchable select ────────────────────────────────────────────────────────
+// ─── API-based searchable select for products ─────────────────────────────────────
+const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchProducts = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await ProductService.search(query, 20);
+            setOptions(results.map(p => ({ label: p.name, value: p._id, data: p })));
+        } catch (error) {
+            console.error("Error searching products:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchProducts(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }}>
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <input 
+                            autoFocus 
+                            type="text" 
+                            placeholder="Search products..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }} 
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"}>
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No products found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── API-based searchable select for suppliers ─────────────────────────────────────
+const ApiSupplierSelect = ({ value, onChange, placeholder = "Search suppliers..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchSuppliers = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await SupplierService.search(query, 20);
+            setOptions(results.map(s => ({ label: s.name, value: s._id, data: s })));
+        } catch (error) {
+            console.error("Error searching suppliers:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchSuppliers(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }}>
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <input 
+                            autoFocus 
+                            type="text" 
+                            placeholder="Search suppliers..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }} 
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"}>
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No suppliers found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── original searchable select ────────────────────────────────────────────────────────
 const SSelect = ({ options = [], value, onChange, placeholder = "Select..." }) => {
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState("");
@@ -715,9 +893,24 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <Field>
                                         <Label>{labels.product} *</Label>
                                         <div className="flex gap-2">
-                                            <SSelect className="flex-1" options={productsList.map(p => ({ label: p.name, value: p._id }))} value={itemForm.item}
-                                                onChange={val => { const prod = productsList.find(p => p._id === val); if (prod) { setBatchStamp(Date.now().toString()); setItemForm(() => ({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", discountType: prod.discountType ?? "percentage", taxType: prod.taxType ?? "percentage" })); } }}
-                                                placeholder={labels.product + "…"} />
+                                            <ApiProductSelect 
+                                                className="flex-1" 
+                                                value={itemForm.item}
+                                                onChange={(val, productData) => { 
+                                                    if (productData) { 
+                                                        setBatchStamp(Date.now().toString()); 
+                                                        setItemForm(() => ({ 
+                                                            ...emptyItem(), 
+                                                            item: productData._id, 
+                                                            name: productData.name, 
+                                                            unit: productData.unit ?? "unit", 
+                                                            discountType: productData.discountType ?? "percentage", 
+                                                            taxType: productData.taxType ?? "percentage" 
+                                                        })); 
+                                                    } 
+                                                }}
+                                                placeholder={labels.product + "…"} 
+                                            />
                                             <button type="button" onClick={() => setShowProductModal(true)} className="px-3 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-1 shrink-0" style={{ background: "var(--accent-2)", color: "#fff" }} title="Create new product"><Plus size={16} /></button>
                                         </div>
                                     </Field>
@@ -728,7 +921,19 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <Field>
                                         <Label>{labels.batchMode}</Label>
                                         <div className="flex gap-2">
-                                            <Btn variant={itemForm.batchMode === "new" ? "active" : "inactive"} size="sm" className="flex-1" onClick={() => { setBatchStamp(Date.now().toString()); setItemForm(p => ({ ...p, batchMode: "new", batchSelection: "" })); }}>{labels.new}</Btn>
+                                            <Btn variant={itemForm.batchMode === "new" ? "active" : "inactive"} size="sm" className="flex-1" onClick={() => { 
+                                                setBatchStamp(Date.now().toString()); 
+                                                setItemForm(() => ({ 
+                                                    ...emptyItem(), 
+                                                    item: itemForm.item, 
+                                                    name: itemForm.name, 
+                                                    unit: itemForm.unit, 
+                                                    discountType: itemForm.discountType, 
+                                                    taxType: itemForm.taxType,
+                                                    batchMode: "new",
+                                                    batchSelection: ""
+                                                })); 
+                                            }}>{labels.new}</Btn>
                                             <Btn variant={itemForm.batchMode === "existing" ? "active" : "inactive"} size="sm" className="flex-1" disabled={!itemForm.item || availableBatches.length === 0} onClick={() => setItemForm(p => ({ ...p, batchMode: "existing" }))}>{labels.existing}</Btn>
                                         </div>
                                         {itemForm.batchMode === "existing" && (
@@ -1077,7 +1282,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                             <Field>
                                 <Label>{labels.supplier} *</Label>
                                 <div className="flex gap-2">
-                                    <div className="relative z-50 flex-1"><SearchableSelect options={supplierOptions} value={bill.supplier} onChange={val => setBill(p => ({ ...p, supplier: val }))} placeholder={labels.selectSupplier + "…"} /></div>
+                                    <ApiSupplierSelect 
+                                        className="flex-1" 
+                                        value={bill.supplier}
+                                        onChange={val => setBill(p => ({ ...p, supplier: val }))}
+                                        placeholder={labels.selectSupplier + "…"} 
+                                    />
                                     <button type="button" onClick={() => setShowSupplierModal(true)} className="px-3 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-1 shrink-0" style={{ background: "var(--accent-2)", color: "#fff" }} title="Create new supplier"><Plus size={16} /></button>
                                 </div>
                             </Field>

@@ -54,7 +54,7 @@ const router = express.Router();
 // Staff Role Routes (must come before /:id)
 router.post("/role", createStaffRole);
 router.get("/role", getAllStaffRoles);
-router.delete("/role", deleteStaffRole);
+router.delete("/role", upload.none(), deleteStaffRole);
 
 // Staff Salary Payment Routes (must come before /:id)
 router.post("/salary-payment", createSalaryPaymentData);
@@ -87,7 +87,7 @@ router.get("/attendance/history", getAttendanceHistoryData);
 router.get("/active", getActiveStaffData);
 
 // Staff Routes
-router.post("/", upload.single("photo"), createStaffData);
+router.post("/", upload.any(), createStaffData);
 router.get("/", getAllStaffData);
 
 // Staff Salary & Payment Summary Routes (must come after POST/GET but before wildcard /:id)
@@ -100,7 +100,7 @@ router.get("/:id/percentage-breakdown", getPercentageBreakdownData);
 
 // Wildcard routes for single staff member (must come last)
 router.get("/:id", getStaffDataById);
-router.put("/:id", upload.single("photo"), updateStaffData);
+router.put("/:id", upload.any(), updateStaffData);
 router.delete("/:id", deleteStaffData);
 router.post("/:id/images", upload.array("images", 10), addImagesToStaffData);
 router.delete("/:id/images/:imageId", removeImageFromStaffData);

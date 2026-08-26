@@ -47,4 +47,15 @@ export const ProductService = {
             throw error;
         }
     },
+    search: async (searchText, limit = 20) => {
+        try {
+            const { data } = await api.get("/products/pagination", {
+                params: { searchText, page: 1, limit }
+            });
+            return data.data || [];
+        } catch (error) {
+            showError(error?.response?.data?.message || error?.message || "Failed to search products");
+            throw error;
+        }
+    },
 };

@@ -47,13 +47,11 @@ export default function StaffRole() {
                                 <td className="px-4 py-3">
                                     <div className="flex justify-center gap-2">
                                         <ConfirmDialog message={`Are you sure you want to delete the role "${item.name}"?`} onConfirm={() => handleDeleteRole(item._id)}>
-                                            <PermissionGuard permission="staff.delete">
-                                                <button
-                                                    className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </PermissionGuard>
+                                            <button
+                                                className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
                                         </ConfirmDialog>
                                     </div>
                                 </td>

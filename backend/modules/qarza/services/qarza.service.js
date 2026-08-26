@@ -6,7 +6,7 @@ const qarzaAccountCreate = async (data) => {
 };
 
 const getAllQarzaAccounts = async (query = {}) => {
-    return await findQarzaAccountService(query, { populate: "payments" });
+    return await findQarzaAccountService(query, { populate: "payments", sort: { createdAt: -1 } });
 };
 
 const getQarzaAccountById = async (id) => {

@@ -24,26 +24,31 @@ import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSyn
 
 // Create Staff
 export const createStaffData = asyncHandler(async (req, res, next) => {
-    const StaffModel = getLocalStaffModel();
-    const staffData = req.body;
-    
-    // If a photo was uploaded, add its filename to the staff data
-    if (req.file) {
-        staffData.photo = req.file.filename;
-    }
-    
-    const staff = await createStaff(staffData);
-    
-    // Track image creation if photo was uploaded
-    if (staffData.photo) {
-        await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
-    }
+    try {
+        const StaffModel = getLocalStaffModel();
+        const staffData = req.body;
+        
+        // Handle photo from multer.any() - find photo in req.files array
+        const photoFile = req.files?.find(f => f.fieldname === 'photo');
+        if (photoFile?.filename) {
+            staffData.photo = photoFile.filename;
+        }
+        
+        const staff = await createStaff(staffData);
+        
+        // Track image creation if photo was uploaded
+        if (staffData.photo) {
+            await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
+        }
 
-    res.status(201).json({
-        success: true,
-        message: "Staff created successfully",
-        data: staff,
-    });
+        res.status(201).json({
+            success: true,
+            message: "Staff created successfully",
+            data: staff,
+        });
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
 });
 
 // Get All Staff
@@ -72,34 +77,39 @@ export const getStaffDataById = asyncHandler(async (req, res, next) => {
 
 // Update Staff
 export const updateStaffData = asyncHandler(async (req, res, next) => {
-    const StaffModel = getLocalStaffModel();
-    const { id } = req.params;
-    const updateData = req.body;
-    
-    // Get existing staff to check for photo change
-    const existingStaff = await getStaffById(id);
-    
-    // If a photo was uploaded, add its filename to the update data
-    if (req.file) {
-        updateData.photo = req.file.filename;
-    }
-    
-    const staff = await updateStaff(id, updateData);
-    
-    // Track image changes
-    if (updateData.photo) {
-        // New photo uploaded - delete old photo from Cloudinary and track new one
-        if (existingStaff?.cloudinaryPublicId) {
-            await imageChangeTrackDocsCreation("delete", StaffModel.modelName, staff._id, existingStaff.cloudinaryPublicId);
+    try {
+        const StaffModel = getLocalStaffModel();
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        // Get existing staff to check for photo change
+        const existingStaff = await getStaffById(id);
+        
+        // Handle photo from multer.any() - find photo in req.files array
+        const photoFile = req.files?.find(f => f.fieldname === 'photo');
+        if (photoFile?.filename) {
+            updateData.photo = photoFile.filename;
         }
-        await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
-    }
+        
+        const staff = await updateStaff(id, updateData);
+        
+        // Track image changes
+        if (updateData.photo) {
+            // New photo uploaded - delete old photo from Cloudinary and track new one
+            if (existingStaff?.cloudinaryPublicId) {
+                await imageChangeTrackDocsCreation("delete", StaffModel.modelName, staff._id, existingStaff.cloudinaryPublicId);
+            }
+            await imageChangeTrackDocsCreation("create", StaffModel.modelName, staff._id);
+        }
 
-    res.status(200).json({
-        success: true,
-        message: "Staff updated successfully",
-        data: staff,
-    });
+        res.status(200).json({
+            success: true,
+            message: "Staff updated successfully",
+            data: staff,
+        });
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
 });
 
 // Delete Staff

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, ShoppingCart, X, Calendar, Filter, TrendingUp, PieChart, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { useGetStaffByIdQuery, useAddDocumentMutation, useRemoveDocumentMutation, useGetSalaryPaymentsQuery, useCreateSalaryPaymentMutation, useDeleteSalaryPaymentMutation, useAddImagesMutation, useRemoveImageMutation, useGetSaleBillsQuery, useGetSalaryBreakdownQuery, useGetPaymentSummaryQuery, useGetSalaryChangesQuery, useCreateSalaryChangeMutation, useUpdateSalaryChangeMutation, useDeleteSalaryChangeMutation, useGetPercentageChangesQuery, useCreatePercentageChangeMutation, useUpdatePercentageChangeMutation, useDeletePercentageChangeMutation } from "../api/staff.api.js";
 import { getStaffLabels } from "../labels/staffLabels.js";
@@ -260,27 +260,6 @@ export default function StaffDetail() {
     const handleCreatePercentageChange = async (e) => {
         e.preventDefault();
         try {
-            // Auto-detect change type if not editing
-            if (!editingPercentageChange) {
-                const sortedChanges = percentageChangesData?.data?.sort((a, b) => 
-                    new Date(a.percentageChangeFromDate) - new Date(b.percentageChangeFromDate)
-                ) || [];
-                
-                if (sortedChanges.length > 0) {
-                    const lastChange = sortedChanges[sortedChanges.length - 1];
-                    const newPercentage = parseFloat(percentageChangeForm.percentage);
-                    const lastPercentage = lastChange.percentage;
-                    
-                    if (newPercentage > lastPercentage) {
-                        percentageChangeForm.changeType = 'inc';
-                    } else if (newPercentage < lastPercentage) {
-                        percentageChangeForm.changeType = 'decr';
-                    } else {
-                        percentageChangeForm.changeType = 'set';
-                    }
-                }
-            }
-            
             if (editingPercentageChange) {
                 await updatePercentageChange({ 
                     id: editingPercentageChange._id,
@@ -809,7 +788,7 @@ export default function StaffDetail() {
                                                             onClick={() => handleEditSalaryChange(change)}
                                                             className="p-1 hover:bg-blue-100 rounded"
                                                         >
-                                                            <Plus size={14} className="text-blue-500" />
+                                                            <Edit size={14} className="text-blue-500" />
                                                         </button>
                                                         <ConfirmDialog message="Are you sure you want to delete this salary change?" onConfirm={() => handleDeleteSalaryChange(change._id)}>
                                                             <button className="p-1 hover:bg-red-100 rounded">
@@ -1001,7 +980,7 @@ export default function StaffDetail() {
                                                             onClick={() => handleEditPercentageChange(change)}
                                                             className="p-1 hover:bg-blue-100 rounded"
                                                         >
-                                                            <Plus size={14} className="text-blue-500" />
+                                                            <Edit size={14} className="text-blue-500" />
                                                         </button>
                                                         <ConfirmDialog message="Are you sure you want to delete this percentage change?" onConfirm={() => handleDeletePercentageChange(change._id)}>
                                                             <button className="p-1 hover:bg-red-100 rounded">
@@ -1063,19 +1042,6 @@ export default function StaffDetail() {
                                                 className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
                                                 required
                                             />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Change Type</label>
-                                            <select
-                                                value={percentageChangeForm.changeType}
-                                                onChange={(e) => setPercentageChangeForm(prev => ({ ...prev, changeType: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
-                                                required
-                                            >
-                                                <option value="set">Set to % of salary</option>
-                                                <option value="inc">Increase by %</option>
-                                                <option value="decr">Decrease by %</option>
-                                            </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Notes</label>

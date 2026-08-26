@@ -12,6 +12,32 @@ import {
 export const createPercentageChangeData = asyncHandler(async (req, res, next) => {
     const percentageChangeData = req.body;
     
+    // Auto-detect change type by comparing with previous percentage
+    const { staffId, percentage } = percentageChangeData;
+    if (staffId && percentage !== undefined) {
+        const previousChanges = await findStaffPercentageChangeService(
+            { staffId },
+            { sort: { percentageChangeFromDate: -1 }, limit: 1 }
+        );
+        
+        if (previousChanges && previousChanges.length > 0) {
+            const lastChange = previousChanges[0];
+            const newPercentage = parseFloat(percentage);
+            const lastPercentage = parseFloat(lastChange.percentage);
+            
+            if (newPercentage > lastPercentage) {
+                percentageChangeData.changeType = 'inc';
+            } else if (newPercentage < lastPercentage) {
+                percentageChangeData.changeType = 'decr';
+            } else {
+                percentageChangeData.changeType = 'set';
+            }
+        } else {
+            // First percentage change - set as 'set'
+            percentageChangeData.changeType = 'set';
+        }
+    }
+    
     const percentageChange = await createStaffPercentageChangeService(percentageChangeData);
 
     res.status(201).json({
@@ -57,6 +83,37 @@ export const getPercentageChangeByIdData = asyncHandler(async (req, res, next) =
 export const updatePercentageChangeData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
+    
+    // Auto-detect change type when percentage is being updated
+    const { percentage } = updateData;
+    if (percentage !== undefined) {
+        const existingChange = await findByIdStaffPercentageChangeService(id);
+        if (existingChange) {
+            // Get previous changes (excluding current one) to compare
+            const previousChanges = await findStaffPercentageChangeService(
+                { staffId: existingChange.staffId, _id: { $ne: id } },
+                { sort: { percentageChangeFromDate: -1 }, limit: 1 }
+            );
+            
+            const newPercentage = parseFloat(percentage);
+            
+            if (previousChanges && previousChanges.length > 0) {
+                const lastChange = previousChanges[0];
+                const lastPercentage = parseFloat(lastChange.percentage);
+                
+                if (newPercentage > lastPercentage) {
+                    updateData.changeType = 'inc';
+                } else if (newPercentage < lastPercentage) {
+                    updateData.changeType = 'decr';
+                } else {
+                    updateData.changeType = 'set';
+                }
+            } else {
+                // No previous changes - set as 'set'
+                updateData.changeType = 'set';
+            }
+        }
+    }
     
     const percentageChange = await updateStaffPercentageChangeService(id, updateData);
     if (!percentageChange) {

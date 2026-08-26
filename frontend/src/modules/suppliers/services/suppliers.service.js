@@ -1,5 +1,7 @@
 // src/modules/suppliers/services/suppliers.service.js
 import { baseApi } from "../../../app/rtkBaseApi.js";
+import api from "../../../shared/services/api.js";
+import { showError } from "../../../shared/utilities/toastHelpers.js";
 
 export const supplierApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
@@ -79,3 +81,17 @@ export const {
     useGetSupplierPurchaseKPIsQuery: useSupplierPurchaseKPIs,
     useGetSupplierPurchaseReturnKPIsQuery: useSupplierPurchaseReturnKPIs,
 } = supplierApi;
+
+export const SupplierService = {
+    search: async (searchText, limit = 20) => {
+        try {
+            const { data } = await api.get("/suppliers/pagination", {
+                params: { searchText, page: 1, limit }
+            });
+            return data.data || [];
+        } catch (error) {
+            showError(error?.response?.data?.message || error?.message || "Failed to search suppliers");
+            throw error;
+        }
+    },
+};
