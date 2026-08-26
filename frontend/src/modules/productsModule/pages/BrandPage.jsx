@@ -15,7 +15,7 @@ export default function BrandPage() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getProductLabels(language);
-    
+
     const [mode, setMode] = useState("list");
     const [selectedBrandId, setSelectedBrandId] = useState(null);
     const [deleteBrand] = useDeleteBrandMutation();
@@ -61,35 +61,36 @@ export default function BrandPage() {
 
                 {/* Desktop Rows */}
                 {items.map((item) => (
-                    <div key={item._id} className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition-all items-center">
+                    <div key={item._id} data-testid={`brand-row-${item._id}`} className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition-all items-center">
                         <div className="col-span-6 font-medium text-[var(--ink)] truncate flex items-center gap-2">
                             {item.isActive && (
                                 <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
                             )}
-                            {item.name}
+                            <span data-testid={`brand-name-${item._id}`}>{item.name}</span>
                         </div>
                         <div className="col-span-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                item.isActive 
-                                    ? 'bg-green-100 text-green-700' 
+                            <span data-testid={`brand-status-${item._id}`} className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                item.isActive
+                                    ? 'bg-green-100 text-green-700'
                                     : 'bg-gray-100 text-gray-700'
                             }`}>
                                 {item.isActive ? labels.active : labels.inactive}
                             </span>
                         </div>
                         <div className="col-span-3 flex items-center gap-2">
-                            <button 
+                            <button
+                                id={`brand-edit-${item._id}`}
                                 onClick={() => handleEdit(item._id)}
                                 className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all"
                             >
                                 <Edit size={16} />
                             </button>
-                            <PermissionGuard 
-                                execute={() => handleDelete(item._id)} 
-                                permission="brands.delete" 
+                            <PermissionGuard
+                                execute={() => handleDelete(item._id)}
+                                permission="brands.delete"
                                 isConfirmation={true}
                             >
-                                <button className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-500 hover:text-red-500 transition-all">
+                                <button id={`brand-delete-${item._id}`} className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-500 hover:text-red-500 transition-all">
                                     <Trash2 size={16} />
                                 </button>
                             </PermissionGuard>
@@ -141,7 +142,7 @@ export default function BrandPage() {
     };
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div id="brands-page" className="h-full flex flex-col overflow-hidden">
             {/* Brand CRUD Modal */}
             <BrandCRUDModal
                 mode={mode}
@@ -156,19 +157,19 @@ export default function BrandPage() {
                     heading={labels.brands}
                     subheading={labels.manageBrands}
                     leftActions={
-                        <PermissionGuard 
-                            execute={handleCreate} 
-                            permission="brands.create" 
+                        <PermissionGuard
+                            execute={handleCreate}
+                            permission="brands.create"
                             isConfirmation={false}
                         >
-                            <div>
+                            <div id="brands-add-button">
                                 <ScreenTabButton lucideIcon={Plus} text={labels.add} />
                             </div>
                         </PermissionGuard>
                     }
                 />
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div id="brands-list-container" className="flex-1 overflow-hidden">
                 <PaginatedList
                     rtkQuery={useGetBrandsQuery}
                     limit={10}

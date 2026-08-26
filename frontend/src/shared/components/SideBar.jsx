@@ -190,6 +190,7 @@ export default function Sidebar() {
                   {/* Parent row */}
                   <div className="flex items-center">
                     <NavLink
+                      data-testid={`sidebar-nav-${item.id}`}
                       to={item.url}
                       onClick={() => {
                         setActiveId(item.id);
@@ -227,6 +228,7 @@ export default function Sidebar() {
                         return (
                           <li key={sub.id ?? sub.title}>
                             <NavLink
+                              data-testid={`sidebar-nav-${sub.id}`}
                               to={sub.url}
                               onClick={() => setActiveId(item.id)}
                               className={`sidebar-item py-1.5 text-xs ${isSubActive ? "sidebar-item-active" : ""}`}

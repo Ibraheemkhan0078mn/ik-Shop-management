@@ -99,6 +99,7 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
 
     return (
         <div
+            id="brand-modal"
             className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
             onClick={() => onClose()}
         >
@@ -108,10 +109,11 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)] shrink-0 bg-[var(--surface-muted)]">
-                    <h2 className="text-xl font-bold text-[var(--ink)] tracking-tight">
+                    <h2 id="brand-modal-title" className="text-xl font-bold text-[var(--ink)] tracking-tight">
                         {isCreate ? labels.addNewBrand : labels.editBrand}
                     </h2>
                     <button
+                        id="brand-modal-close"
                         type="button"
                         onClick={() => onClose()}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--surface)] text-[var(--muted)] transition-colors duration-200"
@@ -125,17 +127,18 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
                     <div className="w-full grid grid-cols-1 gap-x-5 gap-y-4">
                         {/* Brand Name */}
                         <div>
-                            <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
+                            <label htmlFor="brand-name-input" className="block text-sm font-medium text-[var(--ink)] mb-1.5">
                                 * {labels.brandName}
                             </label>
                             <input
+                                id="brand-name-input"
                                 type="text"
                                 placeholder={labels.brandPlaceholder}
                                 value={formData.name}
                                 onChange={(e) => updateField('name', e.target.value)}
                                 className={`w-full px-4 py-2.5 rounded-lg border ${
-                                    errors.name 
-                                        ? 'border-red-500 bg-red-500/5' 
+                                    errors.name
+                                        ? 'border-red-500 bg-red-500/5'
                                         : 'border-[var(--border)] bg-[var(--app-bg)]'
                                 } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
                             />
@@ -145,9 +148,10 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
 
                         {/* Active Status */}
                         <div>
-                            <label className="flex items-center gap-3 cursor-pointer">
+                            <label htmlFor="brand-active-checkbox" data-testid="brand-active-label" className="flex items-center gap-3 cursor-pointer">
                                 <div className="relative">
                                     <input
+                                        id="brand-active-checkbox"
                                         type="checkbox"
                                         checked={formData.isActive}
                                         onChange={(e) => updateField('isActive', e.target.checked)}
@@ -167,12 +171,13 @@ export default function BrandCRUDModal({ mode = "create", brandId = null, open, 
 
                     {/* Submit Button */}
                     <div className="mt-6">
-                        <PermissionGuard 
+                        <PermissionGuard
                             execute={onSubmit}
                             permission={isCreate ? "brands.create" : "brands.update"}
                             isConfirmation={false}
                         >
                             <button
+                                id="brand-modal-submit"
                                 disabled={isCreating || isUpdating}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium
                                            rounded-lg bg-[var(--accent-2)] text-[var(--surface)] hover:bg-[var(--accent-2)]/80

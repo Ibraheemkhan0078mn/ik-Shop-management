@@ -9,6 +9,8 @@ lerna-debug.log*
 release
 backend.exe
 .env
+test-results
+playwright-report
 
 node_modules
 dist
