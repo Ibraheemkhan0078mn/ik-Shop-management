@@ -9,17 +9,17 @@ import { getReportsLabels } from "../labels/reportsLabels.js";
 
 function BreakdownItem({ label, value, count, percentage, color }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
                 <div>
-                    <p className="text-sm font-medium text-[var(--ink)]">{label}</p>
-                    <p className="text-xs text-[var(--muted)]">{count} transactions</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{label}</p>
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{count} transactions</p>
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-sm font-bold" style={{ color }}>Rs {value?.toLocaleString() || 0}</p>
-                <p className="text-xs text-[var(--muted)]">{percentage}%</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color }}>Rs {value?.toLocaleString() || 0}</p>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>{percentage}%</p>
             </div>
         </div>
     );
@@ -28,15 +28,11 @@ function BreakdownItem({ label, value, count, percentage, color }) {
 function ExpenseTransactionRow({ expense, index }) {
     return (
         <>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{index + 1}</td>
-            <td className="py-3 px-4 text-sm font-medium text-[var(--ink)]">
-                Rs {expense.amount?.toLocaleString() || 0}
-            </td>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.expenseCategory || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--muted)]">{expense.notes || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--muted)]">
-                {new Date(expense.transactionDate).toLocaleDateString()}
-            </td>
+            <td className="py-2.5 px-4 text-sm" style={{ color: 'var(--muted)' }}>{index + 1}</td>
+            <td className="py-2.5 px-4 text-sm font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {expense.amount?.toLocaleString() || 0}</td>
+            <td className="py-2.5 px-4 text-sm capitalize" style={{ color: 'var(--ink)' }}>{expense.expenseCategory || '—'}</td>
+            <td className="py-2.5 px-4 text-sm" style={{ color: 'var(--muted)' }}>{expense.notes || '—'}</td>
+            <td className="py-2.5 px-4 text-sm" style={{ color: 'var(--muted)' }}>{new Date(expense.transactionDate).toLocaleDateString()}</td>
         </>
     );
 }
@@ -44,27 +40,29 @@ function ExpenseTransactionRow({ expense, index }) {
 function TransactionTable({ transactions, labels, total, page, limit, totalPages, onPageChange }) {
     if (!transactions || transactions.length === 0) {
         return (
-            <div className="rounded-lg border p-8 text-center" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-                <p className="text-sm text-[var(--muted)]">{labels.noDataFound || 'No transactions in this period.'}</p>
+            <div className="rounded-xl border p-8 text-center" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.noDataFound || 'No transactions in this period.'}</p>
             </div>
         );
     }
     return (
-        <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead style={{ background: 'var(--surface-muted)' }}>
                         <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>#</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.amount || 'Amount'}</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.category || 'Category'}</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.notes || 'Notes'}</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-[var(--ink)] tracking-wider border-b" style={{ borderColor: 'var(--border)' }}>{labels.date || 'Date'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>#</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.amount || 'Amount'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.category || 'Category'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.notes || 'Notes'}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.date || 'Date'}</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                         {transactions.map((expense, idx) => (
-                            <tr key={expense._id} className="border-b hover:bg-[var(--surface-muted)] transition-colors" style={{ borderColor: 'var(--border)' }}>
+                            <tr key={expense._id} className="transition-colors" style={{ background: 'transparent' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                                 <ExpenseTransactionRow expense={expense} index={idx} />
                             </tr>
                         ))}
@@ -73,24 +71,24 @@ function TransactionTable({ transactions, labels, total, page, limit, totalPages
             </div>
             {totalPages > 1 && (
                 <div className="px-4 py-3 flex items-center justify-between border-t" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
-                    <p className="text-xs text-[var(--muted)]">
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>
                         Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} transactions
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                         <button
                             onClick={() => onPageChange(page - 1)}
                             disabled={page === 1}
-                            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--surface)] transition-colors"
-                            style={{ borderColor: 'var(--border)' }}
+                            className="px-3 py-1.5 text-xs rounded-lg border disabled:opacity-40 transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                         >
                             Previous
                         </button>
-                        <span className="px-3 py-1.5 text-xs font-medium text-[var(--ink)]">Page {page} of {totalPages}</span>
+                        <span className="px-3 py-1.5 text-xs" style={{ color: 'var(--muted)' }}>Page {page} of {totalPages}</span>
                         <button
                             onClick={() => onPageChange(page + 1)}
                             disabled={page === totalPages}
-                            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--surface)] transition-colors"
-                            style={{ borderColor: 'var(--border)' }}
+                            className="px-3 py-1.5 text-xs rounded-lg border disabled:opacity-40 transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                         >
                             Next
                         </button>
@@ -101,6 +99,19 @@ function TransactionTable({ transactions, labels, total, page, limit, totalPages
     );
 }
 
+function InlineStat({ label, value, icon: Icon, color }) {
+    return (
+        <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}17` }}>
+                <Icon size={18} style={{ color }} />
+            </div>
+            <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide truncate" style={{ color: 'var(--muted)' }}>{label}</p>
+                <p className="text-sm font-bold tabular-nums truncate" style={{ color }}>{value}</p>
+            </div>
+        </div>
+    );
+}
 
 export default function ExpenseReport() {
     const { settings } = useSettings();
@@ -161,30 +172,28 @@ export default function ExpenseReport() {
     const transactions = transactionsData?.data || [];
     const expenseCount = summary?.expenseCount || 0;
     const categoryCount = breakdowns?.expensesByCategory?.length || 0;
-    const details = {
-        expenseCount,
-        categoryCount
-    };
+    const details = { expenseCount, categoryCount };
 
     return (
-        <div className="p-6 min-h-screen bg-[var(--app-bg)]">
+        <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.expenseReport}</h1>
-                    <p className="text-sm text-[var(--muted)]">{labels.expenseAnalysis}</p>
+                    <h1 className="text-2xl font-bold font-display" style={{ color: 'var(--ink)' }}>{labels.expenseReport}</h1>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.expenseAnalysis}</p>
                 </div>
                 <div className="flex gap-2 no-print">
                     <button
                         onClick={handleRefresh}
-                        className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2"
+                        className="px-4 py-2 rounded-xl border transition-colors flex items-center gap-2"
+                        style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}
                     >
-                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} style={{ color: 'var(--accent-2)' }} />
                         {labels.refresh}
                     </button>
                     <button
                         onClick={() => setIsPdfModalOpen(true)}
-                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                        className="px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90 flex items-center gap-2"
                         style={{ background: 'var(--accent-2)' }}
                     >
                         {labels.exportPdf}
@@ -193,18 +202,19 @@ export default function ExpenseReport() {
             </div>
 
             {/* Filter bar */}
-            <div className="card p-4 mb-6 no-print">
+            <div className="rounded-2xl border p-4 mb-6 no-print" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center gap-2 mb-3">
-                    <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.periodFilter}</span>
+                    <Filter size={16} style={{ color: 'var(--accent-2)' }} />
+                    <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{labels.periodFilter}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                         >
                             <option value="today">{labels.today}</option>
                             <option value="month">{labels.thisMonth}</option>
@@ -214,11 +224,12 @@ export default function ExpenseReport() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.category}</label>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.category}</label>
                         <select
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                         >
                             <option value="all">{labels.allCategories}</option>
                             <option value="Cash">Cash</option>
@@ -230,21 +241,23 @@ export default function ExpenseReport() {
                     {period === "custom" && (
                         <>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.fromDate}</label>
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.fromDate}</label>
                                 <input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.toDate}</label>
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.toDate}</label>
                                 <input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => setToDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                                 />
                             </div>
                         </>
@@ -255,65 +268,25 @@ export default function ExpenseReport() {
             {/* Content */}
             {showLoader ? (
                 <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent-2)' }}></div>
                 </div>
             ) : (
-                <div className="card">
+                <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                     {/* KPI Cards - Inline */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-b border-[var(--border)]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                <DollarSign size={20} className="text-[var(--accent-2)]" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalExpenses}</p>
-                                <p className="font-semibold text-[var(--ink)]">
-                                    Rs {(summary.totalExpenses || 0).toLocaleString()}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                                <TrendingUp size={20} className="text-red-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.averageExpense}</p>
-                                <p className="font-semibold text-red-600">
-                                    Rs {(summary.averageExpense || 0).toLocaleString()}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                                <Receipt size={20} className="text-green-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.categories}</p>
-                                <p className="font-semibold text-green-600">
-                                    {details.categoryCount || 0}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <BarChart3 size={20} className="text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.transactions}</p>
-                                <p className="font-semibold text-blue-600">
-                                    {details.expenseCount || 0}
-                                </p>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                        <InlineStat label={labels.totalExpenses} value={`Rs ${(summary.totalExpenses || 0).toLocaleString()}`} icon={DollarSign} color="var(--accent-2)" />
+                        <InlineStat label={labels.averageExpense} value={`Rs ${(summary.averageExpense || 0).toLocaleString()}`} icon={TrendingUp} color="#ef4444" />
+                        <InlineStat label={labels.categories} value={details.categoryCount || 0} icon={Receipt} color="#10b981" />
+                        <InlineStat label={labels.transactions} value={details.expenseCount || 0} icon={BarChart3} color="#3b82f6" />
                     </div>
 
-                    {/* Detailed Sections - Flat Preview */}
+                    {/* Detailed Sections */}
                     <div className="p-4 space-y-6">
                         {/* Categories Breakdown */}
                         <div>
-                            <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByCategory}</h3>
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>{labels.expensesByCategory}</h3>
                             {breakdowns.expensesByCategory && breakdowns.expensesByCategory.length > 0 ? (
-                                <div className="space-y-2">
+                                <div className="rounded-xl border px-4" style={{ borderColor: 'var(--border)' }}>
                                     {breakdowns.expensesByCategory.map((item, idx) => (
                                         <BreakdownItem
                                             key={idx}
@@ -326,16 +299,16 @@ export default function ExpenseReport() {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-[var(--muted)]">No category data available</p>
+                                <p className="text-sm" style={{ color: 'var(--muted)' }}>No category data available</p>
                             )}
                         </div>
 
                         {/* Transactions Table */}
                         <div>
-                            <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.transactions}</h3>
-                            <TransactionTable 
-                                transactions={transactions} 
-                                labels={labels} 
+                            <h3 className="text-md font-semibold mb-3" style={{ color: 'var(--ink)' }}>{labels.transactions}</h3>
+                            <TransactionTable
+                                transactions={transactions}
+                                labels={labels}
                                 total={transactionsData?.total || 0}
                                 page={currentPage}
                                 limit={50}

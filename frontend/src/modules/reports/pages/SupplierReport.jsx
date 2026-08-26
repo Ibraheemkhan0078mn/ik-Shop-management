@@ -7,6 +7,58 @@ import SupplierReportPdfTemplate from "../components/SupplierReportPdfTemplate.j
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
+function getInitials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] || "";
+    const second = parts.length > 1 ? parts[1][0] : "";
+    return (first + second).toUpperCase();
+}
+
+function Avatar({ name, large = false }) {
+    return (
+        <div
+            className={`${large ? 'w-12 h-12 text-sm' : 'w-8 h-8 text-xs'} rounded-full flex items-center justify-center font-bold shrink-0`}
+            style={{ background: 'var(--accent-2)17', color: 'var(--accent-2)' }}
+        >
+            {getInitials(name)}
+        </div>
+    );
+}
+
+function KpiCard({ label, value, sub, icon: Icon, color }) {
+    return (
+        <div className="rounded-2xl border p-4 transition-shadow hover:shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}17` }}>
+                    <Icon size={18} style={{ color }} />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wide truncate" style={{ color: 'var(--muted)' }}>{label}</p>
+                    <p className="text-sm font-bold tabular-nums truncate" style={{ color: 'var(--ink)' }}>{value}</p>
+                    {sub && <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>{sub}</p>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const DELIVERY_COLORS = {
+    delivered: { bg: '#10b98117', fg: '#10b981', bd: '#10b98140' },
+    ordered: { bg: '#f59e0b17', fg: '#f59e0b', bd: '#f59e0b40' },
+    rejected: { bg: '#dc262617', fg: '#dc2626', bd: '#dc262640' },
+    default: { bg: 'var(--surface-muted)', fg: 'var(--muted)', bd: 'var(--border)' },
+};
+
+function StatusBadge({ status, labelText }) {
+    const c = DELIVERY_COLORS[status] || DELIVERY_COLORS.default;
+    return (
+        <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: c.bg, color: c.fg, borderColor: c.bd }}>
+            {labelText}
+        </span>
+    );
+}
+
 export default function SupplierReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -17,53 +69,40 @@ export default function SupplierReport() {
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
 
-    // Calculate date range based on period
     const getDatesFromPeriod = (periodValue) => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
+
         switch (periodValue) {
             case "today":
-                return {
-                    from: today.toISOString().split('T')[0],
-                    to: today.toISOString().split('T')[0]
-                };
-            case "month":
+                return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+            case "month": {
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                 const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return {
-                    from: monthStart.toISOString().split('T')[0],
-                    to: monthEnd.toISOString().split('T')[0]
-                };
-            case "3month":
+                return { from: monthStart.toISOString().split('T')[0], to: monthEnd.toISOString().split('T')[0] };
+            }
+            case "3month": {
                 const threeMonthStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
                 const threeMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return {
-                    from: threeMonthStart.toISOString().split('T')[0],
-                    to: threeMonthEnd.toISOString().split('T')[0]
-                };
-            case "year":
+                return { from: threeMonthStart.toISOString().split('T')[0], to: threeMonthEnd.toISOString().split('T')[0] };
+            }
+            case "year": {
                 const yearStart = new Date(now.getFullYear(), 0, 1);
                 const yearEnd = new Date(now.getFullYear(), 11, 31);
-                return {
-                    from: yearStart.toISOString().split('T')[0],
-                    to: yearEnd.toISOString().split('T')[0]
-                };
+                return { from: yearStart.toISOString().split('T')[0], to: yearEnd.toISOString().split('T')[0] };
+            }
             default:
-                return {
-                    from: today.toISOString().split('T')[0],
-                    to: today.toISOString().split('T')[0]
-                };
+                return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
         }
     };
 
     const dates = useMemo(() => getDatesFromPeriod(period), [period]);
-    const filters = useMemo(() => ({ 
-        fromDate: dates.from, 
-        toDate: dates.to, 
+    const filters = useMemo(() => ({
+        fromDate: dates.from,
+        toDate: dates.to,
         supplierName, paymentStatus
     }), [dates.from, dates.to, supplierName, paymentStatus]);
-    
+
     const { data, isLoading, isFetching, error, refetch } = useGetSupplierReportQuery(filters);
 
     if (error) {
@@ -82,53 +121,41 @@ export default function SupplierReport() {
         return new Date(dateStr).toLocaleDateString();
     };
 
-    const getDeliveryStatusColor = (status) => {
-        switch (status) {
-            case 'delivered': return 'bg-green-100 text-green-800 border-green-300';
-            case 'ordered': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
+    const deliveryLabel = (status) => status === 'delivered' ? 'Received' : status === 'ordered' ? 'Pending' : (status || "—");
 
     return (
-        <div className="p-6 min-h-screen bg-[var(--app-bg)]">
+        <div className="p-6 min-h-screen" style={{ background: 'var(--app-bg)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{labels.supplierReport}</h1>
-                    <p className="text-sm text-[var(--muted)]">
-                        {labels.supplierAnalytics}
-                    </p>
+                    <h1 className="text-2xl font-bold font-display" style={{ color: 'var(--ink)' }}>{labels.supplierReport}</h1>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.supplierAnalytics}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleRefresh} className="px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors flex items-center gap-2">
-                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} />
+                    <button onClick={handleRefresh} className="px-4 py-2 rounded-xl border transition-colors flex items-center gap-2" style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--ink)' }}>
+                        <RefreshCw size={16} className={showLoader ? "animate-spin" : ""} style={{ color: 'var(--accent-2)' }} />
                         {labels.refresh}
                     </button>
-                    <button
-                        onClick={() => setIsPdfModalOpen(true)}
-                        className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
-                        style={{ background: 'var(--accent-2)' }}
-                    >
+                    <button onClick={() => setIsPdfModalOpen(true)} className="px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90 flex items-center gap-2" style={{ background: 'var(--accent-2)' }}>
                         {labels.exportPdf}
                     </button>
                 </div>
             </div>
 
             {/* Filter bar */}
-            <div className="card p-4 mb-6">
+            <div className="rounded-2xl border p-4 mb-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center gap-2 mb-3">
-                    <Filter size={16} className="text-[var(--accent-2)]" />
-                    <span className="text-sm font-semibold text-[var(--ink)]">{labels.filters}</span>
+                    <Filter size={16} style={{ color: 'var(--accent-2)' }} />
+                    <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{labels.filters}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.period}</label>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.period}</label>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                         >
                             <option value="today">{labels.today}</option>
                             <option value="month">{labels.thisMonth}</option>
@@ -137,21 +164,23 @@ export default function SupplierReport() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.supplier}</label>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.supplier}</label>
                         <input
                             type="text"
                             placeholder="Supplier name..."
                             value={supplierName}
                             onChange={(e) => setSupplierName(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">{labels.status}</label>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.status}</label>
                         <select
                             value={paymentStatus}
                             onChange={(e) => setPaymentStatus(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]/20"
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
                         >
                             <option value="all">{labels.allStatuses}</option>
                             <option value="paid">{labels.paid}</option>
@@ -164,127 +193,73 @@ export default function SupplierReport() {
 
             {showLoader ? (
                 <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-2)]"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent-2)' }}></div>
                 </div>
             ) : (
                 <div>
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                    <Truck size={20} className="text-[var(--accent-2)]" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalSuppliers}</p>
-                                    <p className="font-semibold text-[var(--ink)]">
-                                        {summary.totalSuppliers || 0}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                                    <DollarSign size={20} className="text-[var(--accent-2)]" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPurchases}</p>
-                                    <p className="font-semibold text-[var(--ink)]">
-                                        Rs {(summary.totalPurchases || 0).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                                    <DollarSign size={20} className="text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalPaid}</p>
-                                    <p className="font-semibold text-[var(--ink)]">
-                                        Rs {(summary.totalPaid || 0).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                                    <AlertCircle size={20} className="text-red-600" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalDue}</p>
-                                    <p className="font-semibold text-[var(--ink)]">
-                                        Rs {(summary.totalDue || 0).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                                    <Star size={20} className="text-yellow-600" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.topSupplier}</p>
-                                    <p className="font-semibold text-[var(--ink)] text-sm truncate max-w-[150px]">
-                                        {summary.topSupplier?.name || "—"}
-                                    </p>
-                                    <p className="text-xs text-[var(--muted)]">
-                                        Rs {(summary.topSupplier?.amount || 0).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="flex flex-wrap gap-3 mb-6">
+                        <KpiCard label={labels.totalSuppliers} value={summary.totalSuppliers || 0} icon={Truck} color="var(--accent-2)" />
+                        <KpiCard label={labels.totalPurchases} value={`Rs ${(summary.totalPurchases || 0).toLocaleString()}`} icon={DollarSign} color="#3b82f6" />
+                        <KpiCard label={labels.totalPaid} value={`Rs ${(summary.totalPaid || 0).toLocaleString()}`} icon={DollarSign} color="#10b981" />
+                        <KpiCard label={labels.totalDue} value={`Rs ${(summary.totalDue || 0).toLocaleString()}`} icon={AlertCircle} color="#dc2626" />
+                        <KpiCard
+                            label={labels.topSupplier}
+                            value={summary.topSupplier?.name || "—"}
+                            sub={`Rs ${(summary.topSupplier?.amount || 0).toLocaleString()}`}
+                            icon={Star}
+                            color="#f59e0b"
+                        />
                     </div>
 
                     {/* Supplier Table */}
-                    <div className="card">
-                        <div className="p-4 border-b border-[var(--border)]">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.supplierReport}</h2>
+                    <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                        <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{labels.supplierReport}</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-[var(--surface-muted)]">
+                                <thead style={{ background: 'var(--surface-muted)' }}>
                                     <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPurchases}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalBills}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.lastPurchase}</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.actions}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>#</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.supplier}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalPurchases}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalBills}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.lastPurchase}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.actions}</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--border)]">
+                                <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                     {suppliers.length === 0 ? (
                                         <tr>
-                                            <td colSpan="7" className="px-4 py-8 text-center text-[var(--muted)]">
-                                                {labels.noDataFound}
-                                            </td>
+                                            <td colSpan="7" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
                                         </tr>
                                     ) : (
                                         suppliers.map((supplier) => (
-                                            <tr key={supplier._id} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                                <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{supplier.rank}</td>
-                                                <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{supplier.name}</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(supplier.totalPurchases || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right text-blue-600 font-medium">{supplier.totalOrders || 0}</td>
-                                                <td className="px-4 py-3 text-right text-red-600 font-medium">Rs {(supplier.totalDue || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-sm text-[var(--muted)]">{formatDate(supplier.lastPurchase)}</td>
+                                            <tr key={supplier._id} className="transition-colors" style={{ background: 'transparent' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                                <td className="px-4 py-3 font-bold tabular-nums" style={{ color: 'var(--accent-2)' }}>#{supplier.rank}</td>
+                                                <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--ink)' }}>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar name={supplier.name} />
+                                                        <span>{supplier.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(supplier.totalPurchases || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#3b82f6' }}>{supplier.totalOrders || 0}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#dc2626' }}>Rs {(supplier.totalDue || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--muted)' }}>{formatDate(supplier.lastPurchase)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <button
                                                         onClick={() => setSelectedSupplier(supplier)}
-                                                        className="p-2 hover:bg-[var(--app-bg)] rounded-lg transition-colors"
+                                                        className="p-2 rounded-lg transition-colors"
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--app-bg)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                                         title={labels.viewDetails}
                                                     >
-                                                        <Eye size={16} className="text-[var(--accent-2)]" />
+                                                        <Eye size={16} style={{ color: 'var(--accent-2)' }} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -300,98 +275,99 @@ export default function SupplierReport() {
             {/* Supplier Detail Modal */}
             {selectedSupplier && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedSupplier(null)}>
-                    <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.supplierDetails}</h2>
-                            <button onClick={() => setSelectedSupplier(null)} className="p-2 hover:bg-[var(--app-bg)] rounded-lg">
-                                <X size={20} className="text-[var(--muted)]" />
+                    <div className="rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }} onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{labels.supplierDetails}</h2>
+                            <button onClick={() => setSelectedSupplier(null)} className="p-2 rounded-lg transition-colors"
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--app-bg)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                <X size={20} style={{ color: 'var(--muted)' }} />
                             </button>
                         </div>
-                        <div className="p-4">
+                        <div className="p-5">
                             {/* Basic Info */}
                             <div className="mb-6">
-                                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Basic Information</h3>
+                                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Basic Information</h3>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs text-[var(--muted)]">Name</p>
-                                        <p className="font-medium text-[var(--ink)]">{selectedSupplier.name}</p>
+                                    <div className="flex items-center gap-3 col-span-2">
+                                        <Avatar name={selectedSupplier.name} large />
+                                        <div>
+                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>Name</p>
+                                            <p className="font-medium" style={{ color: 'var(--ink)' }}>{selectedSupplier.name}</p>
+                                        </div>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)]">Phone</p>
-                                        <p className="font-medium text-[var(--ink)]">{selectedSupplier.phone || "—"}</p>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Phone</p>
+                                        <p className="font-medium" style={{ color: 'var(--ink)' }}>{selectedSupplier.phone || "—"}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-[var(--muted)]">Address</p>
-                                        <p className="font-medium text-[var(--ink)]">{selectedSupplier.address || "—"}</p>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Address</p>
+                                        <p className="font-medium" style={{ color: 'var(--ink)' }}>{selectedSupplier.address || "—"}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Stats */}
                             <div className="mb-6">
-                                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Statistics</h3>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="p-3 bg-[var(--surface-muted)] rounded-lg">
-                                        <p className="text-xs text-[var(--muted)]">Total Purchases</p>
-                                        <p className="font-semibold text-[var(--accent-2)]">Rs {(selectedSupplier.totalPurchases || 0).toLocaleString()}</p>
+                                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Statistics</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Total Purchases</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(selectedSupplier.totalPurchases || 0).toLocaleString()}</p>
                                     </div>
-                                    <div className="p-3 bg-[var(--surface-muted)] rounded-lg">
-                                        <p className="text-xs text-[var(--muted)]">Total Bills</p>
-                                        <p className="font-semibold text-[var(--ink)]">{selectedSupplier.totalBills || 0}</p>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Total Bills</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>{selectedSupplier.totalBills || 0}</p>
                                     </div>
-                                    <div className="p-3 bg-[var(--surface-muted)] rounded-lg">
-                                        <p className="text-xs text-[var(--muted)]">Outstanding Due</p>
-                                        <p className="font-semibold text-red-600">Rs {(selectedSupplier.totalDue || 0).toLocaleString()}</p>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Outstanding Due</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: '#dc2626' }}>Rs {(selectedSupplier.totalDue || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Purchase History */}
                             <div>
-                                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Purchase History</h3>
-                                <div className="overflow-x-auto">
+                                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Purchase History</h3>
+                                <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--border)' }}>
                                     <table className="w-full text-sm">
-                                        <thead className="bg-[var(--surface-muted)]">
+                                        <thead style={{ background: 'var(--surface-muted)' }}>
                                             <tr>
-                                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
-                                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Bill No</th>
-                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
-                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Paid</th>
-                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">Due</th>
-                                                <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-[var(--muted)]">Delivery</th>
-                                                <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-[var(--muted)]">Reject</th>
+                                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Date</th>
+                                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Bill No</th>
+                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Amount</th>
+                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Paid</th>
+                                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Due</th>
+                                                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Delivery</th>
+                                                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Reject</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-[var(--border)]">
+                                        <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                             {selectedSupplier.purchases && selectedSupplier.purchases.length > 0 ? (
                                                 selectedSupplier.purchases.map((purchase) => {
                                                     const paidAmount = purchase.paidAmount || 0;
                                                     const dueAmount = purchase.totalAmount - paidAmount;
                                                     const isRejected = purchase.status === 'rejected';
-                                                    
+
                                                     return (
                                                         <tr key={purchase._id}>
-                                                            <td className="px-3 py-2 text-[var(--muted)]">{formatDate(purchase.createdAt)}</td>
-                                                            <td className="px-3 py-2 text-[var(--ink)]">{purchase.invoiceNumber || "—"}</td>
-                                                            <td className="px-3 py-2 text-right font-medium text-[var(--accent-2)]">Rs {(purchase.totalAmount || 0).toLocaleString()}</td>
-                                                            <td className="px-3 py-2 text-right text-green-600">Rs {paidAmount.toLocaleString()}</td>
-                                                            <td className="px-3 py-2 text-right text-red-600">Rs {dueAmount.toLocaleString()}</td>
+                                                            <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{formatDate(purchase.createdAt)}</td>
+                                                            <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>{purchase.invoiceNumber || "—"}</td>
+                                                            <td className="px-3 py-2 text-right font-medium tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(purchase.totalAmount || 0).toLocaleString()}</td>
+                                                            <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#10b981' }}>Rs {paidAmount.toLocaleString()}</td>
+                                                            <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#dc2626' }}>Rs {dueAmount.toLocaleString()}</td>
                                                             <td className="px-3 py-2 text-center">
-                                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getDeliveryStatusColor(purchase.status)}`}>
-                                                                    {purchase.status === 'delivered' ? 'Received' : purchase.status === 'ordered' ? 'Pending' : purchase.status || "—"}
-                                                                </span>
+                                                                <StatusBadge status={purchase.status} labelText={deliveryLabel(purchase.status)} />
                                                             </td>
                                                             <td className="px-3 py-2 text-center">
-                                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${isRejected ? 'bg-red-100 text-red-800 border-red-300' : 'bg-green-100 text-green-800 border-green-300'}`}>
-                                                                    {isRejected ? 'Yes' : 'No'}
-                                                                </span>
+                                                                <StatusBadge status={isRejected ? 'rejected' : 'delivered'} labelText={isRejected ? 'Yes' : 'No'} />
                                                             </td>
                                                         </tr>
                                                     );
                                                 })
                                             ) : (
                                                 <tr>
-                                                    <td colSpan="7" className="px-3 py-4 text-center text-[var(--muted)]">No purchase history</td>
+                                                    <td colSpan="7" className="px-3 py-4 text-center" style={{ color: 'var(--muted)' }}>No purchase history</td>
                                                 </tr>
                                             )}
                                         </tbody>

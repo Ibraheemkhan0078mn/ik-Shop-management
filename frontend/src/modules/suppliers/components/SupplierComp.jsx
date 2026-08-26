@@ -36,7 +36,9 @@ export default function SupplierComp({ setVisibility }) {
             await deleteSupplier(id).unwrap();
             showSuccess("Supplier deleted successfully");
         } catch (error) {
-            showError(error?.data?.message || "Failed to delete supplier");
+            // Backend returns error in 'error' field from error middleware
+            const errorMessage = error?.error || error?.data?.error || error?.data?.message || "Failed to delete supplier";
+            showError(errorMessage);
         }
     };
 

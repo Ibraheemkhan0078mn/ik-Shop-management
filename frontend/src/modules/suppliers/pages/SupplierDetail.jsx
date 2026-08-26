@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Phone, Mail, MapPin, Building2, Package } from "lucide-react";
+import { ArrowLeft, Edit, Phone, Mail, MapPin, Building2, Package, FileText } from "lucide-react";
 import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -157,6 +157,16 @@ export default function SupplierDetail() {
                             <div>
                                 <label className="text-xs text-[var(--muted)] uppercase font-bold">Type</label>
                                 <p className="font-medium text-[var(--ink)] capitalize">{supplier.type || "—"}</p>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <FileText size={18} className="text-primary" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-xs text-[var(--muted)] uppercase font-bold">{labels.notes || "Notes"}</label>
+                                <p className="font-medium text-[var(--ink)] whitespace-pre-wrap">{supplier.notes || "—"}</p>
                             </div>
                         </div>
 

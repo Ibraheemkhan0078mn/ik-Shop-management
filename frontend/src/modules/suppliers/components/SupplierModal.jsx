@@ -32,6 +32,8 @@ const emptyForm = () => ({
     image: null,
 });
 
+const MAX_NOTES_LENGTH = 1000;
+
 // ─── theme atoms ───────────────────────────────────────────────────────────
 const Label = ({ children, required }) => (
     <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
@@ -161,6 +163,7 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
     const handleSubmit = async () => {
         if (!form.name.trim()) return showError(labels.nameRequired);
         if (nameError)          return showError(labels.nameAlreadyTaken);
+        if (form.notes.length > MAX_NOTES_LENGTH) return showError(`Notes must be less than ${MAX_NOTES_LENGTH} characters`);
 
         const formData = new FormData();
         formData.append("name", form.name.trim());
@@ -311,6 +314,12 @@ export default function SupplierModal({ mode = "create", supplierId, onClose, on
                             <Label>{labels.notes}</Label>
                             <Txt rows={2} value={form.notes} placeholder={labels.notesPlaceholder}
                                 onChange={e => update("notes", e.target.value)} />
+                            <div className="flex justify-between mt-1">
+                                <span className="text-xs text-[var(--muted)]">{labels.notesPlaceholder}</span>
+                                <span className={`text-xs ${form.notes.length > MAX_NOTES_LENGTH ? 'text-red-500' : 'text-[var(--muted)]'}`}>
+                                    {form.notes.length} / {MAX_NOTES_LENGTH}
+                                </span>
+                            </div>
                         </Field>
 
                         <Field className="sm:col-span-2">

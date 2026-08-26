@@ -28,7 +28,9 @@ export default function SupplierPage() {
             await deleteSupplier(id).unwrap();
             showSuccess(labels.supplierDeleted);
         } catch (error) {
-            showError(error?.data?.message || labels.failedToDelete);
+            // Backend returns error in 'error' field from error middleware
+            const errorMessage = error?.error || error?.data?.error || error?.data?.message || labels.failedToDelete;
+            showError(errorMessage);
         }
     };
 

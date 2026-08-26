@@ -43,9 +43,9 @@ const router = express.Router();
 router.get("/dashboard/summary", getDashboardSummaryData);
 
 // Main Business Report
-router.get("/main-business", getMainBusinessReportData);
 router.get("/main-business/kpi", getMainBusinessReportKPIData);
 router.get("/main-business/data", getMainBusinessReportRowsData);
+router.get("/main-business", getMainBusinessReportData);
 
 // Sales Report
 router.get("/sales", getSalesReportData);

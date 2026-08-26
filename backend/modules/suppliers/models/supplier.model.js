@@ -46,6 +46,7 @@ const supplierSchema = new mongoose.Schema(
             type: String,
             trim: true,
             default: "",
+            maxlength: 1000,
         },
         // Supplier image/logo
         image: {
