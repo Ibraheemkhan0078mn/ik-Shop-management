@@ -505,6 +505,7 @@ export default function MainBusinessReportPdfTemplate({ summary = {}, details = 
                             { label: 'Avg Invoice', value: details.avgPurchaseValue, isCurrency: true },
                             { label: 'Suppliers', value: details.supplierCount, isCurrency: false, showPercentage: false },
                         ]}
+                        breakdown={breakdowns.purchasesBySupplier} breakdownLabelKey="supplierName"
                         transactions={transactions.purchases}
                         transactionType="purchases"
                         isExpanded={!!expandedSections.purchases}
@@ -536,7 +537,10 @@ export default function MainBusinessReportPdfTemplate({ summary = {}, details = 
                         color="#8b5cf6"
                         kpiValue={summary.totalSalaries}
                         count={details.salaryPaymentCount || 0}
-                        metrics={[{ label: 'Avg/Staff', value: details.avgSalaryPerStaff, isCurrency: true }]}
+                        metrics={[
+                            { label: 'Avg/Staff', value: details.avgSalaryPerStaff, isCurrency: true },
+                            { label: 'Staff Count', value: details.staffCount, isCurrency: false, showPercentage: false },
+                        ]}
                         breakdown={breakdowns.salariesByStaff}
                         breakdownLabelKey="staffName"
                         transactions={transactions.salaryPayments}

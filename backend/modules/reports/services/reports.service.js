@@ -2117,9 +2117,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const totalSalaries = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     const salaryPaymentCount = salaryPayments.length;
 
-    // Calculate average salary per staff
+    // Calculate average salary per staff and staff count
     const uniqueStaffPaid = new Set(salaryPayments.map(p => p.staffId?.toString()).filter(Boolean));
-    const avgSalaryPerStaff = uniqueStaffPaid.size > 0 ? totalSalaries / uniqueStaffPaid.size : 0;
+    const staffCount = uniqueStaffPaid.size;
+    const avgSalaryPerStaff = staffCount > 0 ? totalSalaries / staffCount : 0;
 
     const totalReceivable = qarzaReceivable.reduce((sum, q) => sum + (q.balance || 0), 0);
     const qarzaReceivableCount = qarzaReceivable.length;
@@ -2196,6 +2197,22 @@ const prepareMainBusinessReport = async (filters = {}) => {
     });
     const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
         _id: method,
+        total: data.total,
+        count: data.count
+    }));
+
+    // Calculate purchases by supplier
+    const purchasesBySupplierMap = {};
+    purchases.forEach(purchase => {
+        const supplierName = purchase.supplierName || 'unknown';
+        if (!purchasesBySupplierMap[supplierName]) {
+            purchasesBySupplierMap[supplierName] = { total: 0, count: 0 };
+        }
+        purchasesBySupplierMap[supplierName].total += purchase.totalAmount || 0;
+        purchasesBySupplierMap[supplierName].count += 1;
+    });
+    const purchasesBySupplier = Object.entries(purchasesBySupplierMap).map(([supplierName, data]) => ({
+        _id: supplierName,
         total: data.total,
         count: data.count
     }));
@@ -2402,6 +2419,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
             avgPurchaseValue,
             avgExpenseValue,
             avgSalaryPerStaff,
+            staffCount,
             wastagePercentOfPurchases,
         },
         comparison: {
@@ -2452,6 +2470,12 @@ const prepareMainBusinessReport = async (filters = {}) => {
                 total: item.total,
                 count: item.count,
                 percentage: totalSales > 0 ? ((item.total / totalSales) * 100).toFixed(1) : 0
+            })),
+            purchasesBySupplier: purchasesBySupplier.map(item => ({
+                supplierName: item._id || 'unknown',
+                total: item.total,
+                count: item.count,
+                percentage: totalPurchases > 0 ? ((item.total / totalPurchases) * 100).toFixed(1) : 0
             })),
             expensesByCategory: expensesByCategory.map(item => ({
                 category: item._id || 'uncategorized',

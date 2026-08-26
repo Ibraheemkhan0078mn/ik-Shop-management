@@ -1,6 +1,6 @@
 // src/reports/components/MainBusinessReport.jsx
 import React, { useState, useMemo } from "react";
-import { RefreshCw, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter, HandCoins, Calendar } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Package, Receipt, Users, AlertCircle, Wallet, Filter, HandCoins, Calendar, TrendingUp, TrendingDown } from "lucide-react";
 import { useGetMainBusinessReportKPIQuery, useGetMainBusinessReportDataQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -506,6 +506,7 @@ export default function MainBusinessReport() {
                                     { label: 'Avg Invoice', value: details.avgPurchaseValue, isCurrency: true },
                                     { label: 'Suppliers', value: details.supplierCount, isCurrency: false, showPercentage: false },
                                 ]}
+                                breakdown={breakdowns.purchasesBySupplier} breakdownLabelKey="supplierName"
                                 transactions={transactions.purchases} transactionType="purchases"
                                 isExpanded={!!expandedSections.purchases} onToggle={() => toggleSection('purchases')} labels={labels}
                             />
@@ -522,10 +523,29 @@ export default function MainBusinessReport() {
                             <SourceSection
                                 eyebrow={labels.salaries} title={labels.salaries} description={labels.staffSalaryPayments}
                                 icon={Users} color="#8b5cf6" kpiValue={summary.totalSalaries} count={details.salaryPaymentCount || 0}
-                                metrics={[{ label: 'Avg/Staff', value: details.avgSalaryPerStaff, isCurrency: true }]}
+                                metrics={[
+                                    { label: 'Avg/Staff', value: details.avgSalaryPerStaff, isCurrency: true },
+                                    { label: 'Staff Count', value: details.staffCount, isCurrency: false, showPercentage: false },
+                                ]}
                                 breakdown={breakdowns.salariesByStaff} breakdownLabelKey="staffName"
                                 transactions={transactions.salaryPayments} transactionType="salaryPayments"
                                 isExpanded={!!expandedSections.salaries} onToggle={() => toggleSection('salaries')} labels={labels}
+                            />
+
+                            <SourceSection
+                                eyebrow={labels.purchaseReturns} title={labels.purchaseReturns} description={labels.returnsSentToSuppliers}
+                                icon={TrendingUp} color="#06b6d4" kpiValue={summary.totalPurchaseReturns} count={details.purchaseReturnCount || 0}
+                                breakdown={breakdowns.purchaseReturnsBySupplier} breakdownLabelKey="supplierName"
+                                transactions={transactions.purchaseReturns} transactionType="purchaseReturns"
+                                isExpanded={!!expandedSections.purchaseReturns} onToggle={() => toggleSection('purchaseReturns')} labels={labels}
+                            />
+
+                            <SourceSection
+                                eyebrow={labels.saleReturns} title={labels.saleReturns} description={labels.customerProductReturns}
+                                icon={TrendingDown} color="#f59e0b" kpiValue={summary.totalProductReturns} count={details.productReturnCount || 0}
+                                breakdown={breakdowns.productReturnsByReason} breakdownLabelKey="reason"
+                                transactions={transactions.productReturns} transactionType="productReturns"
+                                isExpanded={!!expandedSections.productReturns} onToggle={() => toggleSection('productReturns')} labels={labels}
                             />
 
                           <SourceSection
