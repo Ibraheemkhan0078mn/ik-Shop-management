@@ -19,11 +19,12 @@ const PERMISSION_MAP = {
   purchaseReturn:  p => hasPermission(p, "purchaseReturns.view"),
   customers:       p => hasPermission(p, "customers.view"),
   suppliers:       p => hasPermission(p, "suppliers.view"),
-  creditDebits:    p => hasPermission(p, "creditsDebits.view") || hasPermission(p, "accounts.view"),
+  creditDebits:    p => hasPermission(p, "creditsDebits.view") || hasPermission(p, "accounts.view") || hasPermission(p, "creditsAndDebitsAccounts.view"),
   expenses:        p => hasPermission(p, "expenses.view"),
   staff:           p => hasPermission(p, "staff.view"),
   reports:         p => hasPermission(p, "reports.view"),
   users:           p => hasPermission(p, "users.view") || hasPermission(p, "users.manage"),
+  orders:          p => hasPermission(p, "orders.view") || hasPermission(p, "pos.orders.view"),
 };
 
 export default function Sidebar() {
@@ -32,10 +33,8 @@ export default function Sidebar() {
   const { settings } = useSettings();
   const language = settings?.language || "en";
   const { permissions = [], role, id: userId } = useSelector(s => s.auth) ?? {};
-  // const { data: settingsData } = useGetSettingsQuery(userId);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // const settings = settingsData?.data || {};
   const appName = "Syed Soft";
   const shopName = settings?.shop?.name || appName;
   const shopImageUrl = settings?.shop?.imageUrl || "";
@@ -47,10 +46,14 @@ export default function Sidebar() {
     // Admin has access to everything
     if (role === "admin") return true;
     
+    // Check permission map
     const check = PERMISSION_MAP[item.id];
-    if (check) return check(permissions);
-    if (item.id === "users") return hasPermission(permissions, "users.manage");
-    return true;
+    if (check) {
+      return check(permissions);
+    }
+    
+    // Fallback - deny access if no permission check defined
+    return false;
   };
 
   const isModuleVisible = item => {
