@@ -2,9 +2,8 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit, Trash2, Filter, Package, Eye } from "lucide-react";
-import { useDeleteProduct, useDeleteProductWithBatches, useProducts } from "../services/product.service.js";
+import { useDeleteProduct, useProducts } from "../services/product.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
-import { useUser } from "../../auth/services/auth.service.js";
 import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
@@ -31,41 +30,25 @@ const StockBadge = ({ qty }) => (
     </span>
 );
 
-const StatusBadge = ({ active, labels }) => (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${active ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500"}`}>
-        {active ? labels.active : labels.inactive}
-    </span>
-);
-
-const IconBtn = ({ onClick, icon: Icon, hoverClass }) => (
-    <button onClick={onClick}
-        className={`p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 ${hoverClass}`}>
-        <Icon size={15} />
-    </button>
-);
-
 export default function Products() {
     const navigate = useNavigate();
-    const { data: userQuery } = useUser();
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getProductLabels(language);
 
     const [deleteProduct] = useDeleteProduct();
-    const [deleteProductWithBatches] = useDeleteProductWithBatches();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("create");
     const [selectedProductId, setSelectedProductId] = useState(null);
     const [filterPanelOpen, setFilterPanelOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
-    const [currentPage, setCurrentPage] = useState(1);
     const [imageLoadStates, setImageLoadStates] = useState({});
-    
+
     const { data: brandsData } = useGetBrandsQuery();
     const uniqueBrands = brandsData?.data?.filter(b => b.isActive).map(b => b.name) || [];
 
-    const handleFiltersChange = useCallback((f) => { setActiveFilters(f); setCurrentPage(1); }, []);
+    const handleFiltersChange = useCallback((f) => { setActiveFilters(f); }, []);
     const openEdit = (id) => { setSelectedProductId(id); setModalMode("update"); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setModalMode("create"); setSelectedProductId(null); };
     
@@ -290,7 +273,7 @@ export default function Products() {
                     dataKey="data"
                     wrapperClassName="h-full"
                     renderItems={renderItems}
-                    queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
+                    queryArgs={{ ...activeFilters }}
                 />
             </div>
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { usePaymentMethod, useCreatePaymentMethod, useUpdatePaymentMethod } from "../services/paymentMethod.service.js";
 
-export default function PaymentMethodModal({ mode, paymentMethodId, onClose, labels }) {
+export default function PaymentMethodModal({ mode, paymentMethodId, onClose, labels = {} }) {
     const [formData, setFormData] = useState({
         name: "",
         isActive: true,
@@ -34,6 +34,19 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
         return Object.keys(newErrors).length === 0;
     };
 
+    const displayLabels = {
+        addPaymentMethod: labels.addPaymentMethod || "Add Payment Method",
+        editPaymentMethod: labels.editPaymentMethod || "Edit Payment Method",
+        paymentMethodName: labels.paymentMethodName || "Payment Method Name",
+        paymentMethodPlaceholder: labels.paymentMethodPlaceholder || "e.g., Cash, Bank Transfer, JazzCash",
+        active: labels.active || "Active",
+        cancel: labels.cancel || "Cancel",
+        saving: labels.saving || "Saving...",
+        add: labels.add || "Add",
+        update: labels.update || "Update",
+        paymentMethodFailed: labels.paymentMethodFailed || "Failed to save payment method",
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
@@ -54,7 +67,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
                 onClose();
             }
         } catch (error) {
-            setErrors({ submit: error?.data?.message || labels.paymentMethodFailed || "Failed to save payment method" });
+            setErrors({ submit: error?.data?.message || displayLabels.paymentMethodFailed });
         }
     };
 
@@ -63,7 +76,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
             <div className="w-full max-w-md rounded-2xl shadow-2xl bg-[var(--surface)] border border-[var(--border)]">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
                     <h2 className="text-lg font-bold text-[var(--ink)]">
-                        {mode === "create" ? labels.addPaymentMethod : labels.editPaymentMethod}
+                        {mode === "create" ? displayLabels.addPaymentMethod : displayLabels.editPaymentMethod}
                     </h2>
                     <button onClick={onClose} className="p-1 hover:bg-[var(--hover)] rounded-lg">
                         <X size={20} className="text-[var(--muted)]" />
@@ -79,7 +92,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                            {labels.paymentMethodName} *
+                            {displayLabels.paymentMethodName} *
                         </label>
                         <input
                             type="text"
@@ -88,7 +101,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
                             className={`w-full px-4 py-2.5 rounded-lg border ${
                                 errors.name ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--app-bg)]'
                             } text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent-2)] focus:ring-1 focus:ring-[var(--accent-2)] transition-all`}
-                            placeholder={labels.paymentMethodPlaceholder || "e.g., Cash, Bank Transfer, JazzCash"}
+                            placeholder={displayLabels.paymentMethodPlaceholder}
                         />
                         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
                     </div>
@@ -102,7 +115,7 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
                             className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent-2)] focus:ring-[var(--accent-2)]"
                         />
                         <label htmlFor="isActive" className="text-sm text-[var(--ink)]">
-                            {labels.active || "Active"}
+                            {displayLabels.active}
                         </label>
                     </div>
 
@@ -112,14 +125,14 @@ export default function PaymentMethodModal({ mode, paymentMethodId, onClose, lab
                             onClick={onClose}
                             className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--ink)] hover:bg-[var(--hover)] transition-all"
                         >
-                            {labels.cancel || "Cancel"}
+                            {displayLabels.cancel}
                         </button>
                         <button
                             type="submit"
                             disabled={isCreating || isUpdating || isLoading}
                             className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isCreating || isUpdating || isLoading ? (labels.saving || "Saving...") : mode === "create" ? (labels.add || "Add") : (labels.update || "Update")}
+                            {isCreating || isUpdating || isLoading ? displayLabels.saving : mode === "create" ? displayLabels.add : displayLabels.update}
                         </button>
                     </div>
                 </form>
