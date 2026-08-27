@@ -84,3 +84,28 @@ export const deleteCategory = async (id) => {
     
     return deleteOneCategoryService(id);
 };
+
+export const searchCategories = async (query = "", limit = 20) => {
+    const CategoryModel = getLocalCategoryModel();
+    
+    if (!query || query.length < 2) {
+        return [];
+    }
+    
+    const searchRegex = new RegExp(query, 'i');
+    
+    const categories = await findDocs({
+        model: CategoryModel,
+        filter: {
+            isDeleted: { $ne: true },
+            isActive: { $ne: false },
+            name: searchRegex
+        },
+        options: {
+            limit: parseInt(limit),
+            sort: { name: 1 }
+        }
+    });
+    
+    return categories;
+};

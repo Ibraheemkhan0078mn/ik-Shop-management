@@ -1,8 +1,7 @@
 // src/components/ProductCRUDModal.jsx
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock } from "lucide-react";
+import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock, ChevronDown } from "lucide-react";
 import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery, useLazyGenerateProductCodeQuery } from "../services/product.service";
-import { useGetCategoriesQuery } from "../services/category.service.js";
 import { useGetBrandsQuery } from "../services/brand.service.js";
 import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
@@ -13,10 +12,99 @@ import { getProductLabels } from "../labels/productLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { toast } from "sonner";
+import { CategoryService } from "../api/categoriesApi.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+// ─── API-based searchable select for categories ─────────────────────────────────────
+const ApiCategorySelect = ({ value, onChange, placeholder = "Search categories..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchCategories = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await CategoryService.search(query, 20);
+            setOptions(results.map(c => ({ label: c.name, value: c.name, data: c })));
+        } catch (error) {
+            console.error("Error searching categories:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchCategories(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }}>
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <input 
+                            autoFocus 
+                            type="text" 
+                            placeholder="Search categories..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }} 
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"}>
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No categories found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const EMPTY_FORM = {
   name: "",
@@ -70,7 +158,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const { data: productData, isLoading: isFetching, error: productError } = useProduct(productId, {
     skip: !productId || isCreate,
   });
-  const { data: categoriesRaw, error: catError } = useGetCategoriesQuery();
   const { data: brandsRaw } = useGetBrandsQuery();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -86,7 +173,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [showBrandDialog, setShowBrandDialog] = useState(false);
   const fileInputRef = useRef(null);
 
-  const categories = useMemo(() => safeArray(categoriesRaw), [categoriesRaw]);
   const brands = useMemo(() => safeArray(brandsRaw), [brandsRaw]);
 
   useEffect(() => {
@@ -132,11 +218,10 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   }, [imagePreview]);
 
   useEffect(() => {
-    const apiError = productError || catError;
-    if (apiError) {
-      setBanner(`⚠️ ${apiError?.data?.message || apiError?.message || "Failed to load data"}`);
+    if (productError) {
+      setBanner(`⚠️ ${productError?.data?.message || productError?.message || "Failed to load data"}`);
     }
-  }, [productError, catError]);
+  }, [productError]);
 
   useEffect(() => {
     const productCode = form.productCode?.trim();
@@ -232,7 +317,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     [updateField, labels]
   );
 
-  const categoryOptions = useMemo(() => categories.filter(c => c.isActive !== false).map((c) => ({ label: c.name, value: c.name })), [categories]);
   const unitOptions = useMemo(() => UNITS.map((u) => ({ label: u.label, value: u.value })), [UNITS]);
 
   const validateForm = useCallback(() => {
@@ -441,17 +525,21 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               />
 
               {/* Category */}
-              <SelectField
-                label={labels.category}
-                name="categoryName"
-                value={form.categoryName}
-                onChange={updateField}
-                options={categoryOptions}
-                error={errors.categoryName}
-                required
-                placeholder={labels.selectCategory}
-                action={{ label: labels.new, icon: Plus, onClick: () => setShowCategoryDialog(true) }}
-              />
+              <div>
+                <label className="flex items-center justify-between text-xs font-medium text-[var(--muted)] mb-1">
+                  <span>{labels.category}<span className="text-red-500 ml-0.5">*</span></span>
+                  <button type="button" onClick={() => setShowCategoryDialog(true)}
+                    className="flex items-center gap-1 text-[var(--accent-2)] hover:opacity-75 text-[10px] transition-opacity">
+                    <Plus className="h-3 w-3" /> {labels.new}
+                  </button>
+                </label>
+                <ApiCategorySelect
+                  value={form.categoryName}
+                  onChange={(value) => updateField('categoryName', value)}
+                  placeholder={labels.selectCategory}
+                />
+                {errors.categoryName && <p className="mt-1 text-xs text-red-500">{errors.categoryName}</p>}
+              </div>
 
               {/* Sub Category */}
               {/* <SelectField

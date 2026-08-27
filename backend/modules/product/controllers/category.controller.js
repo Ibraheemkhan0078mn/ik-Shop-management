@@ -7,6 +7,7 @@ import {
     createCategory as createCategoryService,
     updateCategory as updateCategoryService,
     deleteCategory as deleteCategoryService,
+    searchCategories as searchCategoriesService,
 } from "../services/category.service.js";
 
 export const getCategories = asyncHandler(async (req, res, next) => {
@@ -101,5 +102,18 @@ export const getCategoryById = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Category retrieved successfully",
         data: category,
+    });
+});
+
+export const searchCategories = asyncHandler(async (req, res, next) => {
+    const { q } = req.query;
+    const { limit = 20 } = req.query;
+
+    const categories = await searchCategoriesService(q, limit);
+
+    res.status(200).json({
+        success: true,
+        message: "Categories searched successfully",
+        data: categories,
     });
 });

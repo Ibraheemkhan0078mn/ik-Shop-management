@@ -6,6 +6,7 @@ import {
     deleteCategory,
     getPaginationCategories,
     getCategoryById,
+    searchCategories,
 } from "../controllers/category.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.get("/", getCategories);
 router.get("/getPaginationCategories", getPaginationCategories)
+router.get("/search", searchCategories);
 router.post("/", authorize("admin"), createCategory);
 router.put("/:id", authorize("admin"), updateCategory);
 router.delete("/:id", authorize("admin"), deleteCategory);

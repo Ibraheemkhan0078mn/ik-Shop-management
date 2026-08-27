@@ -57,6 +57,18 @@ export const categoryApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/categories/${id}`, method: "DELETE" }),
             invalidatesTags: ["Category"],
         }),
+
+        // Search categories
+        searchCategories: build.query({
+            query: ({ q, limit = 20 }) => ({
+                url: "/categories/search",
+                params: { q, limit },
+            }),
+            transformResponse: (raw) => {
+                const payload = raw?.data ?? raw;
+                return Array.isArray(payload) ? payload : [];
+            },
+        }),
     }),
 });
 
@@ -66,4 +78,5 @@ export const {
     useCreateCategoryMutation,
     useUpdateCategoryMutation,
     useDeleteCategoryMutation,
+    useSearchCategoriesQuery,
 } = categoryApi;
