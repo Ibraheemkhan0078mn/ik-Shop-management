@@ -43,6 +43,29 @@ const getPaginatedCustomers = async (filters = {}) => {
     };
 };
 
+// Search customers by name, phone, or cnic
+const searchCustomers = async (query = "", limit = 20) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+
+    const customers = await findCustomerService({
+        $or: [
+            { name: searchRegex },
+            { phoneNo: searchRegex },
+            { cnic: searchRegex }
+        ],
+        isActive: { $ne: false }
+    }, {
+        limit: parseInt(limit),
+        sort: { name: 1 }
+    });
+
+    return customers;
+};
+
 export {
     customerCreate,
     getAllCustomers,
@@ -52,4 +75,5 @@ export {
     customerDelete,
     countCustomers,
     getPaginatedCustomers,
+    searchCustomers,
 };

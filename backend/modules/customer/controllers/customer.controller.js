@@ -9,6 +9,7 @@ import {
     customerUpdate as customerUpdateService,
     customerDelete as customerDeleteService,
     getPaginatedCustomers as getPaginatedCustomersService,
+    searchCustomers as searchCustomersService,
 } from "../services/customer.service.js";
 import { calculateCustomerOrderKPIs } from "../services/customerOrderKPI.service.js";
 import { calculateCustomerOrderReturnKPIs } from "../services/customerOrderReturnKPI.service.js";
@@ -223,4 +224,21 @@ export const getCustomerOrderReturnKPIs = asyncHandler(async (req, res, next) =>
         message: "Customer order return KPIs retrieved successfully", 
         data: kpiData.data 
     });
+});
+
+export const searchCustomersData = asyncHandler(async (req, res, next) => {
+    try {
+        const { q } = req.query;
+        const { limit = 20 } = req.query;
+
+        const customers = await searchCustomersService(q, limit);
+
+        res.status(200).json({
+            success: true,
+            message: "Customers searched successfully",
+            data: customers,
+        });
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
 });

@@ -18,7 +18,8 @@ import {
     calculateStaffCommission,
     calculateStaffCommissionAllTime,
     getStaffCommissionOrders,
-    getPercentageBreakdown
+    getPercentageBreakdown,
+    searchStaff
 } from "../services/staff.service.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
@@ -311,4 +312,22 @@ export const getPercentageBreakdownData = asyncHandler(async (req, res, next) =>
         message: "Percentage breakdown calculated successfully",
         data: breakdown,
     });
+});
+
+// Search Staff
+export const searchStaffData = asyncHandler(async (req, res, next) => {
+    try {
+        const { q } = req.query;
+        const { limit = 20 } = req.query;
+
+        const staff = await searchStaff(q, limit);
+
+        res.status(200).json({
+            success: true,
+            message: "Staff searched successfully",
+            data: staff,
+        });
+    } catch (error) {
+        next(new ErrorResponse(error.message, 400));
+    }
 });

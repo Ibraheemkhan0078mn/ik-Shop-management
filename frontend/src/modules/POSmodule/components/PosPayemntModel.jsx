@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { X, CreditCard, Wallet, Layers, ChevronRight, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { FormField, Input } from "../../../shared/components/FormFields.jsx";
 import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
-import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { useAllCustomers } from "../../customers/services/customers.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
+import { StaffService } from "../../staff/api/staffSearchApi.js";
+import { CustomerService } from "../../customers/api/customersSearchApi.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 import StaffModal from "../../staff/components/StaffModal.jsx";
@@ -71,6 +72,182 @@ const CustomerTypeToggle = ({ value, onChange, labels }) => (
     </div>
 );
 
+// ─── API-based searchable select for staff ─────────────────────────────────────
+const ApiStaffSelect = ({ value, onChange, placeholder = "Search staff..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchStaff = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await StaffService.search(query, 20);
+            setOptions(results.map(s => ({ label: s.fullName, value: s._id, data: s })));
+        } catch (error) {
+            console.error("Error searching staff:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchStaff(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }} >
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} >
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }} >
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search staff..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"} >
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No staff found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── API-based searchable select for customers ─────────────────────────────────
+const ApiCustomerSelect = ({ value, onChange, placeholder = "Search customers..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchCustomers = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await CustomerService.search(query, 20);
+            setOptions(results.map(c => ({ label: c.name + (c.phoneNo ? ` · ${c.phoneNo}` : ""), value: c._id, data: c })));
+        } catch (error) {
+            console.error("Error searching customers:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchCustomers(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }} >
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} >
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }} >
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search customers..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }}
+                        />
+                    </div>
+                    <div className="max-h-84 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"} >
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No customers found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function PosPaymentModal({
@@ -87,7 +264,6 @@ export default function PosPaymentModal({
     const labels = getPosLabels(currentLanguage);
 
     const { data: qarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
-    const { data: staffList = [], refetch: refetchStaffList } = useGetStaffListQuery({ limit: 100 });
     const { data: customersData = [], refetch: refetchCustomers } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
@@ -185,7 +361,6 @@ export default function PosPaymentModal({
 
     const handleStaffCreated = () => {
         setShowStaffModal(false);
-        refetchStaffList();
     };
 
     const handleCustomerCreated = () => {
@@ -199,17 +374,10 @@ export default function PosPaymentModal({
         label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
     })) || [];
 
-    const customerOptions = (customersData?.filter(c => c.isActive !== false) || []).map((c) => ({
-        value: c._id,
-        label: c.name + (c.phoneNo ? ` · ${c.phoneNo}` : ""),
-    })) || [];
-
     const paymentMethodOptions = useMemo(() => paymentMethodsData?.filter(pm => pm.isActive !== false).map((pm) => ({
         value: pm._id,
         label: pm.name,
     })) || [], [paymentMethodsData]);
-
-    const staffListFiltered = Array.isArray(staffList?.data) ? staffList.data : [];
 
     // Auto select qarza account when customer is selected
     useEffect(() => {
@@ -404,21 +572,11 @@ export default function PosPaymentModal({
 
                                 <FormField label={labels.staffMember}>
                                     <div className="flex gap-2">
-                                        <select
+                                        <ApiStaffSelect
                                             value={selectedStaffId}
-                                            onChange={(e) => setSelectedStaffId(e.target.value)}
-                                            className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                            style={{
-                                                background: "var(--surface)",
-                                                color: selectedStaffId ? "var(--ink)" : "var(--muted)",
-                                                border: "1px solid var(--border)",
-                                            }}
-                                        >
-                                            <option value="">{labels.selectStaff}</option>
-                                            {staffListFiltered.map((s) => (
-                                                <option key={s._id} value={s._id}>{s.fullName}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(value) => setSelectedStaffId(value)}
+                                            placeholder={labels.selectStaff}
+                                        />
                                         <button
                                             type="button"
                                             onClick={() => setShowStaffModal(true)}
@@ -450,21 +608,17 @@ export default function PosPaymentModal({
                                             value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                                     ) : (
                                         <div className="flex gap-2">
-                                            <select
+                                            <ApiCustomerSelect
                                                 value={selectedCustomerId}
-                                                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                                                className="flex-1 h-9 px-3 text-sm rounded-lg outline-none transition-all"
-                                                style={{
-                                                    background: "var(--surface)",
-                                                    color: selectedCustomerId ? "var(--ink)" : "var(--muted)",
-                                                    border: "1px solid var(--border)",
+                                                onChange={(value, data) => {
+                                                    setSelectedCustomerId(value);
+                                                    if (data?.qarzaAccountId) {
+                                                        setQarzaAccountId(data.qarzaAccountId);
+                                                        setHybridQarzaAccountId(data.qarzaAccountId);
+                                                    }
                                                 }}
-                                            >
-                                                <option value="">{labels.selectCustomer}</option>
-                                                {customerOptions.map((c) => (
-                                                    <option key={c.value} value={c.value}>{c.label}</option>
-                                                ))}
-                                            </select>
+                                                placeholder={labels.selectCustomer}
+                                            />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowCustomerModal(true)}

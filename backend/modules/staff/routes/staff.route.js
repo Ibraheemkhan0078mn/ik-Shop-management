@@ -18,6 +18,7 @@ import {
     getStaffCommissionAllTimeData,
     getStaffCommissionOrdersData,
     getPercentageBreakdownData,
+    searchStaffData,
 } from "../controllers/staff.controller.js";
 import {
     createSalaryPaymentData,
@@ -85,6 +86,7 @@ router.get("/attendance/by-date", getAttendanceByDateData);
 router.post("/attendance", createOrUpdateAttendanceData);
 router.get("/attendance/history", getAttendanceHistoryData);
 router.get("/active", getActiveStaffData);
+router.get("/search", searchStaffData);
 
 // Staff Routes
 router.post("/", upload.any(), createStaffData);

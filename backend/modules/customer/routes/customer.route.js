@@ -8,6 +8,7 @@ import {
     getCustomerById,
     getCustomerOrderKPIs,
     getCustomerOrderReturnKPIs,
+    searchCustomersData,
 } from "../controllers/customer.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 import { upload } from "../../../common/middlewares/multer.middleware.js";
@@ -18,6 +19,7 @@ router.use(protect);
 
 router.get("/", getCustomers);
 router.get("/pagination", getPaginatedCustomers);
+router.get("/search", searchCustomersData);
 
 // KPI routes (must come before /:id to avoid conflict)
 router.get("/:customerId/order-kpis", getCustomerOrderKPIs);

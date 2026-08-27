@@ -742,6 +742,34 @@ export const getActiveStaff = async () => {
     return staff;
 };
 
+// Search staff by name, cnic, or phone
+export const searchStaff = async (query = "", limit = 20) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+    const StaffModel = getLocalStaffModel();
+
+    const staff = await findDocs({
+        model: StaffModel,
+        filter: {
+            $or: [
+                { fullName: searchRegex },
+                { cnic: searchRegex },
+                { phone: searchRegex }
+            ],
+            status: 'active'
+        },
+        options: {
+            limit: parseInt(limit),
+            sort: { fullName: 1 }
+        }
+    });
+
+    return staff;
+};
+
 // Calculate salary breakdown for fixed salary staff
 
 // Helper function to calculate salary for a single day
