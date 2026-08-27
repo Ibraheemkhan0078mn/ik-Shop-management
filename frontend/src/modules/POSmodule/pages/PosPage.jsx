@@ -18,7 +18,6 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import api from "../../../shared/services/api.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PosCartSidebar from "../components/PosCartSidebar.jsx";
-import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 import PosPaymentModal from "../components/PosPayemntModel.jsx";
 import BatchSelectionModal from "../components/BatchSelectionModal.jsx";
 import PortionModal from "../components/PortionModal.jsx";
@@ -185,7 +184,6 @@ export default function PosPage() {
     staffId: "",
   });
   const [stickyBatchByProductId, setStickyBatchByProductId] = useState({});
-  const [localQarzaAccounts, setLocalQarzaAccounts] = useState([]);
 
   // ── Modal State ───────────────────────────────────────────────────────────
   const [openModals, setOpenModals] = useState({
@@ -202,7 +200,6 @@ export default function PosPage() {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const [activeFilters, setActiveFilters] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Save filter sidebar state to localStorage
   useEffect(() => {
@@ -228,7 +225,7 @@ export default function PosPage() {
   const heldOrders = heldOrdersResponse?.data || heldOrdersResponse || [];
 
   const { data: qarzaAccounts, refetch: refetchQarzaAccounts } = useQarzaAccounts();
-  const { data: productsData, refetch: refetchProducts } = useProducts();
+  const { refetch: refetchProducts } = useProducts();
 
   // ── Filter Handlers ───────────────────────────────────────────────────────
   const handleFiltersChange = useCallback((newFilters) => {
@@ -805,7 +802,7 @@ export default function PosPage() {
             dataKey="data"
             wrapperClassName="h-full"
             className="p-3"
-            queryArgs={{ page: currentPage, limit: 20, ...activeFilters }}
+            queryArgs={{ ...activeFilters }}
             renderItems={(products) => (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {products.filter(product => product.isActive !== false).map((product) => (
@@ -891,8 +888,7 @@ export default function PosPage() {
         <QarzaAccountCreation
           setQarzaAccountCreationFormPopupVisibility={() => toggleModal("newQarzaAccount")}
           type="personal"
-          onCreated={(newAccount) => {
-            setLocalQarzaAccounts((prev) => [...prev, newAccount]);
+          onCreated={() => {
             refetchQarzaAccounts();
           }}
         />
