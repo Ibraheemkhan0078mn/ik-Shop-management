@@ -12,8 +12,27 @@ const expenseCatagDelete = async (id) => {
     return await deleteOneExpenseCategoryService(id);
 };
 
+const expenseCatagSearch = async (query = "", limit = 20) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+    
+    const searchRegex = new RegExp(query, 'i');
+    
+    const categories = await findExpenseCategoryService({
+        name: searchRegex,
+        isDeleted: { $ne: true }
+    }, {
+        limit: parseInt(limit),
+        sort: { name: 1 }
+    });
+    
+    return categories;
+};
+
 export {
     expenseCatagCreate,
     expenseCatagGetAll,
     expenseCatagDelete,
+    expenseCatagSearch,
 };

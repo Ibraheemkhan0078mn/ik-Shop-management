@@ -14,6 +14,7 @@ import {
     expenseCatagCreate as expenseCatagCreateService,
     expenseCatagGetAll as expenseCatagGetAllService,
     expenseCatagDelete as expenseCatagDeleteService,
+    expenseCatagSearch as expenseCatagSearchService,
 } from "../services/expenseCategory.service.js";
 import { createTransactionService } from "../../transactions/services/transaction.service.js";
 
@@ -269,3 +270,21 @@ export async function getCatagBasedExpense(req, res) {
         return res.json({ success: false, msg: error?.message, stack: error?.stack })
     }
 }
+
+export const expenseCatagSearch = async (req, res) => {
+    try {
+        const { q } = req.query;
+        const { limit = 20 } = req.query;
+
+        const categories = await expenseCatagSearchService(q, limit);
+
+        return res.json({
+            success: true,
+            message: "Expense categories searched successfully",
+            data: categories,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.json({ success: false, msg: "Error searching expense categories" });
+    }
+};

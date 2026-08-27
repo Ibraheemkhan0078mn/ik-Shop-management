@@ -53,6 +53,17 @@ export const expenseApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/expenseRoutes/expenseCatagDelete/${id}`, method: "DELETE" }),
             invalidatesTags: ["ExpenseCategory"],
         }),
+
+        searchExpenseCategories: build.query({
+            query: ({ q, limit = 20 }) => ({
+                url: "/expenseRoutes/expenseCatagSearch",
+                params: { q, limit },
+            }),
+            transformResponse: (raw) => {
+                const payload = raw?.data ?? raw;
+                return Array.isArray(payload) ? payload : [];
+            },
+        }),
     }),
 });
 
@@ -65,4 +76,5 @@ export const {
     useGetExpenseCategoriesQuery:  useExpenseCategories,
     useCreateExpenseCategoryMutation: useCreateExpenseCategory,
     useDeleteExpenseCategoryMutation: useDeleteExpenseCategory,
+    useSearchExpenseCategoriesQuery: useSearchExpenseCategories,
 } = expenseApi;

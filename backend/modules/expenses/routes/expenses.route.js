@@ -1,5 +1,5 @@
 import express from "express";
-import { expenseCatagCreate, expenseCatagDelete, expenseCatagGetAll, expenseCreate, expenseDelete, expenseUpdate, getCatagBasedExpense, getExpenses, getPaginatedExpenses } from "../controllers/expense.controller.js";
+import { expenseCatagCreate, expenseCatagDelete, expenseCatagGetAll, expenseCatagSearch, expenseCreate, expenseDelete, expenseUpdate, getCatagBasedExpense, getExpenses, getPaginatedExpenses } from "../controllers/expense.controller.js";
 const router = express.Router();
 
 
@@ -11,6 +11,7 @@ router.delete("/expense", expenseDelete);
 router.post("/expenseCatagCreate", expenseCatagCreate)
 router.delete("/expenseCatagDelete/:id", expenseCatagDelete)
 router.get("/expenseCatagGetAll", expenseCatagGetAll)
+router.get("/expenseCatagSearch", expenseCatagSearch)
 router.post("/getCatagBasesExpense", getCatagBasedExpense)
 
 
