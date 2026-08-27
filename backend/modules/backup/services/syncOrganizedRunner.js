@@ -7,6 +7,7 @@ import { imgDelete } from "./imgDelete.js";
 import { ImageUpload } from "./imgUpload.js";
 import { onlineDocsUploadSyncInsert } from "./insertSync.js";
 import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
+import { imageFullSync } from "./imageFullSync.js";
 
 
 
@@ -83,9 +84,13 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         await downloadOnlineSync(modelArray, syncType, loggedInUserData)
 
 
-        await imgDelete(modelArray, loggedInUserData)
-        await ImageUpload(modelArray, loggedInUserData)
-        await imageDownloadSync(modelArray, loggedInUserData)
+        // NEW: Comprehensive image sync
+        await imageFullSync(modelArray, loggedInUserData)
+
+        // Keep old functions for backward compatibility
+        // await imgDelete(modelArray, loggedInUserData)
+        // await ImageUpload(modelArray, loggedInUserData)
+        // await imageDownloadSync(modelArray, loggedInUserData)
 
 
 
