@@ -87,6 +87,25 @@ const deleteBrand = async (id) => {
     return await deleteOneBrandService(id);
 };
 
+const searchBrands = async (query = "", limit = 20) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+    
+    const searchRegex = new RegExp(query, 'i');
+    
+    const brands = await findBrandService({
+        name: searchRegex,
+        isDeleted: { $ne: true },
+        isActive: { $ne: false }
+    }, {
+        limit: parseInt(limit),
+        sort: { name: 1 }
+    });
+    
+    return brands;
+};
+
 export {
     getBrands,
     getPaginationBrands,
@@ -94,4 +113,5 @@ export {
     createBrand,
     updateBrand,
     deleteBrand,
+    searchBrands,
 };

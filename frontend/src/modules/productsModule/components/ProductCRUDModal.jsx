@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock, ChevronDown } from "lucide-react";
 import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery, useLazyGenerateProductCodeQuery } from "../services/product.service";
-import { useGetBrandsQuery } from "../services/brand.service.js";
 import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal.jsx";
@@ -13,6 +12,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { toast } from "sonner";
 import { CategoryService } from "../api/categoriesApi.js";
+import { BrandService } from "../api/brandsApi.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -106,6 +106,94 @@ const ApiCategorySelect = ({ value, onChange, placeholder = "Search categories..
     );
 };
 
+// ─── API-based searchable select for brands ─────────────────────────────────────
+const ApiBrandSelect = ({ value, onChange, placeholder = "Search brands..." }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const ref = useRef();
+
+    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+
+    const searchBrands = async (query) => {
+        if (!query || query.length < 2) {
+            setOptions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await BrandService.search(query, 20);
+            setOptions(results.map(b => ({ label: b.name, value: b.name, data: b })));
+        } catch (error) {
+            console.error("Error searching brands:", error);
+            setOptions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            if (open && search) {
+                searchBrands(search);
+            }
+        }, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [search, open]);
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button type="button" onClick={() => setOpen(p => !p)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }}>
+                <span className="truncate">{selected?.label || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && (
+                <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <input 
+                            autoFocus 
+                            type="text" 
+                            placeholder="Search brands..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--ink)" }} 
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : search.length < 2 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : options.length > 0 ? (
+                            options.map(o => (
+                                <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
+                                    className="px-3 py-2 text-sm cursor-pointer transition"
+                                    style={{ background: value === o.value ? "rgba(15,118,110,0.08)" : "transparent", color: value === o.value ? "var(--accent-2)" : "var(--ink)", fontWeight: value === o.value ? 600 : 400 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(15,118,110,0.06)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = value === o.value ? "rgba(15,118,110,0.08)" : "transparent"}>
+                                    {o.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No brands found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const EMPTY_FORM = {
   name: "",
   brandName: "",
@@ -130,13 +218,6 @@ const EMPTY_FORM = {
   image: "",
 };
 
-const safeArray = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (typeof data === "object" && data.data) return Array.isArray(data.data) ? data.data : [];
-  return [];
-};
-
 export default function ProductCRUDModal({ mode = "create", productId = null, open, onClose }) {
   const { settings } = useSettings();
   const language = settings?.language || "en";
@@ -158,8 +239,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const { data: productData, isLoading: isFetching, error: productError } = useProduct(productId, {
     skip: !productId || isCreate,
   });
-  const { data: brandsRaw } = useGetBrandsQuery();
-
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [banner, setBanner] = useState(null);
@@ -172,8 +251,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
   const [showBrandDialog, setShowBrandDialog] = useState(false);
   const fileInputRef = useRef(null);
-
-  const brands = useMemo(() => safeArray(brandsRaw), [brandsRaw]);
 
   useEffect(() => {
     if (!isCreate && productData) {
@@ -581,17 +658,21 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
 
                 {/* Brand Dropdown */}
-                <SelectField
-                  label={labels.brandName}
-                  name="brandName"
-                  value={form.brandName}
-                  onChange={updateField}
-                  options={brands.filter(b => b.isActive).map((b) => ({ label: b.name, value: b.name }))}
-                  error={errors.brandName}
-                  required
-                  placeholder={labels.selectBrand || "Select Brand"}
-                  action={{ label: labels.new, icon: Plus, onClick: () => setShowBrandDialog(true) }}
-                />
+                <div>
+                  <label className="flex items-center justify-between text-xs font-medium text-[var(--muted)] mb-1">
+                    <span>{labels.brandName}<span className="text-red-500 ml-0.5">*</span></span>
+                    <button type="button" onClick={() => setShowBrandDialog(true)}
+                      className="flex items-center gap-1 text-[var(--accent-2)] hover:opacity-75 text-[10px] transition-opacity">
+                      <Plus className="h-3 w-3" /> {labels.new}
+                    </button>
+                  </label>
+                  <ApiBrandSelect
+                    value={form.brandName}
+                    onChange={(value) => updateField('brandName', value)}
+                    placeholder={labels.selectBrand || "Select Brand"}
+                  />
+                  {errors.brandName && <p className="mt-1 text-xs text-red-500">{errors.brandName}</p>}
+                </div>
 
                 {/* Barcode */}
                 <Field
@@ -653,7 +734,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 {/* Discount Section */}
                 <div className="col-span-full sm:col-span-2 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
                   <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>
-                    {labels.discount || "Discount Settings"}
+                    Discount Limit in POS
                   </h4>
                 </div>
                 <ToggleField

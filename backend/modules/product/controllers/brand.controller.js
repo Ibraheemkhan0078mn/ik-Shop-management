@@ -2,7 +2,7 @@ import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getBrands, getPaginationBrands, getBrandById,
-    createBrand, updateBrand, deleteBrand,
+    createBrand, updateBrand, deleteBrand, searchBrands,
 } from "../services/brand.service.js";
 
 export const getBrandsData = asyncHandler(async (req, res) => {
@@ -48,4 +48,17 @@ export const deleteBrandData = asyncHandler(async (req, res, next) => {
     } catch (error) {
         next(new ErrorResponse(error.message, 400));
     }
+});
+
+export const searchBrandsData = asyncHandler(async (req, res, next) => {
+    const { q } = req.query;
+    const { limit = 20 } = req.query;
+
+    const brands = await searchBrands(q, limit);
+
+    res.status(200).json({
+        success: true,
+        message: "Brands searched successfully",
+        data: brands,
+    });
 });
