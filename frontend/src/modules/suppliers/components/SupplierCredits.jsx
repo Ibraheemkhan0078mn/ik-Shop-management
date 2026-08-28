@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Edit, ShoppingCart, RefreshCw, Plus } from "lucide-react";
+import { Edit, Trash2, RefreshCw, Plus } from "lucide-react";
 import { useSupplierPaymentsSummary, useSupplierPayments, useDeleteQarzaPayment, useRecalculateSupplierBalance, useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateSupplier } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -155,6 +155,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                 <tr>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
                                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Payment Method</th>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Notes</th>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
                                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
@@ -175,6 +176,9 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                                 Rs {(item.amount || 0).toLocaleString()}
                                                             </td>
                                                             <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                                                {item.paymentMethodName || item.paymentMethod?.name || "-"}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-[var(--muted)]">
                                                                 {item.notes || "-"}
                                                             </td>
                                                             <td className="px-4 py-3 text-sm text-[var(--muted)]">
@@ -193,7 +197,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                                             <button
                                                                                 className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
                                                                             >
-                                                                                <ShoppingCart size={14} />
+                                                                                <Trash2 size={14} />
                                                                             </button>
                                                                         </ConfirmDialog>
                                                                     </>

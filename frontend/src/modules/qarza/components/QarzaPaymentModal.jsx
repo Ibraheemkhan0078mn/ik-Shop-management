@@ -66,7 +66,7 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
             type:   payment.creditType ?? payment.type ?? "cashin",
             date:   payment.transactionDate ? new Date(payment.transactionDate).toISOString().split("T")[0] : (payment.date ? new Date(payment.date).toISOString().split("T")[0] : today()),
             notes:  payment.notes  ?? "",
-            paymentMethod: payment.paymentMethod ?? payment.method ?? "",
+            paymentMethod: payment.paymentMethodName ?? payment.paymentMethod?.name ?? "",
         });
     }, [payment, isUpdate]);
 

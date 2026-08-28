@@ -121,7 +121,7 @@ function AppRoutes() {
 
             {/* Default Route */}
             {/* <Route path="/" element={<Login />} /> */}
-            <Route path="*" element={<Link to={"/login"}>go back</Link>} />
+            <Route path="*" element={<Link to={"/dashboard"}>go back</Link>} />
             {/* </Route> */}
         </Routes>
     );

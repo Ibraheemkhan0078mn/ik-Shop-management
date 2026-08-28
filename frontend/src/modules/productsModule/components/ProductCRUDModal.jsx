@@ -700,7 +700,12 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
 
                 {/* Count Format Row - Commented out */}
 
-                {/* Stock Row */}
+                {/* Stock Tracking Values Section */}
+                <div className="col-span-full sm:col-span-2 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>
+                    Stock Tracking Values
+                  </h4>
+                </div>
                 <Field
                   label={labels.minStockLevel}
                   name="minStockLevel"

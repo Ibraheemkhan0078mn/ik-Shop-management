@@ -80,7 +80,7 @@ export const connectOnlineDb = async () => {
     const ONLINE_MONGODB_URI = "mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0";
     
     OnlineConnectionInstance = await mongoose
-        .createConnection(ONLINE_MONGODB_URI, { dbName: "IMS-ONLINE-Test-new" })
+        .createConnection(ONLINE_MONGODB_URI, { dbName: "Shop-afrasiab" })
         .asPromise();
 
     if (OnlineConnectionInstance.host) {

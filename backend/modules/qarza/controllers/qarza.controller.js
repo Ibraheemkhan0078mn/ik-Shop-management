@@ -513,6 +513,7 @@ export const createQarzaPayment = async (req, res) => {
             creditType: creditType,
             transactionDate: transactionDate,
             notes: notes || `Qarza payment: ${type}`,
+            paymentMethodName: paymentMethod,
             createdBy: req.user?._id,
         });
 
@@ -560,6 +561,9 @@ export const updateQarzaPayment = async (req, res) => {
         };
         if (transactionDate) {
             updateData.transactionDate = transactionDate;
+        }
+        if (paymentMethod) {
+            updateData.paymentMethodName = paymentMethod;
         }
         await updateTransaction(_id, updateData);
 

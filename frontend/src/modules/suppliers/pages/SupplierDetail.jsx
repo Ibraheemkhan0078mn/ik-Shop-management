@@ -1,6 +1,6 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Phone, Mail, MapPin, Building2, Package, FileText } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Building2, Package, FileText } from "lucide-react";
 import { useSupplier } from "../services/suppliers.service.js";
 import { getSupplierLabels } from "../labels/supplierLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -58,12 +58,6 @@ export default function SupplierDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{supplier.name}</h1>
                     <p className="text-sm text-[var(--muted)]">{supplier.type || "Supplier"}</p>
                 </div>
-                <button
-                    onClick={() => navigate(-1)} 
-                    className="btn-add"
-                >
-                    <Edit size={16} /> {labels.edit || "Edit"}
-                </button>
             </div>
 
             {/* Tabs */}

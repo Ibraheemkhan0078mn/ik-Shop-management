@@ -87,10 +87,11 @@ export default function EachQarzaAccountRecords() {
         return (
             <div className="flex flex-col gap-0">
                 {/* Desktop header */}
-                <div className="hidden lg:grid lg:grid-cols-6 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
+                <div className="hidden lg:grid lg:grid-cols-7 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                     style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
                     <div className="col-span-1">{language === "en" ? "Type" : "قسم"}</div>
                     <div className="col-span-1">{language === "en" ? "Amount" : "رقم"}</div>
+                    <div className="col-span-1">{language === "en" ? "Payment Method" : "ادائیگی کا طریقہ"}</div>
                     <div className="col-span-2">{language === "en" ? "Notes" : "نوٹس"}</div>
                     <div className="col-span-1">{language === "en" ? "Date" : "تاریخ"}</div>
                     <div className="col-span-1">{language === "en" ? "Actions" : "اقدامات"}</div>
@@ -102,7 +103,7 @@ export default function EachQarzaAccountRecords() {
                     const { bg, text, Icon } = STATUS_COLOR[paymentType] ?? STATUS_COLOR.cashin;
                     return (
                         <div key={item._id}
-                            className="hidden lg:grid lg:grid-cols-6 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
+                            className="hidden lg:grid lg:grid-cols-7 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
                             style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
                             <div className="col-span-1 flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
@@ -113,6 +114,11 @@ export default function EachQarzaAccountRecords() {
                             <div className="col-span-1">
                                 <p className="font-bold text-sm tabular-nums" style={{ color: text }}>
                                     Rs {(item.amount || 0).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="col-span-1">
+                                <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
+                                    {item.paymentMethodName || item.paymentMethod?.name || "-"}
                                 </p>
                             </div>
                             <div className="col-span-2">
@@ -171,6 +177,9 @@ export default function EachQarzaAccountRecords() {
                                                 Rs {(item.amount || 0).toLocaleString()}
                                             </p>
                                         </div>
+                                        <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
+                                            {item.paymentMethodName || item.paymentMethod?.name || "-"}
+                                        </p>
                                         <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
                                             {item.notes || "-"}
                                         </p>

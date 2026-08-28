@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Package, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw, DollarSign } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw, DollarSign } from "lucide-react";
 import { useCustomer, useCustomerOrderKPIs, useCustomerOrderReturnKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
@@ -245,12 +245,6 @@ export default function CustomerDetail() {
                     <h1 className="text-2xl font-bold text-[var(--ink)] font-display">{customer.name}</h1>
                     <p className="text-sm text-[var(--muted)]">{customer.phoneNo || "No phone"}</p>
                 </div>
-                <button
-                    onClick={() => navigate(`/customers/edit/${id}`)}
-                    className="btn-add"
-                >
-                    <Edit size={16} /> {labels.edit}
-                </button>
             </div>
 
             {/* Tabs */}
@@ -375,6 +369,7 @@ export default function CustomerDetail() {
                                                     <tr>
                                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
                                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Payment Method</th>
                                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Notes</th>
                                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
                                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
@@ -395,6 +390,9 @@ export default function CustomerDetail() {
                                                                     Rs {(item.amount || 0).toLocaleString()}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                                                    {item.paymentMethodName || item.paymentMethod?.name || "-"}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-[var(--muted)]">
                                                                     {item.notes || "-"}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">
@@ -413,7 +411,7 @@ export default function CustomerDetail() {
                                                                                 <button
                                                                                     className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
                                                                                 >
-                                                                                    <Package size={14} />
+                                                                                    <Trash2 size={14} />
                                                                                 </button>
                                                                             </ConfirmDialog>
                                                                         </>
@@ -579,7 +577,7 @@ export default function CustomerDetail() {
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <Package size={48} className="text-[var(--muted)] mb-4 mx-auto" />
+                            <Plus size={48} className="text-[var(--muted)] mb-4 mx-auto" />
                             <p className="text-[var(--muted)]">No orders found for this customer</p>
                         </div>
                     )}
