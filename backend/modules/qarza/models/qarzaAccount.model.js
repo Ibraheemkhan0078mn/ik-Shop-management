@@ -5,8 +5,8 @@ const QarzaAccountSchema = new mongoose.Schema(
     cloudinaryPublicId: {type: String},
     qarzaProfileImage:{type:String},
     name: { type: String, required: true },
-    type: { 
-      type: String, 
+    type: {
+      type: String,
       enum: ['supplier', 'customer', 'general'],
       default: 'general'
     },
@@ -20,7 +20,13 @@ const QarzaAccountSchema = new mongoose.Schema(
       }
     ],
     isActive: { type: Boolean, default: true },
-    
+
+    // Balance tracking fields
+    cashIn: { type: Number, default: 0 },
+    cashOut: { type: Number, default: 0 },
+    overall: { type: Number, default: 0 },
+    status: { type: String, enum: ['toGive', 'toReceive', 'balanced'], default: 'balanced' },
+
     // Sync Fields
     createdTimeForSync: { type: Date, default: Date.now },
     updateTimeForSync: { type: Date, default: Date.now },

@@ -127,8 +127,8 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
-            <div className="bg-[var(--app-bg)] rounded-xl shadow-2xl w-full max-w-md">
-                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+            <div className="bg-[var(--app-bg)] rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border)] flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <DollarSign className="w-5 h-5 text-[var(--accent-2)]" />
                         <h2 className="text-lg font-semibold text-[var(--ink)]">{isEditing ? "Edit Payment" : "Record Payment"}</h2>
@@ -138,7 +138,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
                     <div className="bg-[var(--hover)] p-3 rounded-lg">
                         <div className="flex justify-between text-sm mb-1">
                             <span className="text-[var(--muted)]">Total Amount:</span>
@@ -335,7 +335,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
                         </>
                     )}
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-2 pt-2 flex-shrink-0">
                         <button
                             type="button"
                             onClick={onClose}

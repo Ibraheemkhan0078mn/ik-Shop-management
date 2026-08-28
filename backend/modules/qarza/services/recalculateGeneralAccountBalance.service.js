@@ -1,4 +1,4 @@
-import { findByIdQarzaAccountService as getQarzaAccountByIdService } from "./qarzaAccount.crud.js";
+import { findByIdQarzaAccountService as getQarzaAccountByIdService, updateQarzaAccountService } from "./qarzaAccount.crud.js";
 import { getTransactions } from "../../transactions/services/transaction.service.js";
 
 /**
@@ -10,7 +10,7 @@ import { getTransactions } from "../../transactions/services/transaction.service
 export const recalculateGeneralAccountBalance = async (qarzaAccountId) => {
     try {
         const account = await getQarzaAccountByIdService(qarzaAccountId);
-        
+
         if (!account) {
             throw new Error("Qarza account not found");
         }
@@ -24,16 +24,32 @@ export const recalculateGeneralAccountBalance = async (qarzaAccountId) => {
                 { sourceType: 'qarza', sourceId: qarzaAccountId }
             ]
         });
-        
+
         const cashIn = transactions
             .filter(t => t.creditType === 'cashin')
             .reduce((sum, t) => sum + (t.amount || 0), 0);
-        
+
         const cashOut = transactions
             .filter(t => t.creditType === 'cashout')
             .reduce((sum, t) => sum + (t.amount || 0), 0);
-        
+
         const overall = cashIn - cashOut;
+
+        // Determine status
+        let status = 'balanced';
+        if (overall > 0) {
+            status = 'toReceive';
+        } else if (overall < 0) {
+            status = 'toGive';
+        }
+
+        // Update account with calculated values
+        await updateQarzaAccountService(qarzaAccountId, {
+            cashIn,
+            cashOut,
+            overall,
+            status
+        });
 
         return {
             success: true,
@@ -48,6 +64,7 @@ export const recalculateGeneralAccountBalance = async (qarzaAccountId) => {
                 cashIn,
                 cashOut,
                 overall,
+                status,
                 totalTransactions: transactions.length
             }
         };

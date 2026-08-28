@@ -76,10 +76,24 @@ export default function QarzaAccounts() {
         }
     };
 
-    // net balance for an account
-    const netBalance = (acc) =>
-        (acc.payments ?? []).reduce((sum, p) =>
-            p.type === "cashin" ? sum + (p.amount || 0) : sum - (p.amount || 0), 0);
+    // net balance for an account - now uses stored values from backend
+    const netBalance = (acc) => acc.overall || 0;
+
+    // Get balance status from stored value or calculate fallback
+    const getBalanceStatus = (acc) => {
+        if (acc.status) {
+            // Map backend status to display text
+            const statusMap = {
+                'toGive': 'To Pay',
+                'toReceive': 'To Receive',
+                'balanced': 'Balanced'
+            };
+            return statusMap[acc.status] || 'Balanced';
+        }
+        // Fallback to calculation if status not available
+        const net = netBalance(acc);
+        return net > 0 ? "To Pay" : net < 0 ? "To Receive" : "Balanced";
+    };
 
     return (
         <div className="h-screen flex flex-col">
@@ -180,8 +194,8 @@ export default function QarzaAccounts() {
                                             className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
                                         >
                                             <option value="all">{language === "en" ? "All Balances" : "تمام بیلنس"}</option>
-                                            <option value="to_pay">{language === "en" ? "To Pay" : "ادا کرنا ہے"}</option>
-                                            <option value="to_receive">{language === "en" ? "To Receive" : "وصول کرنا ہے"}</option>
+                                            <option value="toGive">{language === "en" ? "To Pay" : "ادا کرنا ہے"}</option>
+                                            <option value="toReceive">{language === "en" ? "To Receive" : "وصول کرنا ہے"}</option>
                                             <option value="balanced">{language === "en" ? "Balanced" : "متوازن"}</option>
                                         </select>
                                     </div>
@@ -223,8 +237,8 @@ export default function QarzaAccounts() {
                                         ? toImageUrl(acc.qarzaProfileImage) 
                                         : null;
                                     
-                                    // Balance status: positive net = need to pay, negative net = need to receive
-                                    const balanceStatus = net > 0 ? "To Pay" : net < 0 ? "To Receive" : "Balanced";
+                                    // Use stored status from backend
+                                    const balanceStatus = getBalanceStatus(acc);
                                     const balanceColor = net > 0 ? "#dc2626" : net < 0 ? "var(--accent-2)" : "var(--muted)";
                                     const balanceBg = net > 0 ? "rgba(220,38,38,0.1)" : net < 0 ? "rgba(15,118,110,0.1)" : "rgba(107,114,128,0.1)";
                                     

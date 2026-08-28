@@ -146,23 +146,17 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
         }
 
         let accounts = await getAllQarzaAccountsService(query);
-        
-        // Filter by balance status on the backend since it requires transaction calculation
+
+        // Filter by balance status using stored status field
         if (filterBalance && filterBalance !== "all") {
-            accounts = await Promise.all(accounts.map(async (acc) => {
-                const transactions = await getTransactions({ sourceType: 'qarza', sourceId: acc._id });
-                const net = transactions.reduce((sum, t) =>
-                    t.creditType === "cashin" ? sum + (t.amount || 0) : sum - (t.amount || 0), 0);
-                return { ...acc, netBalance: net };
-            }));
-            
-            if (filterBalance === "to_pay") {
-                accounts = accounts.filter(acc => acc.netBalance > 0);
-            } else if (filterBalance === "to_receive") {
-                accounts = accounts.filter(acc => acc.netBalance < 0);
+            if (filterBalance === "toGive") {
+                query.status = "toGive";
+            } else if (filterBalance === "toReceive") {
+                query.status = "toReceive";
             } else if (filterBalance === "balanced") {
-                accounts = accounts.filter(acc => acc.netBalance === 0);
+                query.status = "balanced";
             }
+            accounts = await getAllQarzaAccountsService(query);
         }
         
         let total = await countQarzaAccountsService(query);
@@ -523,6 +517,15 @@ export const createQarzaPayment = async (req, res) => {
 
         await changeTrackDocsCreationFunc("update", QarzaAccountModel.modelName, existingQarzaAccount._id)
 
+        // Recalculate balance based on account type
+        if (existingQarzaAccount.type === 'general') {
+            await recalculateGeneralAccountBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'supplier') {
+            await recalculateSupplierBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'customer') {
+            await recalculateCustomerBalance(qarzaAccountId);
+        }
+
         // Get all transactions for this qarza account
         const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
 
@@ -569,6 +572,15 @@ export const updateQarzaPayment = async (req, res) => {
 
         await changeTrackDocsCreationFunc("update", localQarzaAccountModel.modelName, existingQarzaAccount._id)
 
+        // Recalculate balance based on account type
+        if (existingQarzaAccount.type === 'general') {
+            await recalculateGeneralAccountBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'supplier') {
+            await recalculateSupplierBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'customer') {
+            await recalculateCustomerBalance(qarzaAccountId);
+        }
+
         // Get all transactions for this qarza account
         const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
 
@@ -592,6 +604,15 @@ export const deleteQarzaPayment = async (req, res) => {
         await deleteTransaction(paymentId);
 
         await changeTrackDocsCreationFunc("update", localQarzaAccountModel.modelName, existingQarzaAccount._id)
+
+        // Recalculate balance based on account type
+        if (existingQarzaAccount.type === 'general') {
+            await recalculateGeneralAccountBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'supplier') {
+            await recalculateSupplierBalance(qarzaAccountId);
+        } else if (existingQarzaAccount.type === 'customer') {
+            await recalculateCustomerBalance(qarzaAccountId);
+        }
 
         // Get all transactions for this qarza account
         const allTransactions = await getTransactions({ sourceType: 'qarza', sourceId: qarzaAccountId });
