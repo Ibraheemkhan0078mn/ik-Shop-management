@@ -14,6 +14,7 @@ import {
     qarzaAccountUpdate as qarzaAccountUpdateService,
     qarzaAccountDelete as qarzaAccountDeleteService,
     countQarzaAccounts as countQarzaAccountsService,
+    searchQarzaAccounts as searchQarzaAccountsService,
 } from "../services/qarza.service.js";
 import { getLocalQarzaAccountModel } from "../../../configs/connect.db.js";
 import { createTransaction, getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
@@ -108,6 +109,20 @@ export const getAllQarzaAccount = async (req, res) => {
     } catch (err) {
         console.log(err);
         return res.json({ success: false, msg: "Error getting accounts" });
+    }
+}
+
+export const searchQarzaAccountsData = async (req, res) => {
+    try {
+        const { q } = req.query;
+        const { limit = 20 } = req.query;
+
+        const accounts = await searchQarzaAccountsService(q, limit);
+
+        return res.json({ success: true, data: accounts });
+    } catch (err) {
+        console.log(err);
+        return res.json({ success: false, msg: "Error searching accounts" });
     }
 }
 

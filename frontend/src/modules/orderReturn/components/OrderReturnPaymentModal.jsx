@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { DollarSign, Calendar, X, Plus } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import { useAddOrderReturnPaymentMutation } from "../api/orderReturn.api.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
+import ApiQarzaSelect from "../../../shared/components/ApiQarzaSelect.jsx";
 
 export default function OrderReturnPaymentModal({ orderReturn, payment, onClose, onSuccess }) {
     const isEditing = Boolean(payment);
@@ -17,12 +17,8 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
     const [showQarzaModal, setShowQarzaModal] = useState(false);
     const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
-    const { data: creditAccounts, refetch: refetchAccounts } = useQarzaAccounts();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
     const [addOrderReturnPayment] = useAddOrderReturnPaymentMutation();
-
-    // Filter credit accounts to show only customer type for order returns
-    const customerCreditAccounts = creditAccounts?.accounts?.filter(account => account.type === 'customer') || [];
 
     const remainingAmount = (orderReturn?.totalRefundAmount || 0) - (orderReturn?.refundedAmount || 0);
     const editingAmount = payment?.amount || remainingAmount;
@@ -38,7 +34,6 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
 
     const handleQarzaAccountCreated = () => {
         setShowQarzaModal(false);
-        refetchAccounts();
     };
 
     const handlePaymentMethodCreated = () => {
@@ -213,19 +208,12 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
                         <div>
                             <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
                             <div className="flex gap-2">
-                                <select
+                                <ApiQarzaSelect
                                     value={creditAccountId}
-                                    onChange={(e) => setCreditAccountId(e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                    required
-                                >
-                                    <option value="">Select credit account</option>
-                                    {customerCreditAccounts.map(account => (
-                                        <option key={account._id} value={account._id}>
-                                            {account.name} (Type: {account.type})
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setCreditAccountId(value)}
+                                    placeholder="Select credit account"
+                                    type="customer"
+                                />
                                 <button
                                     type="button"
                                     onClick={() => setShowQarzaModal(true)}
@@ -291,19 +279,12 @@ export default function OrderReturnPaymentModal({ orderReturn, payment, onClose,
                             <div>
                                 <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
                                 <div className="flex gap-2">
-                                    <select
+                                    <ApiQarzaSelect
                                         value={creditAccountId}
-                                        onChange={(e) => setCreditAccountId(e.target.value)}
-                                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-2)]"
-                                        required
-                                    >
-                                        <option value="">Select credit account</option>
-                                        {customerCreditAccounts.map(account => (
-                                            <option key={account._id} value={account._id}>
-                                                {account.name} (Type: {account.type})
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(value) => setCreditAccountId(value)}
+                                        placeholder="Select credit account"
+                                        type="customer"
+                                    />
                                     <button
                                         type="button"
                                         onClick={() => setShowQarzaModal(true)}

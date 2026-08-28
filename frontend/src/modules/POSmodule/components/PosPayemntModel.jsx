@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { X, CreditCard, Wallet, Layers, ChevronRight, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { FormField, Input } from "../../../shared/components/FormFields.jsx";
-import { useQarzaAccounts } from "../../qarza/services/qarza.service.js";
 import { useAllCustomers } from "../../customers/services/customers.service.js";
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import { StaffService } from "../../staff/api/staffSearchApi.js";
@@ -13,6 +12,7 @@ import CustomerModal from "../../customers/components/CustomerModal.jsx";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
+import ApiQarzaSelect from "../../../shared/components/ApiQarzaSelect.jsx";
 
 const PAYMENT_TABS = (labels, customerType) => [
     { key: "cash", label: labels.cash, icon: Wallet },
@@ -263,7 +263,6 @@ export default function PosPaymentModal({
     const currentLanguage = settings?.language || "en";
     const labels = getPosLabels(currentLanguage);
 
-    const { data: qarzaAccounts = [], refetch: refetchQarzaAccounts } = useQarzaAccounts();
     const { data: customersData = [], refetch: refetchCustomers } = useAllCustomers();
     const { data: paymentMethodsData = [] } = usePaymentMethods();
 
@@ -352,7 +351,6 @@ export default function PosPaymentModal({
 
     const handleQarzaAccountCreated = () => {
         setShowQarzaModal(false);
-        refetchQarzaAccounts();
     };
 
     const handlePaymentMethodCreated = () => {
@@ -366,13 +364,7 @@ export default function PosPaymentModal({
     const handleCustomerCreated = () => {
         setShowCustomerModal(false);
         refetchCustomers();
-        refetchQarzaAccounts();
     };
-
-    const qarzaOptions = qarzaAccounts?.accounts?.filter(a => a.type === 'customer').map((a) => ({
-        value: a._id,
-        label: a.name + (a.phoneNo ? ` · ${a.phoneNo}` : ""),
-    })) || [];
 
     const paymentMethodOptions = useMemo(() => paymentMethodsData?.filter(pm => pm.isActive !== false).map((pm) => ({
         value: pm._id,
@@ -723,19 +715,12 @@ export default function PosPaymentModal({
                                         <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.ledgerAccount}</label>
                                         <div className={controlWrapClass}>
                                             <div className="flex gap-2">
-                                                <select
+                                                <ApiQarzaSelect
                                                     value={qarzaAccountId}
-                                                    onChange={(e) => setQarzaAccountId(e.target.value)}
-                                                    className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                    style={inputStyle}
-                                                    {...fieldFocus}
-                                                    required
-                                                >
-                                                    <option value="">{labels.searchAccount}</option>
-                                                    {qarzaOptions.map((option) => (
-                                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                                    ))}
-                                                </select>
+                                                    onChange={(value) => setQarzaAccountId(value)}
+                                                    placeholder={labels.searchAccount}
+                                                    type="customer"
+                                                />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowQarzaModal(true)}
@@ -825,19 +810,12 @@ export default function PosPaymentModal({
                                         <label className={labelClass} style={{ color: "var(--muted)" }}>{labels.qarzaPortion}</label>
                                         <div className={controlWrapClass}>
                                             <div className="flex gap-2">
-                                                <select
+                                                <ApiQarzaSelect
                                                     value={hybridQarzaAccountId}
-                                                    onChange={(e) => setHybridQarzaAccountId(e.target.value)}
-                                                    className="flex-1 min-w-0 px-3.5 py-2.5 rounded-lg text-sm border outline-none transition-all duration-200 cursor-pointer"
-                                                    style={inputStyle}
-                                                    {...fieldFocus}
-                                                    required
-                                                >
-                                                    <option value="">{labels.selectQarzaAccount}</option>
-                                                    {qarzaOptions.map((option) => (
-                                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                                    ))}
-                                                </select>
+                                                    onChange={(value) => setHybridQarzaAccountId(value)}
+                                                    placeholder={labels.selectQarzaAccount}
+                                                    type="customer"
+                                                />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowQarzaModal(true)}

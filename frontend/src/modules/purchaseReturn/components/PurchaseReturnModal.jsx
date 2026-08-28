@@ -553,7 +553,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     batch: batchId,
                     batchNumber: item.batch?.batchNumber || "",
                     quantity: details.returnQuantity,
-                    purchasePrice: item.price,
+                    purchasePrice: item.costPrice || item.price,
                     returnReason: details.returnReason,
                     condition: details.condition,
                     cut: details.cut,
@@ -568,6 +568,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             notes: form.returnReason,
             items,
             purchaseReturnNumber: purchaseReturnNumber || undefined,
+            totalRefundAmount: totalRefund,
         };
 
         console.log(payload, "the paylaod")

@@ -33,6 +33,28 @@ const countQarzaAccounts = async (query = {}) => {
     return await countQarzaAccountService(query);
 };
 
+// Search qarza accounts by name or phone
+const searchQarzaAccounts = async (query = "", limit = 20) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+
+    const accounts = await findQarzaAccountService({
+        $or: [
+            { name: searchRegex },
+            { phoneNo: searchRegex }
+        ],
+        isActive: { $ne: false }
+    }, {
+        limit: parseInt(limit),
+        sort: { name: 1 }
+    });
+
+    return accounts;
+};
+
 const qarzaPaymentCreate = async (data) => {
     return await createQarzaPaymentService(data);
 };
@@ -66,6 +88,7 @@ export {
     qarzaAccountUpdate,
     qarzaAccountDelete,
     countQarzaAccounts,
+    searchQarzaAccounts,
     qarzaPaymentCreate,
     getAllQarzaPayments,
     getPaginatedQarzaPayments,

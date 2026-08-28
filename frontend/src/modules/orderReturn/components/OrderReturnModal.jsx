@@ -488,6 +488,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     customerId: fetchedOrder.customerId,
                     items: itemsPayload,
                     notes,
+                    totalRefundAmount,
                 }).unwrap();
                 showSuccess("Order return created successfully");
             }
