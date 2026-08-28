@@ -10,6 +10,10 @@ import {
     deleteOnePurchaseReturnService,
     countPurchaseReturnService,
 } from "../services/purchaseReturn.crud.js";
+import {
+    getPurchaseReturnSummary,
+    calculateReturnedQuantitiesByBatch
+} from "../services/purchaseReturn.service.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { findByIdPurchaseService, findOnePurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
@@ -691,4 +695,10 @@ export const recalculatePurchaseReturnData = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const result = await recalculatePurchaseReturnRefundAmount(id);
     return ApiResponse(res, 200, "Purchase return recalculated successfully", result);
+});
+
+export const getPurchaseReturnSummaryData = asyncHandler(async (req, res) => {
+    const { purchaseId } = req.params;
+    const result = await getPurchaseReturnSummary(purchaseId);
+    return ApiResponse(res, 200, "Purchase return summary retrieved successfully", result);
 });

@@ -47,6 +47,18 @@ const findPurchaseReturnByPurchase = async (purchaseId) => {
     });
 };
 
+const findAllPurchaseReturnsByPurchase = async (purchaseId) => {
+    return await findPurchaseReturnService({ purchase: purchaseId }, {
+        populate: [
+            { path: "purchase", select: "invoiceNumber date totalAmount" },
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 }
+    });
+};
+
 const updatePurchaseReturn = async (id, data) => {
     return await updatePurchaseReturnService(id, data);
 };
@@ -156,15 +168,56 @@ const recalculatePurchaseReturnRefundAmount = async (purchaseReturnId) => {
     return refundStatus;
 };
 
+/**
+ * Calculate returned quantities per batch for a given purchase
+ * Returns an object mapping batchId to total returned quantity
+ */
+const calculateReturnedQuantitiesByBatch = async (purchaseId) => {
+    const purchaseReturns = await findAllPurchaseReturnsByPurchase(purchaseId);
+    
+    const returnedQuantities = {};
+    
+    for (const purchaseReturn of purchaseReturns) {
+        if (purchaseReturn.items && Array.isArray(purchaseReturn.items)) {
+            for (const item of purchaseReturn.items) {
+                const batchId = item.batch?._id || item.batch;
+                if (batchId) {
+                    returnedQuantities[batchId] = (returnedQuantities[batchId] || 0) + (item.quantity || 0);
+                }
+            }
+        }
+    }
+    
+    return returnedQuantities;
+};
+
+/**
+ * Get purchase return summary for a purchase
+ * Returns detailed information about what has been returned from each batch
+ */
+const getPurchaseReturnSummary = async (purchaseId) => {
+    const purchaseReturns = await findAllPurchaseReturnsByPurchase(purchaseId);
+    const returnedQuantities = await calculateReturnedQuantitiesByBatch(purchaseId);
+    
+    return {
+        purchaseReturns,
+        returnedQuantities,
+        totalReturns: purchaseReturns.length
+    };
+};
+
 export {
     createPurchaseReturn,
     getAllPurchaseReturns,
     getPurchaseReturnById,
     findPurchaseReturnByPurchase,
+    findAllPurchaseReturnsByPurchase,
     updatePurchaseReturn,
     deletePurchaseReturn,
     countPurchaseReturns,
     getPaginatedPurchaseReturns,
     calculatePurchaseReturnRefundStatus,
-    recalculatePurchaseReturnRefundAmount
+    recalculatePurchaseReturnRefundAmount,
+    calculateReturnedQuantitiesByBatch,
+    getPurchaseReturnSummary
 };

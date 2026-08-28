@@ -22,6 +22,7 @@ import {
     getPurchaseByInvoiceNumberApi,
     getPurchaseReturnsApi,
     generatePurchaseReturnNumberApi,
+    getPurchaseReturnSummaryApi,
 } from "../api/purchaseReturnApi.js";
 import { usePurchases, usePurchase } from "../../productPurchases/services/purchases.service.js";
 import { productApi } from "../../productsModule/services/product.service.js";
@@ -196,6 +197,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [isPurchaseReturnNumberLocked, setIsPurchaseReturnNumberLocked] = useState(true);
     const [expandedCalculation, setExpandedCalculation] = useState({});
     const [batchStocks, setBatchStocks] = useState({});
+    const [returnSummary, setReturnSummary] = useState(null);
 
     const { data: purchasesData } = usePurchases({ page: 1, limit: 100 });
     const allPurchases = purchasesData?.data ?? [];
@@ -234,6 +236,23 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         };
         fetchBatchStocks();
     }, [purchaseData]);
+
+    // Fetch return summary when purchase data is loaded
+    useEffect(() => {
+        const fetchReturnSummary = async () => {
+            if (purchaseData?._id && !isUpdate) {
+                try {
+                    const result = await getPurchaseReturnSummaryApi(purchaseData._id);
+                    if (result?.success && result?.data) {
+                        setReturnSummary(result.data);
+                    }
+                } catch (error) {
+                    console.error("Error fetching return summary:", error);
+                }
+            }
+        };
+        fetchReturnSummary();
+    }, [purchaseData, isUpdate]);
 
     // Generate default purchase return number on mount for create mode
     useEffect(() => {
@@ -341,6 +360,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     supplier: result.data.supplier?._id,
                 }));
                 setSelectedItems({});
+                setReturnSummary(null);
                 showSuccess(labels.purchaseFound);
             } else {
                 showError(result?.message || labels.purchaseNotFound);
@@ -387,10 +407,15 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 delete newSelected[batchId];
                 return newSelected;
             } else {
+                const alreadyReturned = returnSummary?.returnedQuantities?.[batchId] || 0;
+                const availableQuantity = Math.min(
+                    batchStocks[batchId] || 0,
+                    (item.quantity || 0) - alreadyReturned
+                );
                 return {
                     ...prev,
                     [batchId]: {
-                        returnQuantity: item.quantity,
+                        returnQuantity: Math.max(0, availableQuantity),
                         returnReason: localizedReasons[0]?.value || "damaged",
                         condition: "good",
                         cut: 0,
@@ -417,7 +442,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 if (item) {
                     const batchStock = batchStocks[batchId] || 0;
                     const purchaseQuantity = item.quantity || 0;
-                    const maxLimit = Math.min(batchStock, purchaseQuantity);
+                    const alreadyReturned = returnSummary?.returnedQuantities?.[batchId] || 0;
+                    const maxLimit = Math.min(batchStock, purchaseQuantity - alreadyReturned);
                     const quantity = Number(value) || 0;
                     
                     // Clamp the value to the maximum allowed limit
@@ -833,7 +859,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                     className="w-4 h-4 rounded"
                                                     style={{ accentColor: "var(--accent-2)" }}
                                                 />
-                                                <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
+                                                <div className="flex-1 grid grid-cols-2 sm:grid-cols-6 gap-2 text-sm">
                                                     <div>
                                                         <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.product?.name || "—"}</span>
                                                     </div>
@@ -845,6 +871,9 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
                                                         {labels.batch}: {item.batch?.batchNumber || "—"}
+                                                    </div>
+                                                    <div style={{ color: returnSummary?.returnedQuantities?.[batchId] > 0 ? "var(--accent-2)" : "var(--muted)" }}>
+                                                        Returned: {returnSummary?.returnedQuantities?.[batchId] || 0}
                                                     </div>
                                                     {isSelected && (
                                                         <div className="text-right font-semibold" style={{ color: "var(--accent-2)" }}>
@@ -863,13 +892,13 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                             <Inp
                                                                 type="number"
                                                                 min={1}
-                                                                max={Math.min(batchStocks[batchId] || 0, item.quantity || 0)}
+                                                                max={Math.min(batchStocks[batchId] || 0, (item.quantity || 0) - (returnSummary?.returnedQuantities?.[batchId] || 0))}
                                                                 value={details.returnQuantity}
                                                                 onChange={(e) => handleItemDetailChange(batchId, "returnQuantity", e.target.value)}
                                                                 onWheel={e => e.target.blur()}
                                                             />
                                                             <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                                                                Max limit: {Math.min(batchStocks[batchId] || 0, item.quantity || 0)} (Stock: {batchStocks[batchId] || 0}, Purchase: {item.quantity || 0})
+                                                                Max limit: {Math.min(batchStocks[batchId] || 0, (item.quantity || 0) - (returnSummary?.returnedQuantities?.[batchId] || 0))} (Stock: {batchStocks[batchId] || 0}, Purchase: {item.quantity || 0}, Returned: {returnSummary?.returnedQuantities?.[batchId] || 0})
                                                             </p>
                                                         </Field>
                                                         <Field>

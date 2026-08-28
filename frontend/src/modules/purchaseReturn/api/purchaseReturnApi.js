@@ -114,3 +114,13 @@ export const generatePurchaseReturnNumberApi = async () => {
         throw error;
     }
 };
+
+export const getPurchaseReturnSummaryApi = async (purchaseId) => {
+    try {
+        const response = await api.get(`/purchase-returns/purchase/${purchaseId}/summary`);
+        return response.data;
+    } catch (error) {
+        showError(error?.response?.data?.message || error?.message || "Failed to fetch purchase return summary");
+        throw error;
+    }
+};

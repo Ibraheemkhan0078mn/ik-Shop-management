@@ -17,11 +17,13 @@ import {
     getPurchaseReturnPaymentsData,
     deletePurchaseReturnPaymentData,
     recalculatePurchaseReturnData,
+    getPurchaseReturnSummaryData,
 } from "../controllers/purchaseReturn.controller.js";
 
 const router = express.Router();
 
 router.get("/purchase/:purchaseId", getPurchaseDetailsForReturn);
+router.get("/purchase/:purchaseId/summary", getPurchaseReturnSummaryData);
 router.post("/validate-number", validatePurchaseReturnNumberData);
 router.get("/generate-number", generatePurchaseReturnNumberData);
 router.get("/supplier/:supplierId", getSupplierPurchaseReturnsData);
