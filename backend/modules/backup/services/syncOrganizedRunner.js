@@ -2,9 +2,6 @@ import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpense
 import { getOnlineActivityLogModel, getOnlineExpenseCategoryModel, getOnlineExpensesModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineUserModel, getOnlineProductModel, getOnlineCategoryModel, getOnlineSubCategoryModel, getOnlineBatchModel, getOnlineSupplierModel, getOnlinePurchaseModel, getOnlinePurchasePaymentModel, getOnlineOrderModel, getOnlineHoldOrderModel, getOnlineWastageModel, getOnlinePurchaseReturnModel, getOnlineProductReturnModel, getOnlineCustomerModel, getOnlineStaffModel, getOnlineStaffSalaryPaymentModel, getOnlineStaffSaleBillModel, getOnlineStaffAttendanceModel, getOnlineSettingsModel, getOnlinePaymentMethodModel, getOnlineAppThemeModel, getOnlineBrandModel, getOnlineUserRoleModel, getOnlineStaffRoleModel, getOnlineTransactionModel } from '../../../configs/onlineConnect.db.js'
 import { downloadOnlineSync } from "./downloadOnlineSync.js";
 import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
-import { imageDownloadSync } from "./imageDownloadSync.js";
-import { imgDelete } from "./imgDelete.js";
-import { ImageUpload } from "./imgUpload.js";
 import { onlineDocsUploadSyncInsert } from "./insertSync.js";
 import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 import { imageFullSync } from "./imageFullSync.js";
