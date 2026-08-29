@@ -18,11 +18,28 @@ export const useLogin = () => {
         try {
             const result = await loginMutation(data).unwrap();
             dispatch(login(result.data));
-            toast.success(result.message || "Login Successful");
+            
+            // Show role-aware login message
+            let loginMessage = result.message || "Login Successful";
+            if (result.data?.role === 'admin') {
+                loginMessage += " (Admin - All data preserved)";
+            } else if (result.data?.role !== 'admin') {
+                loginMessage += " (Staff - Local data optimized)";
+            }
+            
+            toast.success(loginMessage);
             navigate("/quick-list");
+            
+            // Return the response data for the caller
+            return {
+                data: result.data,
+                message: result.message,
+                role: result.data?.role
+            };
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.data?.message || "Login Failed";
             toast.error(errorMessage);
+            throw error; // Re-throw so caller can handle it
         }
     };
 
@@ -40,9 +57,18 @@ export const useSignup = () => {
             dispatch(login(result.data));
             toast.success(result.message || "Signup Successful");
             navigate("/quick-list");
+            
+            // Return the response data for the caller to access connection info
+            return {
+                savedToOnline: result.savedToOnline,
+                onlineConnected: result.onlineConnected,
+                data: result.data,
+                message: result.message
+            };
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.data?.message || "Signup Failed";
             toast.error(errorMessage);
+            throw error; // Re-throw so AuthPage can handle it
         }
     };
 

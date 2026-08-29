@@ -11,6 +11,7 @@ import {
 } from "../services/user.service.js";
 import { findOneUserService, createUserService } from "../services/user.crud.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
+import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
 export const getAllUsersController = asyncHandler(async (req, res, next) => {
@@ -77,12 +78,20 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
         return next(new ErrorResponse("Password must be at least 6 characters long", 400));
     }
 
+    // Check if online database is connected (required for user creation)
+    const onlineDb = getOnlineDbInstance();
+    const isOnlineConnected = onlineDb && onlineDb.readyState === 1;
+    
+    if (!isOnlineConnected) {
+        return next(new ErrorResponse("Internet connection to online database is required to create new users. Please check your connection and try again.", 400));
+    }
+
     const userExists = await findOneUserService({ email });
     if (userExists) {
         return next(new ErrorResponse("A user with this email already exists", 400));
     }
 
-    const userData = req.body;
+    const userData = { ...req.body };
     
     // Encrypt password before storing
     if (userData.password && !isPasswordEncrypted(userData.password)) {
@@ -94,16 +103,38 @@ export const createUserByAdminController = asyncHandler(async (req, res, next) =
         userData.photo = req.file.filename;
     }
 
+    // Save to LOCAL DB first
     const user = await createUserService({ ...userData, permissions: userData.permissions });
-    
+    console.log("✅ User saved to LOCAL DB:", user._id);
+
     // Track image creation if photo was uploaded
     if (req.file?.filename) {
         await imageChangeTrackDocsCreation("create", UserModel.modelName, user._id);
     }
 
+    // Save to ONLINE DB (required since we checked connection above)
+    let onlineSaveSuccess = false;
+    try {
+        const { createOnlineUserService } = await import("../services/onlineUser.crud.js");
+        await createOnlineUserService({ ...userData, _id: user._id, permissions: userData.permissions });
+        onlineSaveSuccess = true;
+        console.log("✅ User saved to ONLINE DB:", user._id);
+    } catch (onlineError) {
+        console.error("❌ Failed to save user to ONLINE DB:", onlineError.message);
+        // If online save fails, we should also remove from local DB to maintain consistency
+        try {
+            await userDelete(user._id);
+        } catch (deleteError) {
+            console.error("❌ Failed to cleanup local user after online save failure:", deleteError.message);
+        }
+        return next(new ErrorResponse("Failed to save user to online database. User creation cancelled.", 500));
+    }
+
     res.status(201).json({
         success: true,
-        message: "User created successfully",
+        message: "User created successfully! Saved to both local and online database.",
+        savedToOnline: onlineSaveSuccess,
+        onlineConnected: isOnlineConnected,
         data: {
             id: user._id,
             name: user.name,

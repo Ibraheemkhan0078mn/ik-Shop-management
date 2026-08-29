@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getUserLabels } from "../labels/userLabels.js";
-import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation, useGetAllUserRolesQuery, useGetUserByIdWithPasswordQuery } from "../services/authApi.js";
+import { useGetAllUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation, useGetAllUserRolesQuery, useGetUserByIdWithPasswordQuery, useCheckConnectionStatusQuery } from "../services/authApi.js";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
@@ -12,6 +12,7 @@ import { categorizePermissions } from "../../../shared/utilities/permissionUtils
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { AppPermissionContext } from "../../../shared/context/Permission.context.jsx";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
+import InternetStatusIndicator from "../../../shared/components/InternetStatusIndicator.jsx";
 // import { DEFAULT_PERMISSIONS } from "../../../../backend/common/constants/permissions.constant.js";
 
 export default function UserManagement() {
@@ -26,6 +27,10 @@ export default function UserManagement() {
     const users = response?.data || [];
     const { data: rolesResponse } = useGetAllUserRolesQuery();
     const userRoles = rolesResponse?.data || [];
+    const { data: connectionStatus, refetch: refetchConnection } = useCheckConnectionStatusQuery(undefined, {
+        pollingInterval: 10000, // Check connection every 10 seconds
+        refetchOnFocus: true,
+    });
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
     const [deleteUser] = useDeleteUserMutation();
@@ -67,6 +72,12 @@ export default function UserManagement() {
     }, [userWithPassword, modal]);
 
     const openCreateModal = () => {
+        // Check internet connection before allowing user creation
+        if (!connectionStatus?.connected) {
+            showError("Internet connection required to create new users. Please check your connection and try again.");
+            return;
+        }
+        
         setEditingUserId(null);
         setFormData({
             name: "",
@@ -208,6 +219,13 @@ export default function UserManagement() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Check internet connection before creating user
+        if (modal.mode === "create" && !connectionStatus?.connected) {
+            showError("Internet connection required to create new users. Please check your connection and try again.");
+            return;
+        }
+        
         try {
             if (modal.mode === "create") {
                 // Use FormData if image file exists
@@ -224,8 +242,19 @@ export default function UserManagement() {
                     data = formData;
                 }
                 
-                await createUser(data).unwrap();
-                showSuccess(labels.userCreated);
+                const result = await createUser(data).unwrap();
+                
+                // Show connection-aware success message
+                if (result?.savedToOnline) {
+                    showSuccess("User created successfully! Saved to both local and online database.");
+                } else if (result?.onlineConnected === false) {
+                    showSuccess("User created successfully! Saved to local database. Will sync to online when connected.");
+                } else {
+                    showSuccess(labels.userCreated);
+                }
+                
+                // Refresh connection status after user creation
+                refetchConnection();
             } else {
                 // Use FormData if image file exists
                 let data;
@@ -276,11 +305,24 @@ export default function UserManagement() {
         <div style={{ color: "var(--ink)" }}>
             <PageHeading
                 heading={labels.userManagement}
-                subheading={labels.manageStaffUserAccounts}
+                subheading={
+                    <div className="flex items-center gap-4">
+                        <span>{labels.manageStaffUserAccounts}</span>
+                        <InternetStatusIndicator connectionStatus={connectionStatus} size="sm" showLabel={true} />
+                    </div>
+                }
                 leftActions={
                     <div className="flex gap-2">
-                        <div onClick={openCreateModal}>
-                            <ScreenTabButton lucideIcon={Plus} text={labels.addUser} />
+                        <div 
+                            onClick={openCreateModal}
+                            className={`${!connectionStatus?.connected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            title={!connectionStatus?.connected ? 'Internet connection required to create users' : ''}
+                        >
+                            <ScreenTabButton 
+                                lucideIcon={Plus} 
+                                text={labels.addUser}
+                                disabled={!connectionStatus?.connected}
+                            />
                         </div>
                         <div onClick={() => navigate("/user-roles")}>
                             <ScreenTabButton lucideIcon={Shield} text={labels.userRoles} />
@@ -512,6 +554,24 @@ export default function UserManagement() {
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* Internet Connection Warning for User Creation */}
+                            {modal.mode === "create" && !connectionStatus?.connected && (
+                                <div className="p-3 rounded-lg border-l-4 border-orange-500" style={{ background: "var(--surface-muted)" }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
+                                            <span className="text-white text-xs">!</span>
+                                        </div>
+                                        <p className="text-sm font-medium text-orange-700">
+                                            Internet connection required to create new users
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-orange-600 mt-1 ml-6">
+                                        Please check your connection and try again.
+                                    </p>
+                                </div>
+                            )}
+                            
                             <div className="flex gap-2 justify-end">
                                 <button
                                     type="button"
@@ -523,7 +583,8 @@ export default function UserManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 rounded-lg"
+                                    disabled={modal.mode === "create" && !connectionStatus?.connected}
+                                    className="px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{ background: "var(--accent-2)", color: "white" }}
                                 >
                                     {modal.mode === "create" ? labels.create : labels.update}

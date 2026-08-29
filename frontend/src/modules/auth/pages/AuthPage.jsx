@@ -1,10 +1,10 @@
-// src/pages/AuthPage.jsx
 import React, { useState, useEffect } from "react";
 import { useLogin, useSignup } from "../services/auth.service.js";
-import { useCheckAdminRegistrationQuery } from "../services/authApi.js";
+import { useCheckAdminRegistrationQuery, useCheckConnectionStatusQuery } from "../services/authApi.js";
 import { Eye, EyeOff, BarChart3, Shield, Zap, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthLabels } from "../labels/authLabels.js";
+import InternetStatusIndicator from "../../../shared/components/InternetStatusIndicator.jsx";
 
 const LANGUAGE_KEY = "appLanguage";
 
@@ -23,6 +23,10 @@ export default function AuthPage() {
   const loginUser  = useLogin();
   const signupUser = useSignup();
   const { data: adminCheck } = useCheckAdminRegistrationQuery();
+  const { data: connectionStatus, refetch: refetchConnection } = useCheckConnectionStatusQuery(undefined, {
+    pollingInterval: 5000, // Check connection every 5 seconds
+    refetchOnFocus: true,
+  });
 
   // Load language from localStorage
   const [language] = useState(() => {
@@ -89,8 +93,48 @@ export default function AuthPage() {
       if (isLoginMode) {
         const response = await loginUser({ email: formData.email, password: formData.password, role: formData.role });
         console.log(response, "The data");
+        
+        // Show enhanced login success message based on login source
+        if (response?.message?.includes("from online database")) {
+          if (response?.role === 'admin') {
+            toast.success("Login successful! Connected to online database - All data synchronized.");
+          } else {
+            toast.success("Login successful! Online authentication - Local data optimized for staff access.");
+          }
+        } else if (response?.message?.includes("from local database")) {
+          if (response?.role === 'admin') {
+            toast.success("Login successful! Local database access - Admin privileges available.");
+          } else {
+            toast.success("Login successful! Local authentication - Staff mode active.");
+          }
+        } else if (response?.message?.includes("offline mode")) {
+          toast.success("Login successful! Offline mode - Local data only.");
+        } else {
+          // Fallback message
+          const baseMessage = "Login successful!";
+          if (response?.role === 'admin') {
+            toast.success(`${baseMessage} Welcome Admin - All data available.`);
+          } else if (response?.role && response.role !== 'admin') {
+            toast.success(`${baseMessage} Staff mode - Local data optimized.`);
+          } else {
+            toast.success(baseMessage);
+          }
+        }
+        
+        // Refresh connection status after login
+        refetchConnection();
       } else {
-        await signupUser(formData);
+        // Registration - show connection status in success message
+        const response = await signupUser(formData);
+        if (response?.savedToOnline) {
+          toast.success("Admin registered successfully! Saved to both local and online database.");
+        } else if (response?.onlineConnected === false) {
+          toast.success("Admin registered successfully! Saved to local database. Will sync to online when connected.");
+        } else {
+          toast.success("Admin registered successfully!");
+        }
+        // Refresh connection status after registration
+        refetchConnection();
       }
     } catch (err) {
       toast.error(err?.response?.data?.message ?? err?.message ?? labels.somethingWentWrong);
@@ -209,6 +253,11 @@ export default function AuthPage() {
             <p id="auth-subheading" className="text-sm" style={{ color: "var(--muted)" }}>
               {isLoginMode ? "Enter your credentials to continue" : "Fill in your details to get started"}
             </p>
+            
+            {/* Internet Connection Status */}
+            <div className="mt-4">
+              <InternetStatusIndicator connectionStatus={connectionStatus} size="md" showLabel={true} />
+            </div>
           </div>
 
           {/* Form */}
@@ -256,6 +305,19 @@ export default function AuthPage() {
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+              {isLoginMode && (
+                <div className="mt-2 text-xs">
+                  {connectionStatus?.connected ? (
+                    <p className="text-green-700">
+                      ✓ Priority: Online database login, fallback to local database
+                    </p>
+                  ) : (
+                    <p className="text-orange-700">
+                      ⚠ Local database login only (will check online when connected)
+                    </p>
+                  )}
+                </div>
+              )}
             </FormField>
 
 
@@ -269,9 +331,20 @@ export default function AuthPage() {
                 )}
               </div>
               {!isLoginMode && (
-                <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                  Note: Registration is restricted to admin role only. Contact existing admin for account creation.
-                </p>
+                <div className="space-y-1 mt-1">
+                  <p className="text-xs" style={{ color: "var(--muted)" }}>
+                    Note: Registration is restricted to admin role only.
+                  </p>
+                  {connectionStatus?.connected ? (
+                    <p className="text-xs text-green-700 font-medium">
+                      ✓ Will save to both local and online database
+                    </p>
+                  ) : (
+                    <p className="text-xs text-orange-700 font-medium">
+                      ⚠ Will save to local database only (will sync when online)
+                    </p>
+                  )}
+                </div>
               )}
             </FormField>
 

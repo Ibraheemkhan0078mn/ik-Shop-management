@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
-import { encryptPassword, decryptPassword, comparePassword, isPasswordEncrypted } from "../services/encryption.service.js";
+import { encryptPassword, comparePassword, isPasswordEncrypted } from "../services/encryption.service.js";
 import {
     userCreate as userCreateService,
     findUserByEmail as findUserByEmailService,
@@ -12,6 +12,7 @@ import {
     findOnlineUserByEmailWithPassword as findOnlineUserByEmailWithPasswordService,
     onlineUserCreate as onlineUserCreateService,
 } from "../services/onlineAuth.service.js";
+import { postLoginDataCleanup } from "../services/loginDataCleanup.service.js";
 import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 import { getLocalUserModel } from "../../../configs/connect.db.js";
 import { findOneDoc } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
@@ -136,67 +137,150 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Email and password are required", 400));
     }
 
-    // 1. Try local DB first
-    const localUser = await findUserByEmailWithPasswordService(email);
-    if (localUser) {
-        console.log("The local user", localUser)
-        return verifyAndRespond(localUser, password, res, next, "User logged in successfully");
-    }
-
-    // 2. Not found locally — try online DB
+    // 1. Try ONLINE DB first (priority login)
     const onlineDb = getOnlineDbInstance();
-    if (!onlineDb || onlineDb.readyState !== 1) {
+    const isOnlineConnected = onlineDb && onlineDb.readyState === 1;
+
+    if (isOnlineConnected) {
+        try {
+            console.log("🌐 Attempting ONLINE database login for:", email);
+            const onlineUser = await findOnlineUserByEmailWithPasswordService(email);
+            
+            if (onlineUser) {
+                console.log("✅ User found in ONLINE database");
+                
+                // Verify password for online user
+                if (!comparePassword(password, onlineUser.password)) {
+                    console.log("❌ Password verification failed for online user");
+                    return next(new ErrorResponse("Incorrect password", 401));
+                }
+
+                if (!onlineUser.isActive) {
+                    console.log("❌ Online user account is deactivated");
+                    return next(new ErrorResponse("This account has been deactivated", 403));
+                }
+
+                // Online login successful - sync user to local DB
+                console.log("🔄 Syncing online user to local database");
+                const userData = onlineUser.toObject ? onlineUser.toObject() : onlineUser;
+                
+                // Skip encryption if password is already encrypted (from online DB)
+                if (!isPasswordEncrypted(userData.password)) {
+                    userData.password = encryptPassword(userData.password);
+                }
+                
+                let localUser;
+                try {
+                    localUser = await userCreateService(userData);
+                    console.log("✅ User synced to LOCAL database:", localUser._id);
+                } catch (syncError) {
+                    console.log("⚠️ Failed to sync to local DB, using online user data:", syncError.message);
+                    localUser = onlineUser;
+                }
+
+                // POST-LOGIN DATA CLEANUP BASED ON ROLE
+                try {
+                    const cleanupResult = await postLoginDataCleanup({
+                        _id: localUser._id,
+                        role: localUser.role,
+                        email: localUser.email
+                    });
+                    
+                    if (cleanupResult.success) {
+                        console.log(`📋 Login cleanup: ${cleanupResult.message}`);
+                    } else {
+                        console.error(`⚠️ Login cleanup failed: ${cleanupResult.message}`);
+                    }
+                } catch (cleanupError) {
+                    console.error("⚠️ Post-login cleanup error:", cleanupError.message);
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    message: "User logged in successfully (from online database)",
+                    data: {
+                        id: localUser._id,
+                        name: localUser.name,
+                        email: localUser.email,
+                        phoneNo: localUser.phoneNo,
+                        role: localUser.role,
+                        permissions: localUser.permissions || [],
+                    },
+                });
+            } else {
+                console.log("❌ User not found in ONLINE database");
+            }
+        } catch (onlineError) {
+            console.error("❌ Online database error during login:", onlineError.message);
+            console.log("⬇️ Falling back to LOCAL database login");
+        }
+    } else {
+        console.log("⚠️ Online database not connected, checking LOCAL database");
+    }
+
+    // 2. Fall back to LOCAL DB if online failed or user not found online
+    console.log("💾 Attempting LOCAL database login for:", email);
+    const localUser = await findUserByEmailWithPasswordService(email);
+    
+    if (!localUser) {
+        console.log("❌ User not found in LOCAL database");
         return next(new ErrorResponse(
-            "User not found locally. Please connect to the online database to login.",
+            isOnlineConnected 
+                ? "No user found with this email address. Please check your credentials or contact admin." 
+                : "User not found locally. Please connect to the internet to login with online credentials.",
             401
         ));
     }
 
-    const onlineUser = await findOnlineUserByEmailWithPasswordService(email);
-    if (!onlineUser) {
-        return next(new ErrorResponse(
-            "No user found with this email address. Please check your credentials or contact admin.",
-            401
-        ));
-    }
+    console.log("✅ User found in LOCAL database");
 
-    // 3. Verify password from online record, then sync a copy into the local DB
-    return verifyAndRespond(onlineUser, password, res, next, "User logged in successfully (synced from online)", true);
-});
-
-// Shared logic: check password + isActive, optionally sync to local DB, and send response
-async function verifyAndRespond(user, plainPassword, res, next, successMessage, syncToLocal = false) {
-    if (!comparePassword(plainPassword, user.password)) {
+    // Verify password for local user
+    if (!comparePassword(password, localUser.password)) {
+        console.log("❌ Password verification failed for local user");
         return next(new ErrorResponse("Incorrect password", 401));
     }
 
-    if (!user.isActive) {
+    if (!localUser.isActive) {
+        console.log("❌ Local user account is deactivated");
         return next(new ErrorResponse("This account has been deactivated", 403));
     }
 
-    let finalUser = user;
-    if (syncToLocal) {
-        const userData = user.toObject ? user.toObject() : user;
-        // Skip encryption if password is already encrypted (from online DB)
-        if (!isPasswordEncrypted(userData.password)) {
-            userData.password = encryptPassword(userData.password);
+    // POST-LOGIN DATA CLEANUP BASED ON ROLE
+    try {
+        const cleanupResult = await postLoginDataCleanup({
+            _id: localUser._id,
+            role: localUser.role,
+            email: localUser.email
+        });
+        
+        if (cleanupResult.success) {
+            console.log(`📋 Login cleanup: ${cleanupResult.message}`);
+        } else {
+            console.error(`⚠️ Login cleanup failed: ${cleanupResult.message}`);
         }
-        finalUser = await userCreateService(userData);
+    } catch (cleanupError) {
+        console.error("⚠️ Post-login cleanup error:", cleanupError.message);
     }
+
+    console.log("✅ Local login successful");
 
     return res.status(200).json({
         success: true,
-        message: successMessage,
+        message: isOnlineConnected 
+            ? "User logged in successfully (from local database)" 
+            : "User logged in successfully (offline mode)",
         data: {
-            id: finalUser._id,
-            name: finalUser.name,
-            email: finalUser.email,
-            phoneNo: finalUser.phoneNo,
-            role: finalUser.role,
-            permissions: finalUser.permissions || [],
+            id: localUser._id,
+            name: localUser.name,
+            email: localUser.email,
+            phoneNo: localUser.phoneNo,
+            role: localUser.role,
+            permissions: localUser.permissions || [],
         },
     });
-}
+});
+
+
 
 
 
@@ -232,39 +316,52 @@ export const registerUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("An admin account already exists. Only one admin is allowed.", 400));
     }
 
-    // Also check online DB for existing admin using service
-    try {
-        const onlineDb = getOnlineDbInstance();
-        if (onlineDb && onlineDb.readyState === 1) {
+    // Check online DB for existing admin
+    const onlineDb = getOnlineDbInstance();
+    const isOnlineConnected = onlineDb && onlineDb.readyState === 1;
+    
+    if (isOnlineConnected) {
+        try {
             const existingOnlineAdmin = await findOnlineUserByEmailService(email);
             if (existingOnlineAdmin && existingOnlineAdmin.role === 'admin') {
                 return next(new ErrorResponse("An admin account already exists in the system. Only one admin is allowed.", 400));
             }
+        } catch (onlineError) {
+            console.error("⚠️ Online DB check during registration:", onlineError.message);
+            // Continue with local registration if online check fails
         }
-    } catch (onlineError) {
-        console.error("Online DB check during registration:", onlineError.message);
-        // Continue with local registration if online check fails
     }
   
-    const userData = validatedData;
+    const userData = { ...validatedData };
     // Encrypt password before storing
     userData.password = encryptPassword(userData.password);
+    
+    // ALWAYS save to LOCAL DB first
     const user = await userCreateService(userData);
+    console.log("✅ User saved to LOCAL DB:", user._id);
 
-    // Try to sync to online DB if connected using service
-    try {
-        const onlineDb = getOnlineDbInstance();
-        if (onlineDb && onlineDb.readyState === 1) {
+    // Try to save to ONLINE DB if connected
+    let onlineSaveSuccess = false;
+    if (isOnlineConnected) {
+        try {
             await onlineUserCreateService(userData);
+            onlineSaveSuccess = true;
+            console.log("✅ User saved to ONLINE DB:", user._id);
+        } catch (onlineError) {
+            console.error("❌ Failed to save user to ONLINE DB:", onlineError.message);
+            // Registration succeeded locally, just log the error
         }
-    } catch (onlineError) {
-        console.error("Failed to sync user to online DB:", onlineError.message);
-        // Registration succeeded locally, just log the error
+    } else {
+        console.log("⚠️ ONLINE DB not connected, user saved to LOCAL DB only");
     }
 
     res.status(201).json({
         success: true,
-        message: "Admin registered successfully",
+        message: onlineSaveSuccess 
+            ? "Admin registered successfully (saved to both local and online database)" 
+            : "Admin registered successfully (saved to local database only, will sync when online)",
+        savedToOnline: onlineSaveSuccess,
+        onlineConnected: isOnlineConnected,
         data: {
             id: user._id,
             name: user.name,
@@ -375,6 +472,54 @@ export const checkAdminRegistrationAllowed = asyncHandler(async (req, res, next)
             success: false,
             allowed: false,
             message: "Error checking registration status",
+        });
+    }
+});
+
+// NEW: Check online DB connection status
+export const checkOnlineConnectionStatus = asyncHandler(async (req, res, next) => {
+    try {
+        const onlineDb = getOnlineDbInstance();
+        const isConnected = onlineDb && onlineDb.readyState === 1;
+        
+        res.status(200).json({
+            success: true,
+            connected: isConnected,
+            message: isConnected ? "Online database connected" : "Online database not connected",
+        });
+    } catch (error) {
+        console.error("Error checking connection status:", error.message);
+        res.status(200).json({
+            success: false,
+            connected: false,
+            message: "Error checking connection status",
+        });
+    }
+});
+
+// NEW: Get cleanup preview (for debugging/testing)
+export const getCleanupPreview = asyncHandler(async (req, res, next) => {
+    try {
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return next(new ErrorResponse("User ID is required", 400));
+        }
+
+        const { getCleanupPreview } = await import("../services/loginDataCleanup.service.js");
+        const preview = await getCleanupPreview(userId);
+        
+        res.status(200).json({
+            success: true,
+            data: preview,
+            message: "Cleanup preview generated successfully",
+        });
+    } catch (error) {
+        console.error("Error generating cleanup preview:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Error generating cleanup preview",
+            error: error.message,
         });
     }
 });

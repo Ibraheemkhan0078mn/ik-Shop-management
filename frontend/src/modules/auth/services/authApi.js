@@ -17,6 +17,14 @@ export const authApi = baseApi.injectEndpoints({
         checkAdminRegistration: build.query({
             query: () => ({ url: "/auth/check-admin-registration" }),
         }),
+        checkConnectionStatus: build.query({
+            query: () => ({ url: "/auth/connection-status" }),
+            keepUnusedDataFor: 0, // Don't cache connection status
+        }),
+        getCleanupPreview: build.query({
+            query: (userId) => ({ url: "/auth/cleanup-preview", params: { userId } }),
+            keepUnusedDataFor: 0, // Don't cache cleanup preview
+        }),
         getAllUsers: build.query({
             query: () => ({ url: "/users/all" }),
             providesTags: ["User"],
@@ -85,6 +93,8 @@ export const {
     useLogoutMutation,
     useGetUserQuery,
     useCheckAdminRegistrationQuery,
+    useCheckConnectionStatusQuery,
+    useGetCleanupPreviewQuery,
     useGetAllUsersQuery,
     useGetUserByIdQuery,
     useGetUserByIdWithPasswordQuery,
