@@ -941,7 +941,7 @@ export default function PosPaymentModal({
                                                                     <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface)", color: "var(--ink)" }}>
                                                                         Rs {item.discountLimitType === 'fixed' 
                                                                             ? ((item.maxDiscountPercent || 0) * item.qty).toFixed(2)
-                                                                            : ((item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)
+                                                                            : ((item.unitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)
                                                                         }
                                                                     </div>
                                                                 </div>
@@ -983,7 +983,7 @@ export default function PosPaymentModal({
                                                                                 // Fixed amount validation
                                                                                 const maxFixed = item.discountLimitType === 'fixed' 
                                                                                     ? (item.maxDiscountPercent || 0) * item.qty 
-                                                                                    : (item.discountedUnitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100;
+                                                                                    : (item.unitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100;
                                                                                 if (numValue > maxFixed) {
                                                                                     alert(`Maximum discount allowed is Rs ${maxFixed.toFixed(2)}`);
                                                                                     return;

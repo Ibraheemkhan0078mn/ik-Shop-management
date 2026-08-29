@@ -197,7 +197,18 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         const qty = Number(item.quantity ?? item.qty ?? 1);
         const price = Number(item.unitPrice ?? item.price ?? 0);
         const origPrice = Number(item.originalPrice ?? item.unitPrice ?? item.price ?? 0);
-        const total = item.lineTotal != null ? Number(item.lineTotal) : price * qty;
+        
+        // Calculate tax amount properly
+        let taxAmount = 0;
+        if (item.taxType === 'fixed') {
+            taxAmount = Number(item.taxPercent || 0);
+        } else {
+            taxAmount = (price * Number(item.taxPercent || 0)) / 100;
+        }
+        
+        // Calculate item total including tax
+        const lineTotal = (price * qty) + (taxAmount * qty);
+        const total = item.lineTotal != null ? Number(item.lineTotal) : lineTotal;
 
         return {
             product: item.product || item._id,
@@ -211,13 +222,13 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             batchNumber: item.batchNumber ?? null,
             taxPercent: item.taxPercent || 0,
             taxType: item.taxType || "percentage",
-            taxAmount: item.taxAmount || 0,
+            taxAmount: taxAmount,
             discountPercent: item.discountPercent || 0,
             discountAmount: item.discountAmount || 0,
             discountType: item.discountType || "percentage",
             maxDiscountPercent: item.maxDiscountPercent || 0,
             discountLimitType: item.discountLimitType || "percentage",
-            itemTotal: item.itemTotal || total,
+            itemTotal: total,
         };
     });
 
