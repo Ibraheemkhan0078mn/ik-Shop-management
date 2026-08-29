@@ -14,17 +14,21 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     const [excelBackupPath, setExcelBackupPath] = useState(settingsData?.backup?.excelBackupPath || "./backups/excel");
     const [isExporting, setIsExporting] = useState(false);
 
-    const { data: storageInfo, isLoading: storageLoading, refetch: refetchStorage } = useGetStorageInfoQuery();
+    // Disable automatic polling for storage info to prevent excessive API calls
+    const { data: storageInfo, isLoading: storageLoading, refetch: refetchStorage } = useGetStorageInfoQuery(undefined, {
+        pollingInterval: 0, // Disable auto-polling
+        refetchOnMountOrArgChange: false, // Don't refetch on every mount
+        refetchOnFocus: false, // Don't refetch when window regains focus
+    });
     
-    // Debug logging
-    console.log("Storage Info:", storageInfo);
-    console.log("Storage Loading:", storageLoading);
-    const [syncAll] = useSyncAllMutation();
-    const [syncRequired] = useSyncRequiredMutation();
+    const [syncAll, { isLoading: syncAllLoading }] = useSyncAllMutation();
+    const [syncRequired, { isLoading: syncRequiredLoading }] = useSyncRequiredMutation();
     const [stopSync] = useStopSyncMutation();
     const [updateBackupSettings] = useUpdateBackupSettingsMutation();
     const [exportExcel] = useExportExcelMutation();
-    const { data: syncStatus } = useGetSyncStatusQuery();
+    const { data: syncStatus } = useGetSyncStatusQuery(undefined, {
+        pollingInterval: 0, // Disable auto-polling
+    });
 
     // Update sync interval in settings when changed
     const handleIntervalChange = async (value, unit) => {
@@ -74,24 +78,35 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     const handleSyncAll = async () => {
         setIsSyncing(true);
         try {
-            await syncAll().unwrap();
+            const result = await syncAll().unwrap();
             setLastSyncTime(new Date());
-            await refetchStorage();
+            await refetchStorage(); // Manually refetch storage after sync
+            toast.success(labels.syncCompleted || "Sync completed successfully");
+            console.log("✅ Sync all completed:", result);
         } catch (error) {
-            console.error("Sync all failed:", error);
+            console.error("❌ Sync all failed:", error);
+            toast.error(labels.syncFailed || "Sync failed");
         } finally {
             setIsSyncing(false);
         }
     };
 
     const handleSyncRequired = async () => {
+        // Prevent multiple simultaneous syncs
+        if (isSyncing) {
+            console.log("⏭️ Sync already in progress, skipping...");
+            return;
+        }
+
         setIsSyncing(true);
         try {
-            await syncRequired().unwrap();
+            const result = await syncRequired().unwrap();
             setLastSyncTime(new Date());
-            await refetchStorage();
+            await refetchStorage(); // Manually refetch storage after sync
+            console.log("✅ Sync required completed:", result);
         } catch (error) {
-            console.error("Sync required failed:", error);
+            console.error("❌ Sync required failed:", error);
+            toast.error(labels.syncFailed || "Sync failed");
         } finally {
             setIsSyncing(false);
         }
@@ -101,27 +116,39 @@ export default function BackupSettings({ settingsData, userId, labels }) {
         try {
             await stopSync().unwrap();
             setIsSyncing(false);
+            toast.info(labels.syncStopped || "Sync stopped");
+            console.log("🛑 Sync stopped");
         } catch (error) {
-            console.error("Stop sync failed:", error);
+            console.error("❌ Stop sync failed:", error);
+            toast.error(labels.stopSyncFailed || "Failed to stop sync");
         }
     };
 
     // Interval-based sync activation
     useEffect(() => {
-        if (!syncIntervalValue || syncIntervalValue === 0) return;
+        if (!syncIntervalValue || syncIntervalValue === 0) {
+            console.log("⏸️ Auto-sync disabled (interval is 0)");
+            return;
+        }
 
         const intervalMs = convertToMilliseconds(syncIntervalValue, syncIntervalUnit);
-        console.log(`Auto-sync will run every ${syncIntervalValue} ${syncIntervalUnit} (${intervalMs}ms)`);
+        console.log(`🔄 Auto-sync configured: every ${syncIntervalValue} ${syncIntervalUnit} (${intervalMs}ms)`);
 
-        const intervalId = setInterval(async () => {
-            console.log("Running scheduled sync (required)...");
-            await handleSyncRequired();
+        // Set up recurring interval (NO immediate sync on mount to prevent duplicate syncs)
+        const intervalId = setInterval(() => {
+            console.log("⏰ Running scheduled sync (required)...");
+            handleSyncRequired();
         }, intervalMs);
 
-        return () => clearInterval(intervalId);
-    }, [syncIntervalValue, syncIntervalUnit]);
+        return () => {
+            console.log("🛑 Clearing sync interval");
+            clearInterval(intervalId);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [syncIntervalValue, syncIntervalUnit]); // Only re-run when interval settings change
 
     const timeUnitOptions = [
+        { value: 'seconds', label: labels.seconds || 'Seconds' },
         { value: 'minutes', label: labels.minutes || 'Minutes' },
         { value: 'hours', label: labels.hours || 'Hours' },
         { value: 'days', label: labels.days || 'Days' },
@@ -199,23 +226,23 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                             <button
                                 onClick={handleSyncAll}
-                                disabled={isSyncing}
+                                disabled={isSyncing || syncAllLoading}
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Database size={20} />
                                 <span>{labels.syncAllData}</span>
-                                {isSyncing && <RefreshCw size={16} className="animate-spin" />}
+                                {(isSyncing || syncAllLoading) && <RefreshCw size={16} className="animate-spin" />}
                             </button>
                             <button
                                 onClick={handleSyncRequired}
-                                disabled={isSyncing}
+                                disabled={isSyncing || syncRequiredLoading}
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RefreshCw size={20} />
                                 <span>{labels.syncRequiredOnly}</span>
-                                {isSyncing && <RefreshCw size={16} className="animate-spin" />}
+                                {(isSyncing || syncRequiredLoading) && <RefreshCw size={16} className="animate-spin" />}
                             </button>
-                            {isSyncing && (
+                            {(isSyncing || syncAllLoading || syncRequiredLoading) && (
                                 <button
                                     onClick={handleStopSync}
                                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-500 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
