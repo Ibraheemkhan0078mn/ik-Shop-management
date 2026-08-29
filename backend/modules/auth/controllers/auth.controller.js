@@ -137,13 +137,14 @@ export const loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Email and password are required", 400));
     }
 
-    // 1. Try ONLINE DB first (priority login)
+    // Quick connection check - avoid slow timeouts when offline
     const onlineDb = getOnlineDbInstance();
     const isOnlineConnected = onlineDb && onlineDb.readyState === 1;
 
     if (isOnlineConnected) {
+        console.log("🌐 Online database connected - trying online login first");
+        
         try {
-            console.log("🌐 Attempting ONLINE database login for:", email);
             const onlineUser = await findOnlineUserByEmailWithPasswordService(email);
             
             if (onlineUser) {
@@ -208,17 +209,17 @@ export const loginUser = asyncHandler(async (req, res, next) => {
                     },
                 });
             } else {
-                console.log("❌ User not found in ONLINE database");
+                console.log("❌ User not found in ONLINE database, checking local...");
             }
         } catch (onlineError) {
             console.error("❌ Online database error during login:", onlineError.message);
             console.log("⬇️ Falling back to LOCAL database login");
         }
     } else {
-        console.log("⚠️ Online database not connected, checking LOCAL database");
+        console.log("⚠️ Online database not connected - using LOCAL database directly");
     }
 
-    // 2. Fall back to LOCAL DB if online failed or user not found online
+    // LOCAL DB login (either as fallback or direct when offline)
     console.log("💾 Attempting LOCAL database login for:", email);
     const localUser = await findUserByEmailWithPasswordService(email);
     

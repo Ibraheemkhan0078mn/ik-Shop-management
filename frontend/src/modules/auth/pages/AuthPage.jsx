@@ -309,11 +309,11 @@ export default function AuthPage() {
                 <div className="mt-2 text-xs">
                   {connectionStatus?.connected ? (
                     <p className="text-green-700">
-                      ✓ Priority: Online database login, fallback to local database
+                      ✓ Online database priority, instant fallback to local
                     </p>
                   ) : (
                     <p className="text-orange-700">
-                      ⚠ Local database login only (will check online when connected)
+                      ⚠ Fast offline mode - direct local database access
                     </p>
                   )}
                 </div>
