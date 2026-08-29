@@ -22,6 +22,7 @@ const MODEL_IMAGE_CONFIG = {
     Customer: { imageField: 'image', publicIdField: 'cloudinaryPublicId' },
     User: { imageField: 'photo', publicIdField: 'cloudinaryPublicId' },
     QarzaAccount: { imageField: 'qarzaProfileImage', publicIdField: 'cloudinaryPublicId' },
+    Settings: { imageField: 'shop.imageUrl', publicIdField: null, nested: true }, // Nested field
     Categories: { imageField: 'image', publicIdField: null },
     SubCategories: { imageField: 'image', publicIdField: null },
 };
@@ -71,12 +72,31 @@ export async function imageFullSync(modelArray, loggedInUserData) {
                 console.log(`   Found ${documents.length} documents (including deleted)`);
 
                 for (const doc of documents) {
-                    const imageFilename = doc[config.imageField];
+                    // Handle nested fields (e.g., shop.imageUrl in Settings)
+                    let imageFilename;
+                    if (config.nested && config.imageField.includes('.')) {
+                        const parts = config.imageField.split('.');
+                        imageFilename = doc[parts[0]]?.[parts[1]];
+                    } else {
+                        imageFilename = doc[config.imageField];
+                    }
+                    
                     const cloudinaryPublicId = config.publicIdField ? doc[config.publicIdField] : null;
 
                     // Skip if no image data at all
                     if (!imageFilename && !cloudinaryPublicId) {
                         continue;
+                    }
+
+                    // Extract just the filename if it's a path
+                    if (imageFilename) {
+                        imageFilename = path.basename(imageFilename);
+                    }
+
+                    // ALWAYS protect Settings shop images from deletion
+                    if (modelName === 'Settings' && imageFilename) {
+                        allValidImages.add(imageFilename);
+                        console.log(`   🛡️  Protected Settings shop image: ${imageFilename}`);
                     }
 
                     // CASE 1: Has local filename, missing Cloudinary ID → Upload to Cloudinary
