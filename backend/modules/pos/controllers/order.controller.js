@@ -197,6 +197,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         const qty = Number(item.quantity ?? item.qty ?? 1);
         const price = Number(item.unitPrice ?? item.price ?? 0);
         const origPrice = Number(item.originalPrice ?? item.unitPrice ?? item.price ?? 0);
+        const customPrice = item.customPrice ? Number(item.customPrice) : null;
         
         // Calculate tax amount properly
         let taxAmount = 0;
@@ -216,6 +217,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             quantity: qty,
             unitPrice: price,
             originalPrice: origPrice,
+            customPrice: customPrice,
             lineTotal: total,
             portionType: item.portionType || "full",
             batchId: item.batchId ?? null,
@@ -229,6 +231,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             maxDiscountPercent: item.maxDiscountPercent || 0,
             discountLimitType: item.discountLimitType || "percentage",
             itemTotal: total,
+            allowCustomPrice: item.allowCustomPrice || false,
         };
     });
 

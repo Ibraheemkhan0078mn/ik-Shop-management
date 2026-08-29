@@ -213,6 +213,7 @@ const EMPTY_FORM = {
   isDiscountAllowed: false,
   maxDiscountPercent: 0,
   discountLimitType: "percentage",
+  allowCustomPrice: true,
   rackLocation: "",
   isActive: true,
   image: "",
@@ -810,6 +811,19 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                     />
                   </>
                 )}
+                
+                {/* Custom Price Section */}
+                <div className="col-span-full sm:col-span-2 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>
+                    {labels.customPriceSettings || "Custom Price Settings"}
+                  </h4>
+                </div>
+                <ToggleField
+                  label={labels.allowCustomPrice || "Allow Custom Price in POS"}
+                  name="allowCustomPrice"
+                  value={form.allowCustomPrice}
+                  onChange={updateField}
+                />
               </div>
             )}
           </div>

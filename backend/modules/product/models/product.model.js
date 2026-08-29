@@ -26,6 +26,9 @@ const productSchema = new mongoose.Schema(
         isDiscountAllowed: { type: Boolean, default: true },
         maxDiscountPercent: { type: Number, default: 0 },
         discountLimitType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+        
+        // ─── Custom Pricing ───────────────────────────────────────
+        allowCustomPrice: { type: Boolean, default: true },
 
         // ─── Stock ────────────────────────────────────────────────
         minStockLevel: { type: Number, default: 5 },

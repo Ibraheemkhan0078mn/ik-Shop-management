@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { X, CheckCircle2, ChevronRight, PackageOpen } from "lucide-react";
 import { useBatchesByProduct } from "../../productPurchases/services/batch.service";
+import Alert from "../../../shared/components/Alert.jsx";
 
 // All UI copy lives here so both languages stay in sync and easy to scan.
 const TEXT = {
@@ -71,6 +72,7 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
 
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [isSticky, setIsSticky] = useState(initialIsSticky);
+  const [alertConfig, setAlertConfig] = useState({ show: false, message: '', type: 'warning' });
   const rowRefs = useRef({});
 
   // ---- Derived batch info -------------------------------------------------
@@ -101,11 +103,19 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
     const batch = batches.find((b) => b._id === selectedBatchId);
 
     if (batch.quantity <= 0) {
-      alert(t.outOfStockAlert);
+      setAlertConfig({
+        show: true,
+        message: t.outOfStockAlert,
+        type: 'warning'
+      });
       return;
     }
     if (batch.expiryDate && new Date(batch.expiryDate) < new Date()) {
-      alert(t.expiredAlert);
+      setAlertConfig({
+        show: true,
+        message: t.expiredAlert,
+        type: 'warning'
+      });
       return;
     }
 
@@ -180,6 +190,16 @@ export default function BatchSelectionModal({ product, initialIsSticky = false, 
           />
         )}
       </div>
+      
+      {/* Alert Component */}
+      <Alert
+        msg={alertConfig.message}
+        type={alertConfig.type}
+        isVisible={alertConfig.show}
+        onConfirm={() => setAlertConfig({ show: false, message: '', type: 'warning' })}
+        confirmText="OK"
+        showCancel={false}
+      />
     </div>
   );
 }

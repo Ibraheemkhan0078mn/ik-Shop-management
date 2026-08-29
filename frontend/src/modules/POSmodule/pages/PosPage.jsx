@@ -56,6 +56,7 @@ const buildOrderItemsFromCart = (cart) =>
     maxDiscountPercent: cartItem.maxDiscountPercent || 0,
     discountLimitType: cartItem.discountLimitType || "percentage",
     itemTotal: cartItem.itemTotal || (cartItem.unitPrice * cartItem.qty),
+    customInput: cartItem.customInput || false,  // boolean flag to identify custom input
   }));
 
 // ─── Product Card ────────────────────────────────────────────────────────────────
@@ -299,6 +300,37 @@ export default function PosPage() {
     );
   };
 
+  // Custom price change handler
+  const handleCustomPriceChange = (productId, portionType, batchId, newPrice) => {
+    if (newPrice < 0) return;
+    
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item._id === productId && item.portionType === portionType && item.batchId === batchId) {
+          // Calculate new tax amount based on new price
+          let newTaxAmount = 0;
+          if (item.taxType === 'fixed') {
+            newTaxAmount = item.taxPercent || 0;
+          } else {
+            newTaxAmount = (newPrice * (item.taxPercent || 0)) / 100;
+          }
+          
+          // Calculate new item total
+          const newItemTotal = (newPrice * item.qty) + (newTaxAmount * item.qty);
+          
+          return {
+            ...item,
+            unitPrice: newPrice,
+            taxAmount: newTaxAmount,
+            itemTotal: newItemTotal,
+            customInput: true,  // Mark as custom input
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   const clearCart = () => setCartItems([]);
 
   // ── Add to Cart ───────────────────────────────────────────────────────────
@@ -376,6 +408,8 @@ export default function PosPage() {
           maxDiscountPercent: Number(product.maxDiscountPercent) || 0,
           discountLimitType: product.discountLimitType || "percentage",
           itemTotal,
+          allowCustomPrice: product.allowCustomPrice,
+          customInput: false,  // Initialize as false (default batch price)
         },
       ];
     });
@@ -569,6 +603,8 @@ export default function PosPage() {
         maxDiscountPercent: orderItem.maxDiscountPercent || 0,
         discountLimitType: orderItem.discountLimitType || "percentage",
         itemTotal: orderItem.itemTotal || (Number(orderItem.unitPrice) * (orderItem.quantity ?? 1)),
+        allowCustomPrice: orderItem.allowCustomPrice !== false,
+        customInput: orderItem.customInput || false,
       };
     });
 
@@ -837,6 +873,7 @@ export default function PosPage() {
         onHold={handleHoldCurrentOrder}
         handleResumeOrder={handleResumeHeldOrder}
         handleDeleteHeldOrder={handleDeleteHeldOrder}
+        onCustomPriceChange={handleCustomPriceChange}
       />
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}

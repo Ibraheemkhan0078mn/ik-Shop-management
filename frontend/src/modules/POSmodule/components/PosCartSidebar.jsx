@@ -26,6 +26,7 @@ export default function PosCartSidebar({
     onHold,
     handleResumeOrder,
     handleDeleteHeldOrder,
+    onCustomPriceChange,
 }) {
     const navigate = useNavigate();
     const { settings } = useSettings();
@@ -70,73 +71,73 @@ export default function PosCartSidebar({
                     style={{ borderBottom: "1px solid var(--border)" }}
                 >
                     <div className="flex items-center gap-2 min-w-0 w-full">
-  <ShoppingCart size={18} style={{ color: "var(--accent-2)" }} />
-  <h2 className="font-bold text-sm truncate" style={{ color: "var(--ink)" }}>{labels.currentOrder}</h2>
-  {resumedHoldId && (
-    <span
-      className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
-      style={{
-        background: "rgba(180,83,9,0.1)",
-        color: "var(--accent)",
-        border: "1px solid rgba(180,83,9,0.2)",
-      }}
-    >
-      {labels.resumed}
-    </span>
-  )}
-  {totalItemCount > 0 && (
-    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-      style={{ background: "var(--accent-2)", color: "white" }}
-    >
-      {totalItemCount}
-    </span>
-  )}
-  <div className="flex items-center gap-1 ml-auto">
-    <button
-      onClick={() => setShowHeldOrders(true)}
-      title={labels.heldOrders || "Held Orders"}
-      className="p-1.5 rounded-lg border transition hover:scale-105 relative"
-      style={{
-        background: holdOrders.length > 0 ? "rgba(180,83,9,0.15)" : "var(--surface-muted)",
-        borderColor: holdOrders.length > 0 ? "rgba(180,83,9,0.3)" : "var(--border)",
-        color: "var(--accent)",
-        animation: shouldBlink ? "pulse-accent 1.5s ease-in-out" : "none"
-      }}
-    >
-      <Pause size={14} />
-      {holdOrders.length > 0 && (
-        <span
-          className="absolute -top-1 -right-1 flex items-center justify-center text-[9px] font-bold rounded-full"
-          style={{
-            background: "var(--accent)",
-            color: "white",
-            minWidth: "16px",
-            height: "16px",
-            padding: "0 4px",
-          }}
-        >
-          {holdOrders.length}
-        </span>
-      )}
-    </button>
-    <button
-      onClick={() => navigate("/product-return")}
-      title="Product Return"
-      className="p-1.5 rounded-lg border transition hover:scale-105"
-      style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--accent-2)" }}
-    >
-      <RotateCcw size={14} />
-    </button>
-    <button
-      onClick={() => navigate("/order-history")}
-      title="Order History"
-      className="p-1.5 rounded-lg border transition hover:scale-105"
-      style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
-    >
-      <History size={14} />
-    </button>
-  </div>
-</div>
+                        <ShoppingCart size={18} style={{ color: "var(--accent-2)" }} />
+                        <h2 className="font-bold text-sm truncate" style={{ color: "var(--ink)" }}>{labels.currentOrder}</h2>
+                        {resumedHoldId && (
+                            <span
+                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
+                                style={{
+                                    background: "rgba(180,83,9,0.1)",
+                                    color: "var(--accent)",
+                                    border: "1px solid rgba(180,83,9,0.2)",
+                                }}
+                            >
+                                {labels.resumed}
+                            </span>
+                        )}
+                        {totalItemCount > 0 && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                                style={{ background: "var(--accent-2)", color: "white" }}
+                            >
+                                {totalItemCount}
+                            </span>
+                        )}
+                        <div className="flex items-center gap-1 ml-auto">
+                            <button
+                                onClick={() => setShowHeldOrders(true)}
+                                title={labels.heldOrders || "Held Orders"}
+                                className="p-1.5 rounded-lg border transition hover:scale-105 relative"
+                                style={{
+                                    background: holdOrders.length > 0 ? "rgba(180,83,9,0.15)" : "var(--surface-muted)",
+                                    borderColor: holdOrders.length > 0 ? "rgba(180,83,9,0.3)" : "var(--border)",
+                                    color: "var(--accent)",
+                                    animation: shouldBlink ? "pulse-accent 1.5s ease-in-out" : "none"
+                                }}
+                            >
+                                <Pause size={14} />
+                                {holdOrders.length > 0 && (
+                                    <span
+                                        className="absolute -top-1 -right-1 flex items-center justify-center text-[9px] font-bold rounded-full"
+                                        style={{
+                                            background: "var(--accent)",
+                                            color: "white",
+                                            minWidth: "16px",
+                                            height: "16px",
+                                            padding: "0 4px",
+                                        }}
+                                    >
+                                        {holdOrders.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => navigate("/product-return")}
+                                title="Product Return"
+                                className="p-1.5 rounded-lg border transition hover:scale-105"
+                                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--accent-2)" }}
+                            >
+                                <RotateCcw size={14} />
+                            </button>
+                            <button
+                                onClick={() => navigate("/order-history")}
+                                title="Order History"
+                                className="p-1.5 rounded-lg border transition hover:scale-105"
+                                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--ink)" }}
+                            >
+                                <History size={14} />
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Cart Items */}
@@ -153,7 +154,7 @@ export default function PosCartSidebar({
                     ) : (
                         cart.map((cartItem, index) => (
                             <CartItemRow
-                                key={`${cartItem._id}-${cartItem.portionType}-${cartItem.unitPrice}-${cartItem.batchId}`}
+                                key={`${cartItem._id}-${cartItem.portionType}-${cartItem.unitPrice}-${cartItem.batchId}`} 
                                 cartItem={cartItem}
                                 portionLabel={PORTION_LABEL[cartItem.portionType] || ""}
                                 onIncrement={() => incQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
@@ -161,6 +162,7 @@ export default function PosCartSidebar({
                                 onRemove={() => removeFromCart(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
                                 onQtyChange={(newQty) => setCartItemQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId, newQty)}
                                 onEditPortion={() => openPortionModal(cartItem, index)}
+                                onCustomPriceChange={onCustomPriceChange}
                                 labels={labels}
                             />
                         ))
@@ -237,71 +239,85 @@ export default function PosCartSidebar({
             </aside>
 
             {/* ── Held Orders / History Drawer ─────────────────────────────────── */}
-          {showHeldOrders && (
-  <div
-    className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+            {showHeldOrders && (
+                <div
+                    className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
                w-[95vw] sm:w-[80vw] lg:w-[60vw]
                h-[60vh]
                max-w-4xl
                rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-    style={{
-      background: "var(--surface)",
-      border: "1px solid var(--border)",
-    }}
-    onClick={(e) => e.stopPropagation()}
-  >
-    {/* Header */}
-    <div
-      className="flex items-center justify-between px-4 py-3 shrink-0"
-      style={{ borderBottom: "1px solid var(--border)" }}
-    >
-      <h2
-        className="text-sm font-semibold"
-        style={{ color: "var(--text)" }}
-      >
-        {labels.heldOrders} ({holdOrders.length})
-      </h2>
+                    style={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div
+                        className="flex items-center justify-between px-4 py-3 shrink-0"
+                        style={{ borderBottom: "1px solid var(--border)" }}
+                    >
+                        <h2
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--text)" }}
+                        >
+                            {labels.heldOrders} ({holdOrders.length})
+                        </h2>
 
-      <button
-        onClick={() => setShowHeldOrders(false)}
-        className="text-xl leading-none"
-        style={{ color: "var(--muted)" }}
-      >
-        ×
-      </button>
-    </div>
+                        <button
+                            onClick={() => setShowHeldOrders(false)}
+                            className="text-xl leading-none"
+                            style={{ color: "var(--muted)" }}
+                        >
+                            ×
+                        </button>
+                    </div>
 
-    {/* Content */}
-    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-      {holdOrders.length === 0 ? (
-        <EmptyState message={labels.noHeldOrders} />
-      ) : (
-        holdOrders.map((heldOrder) => (
-          <HeldOrderCard
-            key={heldOrder._id}
-            heldOrder={heldOrder}
-            isCurrentlyInCart={heldOrder._id === resumedHoldId}
-            canDelete={user?.permissions?.deleteOrders}
-            cart={cart}
-            onResume={() => handleResumeOrder(heldOrder)}
-            onDelete={() => handleDeleteHeldOrder(heldOrder._id)}
-            labels={labels}
-          />
-        ))
-      )}
-    </div>
-  </div>
-)}
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {holdOrders.length === 0 ? (
+                            <EmptyState message={labels.noHeldOrders} />
+                        ) : (
+                            holdOrders.map((heldOrder) => (
+                                <HeldOrderCard
+                                    key={heldOrder._id}
+                                    heldOrder={heldOrder}
+                                    isCurrentlyInCart={heldOrder._id === resumedHoldId}
+                                    canDelete={user?.permissions?.deleteOrders}
+                                    cart={cart}
+                                    onResume={() => handleResumeOrder(heldOrder)}
+                                    onDelete={() => handleDeleteHeldOrder(heldOrder._id)}
+                                    labels={labels}
+                                />
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     );
 }
 
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
-
-function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemove, onQtyChange, onEditPortion, labels }) {
+function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemove, onQtyChange, onEditPortion, onCustomPriceChange, labels }) {
     const [expanded, setExpanded] = useState(false);
-    
-    // Calculate tax details
+    const [customPriceInput, setCustomPriceInput] = useState(String(cartItem.unitPrice));
+    const [isPriceFocused, setIsPriceFocused] = useState(false);
+    const [qtyInput, setQtyInput] = useState(String(cartItem.qty));
+    const [isQtyFocused, setIsQtyFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isPriceFocused) {
+            setCustomPriceInput(String(cartItem.unitPrice));
+        }
+    }, [cartItem.unitPrice, isPriceFocused]);
+
+    useEffect(() => {
+        if (!isQtyFocused) {
+            setQtyInput(String(cartItem.qty));
+        }
+    }, [cartItem.qty, isQtyFocused]);
+
     let taxAmount = 0;
     if (cartItem.taxType === 'fixed') {
         taxAmount = cartItem.taxPercent || 0;
@@ -310,18 +326,16 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
     }
     const afterTaxPrice = cartItem.unitPrice + taxAmount;
     const totalWithTax = afterTaxPrice * cartItem.qty;
-    
+
     return (
         <div
             className="rounded-lg overflow-hidden transition-all"
             style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}
         >
-            {/* Item header - always visible */}
             <div
                 className="p-2.5 cursor-pointer group transition-all"
                 onClick={() => setExpanded(!expanded)}
             >
-                {/* Top row: image + name + remove */}
                 <div className="flex items-center gap-2">
                     {cartItem.image && (
                         <img
@@ -361,7 +375,6 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                     </button>
                 </div>
 
-                {/* Bottom row: qty controls + line total */}
                 <div className="flex items-center gap-2 mt-2">
                     <button
                         onClick={(e) => {
@@ -377,12 +390,71 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                     <input
                         type="number"
                         min={1}
-                        value={cartItem.qty}
-                        onChange={(e) => onQtyChange(Number(e.target.value))}
+                        value={qtyInput}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            setQtyInput(e.target.value);
+                        }}
+                        onFocus={(e) => {
+                            e.stopPropagation();
+                            setIsQtyFocused(true);
+                            e.target.select();
+                        }}
+                        onBlur={(e) => {
+                            e.stopPropagation();
+                            setIsQtyFocused(false);
+                            const newQty = parseInt(qtyInput, 10);
+                            if (!newQty || newQty < 1) {
+                                setQtyInput(String(cartItem.qty));
+                            } else {
+                                onQtyChange(newQty);
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.target.blur();
+                            }
+                        }}
                         onClick={(e) => e.stopPropagation()}
                         className="w-10 text-center text-xs font-semibold rounded-md py-0.5 outline-none"
                         style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
                     />
+
+                    {cartItem.allowCustomPrice && (
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Price"
+                            value={customPriceInput}
+                            onChange={(e) => {
+                                e.stopPropagation();
+                                setCustomPriceInput(e.target.value);
+                            }}
+                            onFocus={(e) => {
+                                e.stopPropagation();
+                                setIsPriceFocused(true);
+                                e.target.select();
+                            }}
+                            onBlur={(e) => {
+                                e.stopPropagation();
+                                setIsPriceFocused(false);
+                                const newPrice = parseFloat(customPriceInput) || 0;
+                                if (onCustomPriceChange) {
+                                    onCustomPriceChange(cartItem._id, cartItem.portionType, cartItem.batchId, newPrice);
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.target.blur();
+                                }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-16 text-center text-xs font-semibold rounded-md py-0.5 outline-none"
+                            style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
+                            title="Custom Price"
+                        />
+                    )}
 
                     <button
                         onClick={(e) => {
@@ -411,7 +483,6 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                 )}
             </div>
 
-            {/* Expanded tax calculation */}
             {expanded && (
                 <div className="px-3 py-2 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                     <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation</p>
@@ -423,8 +494,8 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                         <div className="flex justify-between">
                             <span style={{ color: "var(--ink)" }}>Tax Rate:</span>
                             <span className="font-mono" style={{ color: "var(--ink)" }}>
-                                {cartItem.taxType === 'fixed' 
-                                    ? `Rs ${cartItem.taxPercent || 0} (fixed)` 
+                                {cartItem.taxType === 'fixed'
+                                    ? `Rs ${cartItem.taxPercent || 0} (fixed)`
                                     : `${cartItem.taxPercent || 0}% (percentage)`
                                 }
                             </span>
@@ -484,9 +555,9 @@ function HeldOrderCard({ heldOrder, isCurrentlyInCart, canDelete, cart, onResume
 
             {/* Actions */}
             <div className="flex gap-1.5 shrink-0">
-                <ConfirmDialog 
-                    message={cart.length > 0 
-                        ? (labels.language === "ur" 
+                <ConfirmDialog
+                    message={cart.length > 0
+                        ? (labels.language === "ur"
                             ? "آپ کے موجودہ کارٹ میں آئٹمز ہیں۔ جاری رکھنے سے وہ ہٹ جائیں گے۔ جاری رکھیں؟"
                             : "Your current cart has items. Resuming will replace them. Continue?")
                         : labels.resume

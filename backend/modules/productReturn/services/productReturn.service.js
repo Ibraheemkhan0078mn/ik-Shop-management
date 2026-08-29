@@ -207,19 +207,29 @@ const recalculateProductReturnRefundAmount = async (productReturnId) => {
         throw new Error("Product return not found");
     }
 
-    const totalRefundAmount = productReturn?.totalRefundAmount || 0;
-    if (!totalRefundAmount && totalRefundAmount !== 0) {
-        throw new Error("Product return total refund amount not found");
-    }
+    // Recalculate total refund amount from items (similar to order fix)
+    const calculatedRefundAmount = productReturn.items.reduce((sum, item) => {
+        const itemRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+        return sum + itemRefund;
+    }, 0);
 
-    const refundStatus = await calculateProductReturnRefundStatus(productReturnId, totalRefundAmount);
+    // Update the product return with correct total
+    await updateProductReturnService(productReturnId, {
+        totalRefundAmount: calculatedRefundAmount
+    });
+
+    const refundStatus = await calculateProductReturnRefundStatus(productReturnId, calculatedRefundAmount);
 
     await updateProductReturnService(productReturnId, {
         refundedAmount: refundStatus.totalRefunded,
-        refundStatus: refundStatus.refundStatus
+        refundStatus: refundStatus.refundStatus,
+        totalRefundAmount: calculatedRefundAmount
     });
 
-    return refundStatus;
+    return {
+        ...refundStatus,
+        totalRefundAmount: calculatedRefundAmount
+    };
 };
 
 export {

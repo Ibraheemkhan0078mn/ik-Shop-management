@@ -23,6 +23,7 @@ const orderItemSchema = new mongoose.Schema({
     maxDiscountPercent: { type: Number, default: 0 },
     discountLimitType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
     itemTotal: { type: Number, required: true, min: 0 },  // final total including tax and discount
+    customInput: { type: Boolean, default: false },  // boolean flag to identify if price was custom input or default
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import ApiQarzaSelect from "../../../shared/components/ApiQarzaSelect.jsx";
+import Alert from "../../../shared/components/Alert.jsx";
 
 const PAYMENT_TABS = (labels, customerType) => [
     { key: "cash", label: labels.cash, icon: Wallet },
@@ -286,6 +287,7 @@ export default function PosPaymentModal({
     const [itemDiscounts, setItemDiscounts] = useState({});
     const [itemDiscountTypes, setItemDiscountTypes] = useState({});
     const [expandedCalculation, setExpandedCalculation] = useState({});
+    const [alertConfig, setAlertConfig] = useState({ show: false, message: '', type: 'warning' });
 
     const discountAmt = Math.max(0, Number(orderDiscount) || 0);
     
@@ -976,7 +978,11 @@ export default function PosPaymentModal({
                                                                         if (item.maxDiscountPercent > 0) {
                                                                             if (itemDiscountTypes[index] === 'percentage') {
                                                                                 if (numValue > item.maxDiscountPercent) {
-                                                                                    alert(`Maximum discount allowed is ${item.maxDiscountPercent}%`);
+                                                                                    setAlertConfig({
+                                                                                        show: true,
+                                                                                        message: `Maximum discount allowed is ${item.maxDiscountPercent}%`,
+                                                                                        type: 'warning'
+                                                                                    });
                                                                                     return;
                                                                                 }
                                                                             } else {
@@ -985,7 +991,11 @@ export default function PosPaymentModal({
                                                                                     ? (item.maxDiscountPercent || 0) * item.qty 
                                                                                     : (item.unitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100;
                                                                                 if (numValue > maxFixed) {
-                                                                                    alert(`Maximum discount allowed is Rs ${maxFixed.toFixed(2)}`);
+                                                                                    setAlertConfig({
+                                                                                        show: true,
+                                                                                        message: `Maximum discount allowed is Rs ${maxFixed.toFixed(2)}`,
+                                                                                        type: 'warning'
+                                                                                    });
                                                                                     return;
                                                                                 }
                                                                             }
@@ -1553,11 +1563,23 @@ export default function PosPaymentModal({
 //                             color: canCheckout ? "white" : "var(--muted)"
 //                         }}
 //                         onMouseEnter={e => {
+//                 </div>
+
+//                 {/* Action buttons */}
+//                 <div className="px-6 py-4" style={{ borderTop: "1px solid var(--border)" }}>
+//                     <button onClick={handleCheckout} disabled={!canCheckout}
+//                         className="w-full py-3 font-bold rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-sm"
+//                         style={{
+//                             background: canCheckout ? "var(--accent-2)" : "var(--surface-muted)",
+//                             color: canCheckout ? "white" : "var(--muted)"
+//                         }}
+//                         onMouseEnter={e => {
 //                             if (canCheckout) e.currentTarget.style.background = "rgba(15,118,110,0.8)";
 //                         }}
 //                         onMouseLeave={e => {
 //                             if (canCheckout) e.currentTarget.style.background = "var(--accent-2)";
-//                         }}>
+//                         }}
+//                     >
 //                         Complete Payment <ChevronRight size={16} />
 //                     </button>
 //                 </div>
@@ -1566,3 +1588,15 @@ export default function PosPaymentModal({
 //     );
 // }
 
+//             {/* Alert Modal */}
+//             <Alert
+//                 msg={alertConfig.message}
+//                 type={alertConfig.type}
+//                 isVisible={alertConfig.show}
+//                 onConfirm={() => setAlertConfig({ ...alertConfig, show: false })}
+//                 confirmText="OK"
+//                 showCancel={false}
+//             />
+//         </div>
+//     );
+// }
