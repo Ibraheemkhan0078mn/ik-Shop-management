@@ -5,6 +5,7 @@ import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.j
 import { onlineDocsUploadSyncInsert } from "./insertSync.js";
 import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 import { imageFullSync } from "./imageFullSync.js";
+import { cleanupStaleOnlineChangeTracks } from "./cleanupStaleChangeTracks.js";
 
 
 
@@ -83,6 +84,9 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
         // NEW: Comprehensive image sync
         await imageFullSync(modelArray, loggedInUserData)
+
+        // NEW: Cleanup stale online change tracks (7+ days old)
+        await cleanupStaleOnlineChangeTracks()
 
         // Keep old functions for backward compatibility
         // await imgDelete(modelArray, loggedInUserData)

@@ -198,7 +198,7 @@ async function uploadImageToCloudinary(Model, docId, imageFilename, imageField, 
         // Update document with Cloudinary public ID
         await Model.findByIdAndUpdate(docId, {
             [publicIdField]: result.public_id
-        });
+        }); 
 
         console.log(`   ✅ Uploaded: ${result.public_id}`);
         return { success: true, publicId: result.public_id };

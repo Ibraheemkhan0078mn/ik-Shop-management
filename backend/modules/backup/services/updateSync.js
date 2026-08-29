@@ -25,7 +25,7 @@ async function classifyDocsForSync(eachModel, localDocs) {
   const onlineDocs = await eachModel.online.find(
     { _id: { $in: ids } },
     { _id: 1, updateTimeForSync: 1 }
-  );
+  ).lean();
 
   const onlineMap = new Map(
     onlineDocs.map(doc => [doc._id.toString(), doc.updateTimeForSync])
@@ -80,7 +80,7 @@ async function allUpdateUpload(modelsArray) {
     const localChangeTrackModel = getLocalChangeTrackModel();
 
     for (const eachModel of modelsArray) {
-      const localDocs = await eachModel.local.find({}, { _id: 1, updateTimeForSync: 1 });
+      const localDocs = await eachModel.local.find({}, { _id: 1, updateTimeForSync: 1 }).lean();
       if (localDocs.length === 0) continue;
 
       const { insertIds, updateIds } = await classifyDocsForSync(eachModel, localDocs);
@@ -111,7 +111,7 @@ async function requiredUpdateUpload(modelsArray) {
     const onlineChangeTrackModel = getOnlineChangeTrackModel();
     const { deviceId } = await deviceIdentityCheckFunction();
 
-    const updateChangeTrackDocs = await localChangeTrackModel.find({ operationType: "update" });
+    const updateChangeTrackDocs = await localChangeTrackModel.find({ operationType: "update" }).lean();
     if (updateChangeTrackDocs.length === 0) return;
 
     for (const eachModel of modelsArray) {
@@ -123,7 +123,7 @@ async function requiredUpdateUpload(modelsArray) {
       const documentIds = modelChangeTrackDocs.map(doc => doc.documentId).filter(id => id != null);
       if (documentIds.length === 0) continue;
 
-      const localDocs = await eachModel.local.find({ _id: { $in: documentIds } }, { _id: 1, updateTimeForSync: 1 });
+      const localDocs = await eachModel.local.find({ _id: { $in: documentIds } }, { _id: 1, updateTimeForSync: 1 }).lean();
       if (localDocs.length === 0) continue;
 
       const { insertIds, updateIds } = await classifyDocsForSync(eachModel, localDocs);
@@ -142,7 +142,7 @@ async function requiredUpdateUpload(modelsArray) {
         const changeTrackOperations = syncedChangeTrackDocs.map(doc => ({
           updateOne: {
             filter: { _id: doc._id },
-            update: { $set: { ...doc.toObject(), updatedUsers: [deviceId] } },
+            update: { $set: { ...doc, updatedUsers: [deviceId] } },
             upsert: true,
           },
         }));

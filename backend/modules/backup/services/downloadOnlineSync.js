@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { getLocalChangeTrackModel } from "../../../configs/connect.db.js";
 import { getOnlineChangeTrackModel } from "../../../configs/onlineConnect.db.js";
 import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
 
@@ -17,7 +16,7 @@ export async function downloadOnlineSync(modelsArray, downloadType = "required",
         await upsertToLocal(eachCollectionObject, newerDocs);
       }
     } else {
-      const allChangeTrackDocs = await onlineChangeTrackModel.find();
+      const allChangeTrackDocs = await onlineChangeTrackModel.find().lean();
 
       for (const eachCollectionObject of modelsArray) {
         if (!isPermitted(eachCollectionObject, loggedInUserData)) continue;
@@ -34,7 +33,7 @@ export async function downloadOnlineSync(modelsArray, downloadType = "required",
           (doc) => new mongoose.Types.ObjectId(doc.documentId)
         );
 
-        let orgDocs = await eachCollectionObject.online.find({ _id: { $in: changedDocsIds } });
+        let orgDocs = await eachCollectionObject.online.find({ _id: { $in: changedDocsIds } }).lean();
         orgDocs = filterDocsByAllowedClasses(eachCollectionObject, orgDocs, loggedInUserData);
         orgDocs = await filterDocsNewerThanLocal(eachCollectionObject, orgDocs);
 
@@ -49,7 +48,7 @@ export async function downloadOnlineSync(modelsArray, downloadType = "required",
           const changeTrackUpdateOperations = relevantChangeTrackDocs.map((doc) => ({
             updateOne: {
               filter: { _id: doc._id },
-              update: { $set: { ...doc.toObject(), updatedUsers: [...doc.updatedUsers, deviceId] } },
+              update: { $set: { ...doc, updatedUsers: [...doc.updatedUsers, deviceId] } },
               upsert: true,
             },
           }));
