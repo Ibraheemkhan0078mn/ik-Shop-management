@@ -52,9 +52,10 @@ const createProductReturn = async (returnData) => {
 };
 
 const getAllProductReturns = async (filters = {}) => {
-    const { page = 1, limit = 10, status, search } = filters;
+    const { page = 1, limit = 10, status, search, referenceOrderId } = filters;
     const query = {};
     if (status) query.returnStatus = status;
+    if (referenceOrderId) query.referenceOrderId = referenceOrderId;  // CRITICAL: Filter by specific order
     if (search) {
         query.$or = [
             { returnNumber: { $regex: search, $options: "i" } },
@@ -79,9 +80,10 @@ const getAllProductReturns = async (filters = {}) => {
 };
 
 const getPaginatedProductReturns = async (filters = {}) => {
-    const { page = 1, limit = 10, status, search, returnNumber } = filters;
+    const { page = 1, limit = 10, status, search, returnNumber, referenceOrderId } = filters;
     const query = {};
     if (status) query.returnStatus = status;
+    if (referenceOrderId) query.referenceOrderId = referenceOrderId;  // CRITICAL: Filter by specific order
     if (returnNumber) query.returnNumber = { $regex: returnNumber, $options: "i" };
     if (search) {
         query.$or = [

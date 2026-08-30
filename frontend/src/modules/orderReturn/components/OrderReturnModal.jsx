@@ -306,7 +306,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
         showSuccess("Order loaded successfully");
     }, [isEditMode, isViewMode, orderId, orderDataById]);
 
-    // Calculate item limits based on order quantities and previous returns
+    // Calculate item limits based on order quantities and previous returns FOR THIS SPECIFIC ORDER
     useEffect(() => {
         if (!fetchedOrder?.items) return;
 
@@ -320,38 +320,44 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 returnedQuantity: 0,
                 availableQuantity: item.quantity,
                 batchId: item.batchId,
+                productId: item.product || item.productId,  // Store actual product ID
                 productName: item.name || item.productName,
             };
         });
 
-        // Subtract quantities from previous returns (excluding current return in edit mode)
-        const returnsToProcess = previousReturnsData || [];
+        // Subtract quantities ONLY from previous returns for THIS ORDER (excluding current return in edit mode)
+        const returnsToProcess = previousReturnsData?.data || previousReturnsData || [];
         returnsToProcess.forEach((returnRecord) => {
             // Skip the current return being edited
             if (isEditMode && editData?._id && returnRecord._id === editData._id) {
                 return;
             }
             
+            // Only process returns that belong to this order
+            if (returnRecord.referenceOrderId !== fetchedOrder._id && 
+                returnRecord.referenceOrderNumber !== fetchedOrder.orderNumber) {
+                return;
+            }
+            
             if (returnRecord.items) {
                 returnRecord.items.forEach((returnItem) => {
-                    // Try to match by productId first
-                    let matchedItemId = null;
+                    // CRITICAL FIX: Match by productId AND batchId for accurate identification
+                    const returnProductId = returnItem.productId?._id || returnItem.productId;
+                    const returnBatchId = returnItem.batchId?._id || returnItem.batchId;
                     
-                    if (returnItem.productId) {
-                        matchedItemId = Object.keys(limits).find(key => key === returnItem.productId);
-                    }
-                    
-                    // If no match by productId, try to match by batchId
-                    if (!matchedItemId && returnItem.batchId) {
-                        matchedItemId = Object.keys(limits).find(key => limits[key].batchId === returnItem.batchId);
-                    }
-                    
-                    // If still no match, try to match by productName
-                    if (!matchedItemId && returnItem.productName) {
-                        matchedItemId = Object.keys(limits).find(key => 
-                            limits[key].productName?.toLowerCase() === returnItem.productName?.toLowerCase()
-                        );
-                    }
+                    // Find the matching order item
+                    const matchedItemId = Object.keys(limits).find(key => {
+                        const limit = limits[key];
+                        // Match by productId AND batchId (most accurate)
+                        if (returnBatchId && limit.batchId === returnBatchId && limit.productId === returnProductId) {
+                            return true;
+                        }
+                        // Fallback: match by productId only if batch IDs are not available
+                        if (!returnBatchId && !limit.batchId && limit.productId === returnProductId) {
+                            return true;
+                        }
+                        return false;
+                    });
                     
                     if (matchedItemId && limits[matchedItemId]) {
                         limits[matchedItemId].returnedQuantity += returnItem.quantity || 0;
