@@ -28,17 +28,24 @@ const emptyForm = () => ({
 });
 
 // ─── API-based searchable select for products ─────────────────────────────────────
-const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." }) => {
+const ApiProductSelect = ({ value, onChange, placeholder = "Search products...", productName = "" }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option with the product name
+        if (value) return { label: productName || value, value: value, data: { name: productName || value } };
+        return null;
+    }, [options, value, productName]);
 
     const searchProducts = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -93,8 +100,8 @@ const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." 
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
@@ -395,6 +402,7 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                     <Label>{labels.product} *</Label>
                     <ApiProductSelect
                       value={currentItem.product}
+                      productName={currentItem.productName}
                       onChange={(value, data) => {
                         setCurrentItem({
                           ...blankItem(),
