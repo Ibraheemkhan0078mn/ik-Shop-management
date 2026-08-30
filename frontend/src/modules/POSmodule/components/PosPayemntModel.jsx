@@ -945,7 +945,7 @@ export default function PosPaymentModal({
                                                                 </div>
                                                                 <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
                                                                     <span style={{ color: "var(--accent-2)" }}>Total Price:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.originalItemTotal.toFixed(2)}</span>
+                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.lineTotal || 0).toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -973,7 +973,7 @@ export default function PosPaymentModal({
                                                                 )}
                                                                 <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
                                                                     <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.discountedItemTotal.toFixed(2)}</span>
+                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -984,7 +984,7 @@ export default function PosPaymentModal({
                                                             <div className="text-xs space-y-1">
                                                                 <div className="flex justify-between">
                                                                     <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountedItemTotal.toFixed(2)}</span>
+                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
                                                                     <span style={{ color: "var(--ink)" }}>Tax Rate:</span>
@@ -1001,7 +1001,7 @@ export default function PosPaymentModal({
                                                                 </div>
                                                                 <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
                                                                     <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.itemSubtotalWithTax.toFixed(2)}</span>
+                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1012,7 +1012,7 @@ export default function PosPaymentModal({
                                                             <div className="text-xs space-y-1">
                                                                 <div className="flex justify-between">
                                                                     <span style={{ color: "var(--ink)" }}>After Discount:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.discountedItemTotal.toFixed(2)}</span>
+                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
                                                                     <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
@@ -1020,7 +1020,7 @@ export default function PosPaymentModal({
                                                                 </div>
                                                                 <div className="flex justify-between font-bold text-sm pt-2" style={{ borderTop: "1px solid var(--border)" }}>
                                                                     <span style={{ color: "var(--accent-2)" }}>Final Total:</span>
-                                                                    <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {item.itemSubtotalWithTax.toFixed(2)}</span>
+                                                                    <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
