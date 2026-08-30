@@ -4,7 +4,7 @@ import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
     getProducts, getPaginationProduct, getProductById,
     createProduct, updateProduct, deleteProduct, deleteProductWithBatches, checkProductCodeAvailability,
-    generateProductCode,
+    generateProductCode, searchProducts,
 } from "../services/product.service.js";
 import {
     recalculateProductStock, recalculateAllStock,
@@ -27,6 +27,13 @@ export const getProductsData = asyncHandler(async (req, res) => {
 export const getPaginationProductData = asyncHandler(async (req, res) => {
     const result = await getPaginationProduct(req.query);
     res.status(200).json({ success: true, message: "Products retrieved successfully", ...result });
+});
+
+export const searchProductsData = asyncHandler(async (req, res) => {
+    const { q } = req.query;
+    const { limit = 20 } = req.query;
+    const products = await searchProducts(q, limit);
+    res.status(200).json({ success: true, message: "Products searched successfully", data: products });
 });
 
 export const checkProductCode = asyncHandler(async (req, res) => {

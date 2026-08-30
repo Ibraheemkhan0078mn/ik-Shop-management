@@ -49,8 +49,8 @@ export const ProductService = {
     },
     search: async (searchText, limit = 20) => {
         try {
-            const { data } = await api.get("/products/pagination", {
-                params: { searchText, page: 1, limit }
+            const { data } = await api.get("/products/search", {
+                params: { q: searchText, limit }
             });
             return data.data || [];
         } catch (error) {

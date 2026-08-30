@@ -112,17 +112,24 @@ const Btn = ({ children, variant = "primary", size = "md", className = "", ...p 
 );
 
 // ─── API-based searchable select for products ─────────────────────────────────────
-const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." }) => {
+const ApiProductSelect = ({ value, onChange, placeholder = "Search products...", productName = "" }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option with the product name
+        if (value) return { label: productName || value, value: value, data: { name: productName || value } };
+        return null;
+    }, [options, value, productName]);
 
     const searchProducts = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -177,8 +184,8 @@ const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." 
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
@@ -200,17 +207,24 @@ const ApiProductSelect = ({ value, onChange, placeholder = "Search products..." 
 };
 
 // ─── API-based searchable select for suppliers ─────────────────────────────────────
-const ApiSupplierSelect = ({ value, onChange, placeholder = "Search suppliers..." }) => {
+const ApiSupplierSelect = ({ value, onChange, placeholder = "Search suppliers...", supplierName = "" }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option with the supplier name
+        if (value) return { label: supplierName || value, value: value, data: { name: supplierName || value } };
+        return null;
+    }, [options, value, supplierName]);
 
     const searchSuppliers = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -265,8 +279,8 @@ const ApiSupplierSelect = ({ value, onChange, placeholder = "Search suppliers...
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
@@ -486,7 +500,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     useEffect(() => {
         if (!isUpdate || !existingPurchase) return;
         setAddedItems((existingPurchase.items ?? []).map(it => ({
-            item: it.product?._id ?? it.product ?? "", name: it.product?.name ?? "",
+            item: it.product?._id ?? it.product ?? "", 
+            name: it.product?.name ?? "",
             quantity: it.quantity ?? 0, unit: it.unit ?? "",
             pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
             totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.costPrice ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
@@ -498,6 +513,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         })));
         setBill({
             supplier: existingPurchase.supplier?._id ?? existingPurchase.supplier ?? "",
+            supplierName: existingPurchase.supplier?.name ?? "",
             purchaseDate: existingPurchase.date ? new Date(existingPurchase.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
             invoiceNumber: existingPurchase.invoiceNumber ?? "",
             notes: existingPurchase.notes ?? "",
@@ -896,6 +912,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             <ApiProductSelect 
                                                 className="flex-1" 
                                                 value={itemForm.item}
+                                                productName={itemForm.name}
                                                 onChange={(val, productData) => { 
                                                     if (productData) { 
                                                         setBatchStamp(Date.now().toString()); 
@@ -1285,6 +1302,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <ApiSupplierSelect 
                                         className="flex-1" 
                                         value={bill.supplier}
+                                        supplierName={bill.supplierName}
                                         onChange={val => setBill(p => ({ ...p, supplier: val }))}
                                         placeholder={labels.selectSupplier + "…"} 
                                     />

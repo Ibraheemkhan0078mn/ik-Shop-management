@@ -5,6 +5,7 @@ import {
     updateSupplier,
     deleteSupplier,
     getPaginatedSuppliers,
+    searchSuppliersData,
     getSupplierById,
     getSupplierPurchaseKPIs,
     getSupplierPurchaseReturnKPIs,
@@ -18,6 +19,7 @@ router.use(protect);
 
 router.get("/", getSuppliers);
 router.get("/pagination", getPaginatedSuppliers);
+router.get("/search", searchSuppliersData);
 
 // KPI routes (must come before /:id to avoid conflict)
 router.get("/:supplierId/purchase-kpis", getSupplierPurchaseKPIs);

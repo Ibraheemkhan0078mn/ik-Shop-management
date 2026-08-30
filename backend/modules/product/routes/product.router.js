@@ -7,6 +7,7 @@ import {
     deleteProductData,
     deleteProductWithBatchesData,
     getPaginationProductData,
+    searchProductsData,
     getSubCategoriesData,
     createSubCategoryData,
     updateSubCategoryData,
@@ -30,6 +31,7 @@ router.use(protect);
 
 router.get("/", getProductsData);
 router.get("/pagination", getPaginationProductData);
+router.get("/search", searchProductsData);
 router.get("/check-code/:productCode", checkProductCode);
 router.get("/generate-code", generateProductCodeData);
 router.get("/:id", getProductDataById);

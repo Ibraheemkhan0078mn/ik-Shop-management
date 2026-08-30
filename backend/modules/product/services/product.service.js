@@ -49,6 +49,52 @@ const attachBatchSellingPrice = async (products) => {
     );
 };
 
+// Search products by name, barcode, or productCode - without pagination
+export const searchProducts = async (query = "", limit = 20) => {
+    if (!query || query.length < 1) {
+        return [];
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
+
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findProductService({
+        $or: [
+            { name: startsWithRegex },
+            { barcode: startsWithRegex },
+            { productCode: startsWithRegex }
+        ],
+        isActive: true
+    }, {
+        limit: parseInt(limit),
+        sort: { name: 1 }
+    });
+
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return attachBatchSellingPrice(startsWithResults.slice(0, limit));
+    }
+
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findProductService({
+        $or: [
+            { name: searchRegex },
+            { barcode: searchRegex },
+            { productCode: searchRegex }
+        ],
+        isActive: true,
+        _id: { $nin: startsWithResults.map(p => p._id) } // Exclude already found
+    }, {
+        limit: parseInt(limit) - startsWithResults.length,
+        sort: { name: 1 }
+    });
+
+    // Combine: startsWith results first, then contains results
+    const allResults = [...startsWithResults, ...containsResults];
+    return attachBatchSellingPrice(allResults);
+};
+
 /**
  * Ensure SKU / productCode / barcode uniqueness against OTHER products.
  * Returns the offending field's human label, or null if free.

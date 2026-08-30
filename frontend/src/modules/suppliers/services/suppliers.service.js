@@ -85,8 +85,8 @@ export const {
 export const SupplierService = {
     search: async (searchText, limit = 20) => {
         try {
-            const { data } = await api.get("/suppliers/pagination", {
-                params: { searchText, page: 1, limit }
+            const { data } = await api.get("/suppliers/search", {
+                params: { q: searchText, limit }
             });
             return data.data || [];
         } catch (error) {

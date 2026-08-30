@@ -10,6 +10,7 @@ import {
     supplierUpdate as supplierUpdateService,
     supplierDelete as supplierDeleteService,
     countSuppliers as countSuppliersService,
+    searchSuppliers as searchSuppliersService,
 } from "../services/supplier.service.js";
 import { countPurchaseService } from "../../productPurchases/services/purchase.crud.js";
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
@@ -27,6 +28,13 @@ export const getSuppliers = asyncHandler(async (req, res, next) => {
         message: "Suppliers retrieved successfully",
         data: suppliers,
     });
+});
+
+export const searchSuppliersData = asyncHandler(async (req, res) => {
+    const { q } = req.query;
+    const { limit = 20 } = req.query;
+    const suppliers = await searchSuppliersService(q, limit);
+    res.status(200).json({ success: true, message: "Suppliers searched successfully", data: suppliers });
 });
 
 
