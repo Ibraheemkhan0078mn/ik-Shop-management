@@ -307,6 +307,9 @@ export default function PosPage() {
     setCartItems((prev) =>
       prev.map((item) => {
         if (item._id === productId && item.portionType === portionType && item.batchId === batchId) {
+          // Preserve the original batch price for reference (only save it once)
+          const originalBatchPrice = item.originalBatchPrice || item.unitPrice;
+          
           // Calculate new tax amount based on new price
           let newTaxAmount = 0;
           if (item.taxType === 'fixed') {
@@ -321,6 +324,7 @@ export default function PosPage() {
           return {
             ...item,
             unitPrice: newPrice,
+            originalBatchPrice, // Preserve original batch price
             taxAmount: newTaxAmount,
             itemTotal: newItemTotal,
             customInput: true,  // Mark as custom input
@@ -664,18 +668,18 @@ export default function PosPage() {
         if (itemDiscountValue > 0) {
           let newDiscountAmount = 0;
           let discountPercent = 0;
-          let discountedUnitPrice = item.unitPrice;
 
           if (discountType === 'percentage') {
             discountPercent = itemDiscountValue;
             newDiscountAmount = (item.unitPrice * item.qty * itemDiscountValue) / 100;
-            discountedUnitPrice = item.unitPrice - (item.unitPrice * itemDiscountValue / 100);
           } else {
             // Fixed amount discount
             newDiscountAmount = Math.min(itemDiscountValue, item.unitPrice * item.qty);
             discountPercent = (newDiscountAmount / (item.unitPrice * item.qty)) * 100;
-            discountedUnitPrice = item.unitPrice - (newDiscountAmount / item.qty);
           }
+
+          // Calculate discounted unit price for tax calculation ONLY (don't store it)
+          const discountedUnitPrice = item.unitPrice - (newDiscountAmount / item.qty);
 
           // Calculate tax amount based on discounted unit price
           const recalculatedTaxAmount = (discountedUnitPrice * item.taxPercent) / 100;
@@ -688,7 +692,7 @@ export default function PosPage() {
             discountPercent,
             discountAmount: newDiscountAmount,
             discountType,
-            unitPrice: discountedUnitPrice,
+            // DO NOT CHANGE unitPrice - it should remain original
             taxAmount: recalculatedTaxAmount,
             itemTotal: itemSubtotalWithTax,
           };

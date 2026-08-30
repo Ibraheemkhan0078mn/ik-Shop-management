@@ -275,6 +275,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       setErrors({});
       setBanner(null);
       setShowMore(false);
+      setShowTax(false); // Reset tax toggle when creating new product
       setIsProductCodeLocked(true);
       
       // Generate product code when opening create form
@@ -328,6 +329,9 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       }
       if (name === "discountLimitType") {
         return { ...prev, discountLimitType: value, maxDiscountPercent: 0 };
+      }
+      if (name === "isDiscountAllowed") {
+        return { ...prev, isDiscountAllowed: value, maxDiscountPercent: value ? prev.maxDiscountPercent : 0 };
       }
       if (name === "taxPercent" && prev.taxType === "percentage") {
         return { ...prev, [name]: Math.min(100, Math.max(0, Number(value) || 0)) };
@@ -439,7 +443,18 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     if (!validateForm()) return;
     const payload = new FormData();
     const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id", "batchSellingPrice"];
-    Object.entries(form).forEach(([key, value]) => {
+    
+    // If tax is disabled, ensure taxPercent is 0
+    // If discount is disabled, ensure maxDiscountPercent is 0
+    const formToSubmit = { ...form };
+    if (!showTax) {
+      formToSubmit.taxPercent = 0;
+    }
+    if (!form.isDiscountAllowed) {
+      formToSubmit.maxDiscountPercent = 0;
+    }
+    
+    Object.entries(formToSubmit).forEach(([key, value]) => {
       if (key === "image" || exclude.includes(key)) return;
       if (value === undefined || value === null) return;
       // Don't send empty strings for category/subCategory/barcode to avoid ObjectId cast and duplicate key errors
@@ -461,7 +476,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       showError(msg);
       setBanner(`❌ ${msg}`);
     }
-  }, [form, isCreate, productData, createProduct, updateProduct, onClose, validateForm]);
+  }, [form, isCreate, productData, createProduct, updateProduct, onClose, validateForm, showTax]);
 
   if (!open) return null;
 
@@ -785,7 +800,13 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                   label={labels.enableTax || "Enable Sale tax in Pos"}
                   name="showTax"
                   value={showTax}
-                  onChange={(name, value) => setShowTax(value)}
+                  onChange={(name, value) => {
+                    setShowTax(value);
+                    // Clear taxPercent when tax is disabled
+                    if (!value) {
+                      updateField("taxPercent", 0);
+                    }
+                  }}
                 />
                 {showTax && (
                   <>
