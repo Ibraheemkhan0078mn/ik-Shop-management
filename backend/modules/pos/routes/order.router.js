@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { protect, authorize }           from "../../auth/middlewares/auth.middleware.js";
-import { generateOrderNumber, getOrders, getPaginatedOrders, getOrdersByCustomer, getOrderById, addOrder, deleteOrder, getOrderPaymentsData, getOrderPaymentStatusData, recalculateOrderPaidAmountData, getOrderByNumber } from "../controllers/order.controller.js";
+import { generateOrderNumber, getOrders, getPaginatedOrders, getOrdersByCustomer, getOrderById, addOrder, deleteOrder, getOrderPaymentsData, getOrderPaymentStatusData, recalculateOrderPaidAmountData, totalOrderRecalculationData, getOrderByNumber } from "../controllers/order.controller.js";
 
 const router = Router();
 
@@ -16,6 +16,7 @@ router.get("/:id/payments",             getOrderPaymentsData); // GET  /orders/:
 router.get("/:id/payment-status",       getOrderPaymentStatusData); // GET  /orders/:id/payment-status
 router.get("/:id",                      getOrderById);          // GET  /orders/:id
 router.post("/:id/recalculate-payment", authorize("admin"), recalculateOrderPaidAmountData); // POST /orders/:id/recalculate-payment
+router.post("/:id/total-order-recalculation", authorize("admin"), totalOrderRecalculationData); // POST /orders/:id/total-order-recalculation
 router.post("/", authorize("admin", "staff"), addOrder);        // POST /orders
 router.delete("/:id", authorize("admin"),     deleteOrder);     // DELETE /orders/:id
 

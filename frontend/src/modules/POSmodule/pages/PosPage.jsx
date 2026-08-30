@@ -666,47 +666,59 @@ export default function PosPage() {
         const discountType = itemDiscountTypes[index] || 'percentage';
 
         if (itemDiscountValue > 0) {
+          // Calculate lineTotal (base amount before discount)
+          const lineTotal = item.unitPrice * item.qty;
+          
           let newDiscountAmount = 0;
           let discountPercent = 0;
 
           if (discountType === 'percentage') {
             discountPercent = itemDiscountValue;
-            newDiscountAmount = (item.unitPrice * item.qty * itemDiscountValue) / 100;
+            newDiscountAmount = (lineTotal * itemDiscountValue) / 100;
           } else {
             // Fixed amount discount
-            newDiscountAmount = Math.min(itemDiscountValue, item.unitPrice * item.qty);
-            discountPercent = (newDiscountAmount / (item.unitPrice * item.qty)) * 100;
+            newDiscountAmount = Math.min(itemDiscountValue, lineTotal);
+            discountPercent = (newDiscountAmount / lineTotal) * 100;
           }
 
-          // Calculate discounted unit price for tax calculation ONLY (don't store it)
-          const discountedUnitPrice = item.unitPrice - (newDiscountAmount / item.qty);
+          // Calculate discounted price (price after discount, before tax)
+          const priceAfterDiscount = lineTotal - newDiscountAmount;
 
-          // Calculate tax amount based on discounted unit price
-          const recalculatedTaxAmount = (discountedUnitPrice * item.taxPercent) / 100;
+          // Calculate tax amount based on priceAfterDiscount
+          let recalculatedTaxAmount = 0;
+          if (item.taxType === 'fixed') {
+            recalculatedTaxAmount = (item.taxPercent || 0) * item.qty;
+          } else {
+            recalculatedTaxAmount = (priceAfterDiscount * (item.taxPercent || 0)) / 100;
+          }
 
-          // Calculate item subtotal (discounted price * qty + tax * qty)
-          const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (recalculatedTaxAmount * item.qty);
+          // Calculate final item total (discounted price + tax)
+          const itemTotal = priceAfterDiscount + recalculatedTaxAmount;
 
           return {
             ...item,
             discountPercent,
             discountAmount: newDiscountAmount,
             discountType,
-            // DO NOT CHANGE unitPrice - it should remain original
             taxAmount: recalculatedTaxAmount,
-            itemTotal: itemSubtotalWithTax,
+            itemTotal: itemTotal,
           };
         }
         return item;
       });
 
-      // Calculate bill subtotal as sum of all item totals (each including their tax)
-      const billSubtotal = updatedCartItems.reduce((sum, item) => sum + (item.itemTotal || (item.unitPrice * item.qty) + (item.taxAmount * item.qty)), 0);
-
-      // Calculate total tax from updated cart items
+      // Calculate order totals
+      // subtotal = sum of priceAfterDiscount (discounted amount before tax and before order discount)
+      const itemDiscountTotal = updatedCartItems.reduce((sum, item) => sum + (Number(item.discountAmount) || 0), 0);
+      const priceAfterItemDiscounts = updatedCartItems.reduce((sum, item) => {
+        const lineTotal = item.unitPrice * item.qty;
+        const itemDiscount = Number(item.discountAmount) || 0;
+        return sum + (lineTotal - itemDiscount);
+      }, 0);
+      
+      const billSubtotal = priceAfterItemDiscounts;  // Subtotal is sum of prices after item discounts, before tax and order discount
       const totalTaxAmount = updatedCartItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0) * (Number(item.qty) || 0), 0);
-
-      const totalAmount = Math.max(0, billSubtotal - discountAmount);
+      const totalAmount = Math.max(0, billSubtotal - discountAmount + totalTaxAmount);
 
       const orderPayload = {
         orderNumber: orderNumberData.orderNumber,

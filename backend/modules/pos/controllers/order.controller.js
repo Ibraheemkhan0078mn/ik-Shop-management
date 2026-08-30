@@ -18,7 +18,7 @@ import {
 } from "../services/holdOrder.crud.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { createStaffSaleBillFromPOS } from "../../staff/services/staff.service.js";
-import { createOrderPayment, getOrderPayments, calculateOrderPaymentStatus, recalculateOrderPaidAmount } from "../services/orderPayment.service.js";
+import { createOrderPayment, getOrderPayments, calculateOrderPaymentStatus, recalculateOrderPaidAmount, totalOrderRecalculation } from "../services/orderPayment.service.js";
 import { getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,17 +199,30 @@ export const addOrder = asyncHandler(async (req, res, next) => {
         const origPrice = Number(item.originalPrice ?? item.unitPrice ?? item.price ?? 0);
         const customPrice = item.customPrice ? Number(item.customPrice) : null;
         
-        // Calculate tax amount properly
-        let taxAmount = 0;
-        if (item.taxType === 'fixed') {
-            taxAmount = Number(item.taxPercent || 0);
-        } else {
-            taxAmount = (price * Number(item.taxPercent || 0)) / 100;
+        // Step 1: Calculate lineTotal (base amount before discount and tax)
+        const lineTotal = price * qty;
+        
+        // Step 2: Calculate item-level discount amount
+        let discountAmount = 0;
+        if (item.discountType === 'fixed') {
+            discountAmount = Number(item.discountPercent || 0) * qty;
+        } else { // percentage
+            discountAmount = (lineTotal * Number(item.discountPercent || 0)) / 100;
         }
         
-        // Calculate item total including tax
-        const lineTotal = (price * qty) + (taxAmount * qty);
-        const total = item.lineTotal != null ? Number(item.lineTotal) : lineTotal;
+        // Step 3: Calculate price after discount
+        const priceAfterDiscount = lineTotal - discountAmount;
+        
+        // Step 4: Calculate tax on price after discount
+        let taxAmount = 0;
+        if (item.taxType === 'fixed') {
+            taxAmount = Number(item.taxPercent || 0) * qty;
+        } else {
+            taxAmount = (priceAfterDiscount * Number(item.taxPercent || 0)) / 100;
+        }
+        
+        // Step 5: Calculate final item total (discounted price + tax)
+        const itemTotal = priceAfterDiscount + taxAmount;
 
         return {
             product: item.product || item._id,
@@ -218,7 +231,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             unitPrice: price,
             originalPrice: origPrice,
             customPrice: customPrice,
-            lineTotal: total,
+            lineTotal: lineTotal,
             portionType: item.portionType || "full",
             batchId: item.batchId ?? null,
             batchNumber: item.batchNumber ?? null,
@@ -226,11 +239,11 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             taxType: item.taxType || "percentage",
             taxAmount: taxAmount,
             discountPercent: item.discountPercent || 0,
-            discountAmount: item.discountAmount || 0,
+            discountAmount: discountAmount,
             discountType: item.discountType || "percentage",
             maxDiscountPercent: item.maxDiscountPercent || 0,
             discountLimitType: item.discountLimitType || "percentage",
-            itemTotal: total,
+            itemTotal: itemTotal,
             allowCustomPrice: item.allowCustomPrice || false,
         };
     });
@@ -437,6 +450,30 @@ export const recalculateOrderPaidAmountData = asyncHandler(async (req, res) => {
             success: true,
             message: "Order paid amount recalculated successfully",
             data: paymentStatus,
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  POST /orders/:id/total-order-recalculation
+//  Completely recalculates the entire order including items, totals, and payments
+//  This recalculates:
+//  - Each item's tax, discount, and totals
+//  - Order subtotal, total tax, total discount
+//  - Order total amount
+//  - Payment status and remaining amount
+//  Then updates everything in the database
+// ─────────────────────────────────────────────────────────────────────────────
+export const totalOrderRecalculationData = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        const recalculationResult = await totalOrderRecalculation(id);
+        res.status(200).json({
+            success: true,
+            message: "Total order recalculation completed successfully",
+            data: recalculationResult,
         });
     } catch (error) {
         return res.status(400).json({ success: false, message: error.message });

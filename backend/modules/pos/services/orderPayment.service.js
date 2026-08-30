@@ -132,6 +132,120 @@ export const recalculateOrderPaidAmount = async (orderId) => {
     return paymentStatus;
 };
 
+/**
+ * Total Order Recalculation - Recalculates the entire order including items, totals, and payments
+ * This function completely recalculates:
+ * - Each item's tax amount, discount amount, and item total
+ * - Order subtotal, total tax, total discount
+ * - Order total amount
+ * - Payment status and remaining amount
+ * Then updates the order in the database
+ */
+export const totalOrderRecalculation = async (orderId) => {
+    const order = await findByIdOrderService(orderId);
+    if (!order) {
+        throw new Error("Order not found");
+    }
+
+    // Recalculate each item
+    let calculatedSubtotal = 0;  // Sum of priceAfterDiscount (after item discount, before tax)
+    let calculatedTotalTax = 0;
+    let calculatedTotalDiscount = 0;
+
+    const recalculatedItems = order.items.map((item) => {
+        // Get base values
+        const quantity = Number(item.quantity) || 0;
+        const unitPrice = Number(item.unitPrice) || 0;
+        const lineTotal = unitPrice * quantity;
+
+        // Calculate discount on line total
+        let discountAmount = 0;
+        if (item.discountType === 'fixed') {
+            discountAmount = Number(item.discountPercent || 0) * quantity;
+        } else { // percentage
+            discountAmount = (lineTotal * Number(item.discountPercent || 0)) / 100;
+        }
+
+        // Price after discount
+        const priceAfterDiscount = lineTotal - discountAmount;
+
+        // Calculate tax on price after discount
+        let taxAmount = 0;
+        if (item.taxType === 'fixed') {
+            taxAmount = Number(item.taxPercent || 0) * quantity;
+        } else { // percentage
+            taxAmount = (priceAfterDiscount * Number(item.taxPercent || 0)) / 100;
+        }
+
+        // Final item total
+        const itemTotal = priceAfterDiscount + taxAmount;
+
+        // Accumulate for order totals
+        // CRITICAL: subtotal = sum of priceAfterDiscount (after item discounts, before order discount and tax)
+        calculatedSubtotal += priceAfterDiscount;
+        calculatedTotalDiscount += discountAmount;
+        calculatedTotalTax += taxAmount;
+
+        // Return recalculated item
+        return {
+            ...item.toObject ? item.toObject() : item,
+            lineTotal: Math.round(lineTotal * 100) / 100,
+            discountAmount: Math.round(discountAmount * 100) / 100,
+            taxAmount: Math.round(taxAmount * 100) / 100,
+            itemTotal: Math.round(itemTotal * 100) / 100
+        };
+    });
+
+    // Round totals to 2 decimal places
+    calculatedSubtotal = Math.round(calculatedSubtotal * 100) / 100;
+    calculatedTotalDiscount = Math.round(calculatedTotalDiscount * 100) / 100;
+    calculatedTotalTax = Math.round(calculatedTotalTax * 100) / 100;
+
+    // Calculate final order total
+    // Note: order.discountAmount is the order-level discount (separate from item discounts)
+    // totalAmount = subtotal - orderDiscount + tax
+    const orderDiscount = Number(order.discountAmount) || 0;
+    const calculatedTotalAmount = Math.round((calculatedSubtotal - orderDiscount + calculatedTotalTax) * 100) / 100;
+
+    // Recalculate payment status with the new total
+    const paymentStatus = await calculateOrderPaymentStatus(orderId, calculatedTotalAmount);
+
+    // Prepare update data
+    const updateData = {
+        items: recalculatedItems,
+        subtotal: calculatedSubtotal,
+        discountAmount: calculatedTotalDiscount,
+        totalTaxAmount: calculatedTotalTax,
+        totalAmount: calculatedTotalAmount,
+        paid: paymentStatus.totalPaid,
+        remainingAmount: paymentStatus.remainingAmount
+    };
+
+    // Update order in database
+    await updateOrderService(orderId, updateData);
+
+    // Return complete recalculation result
+    return {
+        orderId: orderId,
+        orderNumber: order.orderNumber,
+        recalculatedTotals: {
+            subtotal: calculatedSubtotal,
+            discountAmount: calculatedTotalDiscount,
+            totalTaxAmount: calculatedTotalTax,
+            totalAmount: calculatedTotalAmount
+        },
+        paymentStatus: {
+            totalPaid: paymentStatus.totalPaid,
+            totalCash: paymentStatus.totalCash,
+            totalCredit: paymentStatus.totalCredit,
+            remainingAmount: paymentStatus.remainingAmount,
+            paymentStatus: paymentStatus.paymentStatus,
+            transactionCount: paymentStatus.transactionCount
+        },
+        itemsRecalculated: recalculatedItems.length
+    };
+};
+
 export const deleteOrderPayment = async (paymentId) => {
     // Get the transaction to delete
     const transactions = await getTransactions({ _id: paymentId });

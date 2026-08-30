@@ -300,33 +300,35 @@ export default function PosPaymentModal({
         const baseUnitPrice = item.originalBatchPrice || item.unitPrice;
         const currentUnitPrice = item.unitPrice; // This might be custom or original
         
-        const originalItemTotal = currentUnitPrice * (item.qty || 0);
-        let discountedItemTotal = originalItemTotal;
-        let discountedUnitPrice = currentUnitPrice;
+        // Calculate lineTotal (base amount before discount)
+        const lineTotal = currentUnitPrice * (item.qty || 0);
         let discountAmount = 0;
         let discountPercent = 0;
         
         if (itemDiscountValue > 0) {
             if (discountType === 'percentage') {
                 discountPercent = itemDiscountValue;
-                discountAmount = (currentUnitPrice * item.qty * itemDiscountValue) / 100;
+                discountAmount = (lineTotal * itemDiscountValue) / 100;
             } else {
                 // Fixed amount discount
-                discountAmount = Math.min(itemDiscountValue, originalItemTotal);
-                discountPercent = (discountAmount / originalItemTotal) * 100;
+                discountAmount = Math.min(itemDiscountValue, lineTotal);
+                discountPercent = (discountAmount / lineTotal) * 100;
             }
-            discountedItemTotal = originalItemTotal - discountAmount;
-            discountedUnitPrice = currentUnitPrice - (discountAmount / item.qty);
         }
         
-        // Calculate item subtotal including tax (tax applied to discounted unit price)
+        // Price after item discount (before tax)
+        const priceAfterDiscount = lineTotal - discountAmount;
+        
+        // Calculate tax on price after discount
         let itemTaxAmount = 0;
         if (item.taxType === 'fixed') {
-            itemTaxAmount = item.taxPercent || 0;
+            itemTaxAmount = (item.taxPercent || 0) * (item.qty || 0);
         } else {
-            itemTaxAmount = (discountedUnitPrice * (item.taxPercent || 0)) / 100;
+            itemTaxAmount = (priceAfterDiscount * (item.taxPercent || 0)) / 100;
         }
-        const itemSubtotalWithTax = (discountedUnitPrice * item.qty) + (itemTaxAmount * item.qty);
+        
+        // Final item total (discounted price + tax)
+        const itemTotal = priceAfterDiscount + itemTaxAmount;
         
         return {
             ...item,
@@ -334,27 +336,26 @@ export default function PosPaymentModal({
             discountType,
             discountPercent,
             discountAmount,
-            discountedUnitPrice,
             baseUnitPrice, // Original batch price for display
             currentUnitPrice, // Current price (might be custom)
-            originalItemTotal,
-            discountedItemTotal,
+            lineTotal,
+            priceAfterDiscount,
             itemTaxAmount,
-            itemSubtotalWithTax,
+            itemTotal,
         };
     });
     
-    // Calculate bill subtotal as sum of all item subtotals (each including their tax)
-    const billSubtotal = discountedCartItems.reduce((sum, item) => sum + item.itemSubtotalWithTax, 0);
+    // Calculate bill subtotal as sum of priceAfterDiscount (after item discounts, before tax and order discount)
+    const billSubtotal = discountedCartItems.reduce((sum, item) => sum + (item.priceAfterDiscount || 0), 0);
     
     // Calculate total tax from all items
-    const totalTax = discountedCartItems.reduce((sum, item) => sum + item.itemTaxAmount * (item.qty || 0), 0);
+    const totalTax = discountedCartItems.reduce((sum, item) => sum + (item.itemTaxAmount || 0), 0);
     
     // Calculate total discount from per-item discounts
-    const itemDiscountTotal = discountedCartItems.reduce((sum, item) => sum + item.discountAmount, 0);
+    const itemDiscountTotal = discountedCartItems.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
     
     const totalDiscount = discountAmt + itemDiscountTotal;
-    const total = Math.max(0, billSubtotal - discountAmt);
+    const total = Math.max(0, billSubtotal - discountAmt + totalTax);
     const hybridQarza = total - (Number(hybridCash) || 0);
     const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
 
@@ -900,13 +901,13 @@ export default function PosPaymentModal({
                                                     <p className="text-xs text-[var(--muted)]">
                                                         Qty: {item.qty} × Rs {item.currentUnitPrice.toLocaleString()}
                                                         {item.discountAmount > 0 && (
-                                                            <span style={{ color: "var(--accent)" }}> (After discount: Rs {item.discountedUnitPrice.toFixed(2)})</span>
+                                                            <span style={{ color: "var(--accent)" }}> (After discount: Rs {(item.priceAfterDiscount || 0).toFixed(2)})</span>
                                                         )}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <p className="text-sm font-bold" style={{ color: "var(--accent-2)" }}>
-                                                        Rs {item.itemSubtotalWithTax.toFixed(2)}
+                                                        Rs {(item.itemTotal || 0).toFixed(2)}
                                                     </p>
                                                     {expandedCalculation[index] ? <ChevronUp size={16} style={{ color: "var(--muted)" }} /> : <ChevronDown size={16} style={{ color: "var(--muted)" }} />}
                                                 </div>
