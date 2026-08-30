@@ -27,14 +27,16 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { printOrder } from "../../../shared/utilities/printOrder.js";
 import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 import { ArrowLeft, Filter } from "lucide-react";
+import Alert from "../../../shared/components/Alert.jsx";
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const isSameCartLine = (cartItem, productId, portionType, unitPrice, batchId) =>
-  cartItem._id === productId &&
-  cartItem.portionType === portionType &&
-  cartItem.unitPrice === unitPrice &&
-  cartItem.batchId === batchId;
+// Generate unique line item ID
+const generateLineItemId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+const isSameCartLine = (cartItem, lineItemId) =>
+  cartItem.lineItemId === lineItemId;
 
 const buildOrderItemsFromCart = (cart) =>
   cart.map((cartItem) => ({
@@ -195,6 +197,15 @@ export default function PosPage() {
     heldOrders: false,
   });
 
+  // ── Duplicate Item Confirmation State ─────────────────────────────────────
+  const [duplicateConfirmation, setDuplicateConfirmation] = useState({
+    show: false,
+    product: null,
+    portionType: "full",
+    customPrice: null,
+    selectedBatch: null,
+  });
+
   // ── Filter State ───────────────────────────────────────────────────────────
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(() => {
     const saved = localStorage.getItem('posFilterSidebarOpen');
@@ -264,36 +275,36 @@ export default function PosPage() {
   }, [cartItems]);
 
   // ── Cart Actions ──────────────────────────────────────────────────────────
-  const incrementQty = (productId, portionType, unitPrice, batchId) =>
+  const incrementQty = (lineItemId) =>
     setCartItems((prev) =>
       prev.map((item) =>
-        isSameCartLine(item, productId, portionType, unitPrice, batchId)
+        isSameCartLine(item, lineItemId)
           ? { ...item, qty: item.qty + 1 }
           : item
       )
     );
 
-  const decrementQty = (productId, portionType, unitPrice, batchId) =>
+  const decrementQty = (lineItemId) =>
     setCartItems((prev) =>
       prev
         .map((item) =>
-          isSameCartLine(item, productId, portionType, unitPrice, batchId)
+          isSameCartLine(item, lineItemId)
             ? { ...item, qty: item.qty - 1 }
             : item
         )
         .filter((item) => item.qty > 0)
     );
 
-  const removeCartItem = (productId, portionType, unitPrice, batchId) =>
+  const removeCartItem = (lineItemId) =>
     setCartItems((prev) =>
-      prev.filter((item) => !isSameCartLine(item, productId, portionType, unitPrice, batchId))
+      prev.filter((item) => !isSameCartLine(item, lineItemId))
     );
 
-  const setCartItemQty = (productId, portionType, unitPrice, batchId, newQty) => {
+  const setCartItemQty = (lineItemId, newQty) => {
     if (newQty < 1) return;
     setCartItems((prev) =>
       prev.map((item) =>
-        isSameCartLine(item, productId, portionType, unitPrice, batchId)
+        isSameCartLine(item, lineItemId)
           ? { ...item, qty: newQty }
           : item
       )
@@ -301,12 +312,12 @@ export default function PosPage() {
   };
 
   // Custom price change handler
-  const handleCustomPriceChange = (productId, portionType, batchId, newPrice) => {
+  const handleCustomPriceChange = (lineItemId, newPrice) => {
     if (newPrice < 0) return;
     
     setCartItems((prev) =>
       prev.map((item) => {
-        if (item._id === productId && item.portionType === portionType && item.batchId === batchId) {
+        if (item.lineItemId === lineItemId) {
           // Preserve the original batch price for reference (only save it once)
           const originalBatchPrice = item.originalBatchPrice || item.unitPrice;
           
@@ -338,7 +349,7 @@ export default function PosPage() {
   const clearCart = () => setCartItems([]);
 
   // ── Add to Cart ───────────────────────────────────────────────────────────
-  const addProductToCart = (product, portionType = "full", customPrice = null, selectedBatch = null) => {
+  const addProductToCart = (product, portionType = "full", customPrice = null, selectedBatch = null, forceAdd = false) => {
     // Check stock
     const batchStock = selectedBatch?.quantity ?? 0;
     if (batchStock <= 0) {
@@ -382,20 +393,29 @@ export default function PosPage() {
     const itemTotal = (finalUnitPrice * 1) + taxAmount - discountAmount;
 
     setCartItems((prev) => {
-      const existingLine = prev.find((item) =>
-        isSameCartLine(item, product._id, portionType, finalUnitPrice, batchId)
+      // Check if item with same product and batch already exists in cart
+      const duplicateExists = prev.some((item) =>
+        item._id === product._id && item.batchId === batchId
       );
-      if (existingLine) {
-        return prev.map((item) =>
-          isSameCartLine(item, product._id, portionType, finalUnitPrice, batchId)
-            ? { ...item, qty: item.qty + 1, itemTotal: itemTotal * (item.qty + 1) }
-            : item
-        );
+
+      // If duplicate exists and not forced, show confirmation dialog
+      if (duplicateExists && !forceAdd) {
+        setDuplicateConfirmation({
+          show: true,
+          product,
+          portionType,
+          customPrice,
+          selectedBatch,
+        });
+        return prev; // Don't modify cart yet
       }
+
+      // If forceAdd is true or no duplicate, add as new line item
       return [
         ...prev,
         {
           ...product,
+          lineItemId: generateLineItemId(), // Add stable unique ID
           qty: 1,
           unitPrice: finalUnitPrice,
           originalPrice: priceAfterDiscount,
@@ -417,6 +437,18 @@ export default function PosPage() {
         },
       ];
     });
+  };
+
+  // Handle duplicate item confirmation
+  const handleDuplicateConfirm = () => {
+    const { product, portionType, customPrice, selectedBatch } = duplicateConfirmation;
+    setDuplicateConfirmation({ show: false, product: null, portionType: "full", customPrice: null, selectedBatch: null });
+    // Add with forceAdd = true to bypass duplicate check
+    addProductToCart(product, portionType, customPrice, selectedBatch, true);
+  };
+
+  const handleDuplicateCancel = () => {
+    setDuplicateConfirmation({ show: false, product: null, portionType: "full", customPrice: null, selectedBatch: null });
   };
 
   const handleProductClick = useCallback(
@@ -589,6 +621,7 @@ export default function PosPage() {
 
     const restoredCartItems = heldOrder.items.map((orderItem) => {
       return {
+        lineItemId: generateLineItemId(), // Generate new ID for resumed items
         _id: String(orderItem.product),
         name: orderItem.name,
         qty: orderItem.quantity ?? 1,
@@ -951,6 +984,24 @@ export default function PosPage() {
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
           onClick={() => toggleModal("heldOrders")}
+        />
+      )}
+
+      {/* ── Duplicate Item Confirmation Alert ───────────────────────────────── */}
+      {duplicateConfirmation.show && (
+        <Alert
+          msg={
+            isUrdu
+              ? "یہ مصنوع اسی بیچ کے ساتھ پہلے سے کارٹ میں موجود ہے۔ کیا آپ اسے دوبارہ الگ لائن آئٹم کے طور پر شامل کرنا چاہتے ہیں؟"
+              : "This product with the same batch already exists in the cart. Do you want to add it again as a separate line item?"
+          }
+          type="warning"
+          onConfirm={handleDuplicateConfirm}
+          onCancel={handleDuplicateCancel}
+          confirmText={isUrdu ? "جی ہاں" : "Yes"}
+          cancelText={isUrdu ? "نہیں" : "No"}
+          showCancel={true}
+          isVisible={true}
         />
       )}
     </div>

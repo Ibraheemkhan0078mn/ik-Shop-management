@@ -154,13 +154,13 @@ export default function PosCartSidebar({
                     ) : (
                         cart.map((cartItem, index) => (
                             <CartItemRow
-                                key={`${cartItem._id}-${cartItem.portionType}-${cartItem.unitPrice}-${cartItem.batchId}`} 
+                                key={cartItem.lineItemId}
                                 cartItem={cartItem}
                                 portionLabel={PORTION_LABEL[cartItem.portionType] || ""}
-                                onIncrement={() => incQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
-                                onDecrement={() => decQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
-                                onRemove={() => removeFromCart(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId)}
-                                onQtyChange={(newQty) => setCartItemQty(cartItem._id, cartItem.portionType, cartItem.unitPrice, cartItem.batchId, newQty)}
+                                onIncrement={() => incQty(cartItem.lineItemId)}
+                                onDecrement={() => decQty(cartItem.lineItemId)}
+                                onRemove={() => removeFromCart(cartItem.lineItemId)}
+                                onQtyChange={(newQty) => setCartItemQty(cartItem.lineItemId, newQty)}
                                 onEditPortion={() => openPortionModal(cartItem, index)}
                                 onCustomPriceChange={onCustomPriceChange}
                                 labels={labels}
@@ -441,7 +441,7 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                                 setIsPriceFocused(false);
                                 const newPrice = parseFloat(customPriceInput) || 0;
                                 if (onCustomPriceChange) {
-                                    onCustomPriceChange(cartItem._id, cartItem.portionType, cartItem.batchId, newPrice);
+                                    onCustomPriceChange(cartItem.lineItemId, newPrice);
                                 }
                             }}
                             onKeyDown={(e) => {
