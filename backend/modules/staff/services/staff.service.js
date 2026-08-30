@@ -744,20 +744,22 @@ export const getActiveStaff = async () => {
 
 // Search staff by name, cnic, or phone
 export const searchStaff = async (query = "", limit = 20) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
 
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
     const StaffModel = getLocalStaffModel();
 
-    const staff = await findDocs({
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findDocs({
         model: StaffModel,
         filter: {
             $or: [
-                { fullName: searchRegex },
-                { cnic: searchRegex },
-                { phone: searchRegex }
+                { fullName: startsWithRegex },
+                { cnic: startsWithRegex },
+                { phone: startsWithRegex }
             ],
             status: 'active'
         },
@@ -767,7 +769,31 @@ export const searchStaff = async (query = "", limit = 20) => {
         }
     });
 
-    return staff;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findDocs({
+        model: StaffModel,
+        filter: {
+            $or: [
+                { fullName: searchRegex },
+                { cnic: searchRegex },
+                { phone: searchRegex }
+            ],
+            status: 'active',
+            _id: { $nin: startsWithResults.map(s => s._id) } // Exclude already found
+        },
+        options: {
+            limit: parseInt(limit) - startsWithResults.length,
+            sort: { fullName: 1 }
+        }
+    });
+
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };
 
 // Calculate salary breakdown for fixed salary staff

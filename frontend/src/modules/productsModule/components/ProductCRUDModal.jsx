@@ -26,10 +26,17 @@ const ApiCategorySelect = ({ value, onChange, placeholder = "Search categories..
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option
+        if (value) return { label: value, value: value, data: { name: value } };
+        return null;
+    }, [options, value]);
 
     const searchCategories = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -84,8 +91,8 @@ const ApiCategorySelect = ({ value, onChange, placeholder = "Search categories..
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
@@ -114,10 +121,17 @@ const ApiBrandSelect = ({ value, onChange, placeholder = "Search brands..." }) =
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option
+        if (value) return { label: value, value: value, data: { name: value } };
+        return null;
+    }, [options, value]);
 
     const searchBrands = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }

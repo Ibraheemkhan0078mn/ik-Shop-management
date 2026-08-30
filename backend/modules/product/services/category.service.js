@@ -88,18 +88,20 @@ export const deleteCategory = async (id) => {
 export const searchCategories = async (query = "", limit = 20) => {
     const CategoryModel = getLocalCategoryModel();
     
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
     
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
     
-    const categories = await findDocs({
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findDocs({
         model: CategoryModel,
         filter: {
             isDeleted: { $ne: true },
             isActive: { $ne: false },
-            name: searchRegex
+            name: startsWithRegex
         },
         options: {
             limit: parseInt(limit),
@@ -107,5 +109,26 @@ export const searchCategories = async (query = "", limit = 20) => {
         }
     });
     
-    return categories;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+    
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findDocs({
+        model: CategoryModel,
+        filter: {
+            isDeleted: { $ne: true },
+            isActive: { $ne: false },
+            name: searchRegex,
+            _id: { $nin: startsWithResults.map(c => c._id) } // Exclude already found
+        },
+        options: {
+            limit: parseInt(limit) - startsWithResults.length,
+            sort: { name: 1 }
+        }
+    });
+    
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };

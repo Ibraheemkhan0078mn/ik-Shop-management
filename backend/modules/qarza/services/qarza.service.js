@@ -35,16 +35,18 @@ const countQarzaAccounts = async (query = {}) => {
 
 // Search qarza accounts by name or phone
 const searchQarzaAccounts = async (query = "", limit = 20) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
 
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
 
-    const accounts = await findQarzaAccountService({
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findQarzaAccountService({
         $or: [
-            { name: searchRegex },
-            { phoneNo: searchRegex }
+            { name: startsWithRegex },
+            { phoneNo: startsWithRegex }
         ],
         isActive: { $ne: false }
     }, {
@@ -52,7 +54,26 @@ const searchQarzaAccounts = async (query = "", limit = 20) => {
         sort: { name: 1 }
     });
 
-    return accounts;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findQarzaAccountService({
+        $or: [
+            { name: searchRegex },
+            { phoneNo: searchRegex }
+        ],
+        isActive: { $ne: false },
+        _id: { $nin: startsWithResults.map(q => q._id) } // Exclude already found
+    }, {
+        limit: parseInt(limit) - startsWithResults.length,
+        sort: { name: 1 }
+    });
+
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };
 
 const qarzaPaymentCreate = async (data) => {

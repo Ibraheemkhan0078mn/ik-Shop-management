@@ -88,14 +88,16 @@ const deleteBrand = async (id) => {
 };
 
 const searchBrands = async (query = "", limit = 20) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
     
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
     
-    const brands = await findBrandService({
-        name: searchRegex,
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findBrandService({
+        name: startsWithRegex,
         isDeleted: { $ne: true },
         isActive: { $ne: false }
     }, {
@@ -103,7 +105,24 @@ const searchBrands = async (query = "", limit = 20) => {
         sort: { name: 1 }
     });
     
-    return brands;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+    
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findBrandService({
+        name: searchRegex,
+        isDeleted: { $ne: true },
+        isActive: { $ne: false },
+        _id: { $nin: startsWithResults.map(b => b._id) } // Exclude already found
+    }, {
+        limit: parseInt(limit) - startsWithResults.length,
+        sort: { name: 1 }
+    });
+    
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };
 
 export {

@@ -45,17 +45,19 @@ const getPaginatedCustomers = async (filters = {}) => {
 
 // Search customers by name, phone, or cnic
 const searchCustomers = async (query = "", limit = 20) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
 
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
 
-    const customers = await findCustomerService({
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findCustomerService({
         $or: [
-            { name: searchRegex },
-            { phoneNo: searchRegex },
-            { cnic: searchRegex }
+            { name: startsWithRegex },
+            { phoneNo: startsWithRegex },
+            { cnic: startsWithRegex }
         ],
         isActive: { $ne: false }
     }, {
@@ -63,7 +65,27 @@ const searchCustomers = async (query = "", limit = 20) => {
         sort: { name: 1 }
     });
 
-    return customers;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findCustomerService({
+        $or: [
+            { name: searchRegex },
+            { phoneNo: searchRegex },
+            { cnic: searchRegex }
+        ],
+        isActive: { $ne: false },
+        _id: { $nin: startsWithResults.map(c => c._id) } // Exclude already found
+    }, {
+        limit: parseInt(limit) - startsWithResults.length,
+        sort: { name: 1 }
+    });
+
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };
 
 export {

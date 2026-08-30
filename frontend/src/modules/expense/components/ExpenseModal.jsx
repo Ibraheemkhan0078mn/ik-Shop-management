@@ -5,11 +5,11 @@ import { X, DollarSign, ChevronDown } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getExpenseLabels } from "../labels/expenseLabels.js";
-import { useCreateExpense, useUpdateExpense, useExpenseCategories } from "../services/expense.service.js";
+import { useCreateExpense, useUpdateExpense } from "../services/expense.service.js";
 import { ExpenseCategoryService } from "../api/expenseCategoriesApi.js";
  
 const today = () => new Date().toISOString().split("T")[0];
-const emptyForm = (categories = []) => ({ amount: "", category: categories[0]?.name || "", date: today(), notes: "" });
+const emptyForm = () => ({ amount: "", category: "", date: today(), notes: "" });
 
 // ─── API-based searchable select for expense categories ─────────────────────────────
 const ApiExpenseCategorySelect = ({ value, onChange, placeholder = "Search categories..." }) => {
@@ -19,10 +19,17 @@ const ApiExpenseCategorySelect = ({ value, onChange, placeholder = "Search categ
     const [options, setOptions] = useState([]);
     const ref = useRef();
 
-    const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
+    // Add current value to options if not already present (for update mode)
+    const selected = useMemo(() => {
+        const found = options.find(o => o.value === value);
+        if (found) return found;
+        // If value exists but not in options, create a temporary option
+        if (value) return { label: value, value: value, data: { name: value } };
+        return null;
+    }, [options, value]);
 
     const searchCategories = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -77,8 +84,8 @@ const ApiExpenseCategorySelect = ({ value, onChange, placeholder = "Search categ
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
@@ -134,29 +141,22 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
     
     const isUpdate = mode === "update";
 
-    const { data: categories = [] } = useExpenseCategories();
     const [createExpense, { isLoading: isCreating }] = useCreateExpense();
     const [updateExpense, { isLoading: isUpdating }] = useUpdateExpense();
     const isSubmitting = isCreating || isUpdating;
 
-    const [form, setForm] = useState(emptyForm(categories));
+    const [form, setForm] = useState(emptyForm());
     const update = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
     useEffect(() => {
         if (!isUpdate || !expense) return;
         setForm({
             amount:   expense.amount   ?? "",
-            category: expense.expenseCategory ?? expense.category ?? (categories[0]?.name || ""),
+            category: expense.expenseCategory ?? expense.category ?? "",
             date:     expense.transactionDate ? new Date(expense.transactionDate).toISOString().split("T")[0] : (expense.date ? new Date(expense.date).toISOString().split("T")[0] : today()),
             notes:    expense.notes    ?? "",
         });
-    }, [expense, isUpdate, categories]);
-
-    useEffect(() => {
-        if (!isUpdate && categories.length > 0 && !form.category) {
-            setForm(p => ({ ...p, category: categories[0]?.name || "" }));
-        }
-    }, [categories, isUpdate, form.category]);
+    }, [expense, isUpdate]);
 
     const handleSubmit = async () => {
         if (!form.amount || Number(form.amount) <= 0) return showError("Enter valid amount");
@@ -172,7 +172,7 @@ export default function ExpenseModal({ mode = "create", expense, onClose, onSucc
             } else {
                 await createExpense(payload).unwrap();
                 showSuccess(labels.expenseCreated);
-                setForm(emptyForm(categories));
+                setForm(emptyForm());
             }
             onSuccess?.();
             onClose();

@@ -13,21 +13,39 @@ const expenseCatagDelete = async (id) => {
 };
 
 const expenseCatagSearch = async (query = "", limit = 20) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         return [];
     }
     
     const searchRegex = new RegExp(query, 'i');
+    const startsWithRegex = new RegExp(`^${query}`, 'i');
     
-    const categories = await findExpenseCategoryService({
-        name: searchRegex,
+    // Get results that start with the query (higher priority)
+    const startsWithResults = await findExpenseCategoryService({
+        name: startsWithRegex,
         isDeleted: { $ne: true }
     }, {
         limit: parseInt(limit),
         sort: { name: 1 }
     });
     
-    return categories;
+    // If we have enough results from startsWith, return them
+    if (startsWithResults.length >= limit) {
+        return startsWithResults.slice(0, limit);
+    }
+    
+    // Get results that contain the query anywhere (lower priority)
+    const containsResults = await findExpenseCategoryService({
+        name: searchRegex,
+        isDeleted: { $ne: true },
+        _id: { $nin: startsWithResults.map(c => c._id) } // Exclude already found
+    }, {
+        limit: parseInt(limit) - startsWithResults.length,
+        sort: { name: 1 }
+    });
+    
+    // Combine: startsWith results first, then contains results
+    return [...startsWithResults, ...containsResults];
 };
 
 export {

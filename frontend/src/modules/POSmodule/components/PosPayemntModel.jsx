@@ -84,7 +84,7 @@ const ApiStaffSelect = ({ value, onChange, placeholder = "Search staff..." }) =>
     const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
 
     const searchStaff = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -139,8 +139,8 @@ const ApiStaffSelect = ({ value, onChange, placeholder = "Search staff..." }) =>
                     <div className="max-h-48 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
@@ -152,7 +152,7 @@ const ApiStaffSelect = ({ value, onChange, placeholder = "Search staff..." }) =>
                                 </div>
                             ))
                         ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">No staff found</div>
+                            <div className="px-3 py-4 text-sm text-center" style={{ color: "var(--muted)" }}>No results</div>
                         )}
                     </div>
                 </div>
@@ -172,7 +172,7 @@ const ApiCustomerSelect = ({ value, onChange, placeholder = "Search customers...
     const selected = useMemo(() => options.find(o => o.value === value), [options, value]);
 
     const searchCustomers = async (query) => {
-        if (!query || query.length < 2) {
+        if (!query || query.length < 1) {
             setOptions([]);
             return;
         }
@@ -227,8 +227,8 @@ const ApiCustomerSelect = ({ value, onChange, placeholder = "Search customers...
                     <div className="max-h-84 overflow-y-auto">
                         {loading ? (
                             <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
-                        ) : search.length < 2 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 2 characters to search</div>
+                        ) : search.length < 1 ? (
+                            <div className="px-3 py-2 text-sm text-gray-500">Type at least 1 character to search</div>
                         ) : options.length > 0 ? (
                             options.map(o => (
                                 <div key={o.value} onClick={() => { onChange(o.value, o.data); setOpen(false); setSearch(""); }}
