@@ -269,6 +269,7 @@ export default function PosPaymentModal({
 
     const [activeTab, setActiveTab] = useState("cash");
     const [orderDiscount, setOrderDiscount] = useState(initialDiscount > 0 ? String(initialDiscount) : "");
+    const [orderDiscountType, setOrderDiscountType] = useState("percentage");
     const [customerName, setCustomerName] = useState(initialCustomerName);
     const [customerType, setCustomerType] = useState("walkin");
 
@@ -354,8 +355,19 @@ export default function PosPaymentModal({
     // Calculate total discount from per-item discounts
     const itemDiscountTotal = discountedCartItems.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
     
-    const totalDiscount = discountAmt + itemDiscountTotal;
-    const total = Math.max(0, billSubtotal - discountAmt + totalTax);
+    // Calculate order-level discount based on type
+    let orderDiscountAmount = 0;
+    if (discountAmt > 0) {
+        if (orderDiscountType === 'percentage') {
+            orderDiscountAmount = (billSubtotal * discountAmt) / 100;
+        } else {
+            // Fixed amount
+            orderDiscountAmount = Math.min(discountAmt, billSubtotal);
+        }
+    }
+    
+    const totalDiscount = orderDiscountAmount + itemDiscountTotal;
+    const total = Math.max(0, billSubtotal - orderDiscountAmount + totalTax);
     const hybridQarza = total - (Number(hybridCash) || 0);
     const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
 
@@ -430,6 +442,8 @@ export default function PosPaymentModal({
             selectedWaiter: initialWaiter,
             selectedStaffId,
             orderDiscount: discountAmt,
+            orderDiscountType: orderDiscountType,
+            orderDiscountAmount: orderDiscountAmount,
             paymentMethod: activeTab,
             paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
@@ -439,7 +453,7 @@ export default function PosPaymentModal({
             itemDiscounts: itemDiscounts,
             itemDiscountTypes: itemDiscountTypes,
         };
-    }, [customerName, customerType, selectedCustomerId, initialWaiter, selectedStaffId, discountAmt, activeTab, selectedPaymentMethodId, paymentMethodsData, orderType, total, hybridCash, qarzaAccountId, hybridQarzaAccountId, itemDiscounts, itemDiscountTypes, customersData]);
+    }, [customerName, customerType, selectedCustomerId, initialWaiter, selectedStaffId, discountAmt, orderDiscountType, orderDiscountAmount, activeTab, selectedPaymentMethodId, paymentMethodsData, orderType, total, hybridCash, qarzaAccountId, hybridQarzaAccountId, itemDiscounts, itemDiscountTypes, customersData]);
 
     const handleCheckout = useCallback(() => { if (canCheckout) onCheckout(buildPayload()); }, [canCheckout, buildPayload, onCheckout]);
 
@@ -564,12 +578,23 @@ export default function PosPaymentModal({
                             {/* Row 1: Discount & Staff */}
                             <div className="grid grid-cols-2 gap-3">
                                 <FormField label={labels.discount}>
-                                    <Input
-                                        type="number" min={0} placeholder="Rs 0"
-                                        value={orderDiscount}
-                                        onChange={(e) => setOrderDiscount(e.target.value)}
-                                        onWheel={e => e.target.blur()}
-                                    />
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={orderDiscountType}
+                                            onChange={(e) => setOrderDiscountType(e.target.value)}
+                                            className="px-3 py-2 border rounded-lg text-sm"
+                                            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)", minWidth: "90px" }}
+                                        >
+                                            <option value="percentage">%</option>
+                                            <option value="fixed">Rs</option>
+                                        </select>
+                                        <Input
+                                            type="number" min={0} placeholder={orderDiscountType === 'percentage' ? '0%' : 'Rs 0'}
+                                            value={orderDiscount}
+                                            onChange={(e) => setOrderDiscount(e.target.value)}
+                                            onWheel={e => e.target.blur()}
+                                        />
+                                    </div>
                                 </FormField>
 
                                 <FormField label={labels.staffMember}>

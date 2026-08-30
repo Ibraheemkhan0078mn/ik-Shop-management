@@ -677,6 +677,8 @@ export default function PosPage() {
       selectedWaiter,
       selectedStaffId,
       orderDiscount,
+      orderDiscountType,
+      orderDiscountAmount,
       paymentMethod,
       paymentMethodId,
       paymentMethodName,
@@ -691,7 +693,7 @@ export default function PosPage() {
 
     try {
       const { data: orderNumberData } = await api.get("/orders/generate-number");
-      const discountAmount = Math.max(0, Number(orderDiscount) || 0);
+      const discountAmount = orderDiscountAmount || Math.max(0, Number(orderDiscount) || 0);
 
       // Apply per-item discounts from payment modal
       const updatedCartItems = cartItems.map((item, index) => {
@@ -758,6 +760,7 @@ export default function PosPage() {
         createdAt: new Date().toISOString(),
         subtotal: billSubtotal,
         discountAmount,
+        discountType: orderDiscountType || 'percentage',
         totalTaxAmount,
         totalAmount,
         items: buildOrderItemsFromCart(updatedCartItems),
