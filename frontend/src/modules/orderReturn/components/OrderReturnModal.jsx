@@ -345,8 +345,9 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                     const returnProductId = returnItem.productId?._id || returnItem.productId;
                     const returnBatchId = returnItem.batchId?._id || returnItem.batchId;
                     
-                    // Find the matching order item
-                    const matchedItemId = Object.keys(limits).find(key => {
+                    // Find ALL matching order items (not just the first one)
+                    // This is critical when the same product+batch appears multiple times in one order
+                    const matchingItemIds = Object.keys(limits).filter(key => {
                         const limit = limits[key];
                         // Match by productId AND batchId (most accurate)
                         if (returnBatchId && limit.batchId === returnBatchId && limit.productId === returnProductId) {
@@ -359,10 +360,26 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                         return false;
                     });
                     
-                    if (matchedItemId && limits[matchedItemId]) {
-                        limits[matchedItemId].returnedQuantity += returnItem.quantity || 0;
-                        limits[matchedItemId].availableQuantity = 
-                            limits[matchedItemId].orderQuantity - limits[matchedItemId].returnedQuantity;
+                    // Distribute the returned quantity across all matching items
+                    // Prioritize items that still have available quantity
+                    if (matchingItemIds.length > 0) {
+                        let remainingReturnQty = returnItem.quantity || 0;
+                        
+                        // Sort by available quantity descending, so we deduct from items with most availability first
+                        const sortedMatchingIds = matchingItemIds
+                            .map(id => ({ id, available: limits[id].availableQuantity }))
+                            .sort((a, b) => b.available - a.available);
+                        
+                        for (const { id } of sortedMatchingIds) {
+                            if (remainingReturnQty <= 0) break;
+                            
+                            const limit = limits[id];
+                            const deductQty = Math.min(remainingReturnQty, limit.availableQuantity);
+                            
+                            limit.returnedQuantity += deductQty;
+                            limit.availableQuantity = limit.orderQuantity - limit.returnedQuantity;
+                            remainingReturnQty -= deductQty;
+                        }
                     }
                 });
             }
