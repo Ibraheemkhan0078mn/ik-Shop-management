@@ -6,13 +6,10 @@ import AlertBar from '../components/AlertBar.jsx';
 import SalesRevenueKPIs from '../components/SalesRevenueKPIs.jsx';
 import InventoryAlertKPIs from '../components/InventoryAlertKPIs.jsx';
 import SalesCharts from '../components/SalesCharts.jsx';
-import ProductCategoryCharts from '../components/ProductCategoryCharts.jsx';
 import TopProductsByRevenue from '../components/TopProductsByRevenue.jsx';
 import TopProductsByUnits from '../components/TopProductsByUnits.jsx';
 import RetailWholesaleComparison from '../components/RetailWholesaleComparison.jsx';
-import InventoryOverviewCharts from '../components/InventoryOverviewCharts.jsx';
 import TimeRangeFilter from '../components/TimeRangeFilter.jsx';
-import { dashboardApi } from '../services/dashboard.service.js';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -62,22 +59,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Section 6: Product & Category Charts */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.productsAndCategories}</h2>
-        <ProductCategoryCharts filter={globalDateFilter} />
-      </div>
-
-      {/* Section 7: Retail vs Wholesale Comparison */}
+      {/* Section 6: Retail vs Wholesale Comparison */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.retailVsWholesale}</h2>
         <RetailWholesaleComparison filter={globalDateFilter} />
-      </div>
-
-      {/* Section 8: Inventory Overview Charts */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">{labels.inventoryOverview}</h2>
-        <InventoryOverviewCharts />
       </div>
     </div>
   );
