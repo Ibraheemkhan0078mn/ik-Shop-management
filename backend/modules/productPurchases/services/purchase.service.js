@@ -133,6 +133,14 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
     const purchaseItems = [];
 
     for (const item of purchaseData.items) {
+        // Debug log to verify discount and tax values
+        console.log('Purchase Item Data:', {
+            discount: item.discount,
+            discountType: item.discountType,
+            tax: item.tax,
+            taxType: item.taxType
+        });
+        
         let batchNumber = item.batchNumber;
         
         // If batchNumber is not provided, generate a unique one via API
@@ -165,7 +173,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
 
         if (!batch) {
             // Create new batch with quantity=0 — stock will be incremented when status changes to 'delivered'
-            batch = await createBatchService({
+            const batchData = {
                 product: item.product,
                 batchNumber: batchNumber,
                 supplier: purchaseData.supplier,
@@ -174,7 +182,23 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
-            });
+                gst: Number(item.tax) || 0,
+            };
+            
+            // Add discount object with amount
+            if (item.discount !== undefined && item.discount !== null) {
+                batchData.discount = {
+                    amount: Number(item.discount),
+                    type: item.discountType || "percentage"
+                };
+            } else {
+                batchData.discount = {
+                    amount: 0,
+                    type: item.discountType || "percentage"
+                };
+            }
+            
+            batch = await createBatchService(batchData);
 
             await updateDocs({
                 model: ProductModel,
@@ -184,12 +208,28 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         } else {
             // Only update batch metadata — do NOT modify quantity here.
             // Batch quantity is managed solely through updatePurchaseStatus (ordered → delivered).
-            await updateBatchService(batch._id, {
+            const updateData = {
                 purchasePrice: item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 supplier: purchaseData.supplier,
-            });
+                gst: Number(item.tax) || 0,
+            };
+            
+            // Add discount object with amount
+            if (item.discount !== undefined && item.discount !== null) {
+                updateData.discount = {
+                    amount: Number(item.discount),
+                    type: item.discountType || "percentage"
+                };
+            } else {
+                updateData.discount = {
+                    amount: 0,
+                    type: item.discountType || "percentage"
+                };
+            }
+            
+            await updateBatchService(batch._id, updateData);
         }
 
         purchaseItems.push({
@@ -270,7 +310,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         
         if (!batch) {
             // Create new batch with quantity=0 - adjustStock will handle the increment
-            batch = await createBatchService({
+            const batchData = {
                 product: item.product, 
                 batchNumber: batchNumber,
                 supplier: data.supplier, 
@@ -279,7 +319,24 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate, 
                 expiryDate: item.expiryDate,
-            });
+                gst: Number(item.tax) || 0,
+            };
+            
+            // Add discount object with amount
+            if (item.discount !== undefined && item.discount !== null) {
+                batchData.discount = {
+                    amount: Number(item.discount),
+                    type: item.discountType || "percentage"
+                };
+            } else {
+                batchData.discount = {
+                    amount: 0,
+                    type: item.discountType || "percentage"
+                };
+            }
+            
+            batch = await createBatchService(batchData);
+            
             await updateDocs({
                 model: ProductModel,
                 filter: { _id: item.product },
@@ -287,12 +344,28 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             });
         } else {
             // Update existing batch (quantity is NOT updated here - adjustStock already handles it)
-            await updateBatchService(batch._id, {
+            const updateData = {
                 purchasePrice: item.costPrice || item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 supplier: data.supplier,
-            });
+                gst: Number(item.tax) || 0,
+            };
+            
+            // Add discount object with amount
+            if (item.discount !== undefined && item.discount !== null) {
+                updateData.discount = {
+                    amount: Number(item.discount),
+                    type: item.discountType || "percentage"
+                };
+            } else {
+                updateData.discount = {
+                    amount: 0,
+                    type: item.discountType || "percentage"
+                };
+            }
+            
+            await updateBatchService(batch._id, updateData);
         }
 
         purchaseItems.push({

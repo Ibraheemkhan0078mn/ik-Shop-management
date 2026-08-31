@@ -622,8 +622,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             perItemPrice: editingIndex === null && selectedBatch.sellingPrice != null ? String(selectedBatch.sellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(selectedBatch.mfgDate),
             expiryDate: toInputDate(selectedBatch.expiryDate),
-            discount: editingIndex === null ? "0" : p.discount,
-            tax: editingIndex === null ? "0" : p.tax,
+            discount: editingIndex === null ? String(selectedBatch.discount?.amount || 0) : p.discount,
+            discountType: editingIndex === null && selectedBatch.discount?.type ? selectedBatch.discount.type : p.discountType,
+            tax: editingIndex === null ? String(selectedBatch.gst || 0) : p.tax,
         }));
     }, [selectedBatch, isExistingMode, editingIndex]);
 
@@ -974,11 +975,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             onWheel={e => e.target.blur()}
                                         />
                                     </Field>
-                                    <Field><Label>{labels.unit}</Label>
-                                        <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl w-full flex items-center justify-center" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>{itemForm.unit || "unit"}</span>
+                                    <Field><Label>Status</Label>
                                         {itemForm.item && (() => {
                                             const stockStatus = getStockStatus(itemForm.item, itemForm.quantity);
-                                            if (!stockStatus) return null;
+                                            if (!stockStatus) return <span className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl w-full flex items-center justify-center" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", color: "var(--muted)" }}>—</span>;
                                             const colorClasses = {
                                                 red: 'bg-red-50 text-red-700 border-red-200',
                                                 amber: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -986,7 +986,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                 blue: 'bg-blue-50 text-blue-700 border-blue-200'
                                             };
                                             return (
-                                                <div className={`mt-2 px-3 py-2 rounded-lg text-xs border ${colorClasses[stockStatus.color]}`}>
+                                                <div className={`px-3 py-2 rounded-lg text-xs border ${colorClasses[stockStatus.color]}`}>
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-medium">{stockStatus.label}</span>
                                                         <span>Current: {stockStatus.currentStock} + New: {itemForm.quantity || 0} = {stockStatus.projectedStock}</span>

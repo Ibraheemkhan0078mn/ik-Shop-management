@@ -41,7 +41,10 @@ const batchSchema = new mongoose.Schema(
         updated: { type: Date },
         isActive: { type: Boolean, default: true },
         discount: {
-            amount: Number,
+            amount: {
+                type: Number,
+                default: 0
+            },
             type: {
                 type: String,
                 enum: ["percentage", "fixed"],
