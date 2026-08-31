@@ -12,49 +12,68 @@ import {
     getCategoryModel,
     getQarzaAccountModel,
 } from "./dashboard.crud.js";
-import { findDocs, countDocs, aggregateDocs } from "../../common/services/db/mongodbCentralizedCrud.service.js";
+import { findDocs, countDocs } from "../../common/services/db/mongodbCentralizedCrud.service.js";
+import { findOrderService } from "../pos/services/order.crud.js";
+import { findBatchService, countBatchService } from "../productPurchases/services/batch.crud.js";
+import { findProductService, countProductService } from "../product/services/product.crud.js";
+import { calculateBatchesStockStatus } from "../productPurchases/services/batchStockStatus.service.js";
+import { findCategoryService } from "../product/services/category.crud.js";
 
 // Helper function to get date range based on filter
 const getDateRange = (range) => {
     const now = new Date();
     let startDate;
-    let endDate = now;
+    let endDate;
 
     // Handle custom date range
     if (typeof range === 'object' && range.type === 'custom') {
+        // Parse custom dates and set to start/end of day in local time
+        const start = new Date(range.startDate);
+        const end = new Date(range.endDate);
         return {
-            startDate: new Date(range.startDate),
-            endDate: new Date(range.endDate)
+            startDate: new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0),
+            endDate: new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999)
         };
     }
 
     switch (range) {
         case 'Today':
-            startDate = new Date(now.setHours(0, 0, 0, 0));
+            // Start of today (00:00:00.000)
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            // End of today (23:59:59.999)
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '3D':
-            startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '7D':
-            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '30D':
-            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '3M':
-            startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+            startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate(), 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '90D':
-            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case '1Y':
-            startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         case 'All':
             startDate = new Date(0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
             break;
         default:
-            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     }
 
     return { startDate, endDate };
@@ -78,11 +97,10 @@ export const getDashboardData = async () => {
         const WastageModel = getWastageModel();
         const PurchaseReturnModel = getPurchaseReturnModel();
         const ProductReturnModel = getProductReturnModel();
-        const CategoryModel = getCategoryModel();
         const QarzaAccountModel = getQarzaAccountModel();
 
     const now = new Date();
-    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -97,23 +115,16 @@ export const getDashboardData = async () => {
         totalProducts,
         totalCustomers,
         totalSuppliers,
-        lowStockProducts,
-        expiredBatches,
-        expiringBatches,
+        allProducts,
+        allBatches,
         recentOrders,
         recentPurchases,
-        topSellingProducts,
-        topCustomers,
         pendingWastages,
         pendingPurchaseReturns,
         pendingProductReturns,
-        inventoryValue,
-        paymentMethodBreakdown,
-        categorySales,
-        receivables,
-        payables,
+        qarzaAccounts,
     ] = await Promise.all([
-        // Today's data
+        // Today's data - using centralized service via findDocs
         findDocs({ model: OrderModel, filter: { createdAt: { $gte: startOfDay } } }),
         findDocs({ model: PurchaseModel, filter: { createdAt: { $gte: startOfDay } } }),
         findDocs({ model: ExpenseModel, filter: { createdAt: { $gte: startOfDay } } }),
@@ -123,104 +134,26 @@ export const getDashboardData = async () => {
         findDocs({ model: PurchaseModel, filter: { createdAt: { $gte: startOfMonth } } }),
         findDocs({ model: ExpenseModel, filter: { createdAt: { $gte: startOfMonth } }  }),
         
-        // Counts
+        // Counts - automatically excludes deleted
         countDocs({ model: ProductModel, filter: { isActive: true } }),
         countDocs({ model: CustomerModel }),
         countDocs({ model: SupplierModel }),
         
-        // Stock alerts
-        findDocs({ model: ProductModel, filter: { isActive: true }, options: { lean: true } }),
-        findDocs({ model: BatchModel, filter: { isActive: true }, options: { lean: true } }),
+        // Stock data for calculations
+        findDocs({ model: ProductModel, filter: { isActive: true }, options: { lean: true, populate: 'category' } }),
+        findDocs({ model: BatchModel, filter: { isActive: true }, options: { lean: true, populate: ['product', 'supplier'] } }),
         
-        // Recent data
-        findDocs({ model: OrderModel, options: { sort: { createdAt: -1 }, limit: 10, populate: ['items.product', 'customer'] } }),
+        // Recent data with populated fields
+        findDocs({ model: OrderModel, options: { sort: { createdAt: -1 }, limit: 10, populate: ['customer'] } }),
         findDocs({ model: PurchaseModel, options: { sort: { createdAt: -1 }, limit: 10, populate: 'supplier' } }),
-        
-        // Top selling products
-        aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                { $match: { createdAt: { $gte: startOfMonth } } },
-                { $unwind: "$items" },
-                { $group: { _id: "$items.product", totalQuantity: { $sum: "$items.quantity" }, totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } } } },
-                { $sort: { totalQuantity: -1 } },
-                { $limit: 10 },
-                { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
-                { $unwind: "$product" },
-                { $project: { _id: 1, name: "$product.name", totalQuantity: 1, totalRevenue: 1 } }
-            ]
-        }),
-        
-        // Top customers
-        aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-                { $group: { _id: "$customer", totalSpent: { $sum: "$totalAmount" }, orderCount: { $sum: 1 } } },
-                { $sort: { totalSpent: -1 } },
-                { $limit: 10 },
-                { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "customer" } },
-                { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
-                { $project: { _id: 1, name: { $ifNull: ["$customer.name", "Guest"] }, totalSpent: 1, orderCount: 1 } }
-            ]
-        }),
         
         // Pending approvals
         countDocs({ model: WastageModel, filter: { status: "pending" } }),
         countDocs({ model: PurchaseReturnModel, filter: { status: "pending" } }),
         countDocs({ model: ProductReturnModel, filter: { returnStatus: "pending" } }),
         
-        // Inventory value
-        aggregateDocs({
-            model: BatchModel,
-            pipeline: [
-                { $match: { quantity: { $gt: 0 }, isActive: true } },
-                { $group: { _id: null, totalValue: { $sum: { $multiply: ["$quantity", "$costPrice"] } }, totalQuantity: { $sum: "$quantity" } } }
-            ]
-        }),
-        
-        // Payment method breakdown (monthly)
-        aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-                { $group: { _id: "$paymentMethod", total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
-            ]
-        }),
-        
-        // Category-wise sales
-        aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                { $match: { createdAt: { $gte: startOfMonth }, status: "completed" } },
-                { $unwind: "$items" },
-                { $lookup: { from: "products", localField: "items.product", foreignField: "_id", as: "product" } },
-                { $unwind: "$product" },
-                { $group: { _id: "$product.category", totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] } }, totalQuantity: { $sum: "$items.quantity" } } },
-                { $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "category" } },
-                { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-                { $project: { _id: 1, name: { $ifNull: ["$category.name", "Uncategorized"] }, totalRevenue: 1, totalQuantity: 1 } },
-                { $sort: { totalRevenue: -1 } }
-            ]
-        }),
-        
-        // Receivables (customer qarza)
-        aggregateDocs({
-            model: QarzaAccountModel,
-            pipeline: [
-                { $match: { type: "receivable", balance: { $gt: 0 } } },
-                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
-            ]
-        }),
-        
-        // Payables (supplier qarza)
-        aggregateDocs({
-            model: QarzaAccountModel,
-            pipeline: [
-                { $match: { type: "payable", balance: { $gt: 0 } } },
-                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
-            ]
-        }),
+        // Financial data
+        findDocs({ model: QarzaAccountModel, filter: {} }),
     ]);
 
     // Calculate KPIs with safe number conversion
@@ -236,63 +169,161 @@ export const getDashboardData = async () => {
     const profitMargin = monthlyRevenue > 0 ? toNumber((netProfit / monthlyRevenue) * 100).toFixed(2) : 0;
     
     const avgOrderValue = monthlyOrders.length > 0 ? toNumber(monthlyRevenue / monthlyOrders.length) : 0;
-    const totalInventoryValue = inventoryValue[0]?.totalValue ? toNumber(inventoryValue[0].totalValue) : 0;
-    const totalInventoryQuantity = inventoryValue[0]?.totalQuantity ? toNumber(inventoryValue[0].totalQuantity) : 0;
-
-    // Low stock alerts with safe number conversion
-    const lowStockAlerts = lowStockProducts.filter(p => toNumber(p.currentStockLevel) <= toNumber(p.minStockLevel || 5));
-
-    // Expiry alerts
-    const filteredExpiredBatches = expiredBatches.filter(b => b.expiryDate && new Date(b.expiryDate) < new Date());
-    const filteredExpiringBatches = expiringBatches.filter(b => b.expiryDate && new Date(b.expiryDate) >= new Date() && new Date(b.expiryDate) <= thirtyDaysFromNow);
-
-    // Chart data (last 7 days)
-    const salesChart = await aggregateDocs({
-        model: OrderModel,
-        pipeline: [
-            { $match: { createdAt: { $gte: sevenDaysAgo } } },
-            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-            { $sort: { _id: 1 } }
-        ]
-    });
     
-    const purchaseChart = await aggregateDocs({
-        model: PurchaseModel,
-        pipeline: [
-            { $match: { createdAt: { $gte: sevenDaysAgo } } },
-            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalAmount" } } },
-            { $sort: { _id: 1 } }
-        ]
-    });
-    
-    const wastageChart = await aggregateDocs({
-        model: WastageModel,
-        pipeline: [
-            { $match: { createdAt: { $gte: sevenDaysAgo }, status: "approved" } },
-            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, total: { $sum: "$totalLossAmount" } } },
-            { $sort: { _id: 1 } }
-        ]
-    });
-
-    // Format payment method breakdown
-    const paymentMethods = {
-        cash: 0,
-        card: 0,
-        credit: 0,
-        other: 0
-    };
-    paymentMethodBreakdown.forEach(pm => {
-        const method = pm._id?.toLowerCase() || 'other';
-        if (paymentMethods.hasOwnProperty(method)) {
-            paymentMethods[method] = pm.total;
-        } else {
-            paymentMethods.other += pm.total;
+    // Calculate inventory value manually
+    let totalInventoryValue = 0;
+    let totalInventoryQuantity = 0;
+    allBatches.forEach(batch => {
+        if (batch.quantity > 0) {
+            totalInventoryValue += toNumber(batch.quantity) * toNumber(batch.purchasePrice || 0);
+            totalInventoryQuantity += toNumber(batch.quantity);
         }
     });
 
-    // Ensure arrays exist
-    const receivablesArray = receivables || [];
-    const payablesArray = payables || [];
+    // Calculate stock status using service
+    const batchesWithStatus = await calculateBatchesStockStatus(allBatches);
+    const lowStockAlerts = batchesWithStatus.filter(b => b.stockStatus === 'low_stock');
+
+    // Expiry alerts - manual filtering
+    const expiredBatches = allBatches.filter(b => b.expiryDate && new Date(b.expiryDate) < now);
+    const expiringIn30Days = allBatches.filter(b => 
+        b.expiryDate && new Date(b.expiryDate) >= now && new Date(b.expiryDate) <= thirtyDaysFromNow
+    );
+
+    // Top selling products - manual calculation from monthly orders
+    const productSales = {};
+    monthlyOrders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const productId = item.product?.toString() || item.product;
+                if (!productSales[productId]) {
+                    productSales[productId] = {
+                        _id: productId,
+                        name: item.name || 'Unknown',
+                        totalQuantity: 0,
+                        totalRevenue: 0
+                    };
+                }
+                productSales[productId].totalQuantity += toNumber(item.quantity);
+                productSales[productId].totalRevenue += toNumber(item.quantity) * toNumber(item.unitPrice);
+            });
+        }
+    });
+    const topSellingProducts = Object.values(productSales)
+        .sort((a, b) => b.totalQuantity - a.totalQuantity)
+        .slice(0, 10);
+
+    // Top customers - manual calculation
+    const customerStats = {};
+    monthlyOrders.filter(o => o.status === 'completed').forEach(order => {
+        const customerId = order.customerId?.toString() || order.customerId || 'guest';
+        const customerName = order.customerName || 'Guest';
+        if (!customerStats[customerId]) {
+            customerStats[customerId] = {
+                _id: customerId,
+                name: customerName,
+                totalSpent: 0,
+                orderCount: 0
+            };
+        }
+        customerStats[customerId].totalSpent += toNumber(order.totalAmount);
+        customerStats[customerId].orderCount += 1;
+    });
+    const topCustomers = Object.values(customerStats)
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 10);
+
+    // Payment method breakdown - manual calculation
+    const paymentMethods = { cash: 0, card: 0, credit: 0, hybrid: 0, other: 0 };
+    monthlyOrders.filter(o => o.status === 'completed').forEach(order => {
+        const method = order.paymentMethod?.toLowerCase() || 'other';
+        if (paymentMethods.hasOwnProperty(method)) {
+            paymentMethods[method] += toNumber(order.totalAmount);
+        } else {
+            paymentMethods.other += toNumber(order.totalAmount);
+        }
+    });
+
+    // Category-wise sales - manual calculation
+    const categorySales = {};
+    monthlyOrders.filter(o => o.status === 'completed').forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                // Find product to get category
+                const product = allProducts.find(p => p._id?.toString() === item.product?.toString());
+                const categoryId = product?.category?._id?.toString() || product?.category?.toString() || 'uncategorized';
+                const categoryName = product?.category?.name || 'Uncategorized';
+                
+                if (!categorySales[categoryId]) {
+                    categorySales[categoryId] = {
+                        _id: categoryId,
+                        name: categoryName,
+                        totalRevenue: 0,
+                        totalQuantity: 0
+                    };
+                }
+                categorySales[categoryId].totalRevenue += toNumber(item.quantity) * toNumber(item.unitPrice);
+                categorySales[categoryId].totalQuantity += toNumber(item.quantity);
+            });
+        }
+    });
+    const categorySalesArray = Object.values(categorySales).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    // Chart data (last 7 days) - manual calculation
+    const salesByDate = {};
+    const purchasesByDate = {};
+    const wastageByDate = {};
+    
+    // Get wastage data for charts
+    const recentWastage = await findDocs({
+        model: WastageModel,
+        filter: { createdAt: { $gte: sevenDaysAgo }, status: 'approved' }
+    });
+
+    // Group orders by date
+    todayOrders.concat(await findDocs({
+        model: OrderModel,
+        filter: { createdAt: { $gte: sevenDaysAgo } }
+    })).forEach(order => {
+        const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
+        if (!salesByDate[dateKey]) {
+            salesByDate[dateKey] = { _id: dateKey, total: 0, count: 0 };
+        }
+        salesByDate[dateKey].total += toNumber(order.totalAmount);
+        salesByDate[dateKey].count += 1;
+    });
+
+    // Group purchases by date
+    todayPurchases.concat(await findDocs({
+        model: PurchaseModel,
+        filter: { createdAt: { $gte: sevenDaysAgo } }
+    })).forEach(purchase => {
+        const dateKey = new Date(purchase.createdAt).toISOString().split('T')[0];
+        if (!purchasesByDate[dateKey]) {
+            purchasesByDate[dateKey] = { _id: dateKey, total: 0 };
+        }
+        purchasesByDate[dateKey].total += toNumber(purchase.totalAmount);
+    });
+
+    // Group wastage by date
+    recentWastage.forEach(wastage => {
+        const dateKey = new Date(wastage.createdAt).toISOString().split('T')[0];
+        if (!wastageByDate[dateKey]) {
+            wastageByDate[dateKey] = { _id: dateKey, total: 0 };
+        }
+        wastageByDate[dateKey].total += toNumber(wastage.totalLossAmount);
+    });
+
+    const salesChart = Object.values(salesByDate).sort((a, b) => a._id.localeCompare(b._id));
+    const purchaseChart = Object.values(purchasesByDate).sort((a, b) => a._id.localeCompare(b._id));
+    const wastageChart = Object.values(wastageByDate).sort((a, b) => a._id.localeCompare(b._id));
+
+    // Financial summary - manual calculation
+    const receivables = qarzaAccounts.filter(qa => qa.type === 'receivable' && toNumber(qa.balance) > 0);
+    const payables = qarzaAccounts.filter(qa => qa.type === 'payable' && toNumber(qa.balance) > 0);
+    
+    const totalReceivables = receivables.reduce((sum, qa) => sum + toNumber(qa.balance), 0);
+    const totalPayables = payables.reduce((sum, qa) => sum + toNumber(qa.balance), 0);
 
     return {
         kpis: {
@@ -314,8 +345,8 @@ export const getDashboardData = async () => {
         },
         lowStockAlerts,
         expiryAlerts: {
-            expiredBatches: filteredExpiredBatches,
-            expiringIn30Days: filteredExpiringBatches,
+            expiredBatches,
+            expiringIn30Days,
         },
         recentOrders,
         recentPurchases,
@@ -324,7 +355,7 @@ export const getDashboardData = async () => {
         salesChart,
         purchaseChart,
         wastageChart,
-        categorySales,
+        categorySales: categorySalesArray,
         paymentMethods,
         pendingApprovals: {
             pendingWastages,
@@ -332,10 +363,10 @@ export const getDashboardData = async () => {
             pendingProductReturns,
         },
         financialSummary: {
-            totalReceivables: receivablesArray[0]?.total || 0,
-            totalReceivablesCount: receivablesArray[0]?.count || 0,
-            totalPayables: payablesArray[0]?.total || 0,
-            totalPayablesCount: payablesArray[0]?.count || 0,
+            totalReceivables,
+            totalReceivablesCount: receivables.length,
+            totalPayables,
+            totalPayablesCount: payables.length,
             netProfit,
         },
     };
@@ -376,6 +407,7 @@ export const getDashboardData = async () => {
                 cash: 0,
                 card: 0,
                 credit: 0,
+                hybrid: 0,
                 other: 0
             },
             pendingApprovals: {
@@ -399,14 +431,17 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
         
-        // Import service functions
-        const { findOrderService } = await import('../pos/services/order.crud.js');
-        const { findByIdBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const OrderModel = getOrderModel();
 
-        const orders = await findOrderService({
-            createdAt: { $gte: startDate, $lte: endDate },
-            status: 'completed'
-        }, { sort: { createdAt: -1 } });
+        // Use centralized DB service for all queries
+        const orders = await findDocs({
+            model: OrderModel,
+            filter: {
+                createdAt: { $gte: startDate, $lte: endDate },
+                status: 'completed'
+            },
+            options: { sort: { createdAt: -1 } }
+        });
 
         const retailOrders = orders.filter(o => o.orderType === 'retail');
         const wholesaleOrders = orders.filter(o => o.orderType === 'wholesale');
@@ -421,7 +456,6 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
         // Calculate revenue and cost from each order item
         for (const order of orders) {
             const orderRevenue = toNumber(order.totalAmount);
-            let orderCost = 0;
             
             if (order.orderType === 'retail') {
                 retailRevenue += orderRevenue;
@@ -438,9 +472,9 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
                     
                     // Get cost price from batch using service
                     if (item.batchId) {
-                        const batch = await findByIdBatchService(item.batchId);
-                        if (batch && batch.purchasePrice) {
-                            costPrice = toNumber(batch.purchasePrice);
+                        const batches = await findBatchService({ _id: item.batchId });
+                        if (batches[0] && batches[0].purchasePrice) {
+                            costPrice = toNumber(batches[0].purchasePrice);
                         }
                     }
                     
@@ -532,20 +566,18 @@ export const getSalesRevenueKPIs = async (range = '30D') => {
 // Inventory Alert KPIs
 export const getInventoryAlertKPIs = async (range = '30D') => {
     try {
-        // Import service functions
-        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { countProductService } = await import('../product/services/product.crud.js');
-        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
+        const BatchModel = getBatchModel();
+        const ProductModel = getProductModel();
 
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+        // Use centralized DB service for all queries
         const [batches, totalProducts, totalBatches] = await Promise.all([
-            findBatchService({ isActive: true }),
-            countProductService({ isActive: true }),
-            countBatchService({ isActive: true }),
+            findDocs({ model: BatchModel, filter: { isActive: true } }),
+            countDocs({ model: ProductModel, filter: { isActive: true } }),
+            countDocs({ model: BatchModel, filter: { isActive: true } }),
         ]);
 
         // Calculate stock status for all batches using the service
@@ -595,9 +627,7 @@ export const getInventoryAlertKPIs = async (range = '30D') => {
 // Expiry Products (paginated)
 export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => {
     try {
-        // Import service functions
-        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
+        const BatchModel = getBatchModel();
         
         const now = new Date();
         const daysRange = range === '7D' ? 7 : 30;
@@ -608,14 +638,19 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
             expiryDate: { $gte: now, $lte: expiryDate }
         };
 
+        // Use centralized DB service for all queries
         const [batches, total] = await Promise.all([
-            findBatchService(query, {
-                populate: ['product'],
-                sort: { expiryDate: 1 },
-                skip: (page - 1) * limit,
-                limit
+            findDocs({
+                model: BatchModel,
+                filter: query,
+                options: {
+                    populate: ['product'],
+                    sort: { expiryDate: 1 },
+                    skip: (page - 1) * limit,
+                    limit
+                }
             }),
-            countBatchService(query)
+            countDocs({ model: BatchModel, filter: query })
         ]);
 
         const data = batches.map(b => {
@@ -663,19 +698,21 @@ export const getExpiryProducts = async (range = '30D', page = 1, limit = 10) => 
 // Low Stock Products (paginated)
 export const getLowStockProducts = async (page = 1, limit = 10) => {
     try {
-        // Import service functions
-        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
-
-        const batches = await findBatchService({
-            isActive: true,
-            quantity: { $gt: 0 }
-        }, {
-            populate: ['product'],
-            sort: { quantity: 1 },
-            skip: (page - 1) * limit,
-            limit
+        const BatchModel = getBatchModel();
+        
+        // Use centralized DB service for all queries
+        const batches = await findDocs({
+            model: BatchModel,
+            filter: {
+                isActive: true,
+                quantity: { $gt: 0 }
+            },
+            options: {
+                populate: ['product'],
+                sort: { quantity: 1 },
+                skip: (page - 1) * limit,
+                limit
+            }
         });
 
         // Calculate stock status for batches using the service
@@ -685,15 +722,21 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
             b.stockStatus === 'low_stock'
         );
 
-        const total = await countBatchService({
-            isActive: true,
-            quantity: { $gt: 0 }
+        const total = await countDocs({
+            model: BatchModel,
+            filter: {
+                isActive: true,
+                quantity: { $gt: 0 }
+            }
         });
 
         // Get all batches to calculate accurate total count
-        const allBatches = await findBatchService({
-            isActive: true,
-            quantity: { $gt: 0 }
+        const allBatches = await findDocs({
+            model: BatchModel,
+            filter: {
+                isActive: true,
+                quantity: { $gt: 0 }
+            }
         });
         const allBatchesWithStatus = await calculateBatchesStockStatus(allBatches);
         const lowStockCount = allBatchesWithStatus.filter(b => b.stockStatus === 'low_stock').length;
@@ -737,19 +780,21 @@ export const getLowStockProducts = async (page = 1, limit = 10) => {
 // Out of Stock Products (paginated)
 export const getOutOfStockProducts = async (page = 1, limit = 10) => {
     try {
-        // Import service functions
-        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { countBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { calculateBatchesStockStatus } = await import('../productPurchases/services/batchStockStatus.service.js');
-
-        const batches = await findBatchService({
-            isActive: true,
-            quantity: 0
-        }, {
-            populate: ['product'],
-            sort: { updatedAt: -1 },
-            skip: (page - 1) * limit,
-            limit
+        const BatchModel = getBatchModel();
+        
+        // Use centralized DB service
+        const batches = await findDocs({
+            model: BatchModel,
+            filter: {
+                isActive: true,
+                quantity: 0
+            },
+            options: {
+                populate: ['product'],
+                sort: { updatedAt: -1 },
+                skip: (page - 1) * limit,
+                limit
+            }
         });
 
         // Calculate stock status for batches using the service
@@ -800,39 +845,32 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
 export const getRevenueOverTime = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
 
-        const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
-
-        const data = await aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate },
-                        status: 'completed'
-                    }
-                },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                        retail: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
-                        },
-                        wholesale: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
-                        }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]
+        // Use service to get orders (auto-filters deleted)
+        const orders = await findOrderService({
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: 'completed'
         });
 
-        return data.map(d => ({
-            date: d._id,
-            retail: toNumber(d.retail),
-            wholesale: toNumber(d.wholesale),
-        }));
+        // Manual grouping by date
+        const revenueByDate = {};
+        orders.forEach(order => {
+            const dateKey = range === '7D' || range === '30D' || range === '90D'
+                ? new Date(order.createdAt).toISOString().split('T')[0]  // YYYY-MM-DD
+                : new Date(order.createdAt).toISOString().substring(0, 7);  // YYYY-MM
+
+            if (!revenueByDate[dateKey]) {
+                revenueByDate[dateKey] = { date: dateKey, retail: 0, wholesale: 0 };
+            }
+
+            if (order.orderType === 'retail') {
+                revenueByDate[dateKey].retail += toNumber(order.totalAmount);
+            } else if (order.orderType === 'wholesale') {
+                revenueByDate[dateKey].wholesale += toNumber(order.totalAmount);
+            }
+        });
+
+        return Object.values(revenueByDate).sort((a, b) => a.date.localeCompare(b.date));
     } catch (error) {
         console.error('Error fetching revenue over time:', error);
         return [];
@@ -843,39 +881,32 @@ export const getRevenueOverTime = async (range = '30D') => {
 export const getOrdersOverTime = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
 
-        const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
-
-        const data = await aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate },
-                        status: 'completed'
-                    }
-                },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                        retail: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, 1, 0] }
-                        },
-                        wholesale: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, 1, 0] }
-                        }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]
+        // Use service to get orders (auto-filters deleted)
+        const orders = await findOrderService({
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: 'completed'
         });
 
-        return data.map(d => ({
-            date: d._id,
-            retail: d.retail,
-            wholesale: d.wholesale,
-        }));
+        // Manual grouping by date
+        const ordersByDate = {};
+        orders.forEach(order => {
+            const dateKey = range === '7D' || range === '30D' || range === '90D'
+                ? new Date(order.createdAt).toISOString().split('T')[0]
+                : new Date(order.createdAt).toISOString().substring(0, 7);
+
+            if (!ordersByDate[dateKey]) {
+                ordersByDate[dateKey] = { date: dateKey, retail: 0, wholesale: 0 };
+            }
+
+            if (order.orderType === 'retail') {
+                ordersByDate[dateKey].retail += 1;
+            } else if (order.orderType === 'wholesale') {
+                ordersByDate[dateKey].wholesale += 1;
+            }
+        });
+
+        return Object.values(ordersByDate).sort((a, b) => a.date.localeCompare(b.date));
     } catch (error) {
         console.error('Error fetching orders over time:', error);
         return [];
@@ -886,54 +917,44 @@ export const getOrdersOverTime = async (range = '30D') => {
 export const getTopSellingProducts = async (range = '30D', metric = 'revenue') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
 
-        const sortField = metric === 'revenue' ? 'totalRevenue' : 'totalQuantity';
-
-        const data = await aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate },
-                        status: 'completed'
-                    }
-                },
-                { $unwind: '$items' },
-                {
-                    $group: {
-                        _id: '$items.product',
-                        totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
-                        totalQuantity: { $sum: '$items.quantity' }
-                    }
-                },
-                { $sort: { [sortField]: -1 } },
-                { $limit: 10 },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: '_id',
-                        foreignField: '_id',
-                        as: 'product'
-                    }
-                },
-                { $unwind: '$product' },
-                {
-                    $project: {
-                        _id: 1,
-                        name: '$product.name',
-                        totalRevenue: 1,
-                        totalQuantity: 1
-                    }
-                }
-            ]
+        // Use service to get orders (auto-filters deleted)
+        const orders = await findOrderService({
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: 'completed'
         });
 
-        return data.map(d => ({
-            name: d.name,
-            unitsSold: toNumber(d.totalQuantity),
-            revenue: toNumber(d.totalRevenue),
-        }));
+        // Get all products for name lookup
+        const products = await findProductService({ isActive: true });
+        const productMap = {};
+        products.forEach(p => {
+            productMap[p._id.toString()] = p.name;
+        });
+
+        // Manual calculation
+        const productSales = {};
+        orders.forEach(order => {
+            if (order.items && Array.isArray(order.items)) {
+                order.items.forEach(item => {
+                    const productId = item.product?.toString() || item.product;
+                    if (!productSales[productId]) {
+                        productSales[productId] = {
+                            name: item.name || productMap[productId] || 'Unknown',
+                            unitsSold: 0,
+                            revenue: 0
+                        };
+                    }
+                    productSales[productId].unitsSold += toNumber(item.quantity);
+                    productSales[productId].revenue += toNumber(item.quantity) * toNumber(item.unitPrice);
+                });
+            }
+        });
+
+        // Sort and limit
+        const sortField = metric === 'revenue' ? 'revenue' : 'unitsSold';
+        return Object.values(productSales)
+            .sort((a, b) => b[sortField] - a[sortField])
+            .slice(0, 10);
     } catch (error) {
         console.error('Error fetching top selling products:', error);
         return [];
@@ -944,55 +965,51 @@ export const getTopSellingProducts = async (range = '30D', metric = 'revenue') =
 export const getSalesByCategory = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
 
-        const data = await aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate },
-                        status: 'completed'
-                    }
-                },
-                { $unwind: '$items' },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: 'items.product',
-                        foreignField: '_id',
-                        as: 'product'
-                    }
-                },
-                { $unwind: '$product' },
-                {
-                    $match: {
-                        'product.categoryName': { $exists: true, $ne: null, $ne: '' }
-                    }
-                },
-                {
-                    $group: {
-                        _id: '$product.categoryName',
-                        revenue: { $sum: { $multiply: ['$items.quantity', '$items.unitPrice'] } },
-                        orderCount: { $sum: 1 }
-                    }
-                },
-                {
-                    $project: {
-                        name: '$_id',
-                        revenue: 1,
-                        orderCount: 1
-                    }
-                },
-                { $sort: { revenue: -1 } }
-            ]
+        // Use services to get data (auto-filters deleted)
+        const orders = await findOrderService({
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: 'completed'
         });
 
-        return data.map(d => ({
-            name: d.name,
-            revenue: toNumber(d.revenue),
-            orderCount: d.orderCount,
-        }));
+        const products = await findProductService({ isActive: true }, { populate: 'category' });
+        const categories = await findCategoryService({});
+
+        // Create lookup maps
+        const productMap = {};
+        products.forEach(p => {
+            productMap[p._id.toString()] = {
+                categoryId: p.category?._id?.toString() || p.category?.toString() || 'uncategorized',
+                categoryName: p.category?.name || 'Uncategorized'
+            };
+        });
+
+        // Manual calculation
+        const categorySales = {};
+        orders.forEach(order => {
+            if (order.items && Array.isArray(order.items)) {
+                order.items.forEach(item => {
+                    const productId = item.product?.toString() || item.product;
+                    const productInfo = productMap[productId];
+                    if (!productInfo) return;
+
+                    const categoryId = productInfo.categoryId;
+                    const categoryName = productInfo.categoryName;
+
+                    if (!categorySales[categoryId]) {
+                        categorySales[categoryId] = {
+                            category: categoryName,
+                            totalRevenue: 0,
+                            totalQuantity: 0
+                        };
+                    }
+                    categorySales[categoryId].totalRevenue += toNumber(item.quantity) * toNumber(item.unitPrice);
+                    categorySales[categoryId].totalQuantity += toNumber(item.quantity);
+                });
+            }
+        });
+
+        return Object.values(categorySales).sort((a, b) => b.totalRevenue - a.totalRevenue);
     } catch (error) {
         console.error('Error fetching sales by category:', error);
         return [];
@@ -1003,39 +1020,32 @@ export const getSalesByCategory = async (range = '30D') => {
 export const getRetailVsWholesaleComparison = async (range = '30D') => {
     try {
         const { startDate, endDate } = getDateRange(range);
-        const OrderModel = getOrderModel();
 
-        const groupBy = range === '7D' || range === '30D' || range === '90D' ? '%Y-%m-%d' : '%Y-%m';
-
-        const data = await aggregateDocs({
-            model: OrderModel,
-            pipeline: [
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate },
-                        status: 'completed'
-                    }
-                },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: groupBy, date: '$createdAt' } },
-                        retail: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'retail'] }, '$totalAmount', 0] }
-                        },
-                        wholesale: {
-                            $sum: { $cond: [{ $eq: ['$orderType', 'wholesale'] }, '$totalAmount', 0] }
-                        }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]
+        // Use service to get orders (auto-filters deleted)
+        const orders = await findOrderService({
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: 'completed'
         });
 
-        return data.map(d => ({
-            date: d._id,
-            retail: toNumber(d.retail),
-            wholesale: toNumber(d.wholesale),
-        }));
+        // Manual grouping by date
+        const comparisonByDate = {};
+        orders.forEach(order => {
+            const dateKey = range === '7D' || range === '30D' || range === '90D'
+                ? new Date(order.createdAt).toISOString().split('T')[0]
+                : new Date(order.createdAt).toISOString().substring(0, 7);
+
+            if (!comparisonByDate[dateKey]) {
+                comparisonByDate[dateKey] = { date: dateKey, retail: 0, wholesale: 0 };
+            }
+
+            if (order.orderType === 'retail') {
+                comparisonByDate[dateKey].retail += toNumber(order.totalAmount);
+            } else if (order.orderType === 'wholesale') {
+                comparisonByDate[dateKey].wholesale += toNumber(order.totalAmount);
+            }
+        });
+
+        return Object.values(comparisonByDate).sort((a, b) => a.date.localeCompare(b.date));
     } catch (error) {
         console.error('Error fetching retail vs wholesale comparison:', error);
         return [];
@@ -1045,18 +1055,9 @@ export const getRetailVsWholesaleComparison = async (range = '30D') => {
 // Stock Level by Category
 export const getStockLevelByCategory = async () => {
     try {
-        // Import service functions
-        const { findProductService } = await import('../product/services/product.crud.js');
-        const { findBatchService } = await import('../productPurchases/services/batch.crud.js');
-        const { findCategoryService } = await import('../product/services/category.crud.js');
-
-        // Get all active products
-        const products = await findProductService({ isActive: true });
-        
-        // Get all active batches
+        // Use services (auto-filter deleted)
+        const products = await findProductService({ isActive: true }, { populate: 'category' });
         const batches = await findBatchService({ isActive: true });
-        
-        // Get all categories
         const categories = await findCategoryService({});
         
         // Group batches by product
@@ -1073,26 +1074,22 @@ export const getStockLevelByCategory = async () => {
         // Calculate stock by category
         const categoryStock = {};
         products.forEach(product => {
-            const categoryId = product.category?.toString() || 'uncategorized';
-            const productBatches = batchesByProduct[product._id?.toString()] || [];
+            const categoryId = product.category?._id?.toString() || product.category?.toString() || 'uncategorized';
+            const categoryName = product.category?.name || 'Uncategorized';
+            const productId = product._id?.toString();
+            const productBatches = batchesByProduct[productId] || [];
             const totalStock = productBatches.reduce((sum, batch) => sum + toNumber(batch.quantity), 0);
             
             if (!categoryStock[categoryId]) {
-                categoryStock[categoryId] = 0;
+                categoryStock[categoryId] = {
+                    name: categoryName,
+                    stockLevel: 0
+                };
             }
-            categoryStock[categoryId] += totalStock;
+            categoryStock[categoryId].stockLevel += totalStock;
         });
         
-        // Map to category names
-        const data = Object.keys(categoryStock).map(categoryId => {
-            const category = categories.find(c => c._id?.toString() === categoryId);
-            return {
-                name: category?.name || 'Uncategorized',
-                stockLevel: toNumber(categoryStock[categoryId]),
-            };
-        }).sort((a, b) => b.stockLevel - a.stockLevel);
-
-        return data;
+        return Object.values(categoryStock).sort((a, b) => b.stockLevel - a.stockLevel);
     } catch (error) {
         console.error('Error fetching stock level by category:', error);
         return [];

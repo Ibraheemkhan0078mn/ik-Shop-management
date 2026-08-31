@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Zap } from 'lucide-react';
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
 import AlertBar from '../components/AlertBar.jsx';
@@ -23,10 +22,6 @@ export default function Dashboard() {
   
   const [globalDateFilter, setGlobalDateFilter] = React.useState('30D');
 
-  const handleRefresh = () => {
-    dashboardApi.util.invalidateTags(['Dashboard']);
-  };
-
   return (
     <div className="p-6 bg-[var(--app-bg)] min-h-screen">
       {/* Header */}
@@ -37,18 +32,6 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2 items-center">
           <TimeRangeFilter value={globalDateFilter} onChange={setGlobalDateFilter} size="default" />
-          <button
-            onClick={() => navigate("/quick-list")}
-            className="btn-add"
-          >
-            <Zap size={16} /> {labels.quickList}
-          </button>
-          <button
-            onClick={handleRefresh}
-            className="btn-add"
-          >
-            <RefreshCw size={16} /> {labels.refresh}
-          </button>
         </div>
       </div>
 
