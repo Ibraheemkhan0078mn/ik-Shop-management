@@ -10,13 +10,6 @@ import OrderReturnPaymentPdfTemplate from "../components/OrderReturnPaymentPdfTe
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
-const STATUS_STYLE = {
-    pending: { background: "rgba(180,83,9,0.1)", color: "#d97706", text: "Pending" },
-    approved: { background: "rgba(15,118,110,0.1)", color: "var(--accent-2)", text: "Approved" },
-    rejected: { background: "rgba(220,38,38,0.1)", color: "#dc2626", text: "Rejected" },
-    completed: { background: "rgba(59,130,246,0.1)", color: "#3b82f6", text: "Completed" },
-};
-
 export default function OrderReturnDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -86,8 +79,6 @@ export default function OrderReturnDetail() {
         return <div className="p-6 text-center">Order Return not found</div>;
     }
 
-    const statusStyle = STATUS_STYLE[orderReturn.returnStatus] || STATUS_STYLE.pending;
-
     return (
         <>
             <div className="min-h-screen bg-[var(--app-bg)]">
@@ -130,45 +121,56 @@ export default function OrderReturnDetail() {
                         </div>
                     </div>
 
-                    {/* Paper sheet */}
+                    {/* Paper sheet - Invoice-style layout */}
                     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm px-8 py-8">
 
-                        {/* Return info row */}
-                        <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Return Number</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{orderReturn.returnNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Order Number</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{orderReturn.referenceOrderNumber || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Customer</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{orderReturn.customerName || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Date</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{new Date(orderReturn.returnDate || orderReturn.createdAt).toLocaleDateString()}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Status</p>
-                                <span
-                                    className="inline-block px-3 py-1 rounded-lg text-sm font-semibold"
-                                    style={{ background: statusStyle.background, color: statusStyle.color }}
-                                >
-                                    {statusStyle.text}
-                                </span>
+                        {/* Company Header */}
+                        <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center leading-none mb-2">
+                                <span className="text-3xl font-extrabold tracking-wide text-[var(--ink)]" style={{ letterSpacing: "2px" }}>LOGIN</span>
+                                <span className="text-xs font-semibold tracking-[0.3em] text-[var(--muted)] mt-1">LARAIB</span>
                             </div>
                         </div>
 
-                        {orderReturn.notes && (
-                            <p className="text-sm text-[var(--muted)] mt-6 italic">
+                        <h2 className="text-2xl font-bold text-center text-[var(--ink)] mb-6">
+                            Afrasiab Mobile Accesories
+                        </h2>
+                        <p className="text-center text-sm font-semibold text-[var(--muted)] -mt-4 mb-6 uppercase tracking-wide">
+                            {labels.orderReturnDetails || "Order Return"}
+                        </p>
+
+                        {/* Customer / Return Meta Row */}
+                        <div className="flex justify-between items-start mb-6 gap-6">
+                            <div>
+                                <p className="text-xs font-semibold text-[var(--muted)] mb-1">Customer:</p>
+                                <p className="text-sm font-bold text-[var(--ink)] uppercase">{orderReturn?.customerName || "—"}</p>
+                                {orderReturn?.referenceOrderNumber && (
+                                    <p className="text-xs text-[var(--muted)]">Order #: {orderReturn.referenceOrderNumber}</p>
+                                )}
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[240px]">
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Return #: {orderReturn?.returnNumber || "—"}</span>
+                                    <span className="font-semibold text-[var(--ink)]">Date: {new Date(orderReturn.returnDate || orderReturn.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Status:</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                        orderReturn?.returnStatus === "approved" ? "bg-green-100 text-green-700" :
+                                        orderReturn?.returnStatus === "pending" ? "bg-yellow-100 text-yellow-700" :
+                                        orderReturn?.returnStatus === "rejected" ? "bg-red-100 text-red-700" :
+                                        orderReturn?.returnStatus === "completed" ? "bg-blue-100 text-blue-700" :
+                                        "bg-gray-100 text-gray-700"
+                                    }`}>{orderReturn?.returnStatus || "—"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {orderReturn?.notes && (
+                            <p className="text-sm text-[var(--muted)] mb-6 italic">
                                 {orderReturn.notes}
                             </p>
                         )}
-
-                        <div className="h-px bg-[var(--border)] my-8" />
 
                         {/* Payment KPI row */}
                         <div className="flex flex-wrap items-start justify-between gap-6">
@@ -192,117 +194,107 @@ export default function OrderReturnDetail() {
 
                         <div className="h-px bg-[var(--border)] my-7" />
 
-                        {/* Items */}
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
-                                Items ({orderReturn?.items?.length || 0})
-                            </h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-[var(--border)]">
-                                        <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Product</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Qty</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Original Price</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Cut</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Refund Amount</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--border)]">
-                                    {orderReturn?.items?.map((item, index) => {
-                                        const originalPrice = item.originalPrice || 0;
-                                        const quantity = item.quantity || 0;
-                                        const cut = item.cut || 0;
-                                        const refundAmount = item.refundAmount || 0;
-                                        const isExpanded = expandedItems[index];
+                        {/* Items Table - Invoice style */}
+                        <table className="w-full border-collapse mb-4 text-sm">
+                            <thead>
+                                <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">#</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Original Price</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Cut</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Refund Amount</th>
+                                    <th className="px-3 py-2 text-center font-semibold text-white">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orderReturn?.items?.map((item, index) => {
+                                    const originalPrice = item.originalPrice || 0;
+                                    const quantity = item.quantity || 0;
+                                    const cut = item.cut || 0;
+                                    const refundAmount = item.refundAmount || 0;
+                                    const isExpanded = expandedItems[index];
 
-                                        return (
-                                            <React.Fragment key={index}>
+                                    return (
+                                        <React.Fragment key={index}>
+                                            <tr className="border-b border-[var(--border)]">
+                                                <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
+                                                <td className="px-3 py-2 text-[var(--ink)]">
+                                                    {item.productName || item.product?.name || "—"}
+                                                    {item.returnReason && <span className="text-xs text-[var(--muted)] capitalize block">({item.returnReason})</span>}
+                                                    {item.product?.productCode && <span className="text-xs text-[var(--muted)] block">{item.product.productCode}</span>}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {originalPrice.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-right text-red-600">Rs {cut.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {refundAmount.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-center">
+                                                    <button
+                                                        onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                        className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                        style={{ color: "var(--muted)" }}
+                                                        title={isExpanded ? "Hide calculations" : "Show calculations"}
+                                                    >
+                                                        {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
                                                 <tr>
-                                                    <td className="py-3">
-                                                        <p className="font-medium text-[var(--ink)]">
-                                                            {item.productName || item.product?.name || "—"}
-                                                        </p>
-                                                        {item.product?.productCode && (
-                                                            <p className="text-xs text-[var(--muted)]">{item.product.productCode}</p>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 text-center text-[var(--ink)]">{quantity}</td>
-                                                    <td className="py-3 text-right text-[var(--ink)]">Rs {originalPrice.toLocaleString()}</td>
-                                                    <td className="py-3 text-right text-red-600">Rs {cut.toLocaleString()}</td>
-                                                    <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {refundAmount.toLocaleString()}</td>
-                                                    <td className="py-3 text-center">
-                                                        <button
-                                                            onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
-                                                            className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
-                                                            style={{ color: "var(--muted)" }}
-                                                            title={isExpanded ? "Hide calculations" : "Show calculations"}
-                                                        >
-                                                            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr>
-                                                        <td colSpan="6" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Original Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {originalPrice.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * originalPrice).toFixed(2)}</span>
-                                                                        </div>
+                                                    <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
                                                                     </div>
-                                                                </div>
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Cut Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cut.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * originalPrice - cut).toFixed(2)}</span>
-                                                                        </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Original Price:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {originalPrice.toFixed(2)}</span>
                                                                     </div>
-                                                                </div>
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>After Cut Value:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(quantity * originalPrice - cut).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Refund Amount:</span>
-                                                                            <span className="font-mono text-green-600" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
-                                                                        </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * originalPrice).toFixed(2)}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="h-px bg-[var(--border)] my-10" />
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Cut Calculation</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cut.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * originalPrice - cut).toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Calculation</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>After Cut Value:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(quantity * originalPrice - cut).toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Refund Amount:</span>
+                                                                        <span className="font-mono text-green-600" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
 
                         {/* Summary Section */}
                         <div className="flex items-center justify-between mb-4">
@@ -502,6 +494,26 @@ export default function OrderReturnDetail() {
                         ) : (
                             <p className="text-sm text-[var(--muted)] py-6 text-center">No refunds recorded yet</p>
                         )}
+
+                        {/* Sign-off Bar */}
+                        <div className="border border-[var(--border)] mt-6 mb-4">
+                            <div className="flex text-sm">
+                                <div className="w-1/2 text-center py-3 border-r border-[var(--border)]">
+                                    <p>Prepared By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">SyedSoft</p>
+                                </div>
+                                <div className="w-1/2 text-center py-3">
+                                    <p>Approved By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">Afrasiab Mobile Accesories</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-between items-start text-xs text-[var(--muted)]">
+                            <p className="italic max-w-[70%]">This is a computer generated document, does not required any signature</p>
+                            <p>Print Time: {new Date().toLocaleString()}</p>
+                        </div>
                     </div>
                 </div>
             </div>

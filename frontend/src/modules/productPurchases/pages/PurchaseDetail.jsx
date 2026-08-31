@@ -151,44 +151,185 @@ export default function PurchaseDetail() {
                         </div>
                     </div>
 
-                    {/* Paper sheet */}
+                    {/* Paper sheet - Invoice-style layout */}
                     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm px-8 py-8">
 
-                        {/* Purchase info row */}
-                        <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Invoice Number</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{purchase?.invoiceNumber || "—"}</p>
+                        {/* Company Header */}
+                        <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center leading-none mb-2">
+                                <span className="text-3xl font-extrabold tracking-wide text-[var(--ink)]" style={{ letterSpacing: "2px" }}>LOGIN</span>
+                                <span className="text-xs font-semibold tracking-[0.3em] text-[var(--muted)] mt-1">LARAIB</span>
                             </div>
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-center text-[var(--ink)] mb-6">
+                            Afrasiab Mobile Accesories
+                        </h2>
+
+                        {/* Bill To / Invoice Meta Row */}
+                        <div className="flex justify-between items-start mb-6 gap-6">
                             <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Supplier</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{purchase?.supplier?.name || "—"}</p>
+                                <p className="text-xs font-semibold text-[var(--muted)] mb-1">Purchased From:</p>
+                                <p className="text-sm font-bold text-[var(--ink)] uppercase">{purchase?.supplier?.name || "—"}</p>
+                                {purchase?.supplier?.code && <p className="text-xs text-[var(--muted)]">Supplier Code: {purchase.supplier.code}</p>}
+                                {purchase?.supplier?.phone && <p className="text-xs text-[var(--muted)]">{purchase.supplier.phone}</p>}
                             </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Date</p>
-                                <p className="text-base font-semibold text-[var(--ink)]">{date}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Status</p>
-                                <span
-                                    className="inline-block px-3 py-1 rounded-lg text-sm font-semibold"
-                                    style={{ background: statusStyle.background, color: statusStyle.color }}
-                                >
-                                    {statusStyle.text}
-                                </span>
+                            <div className="flex flex-col gap-2 min-w-[240px]">
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Invoice #: {purchase?.invoiceNumber || purchase?.purchaseNumber || "—"}</span>
+                                    <span className="font-semibold text-[var(--ink)]">Date: {date}</span>
+                                </div>
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Status:</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                        status === "delivered" ? "bg-green-100 text-green-700" :
+                                        status === "ordered" ? "bg-yellow-100 text-yellow-700" :
+                                        status === "rejected" ? "bg-red-100 text-red-700" :
+                                        "bg-blue-100 text-blue-700"
+                                    }`}>{statusStyle.text}</span>
+                                </div>
                             </div>
                         </div>
 
                         {purchase?.notes && (
-                            <p className="text-sm text-[var(--muted)] mt-6 italic">
+                            <p className="text-sm text-[var(--muted)] mb-6 italic">
                                 {purchase.notes}
                             </p>
                         )}
 
-                        <div className="h-px bg-[var(--border)] my-8" />
+                        {/* Items Table - Invoice style */}
+                        <table className="w-full border-collapse mb-4 text-sm">
+                            <thead>
+                                <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">#</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">Category</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Price</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Disc</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Tax</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Net Amount</th>
+                                    <th className="px-3 py-2 text-center font-semibold text-white">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {purchase?.items?.map((item, index) => {
+                                    const price = item.costPrice || item.price || item.perItemPrice || 0;
+                                    const quantity = item.quantity || 0;
+                                    const baseTotal = quantity * price;
+                                    const discountAmount = item.discountType === 'percentage'
+                                        ? baseTotal * (item.discount || 0) / 100
+                                        : (item.discount || 0);
+                                    const taxAmount = item.taxType === 'percentage'
+                                        ? (baseTotal - discountAmount) * (item.tax || 0) / 100
+                                        : (item.tax || 0);
+                                    const subtotal = baseTotal - discountAmount + taxAmount;
+
+                                    const isExpanded = expandedItems[index];
+
+                                    return (
+                                        <React.Fragment key={index}>
+                                            <tr className="border-b border-[var(--border)]">
+                                                <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
+                                                <td className="px-3 py-2 text-[var(--ink)]">
+                                                    {item.name || item.product?.name || item.productName || "—"}
+                                                    {item.product?.productCode && <span className="text-xs text-[var(--muted)] block">{item.product.productCode}</span>}
+                                                </td>
+                                                <td className="px-3 py-2 text-[var(--ink)]">{item.category || item.product?.category || "—"}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{price.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-right text-red-600">
+                                                    {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-green-700">
+                                                    {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">{subtotal.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-center">
+                                                    <button
+                                                        onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                        className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
+                                                        style={{ color: "var(--muted)" }}
+                                                        title={isExpanded ? "Hide calculations" : "Show calculations"}
+                                                    >
+                                                        {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
+                                                <tr>
+                                                    <td colSpan="9" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                            {/* Total Price Calculation */}
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Cost Price:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {price.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {baseTotal.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Discount Calculation */}
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Calculation</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Discount:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toFixed(2)}`}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Discount Amount:</span>
+                                                                        <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {discountAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Tax Calculation */}
+                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation (on After Discount)</p>
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(baseTotal - discountAmount).toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Tax:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toFixed(2)}`}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Tax Amount:</span>
+                                                                        <span className="font-mono text-green-600" style={{ color: "var(--accent-2)" }}>+Rs {taxAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Final Subtotal:</span>
+                                                                <span className="text-lg font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {subtotal.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
 
                         {/* Payment KPI row */}
-                        <div className="flex flex-wrap items-start justify-between gap-6">
+                        <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
                             <div>
                                 <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Amount</p>
                                 <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {(purchase?.totalAmount ?? 0).toLocaleString()}</p>
@@ -207,148 +348,6 @@ export default function PurchaseDetail() {
                                 <p className="text-2xl font-bold text-[var(--ink)] capitalize">{paymentStatusText}</p>
                             </div>
                         </div>
-
-                        <div className="h-px bg-[var(--border)] my-7" />
-
-                        {/* Items */}
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
-                                Items ({purchase?.items?.length || 0})
-                            </h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-[var(--border)]">
-                                        <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Product</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Qty</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Cost Price</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Discount</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Tax</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Subtotal</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--border)]">
-                                    {purchase?.items?.map((item, index) => {
-                                        const price = item.costPrice || item.price || item.perItemPrice || 0;
-                                        const quantity = item.quantity || 0;
-                                        const baseTotal = quantity * price;
-                                        const discountAmount = item.discountType === 'percentage'
-                                            ? baseTotal * (item.discount || 0) / 100
-                                            : (item.discount || 0);
-                                        const taxAmount = item.taxType === 'percentage'
-                                            ? (baseTotal - discountAmount) * (item.tax || 0) / 100
-                                            : (item.tax || 0);
-                                        const subtotal = baseTotal - discountAmount + taxAmount;
-
-                                        const isExpanded = expandedItems[index];
-
-                                        return (
-                                            <React.Fragment key={index}>
-                                                <tr>
-                                                    <td className="py-3">
-                                                        <p className="font-medium text-[var(--ink)]">
-                                                            {item.name || item.product?.name || item.productName || "—"}
-                                                        </p>
-                                                        {item.product?.productCode && (
-                                                            <p className="text-xs text-[var(--muted)]">{item.product.productCode}</p>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 text-center text-[var(--ink)]">{quantity}</td>
-                                                    <td className="py-3 text-right text-[var(--ink)]">Rs {price.toLocaleString()}</td>
-                                                    <td className="py-3 text-right text-red-600">
-                                                        {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
-                                                    </td>
-                                                    <td className="py-3 text-right text-green-600">
-                                                        {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
-                                                    </td>
-                                                    <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {subtotal.toLocaleString()}</td>
-                                                    <td className="py-3 text-center">
-                                                        <button
-                                                            onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
-                                                            className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
-                                                            style={{ color: "var(--muted)" }}
-                                                            title={isExpanded ? "Hide calculations" : "Show calculations"}
-                                                        >
-                                                            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr>
-                                                        <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                {/* Total Price Calculation */}
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Price Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Cost Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {price.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {baseTotal.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Discount Calculation */}
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toFixed(2)}`}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Discount Amount:</span>
-                                                                            <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {discountAmount.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Tax Calculation */}
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax Calculation (on After Discount)</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(baseTotal - discountAmount).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Tax:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toFixed(2)}`}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Tax Amount:</span>
-                                                                            <span className="font-mono text-green-600" style={{ color: "var(--accent-2)" }}>+Rs {taxAmount.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <div className="flex justify-between items-center">
-                                                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Final Subtotal:</span>
-                                                                    <span className="text-lg font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {subtotal.toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="h-px bg-[var(--border)] my-10" />
 
                         {/* Summary Section */}
                         <div className="flex items-center justify-between mb-4">
@@ -643,6 +642,26 @@ export default function PurchaseDetail() {
                         ) : (
                             <p className="text-sm text-[var(--muted)] py-6 text-center">No payments recorded yet</p>
                         )}
+
+                        {/* Sign-off Bar */}
+                        <div className="border border-[var(--border)] mt-6 mb-4">
+                            <div className="flex text-sm">
+                                <div className="w-1/2 text-center py-3 border-r border-[var(--border)]">
+                                    <p>Prepared By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">SyedSoft</p>
+                                </div>
+                                <div className="w-1/2 text-center py-3">
+                                    <p>Approved By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">Afrasiab Mobile Accesories</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-between items-start text-xs text-[var(--muted)]">
+                            <p className="italic max-w-[70%]">This is a computer generated document, does not required any signature</p>
+                            <p>Print Time: {new Date().toLocaleString()}</p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -28,7 +28,7 @@ function BreakdownItem({ label, value, count, percentage, color }) {
 }
 
 // ---------- Transaction table renderer ----------
-function renderTransactionRow(transaction, type) {
+function renderTransactionRow(transaction, type, formatDate) {
     switch (type) {
         case 'sales':
             return (
@@ -37,7 +37,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.customerName || 'N/A'}</td>
                     <td className="px-4 py-2.5 text-sm capitalize" style={{ color: 'var(--muted)' }}>{transaction.paymentMethod}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'purchases':
@@ -46,7 +46,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.invoiceNumber}</td>
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.supplierName || 'N/A'}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'expenses':
@@ -56,7 +56,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm capitalize" style={{ color: 'var(--muted)' }}>{transaction.category}</td>
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--muted)' }}>{transaction.description || '-'}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'wastages':
@@ -66,7 +66,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--muted)' }}>{transaction.quantity}</td>
                     <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {transaction.costPrice?.toLocaleString() || 0}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.totalLoss?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'purchaseReturns':
@@ -75,7 +75,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.returnNumber}</td>
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.supplierName || 'N/A'}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'productReturns':
@@ -84,7 +84,7 @@ function renderTransactionRow(transaction, type) {
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.returnNumber}</td>
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.customerName || 'N/A'}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         case 'salaryPayments':
@@ -92,7 +92,7 @@ function renderTransactionRow(transaction, type) {
                 <>
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.staffName}</td>
                     <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
             );
         default:
@@ -117,10 +117,26 @@ function TransactionTable({ transactions, type, labels }) {
     if (!transactions || transactions.length === 0) {
         return <p className="text-sm py-6 text-center" style={{ color: 'var(--muted)' }}>{labels.noTransactionsInPeriod}</p>;
     }
+
+    // Helper function for better date formatting
+    const formatDate = (dateStr) => {
+        try {
+            return new Date(dateStr).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return 'Invalid Date';
+        }
+    };
+
+    const displayTransactions = transactions.slice(0, MAX_TRANSACTIONS_DISPLAY);
+
     return (
         <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
             <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full" role="table" aria-label={`${type} transactions`}>
                     <thead style={{ background: 'var(--surface-muted)' }}>
                         <tr>
                             {getTableHeaders(type, labels).map((header, idx) => (
@@ -131,19 +147,19 @@ function TransactionTable({ transactions, type, labels }) {
                         </tr>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                        {transactions.slice(0, 50).map((transaction, idx) => (
+                        {displayTransactions.map((transaction, idx) => (
                             <tr key={idx} className="transition-colors" style={{ background: 'transparent' }}
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                                {renderTransactionRow(transaction, type)}
+                                {renderTransactionRow(transaction, type, formatDate)}
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            {transactions.length > 50 && (
+            {transactions.length > MAX_TRANSACTIONS_DISPLAY && (
                 <div className="px-4 py-2.5 text-xs text-center border-t" style={{ color: 'var(--muted)', borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
-                    {labels.showingFirst50} {transactions.length} {labels.transactions}
+                    {labels.showingFirst50 || 'Showing first'} {MAX_TRANSACTIONS_DISPLAY} {labels.of || 'of'} {transactions.length} {labels.transactions}
                 </div>
             )}
         </div>
@@ -255,6 +271,22 @@ function GroupHeading({ eyebrow, title, description }) {
 }
 
 const SECTION_KEYS = ['sales', 'purchases', 'expenses', 'salaries', 'purchaseReturns', 'productReturns', 'wastages', 'qarza'];
+const MAX_TRANSACTIONS_DISPLAY = 50;
+
+// Color constants to replace hardcoded values
+const COLORS = {
+    sales: '#10b981',
+    purchases: '#3b82f6',
+    expenses: '#ef4444',
+    salaries: '#8b5cf6',
+    wastage: '#dc2626',
+    purchaseReturns: '#06b6d4',
+    productReturns: '#f59e0b',
+    qarza: '#0f766e',
+    qarzaPayable: '#7c3aed',
+    profit: '#10b981',
+    loss: '#dc2626'
+};
 
 export default function MainBusinessReport() {
     const { settings } = useSettings();
@@ -288,14 +320,31 @@ export default function MainBusinessReport() {
     const isFetching = kpiQuery.isFetching || dataQuery.isFetching;
     const error = kpiQuery.error || dataQuery.error;
 
-    if (error) {
-        showError(error?.data?.message || "Failed to load report");
-    }
-
     const handleRefresh = () => {
         kpiQuery.refetch();
         dataQuery.refetch();
     };
+
+    // Handle errors properly - don't render if there's an error
+    if (error) {
+        showError(error?.data?.message || "Failed to load report");
+        return (
+            <div className="p-6 min-h-screen flex items-center justify-center" style={{ background: 'var(--app-bg)' }}>
+                <div className="text-center">
+                    <p className="text-lg font-semibold mb-2" style={{ color: 'var(--ink)' }}>Failed to load report</p>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>{error?.data?.message || "Please try again"}</p>
+                    <button
+                        onClick={handleRefresh}
+                        className="mt-4 px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90"
+                        style={{ background: 'var(--accent-2)' }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const showLoader = isLoading || isFetching;
 
     const toggleSection = (key) => {
@@ -323,11 +372,11 @@ export default function MainBusinessReport() {
     // Consolidated: sales/purchases/expenses/salaries + margin + qarza net are
     // shown once each, here, instead of duplicated across KpiCard + SourceSection.
     const heroStats = [
-        { label: labels.totalSales, value: summary.totalSales, icon: ShoppingCart, color: '#10b981' },
-        { label: labels.totalPurchases, value: summary.totalPurchases, icon: Package, color: '#3b82f6' },
-        { label: labels.totalExpenses, value: summary.totalExpenses, icon: Receipt, color: '#ef4444' },
-        { label: labels.totalSalaries, value: summary.totalSalaries, icon: Users, color: '#8b5cf6' },
-        { label: labels.wastageLoss, value: summary.totalWastage, icon: AlertCircle, color: '#dc2626' },
+        { label: labels.totalSales, value: summary.totalSales, icon: ShoppingCart, color: COLORS.sales },
+        { label: labels.totalPurchases, value: summary.totalPurchases, icon: Package, color: COLORS.purchases },
+        { label: labels.totalExpenses, value: summary.totalExpenses, icon: Receipt, color: COLORS.expenses },
+        { label: labels.totalSalaries, value: summary.totalSalaries, icon: Users, color: COLORS.salaries },
+        { label: labels.wastageLoss, value: summary.totalWastage, icon: AlertCircle, color: COLORS.wastage },
     ];
 
     return (
@@ -487,7 +536,7 @@ export default function MainBusinessReport() {
                         <div className="space-y-4">
                             <SourceSection
                                 eyebrow={labels.sales} title={labels.sales} description={labels.revenueFromCompletedOrders}
-                                icon={ShoppingCart} color="#10b981" kpiValue={summary.totalSales} count={details.salesCount || 0}
+                                icon={ShoppingCart} color={COLORS.sales} kpiValue={summary.totalSales} count={details.salesCount || 0}
                                 metrics={[
                                     { label: labels.grossProfit || 'Margin', value: summary.salesMargin, isCurrency: true },
                                     { label: labels.retailSales || 'Retail', value: summary.retailSales, isCurrency: true },
@@ -501,7 +550,7 @@ export default function MainBusinessReport() {
 
                             <SourceSection
                                 eyebrow={labels.purchases} title={labels.purchases} description={labels.costOfInventoryPurchases}
-                                icon={Package} color="#3b82f6" kpiValue={summary.totalPurchases} count={details.purchaseCount || 0}
+                                icon={Package} color={COLORS.purchases} kpiValue={summary.totalPurchases} count={details.purchaseCount || 0}
                                 metrics={[
                                     { label: 'Avg Invoice', value: details.avgPurchaseValue, isCurrency: true },
                                     { label: 'Suppliers', value: details.supplierCount, isCurrency: false, showPercentage: false },
@@ -513,7 +562,7 @@ export default function MainBusinessReport() {
 
                             <SourceSection
                                 eyebrow={labels.expenses} title={labels.expenses} description={labels.operatingExpenses}
-                                icon={Receipt} color="#ef4444" kpiValue={summary.totalExpenses} count={details.expenseCount || 0}
+                                icon={Receipt} color={COLORS.expenses} kpiValue={summary.totalExpenses} count={details.expenseCount || 0}
                                 metrics={[{ label: 'Avg/Txn', value: details.avgExpenseValue, isCurrency: true }]}
                                 breakdown={breakdowns.expensesByCategory} breakdownLabelKey="category"
                                 transactions={transactions.expenses} transactionType="expenses"
@@ -522,7 +571,7 @@ export default function MainBusinessReport() {
 
                             <SourceSection
                                 eyebrow={labels.salaries} title={labels.salaries} description={labels.staffSalaryPayments}
-                                icon={Users} color="#8b5cf6" kpiValue={summary.totalSalaries} count={details.salaryPaymentCount || 0}
+                                icon={Users} color={COLORS.salaries} kpiValue={summary.totalSalaries} count={details.salaryPaymentCount || 0}
                                 metrics={[
                                     { label: 'Avg/Staff', value: details.avgSalaryPerStaff, isCurrency: true },
                                     { label: 'Staff Count', value: details.staffCount, isCurrency: false, showPercentage: false },
@@ -534,7 +583,7 @@ export default function MainBusinessReport() {
 
                             <SourceSection
                                 eyebrow={labels.purchaseReturns} title={labels.purchaseReturns} description={labels.returnsSentToSuppliers}
-                                icon={TrendingUp} color="#06b6d4" kpiValue={summary.totalPurchaseReturns} count={details.purchaseReturnCount || 0}
+                                icon={TrendingUp} color={COLORS.purchaseReturns} kpiValue={summary.totalPurchaseReturns} count={details.purchaseReturnCount || 0}
                                 breakdown={breakdowns.purchaseReturnsBySupplier} breakdownLabelKey="supplierName"
                                 transactions={transactions.purchaseReturns} transactionType="purchaseReturns"
                                 isExpanded={!!expandedSections.purchaseReturns} onToggle={() => toggleSection('purchaseReturns')} labels={labels}
@@ -542,45 +591,45 @@ export default function MainBusinessReport() {
 
                             <SourceSection
                                 eyebrow={labels.saleReturns} title={labels.saleReturns} description={labels.customerProductReturns}
-                                icon={TrendingDown} color="#f59e0b" kpiValue={summary.totalProductReturns} count={details.productReturnCount || 0}
+                                icon={TrendingDown} color={COLORS.productReturns} kpiValue={summary.totalProductReturns} count={details.productReturnCount || 0}
                                 breakdown={breakdowns.productReturnsByReason} breakdownLabelKey="reason"
                                 transactions={transactions.productReturns} transactionType="productReturns"
                                 isExpanded={!!expandedSections.productReturns} onToggle={() => toggleSection('productReturns')} labels={labels}
                             />
 
-                          <SourceSection
-    eyebrow={labels.wastage} title={labels.wastage} description={labels.inventoryWastageCost}
-    icon={AlertCircle} color="#dc2626" kpiValue={summary.totalWastage} count={details.wastageCount || 0}
-    metrics={[{ label: '% of Purchases', value: details.wastagePercentOfPurchases, isCurrency: false, showPercentage: true }]}
-    transactions={transactions.wastages} transactionType="wastages"
-    isExpanded={!!expandedSections.wastages} onToggle={() => toggleSection('wastages')} labels={labels}
-    extraBreakdown={breakdowns.wastagesByProduct && breakdowns.wastagesByProduct.length > 0 && (
-        <div className="mb-4">
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>{labels.byProduct}</p>
-            <div className="space-y-0">
-                {breakdowns.wastagesByProduct.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{item.productName}</p>
-                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.count} {labels.records} • {item.totalQuantity} {labels.units}</p>
-                        </div>
-                        <div className="text-right shrink-0 pl-3">
-                            <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {item.total?.toLocaleString() || 0}</p>
-                            <p className="text-xs" style={{ color: '#dc2626' }}>{item.percentage}%</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )}
-/>
+                            <SourceSection
+                                eyebrow={labels.wastage} title={labels.wastage} description={labels.inventoryWastageCost}
+                                icon={AlertCircle} color={COLORS.wastage} kpiValue={summary.totalWastage} count={details.wastageCount || 0}
+                                metrics={[{ label: '% of Purchases', value: details.wastagePercentOfPurchases, isCurrency: false, showPercentage: true }]}
+                                transactions={transactions.wastages} transactionType="wastages"
+                                isExpanded={!!expandedSections.wastages} onToggle={() => toggleSection('wastages')} labels={labels}
+                                extraBreakdown={breakdowns.wastagesByProduct && breakdowns.wastagesByProduct.length > 0 && (
+                                    <div className="mb-4">
+                                        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>{labels.byProduct}</p>
+                                        <div className="space-y-0">
+                                            {breakdowns.wastagesByProduct.map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{item.productName}</p>
+                                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{item.count} {labels.records} • {item.totalQuantity} {labels.units}</p>
+                                                    </div>
+                                                    <div className="text-right shrink-0 pl-3">
+                                                        <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {item.total?.toLocaleString() || 0}</p>
+                                                        <p className="text-xs" style={{ color: COLORS.wastage }}>{item.percentage}%</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            />
 
                             <SourceSection
                                 eyebrow={labels.qarza || labels.qarzaReceivablePayable} title={labels.qarzaReceivablePayable} description={labels.outstandingCredit}
-                                icon={HandCoins} color="#0f766e" kpiValue={qarzaNet} count={details.qarzaReceivableCount + details.qarzaPayableCount || 0}
+                                icon={HandCoins} color={COLORS.qarza} kpiValue={qarzaNet} count={details.qarzaReceivableCount + details.qarzaPayableCount || 0}
                                 metrics={[
-                                    { label: labels.receivable, value: summary.totalReceivable, isCurrency: true, color: '#0f766e' },
-                                    { label: labels.payable, value: summary.totalPayable, isCurrency: true, color: '#7c3aed' },
+                                    { label: labels.receivable, value: summary.totalReceivable, isCurrency: true, color: COLORS.qarza },
+                                    { label: labels.payable, value: summary.totalPayable, isCurrency: true, color: COLORS.qarzaPayable },
                                 ]}
                                 isExpanded={!!expandedSections.qarza} onToggle={() => toggleSection('qarza')} labels={labels}
                             />

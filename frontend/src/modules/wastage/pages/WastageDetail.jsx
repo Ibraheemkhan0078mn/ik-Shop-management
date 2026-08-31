@@ -40,195 +40,206 @@ export default function WastageDetail() {
     const date = new Date(wastage?.wastageDate ?? wastage?.createdAt).toLocaleDateString();
 
     return (
-        <div className="h-screen flex flex-col bg-[var(--app-bg)]">
-            {/* Header */}
-            <div className="flex-none px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate("/wastage")}
-                            className="p-2 rounded-lg hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--ink)]"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-[var(--ink)]">{wastage?.wastageNumber}</h1>
-                            <p className="text-sm text-[var(--muted)]">{labels.wastageDetails || "Wastage Details"}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowPdfModal(true)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
-                            title="Export PDF"
-                        >
-                            <Download size={15} />
-                            Export
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <>
+            <div className="min-h-screen bg-[var(--app-bg)]">
+                <div className="max-w-5xl mx-auto px-6 py-8">
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-6xl mx-auto">
-                    {/* Status row */}
-                    <div className="flex items-center justify-between mb-6">
-                        <span
-                            className="px-4 py-2 rounded-full text-sm font-medium"
-                            style={{ background: statusStyle.background, color: statusStyle.color }}
-                        >
-                            {statusStyle.text}
-                        </span>
-                    </div>
-
-                    <div className="border-b border-[var(--border)] my-6" />
-
-                    {/* Wastage Information */}
-                    <div className="mb-6">
-                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3">Wastage Information</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate("/wastage")}
+                                className="p-2 -ml-2 hover:bg-[var(--hover)] rounded-lg transition-all"
+                            >
+                                <ArrowLeft size={20} className="text-[var(--ink)]" />
+                            </button>
                             <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Wastage Number</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.wastageNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Reason</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{wastage?.reason?.replace(/_/g, " ") || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Wastage Date</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{date}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Status</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{statusStyle.text}</p>
+                                <h1 className="text-2xl font-bold text-[var(--ink)] font-display leading-tight">
+                                    {labels.wastageDetails || "Wastage Details"}
+                                </h1>
+                                <p className="text-sm text-[var(--muted)]">
+                                    {wastage?.wastageNumber || "—"} · {date}
+                                </p>
                             </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowPdfModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all shadow-sm"
+                            >
+                                <Download size={15} />
+                                Export
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Paper sheet - Invoice-style layout */}
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm px-8 py-8">
+
+                        {/* Company Header */}
+                        <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center leading-none mb-2">
+                                <span className="text-3xl font-extrabold tracking-wide text-[var(--ink)]" style={{ letterSpacing: "2px" }}>LOGIN</span>
+                                <span className="text-xs font-semibold tracking-[0.3em] text-[var(--muted)] mt-1">LARAIB</span>
+                            </div>
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-center text-[var(--ink)] mb-6">
+                            Afrasiab Mobile Accesories
+                        </h2>
+                        <p className="text-center text-sm font-semibold text-[var(--muted)] -mt-4 mb-6 uppercase tracking-wide">
+                            {labels.wastageDetails || "Wastage Details"}
+                        </p>
+
+                        {/* Wastage Meta Row */}
+                        <div className="flex justify-between items-start mb-6 gap-6">
+                            <div>
+                                <p className="text-xs font-semibold text-[var(--muted)] mb-1">Reason:</p>
+                                <p className="text-sm font-bold text-[var(--ink)] capitalize">{wastage?.reason?.replace(/_/g, " ") || "—"}</p>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[240px]">
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Wastage #: {wastage?.wastageNumber || "—"}</span>
+                                    <span className="font-semibold text-[var(--ink)]">Date: {date}</span>
+                                </div>
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Status:</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                        status === "approved" ? "bg-green-100 text-green-700" :
+                                        status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                                        status === "rejected" ? "bg-red-100 text-red-700" :
+                                        "bg-gray-100 text-gray-700"
+                                    }`}>{statusStyle.text}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         {wastage?.notes && (
-                            <p className="text-sm text-[var(--muted)] mt-4 italic">{wastage.notes}</p>
-                        )}
-                    </div>
-
-                    <div className="border-b border-[var(--border)] my-6" />
-
-                    {/* Financial Details */}
-                    <div className="mb-6">
-                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3">Financial Details</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Items</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.totalItems || wastage?.items?.length || 0}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Quantity</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{wastage?.totalQuantity || 0}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-wider text-[var(--muted)] mb-1">Total Loss Amount</p>
-                                <p className="text-sm font-semibold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-b border-[var(--border)] my-6" />
-
-                    {/* Items - Single Sheet Preview */}
-                    <div className="mb-6">
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
-                                Wasted Items ({wastage?.items?.length || 0})
+                            <p className="text-sm text-[var(--muted)] mb-6 italic">
+                                {wastage.notes}
                             </p>
+                        )}
+
+                    {/* Financial KPI row */}
+                    <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Items</p>
+                            <p className="text-2xl font-bold text-[var(--ink)]">{wastage?.totalItems || wastage?.items?.length || 0}</p>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Quantity</p>
+                            <p className="text-2xl font-bold text-[var(--ink)]">{wastage?.totalQuantity || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Loss Amount</p>
+                            <p className="text-2xl font-bold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    {/* Items Table - Invoice style */}
+                    <table className="w-full border-collapse mb-4 text-sm">
+                        <thead>
+                            <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
+                                <th className="px-3 py-2 text-left font-semibold text-white">#</th>
+                                <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Cost Price</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Loss Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {wastage?.items?.map((item, index) => (
+                                <React.Fragment key={index}>
                                     <tr className="border-b border-[var(--border)]">
-                                        <th className="px-4 py-3 text-left text-[var(--muted)] font-medium">{labels.productName || "Product"}</th>
-                                        <th className="px-4 py-3 text-center text-[var(--muted)] font-medium">{labels.quantity || "Qty"}</th>
-                                        <th className="px-4 py-3 text-right text-[var(--muted)] font-medium">{labels.costPrice || "Cost Price"}</th>
-                                        <th className="px-4 py-3 text-right text-[var(--muted)] font-medium">{labels.lossAmount || "Loss Amount"}</th>
+                                        <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
+                                        <td className="px-3 py-2 text-[var(--ink)]">
+                                            {item.product?.name || item.productName || "—"}
+                                            {item.product?._id && <span className="text-xs text-[var(--muted)] block">ID: {item.product._id}</span>}
+                                            {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-[var(--ink)]">{item.quantity || 0}</td>
+                                        <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {wastage?.items?.map((item, index) => (
-                                        <React.Fragment key={index}>
-                                            <tr className="border-b border-[var(--border)]">
-                                                <td className="px-4 py-3 text-[var(--ink)]">
-                                                    <p className="font-medium">{item.product?.name || item.productName || "—"}</p>
-                                                    {item.product?._id && <p className="text-xs text-[var(--muted)]">ID: {item.product._id}</p>}
-                                                    {item.batchNumber && <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>}
-                                                </td>
-                                                <td className="px-4 py-3 text-center text-[var(--ink)]">{item.quantity || 0}</td>
-                                                <td className="px-4 py-3 text-right text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
-                                            </tr>
-                                            <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
-                                                <td colSpan="4" className="px-4 py-3">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                        <div className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
-                                                            <p className="text-xs font-semibold text-[var(--muted)] mb-2">Item Details</p>
-                                                            <div className="text-xs space-y-1">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Product ID:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">{item.product?._id || item.productId || "—"}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Product Name:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">{item.product?.name || item.productName || "—"}</span>
-                                                                </div>
-                                                                {item.batchNumber && (
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-[var(--muted)]">Batch Number:</span>
-                                                                        <span className="font-mono text-[var(--ink)]">{item.batchNumber}</span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Quantity:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">{item.quantity || 0}</span>
-                                                                </div>
-                                                            </div>
+                                    <tr>
+                                        <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Item Details</p>
+                                                    <div className="text-xs space-y-1">
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Product ID:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.product?._id || item.productId || "—"}</span>
                                                         </div>
-                                                        <div className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
-                                                            <p className="text-xs font-semibold text-[var(--muted)] mb-2">Loss Calculation</p>
-                                                            <div className="text-xs space-y-1">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Cost Price:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Quantity:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">{item.quantity || 0}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-[var(--muted)]">Line Total:</span>
-                                                                    <span className="font-mono text-[var(--ink)]">Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="h-px bg-[var(--border)] my-1"></div>
-                                                                <div className="flex justify-between font-semibold">
-                                                                    <span className="text-[var(--ink)]">Loss Amount:</span>
-                                                                    <span className="font-mono text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</span>
-                                                                </div>
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Product Name:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.product?.name || item.productName || "—"}</span>
+                                                        </div>
+                                                        {item.batchNumber && (
+                                                            <div className="flex justify-between">
+                                                                <span style={{ color: "var(--ink)" }}>Batch Number:</span>
+                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{item.batchNumber}</span>
                                                             </div>
+                                                        )}
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
                                                         </div>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        </React.Fragment>
-                                    ))}
-                                </tbody>
-                                <tfoot style={{ background: "var(--surface-muted)", borderTop: "2px solid var(--border)" }}>
-                                    <tr>
-                                        <td colSpan="3" className="px-4 py-3 text-right font-bold text-[var(--ink)]">
-                                            {labels.totalLoss || "Total Loss"}:
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-bold text-red-600 text-lg">
-                                            Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
+                                                </div>
+                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Loss Calculation</p>
+                                                    <div className="text-xs space-y-1">
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Cost Price:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.costPrice || 0).toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span style={{ color: "var(--ink)" }}>Line Total:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="h-px bg-[var(--border)] my-1"></div>
+                                                        <div className="flex justify-between font-semibold">
+                                                            <span style={{ color: "var(--ink)" }}>Loss Amount:</span>
+                                                            <span className="font-mono text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
-                                </tfoot>
-                            </table>
+                                </React.Fragment>
+                            ))}
+                            <tr className="font-semibold" style={{ background: "var(--surface-muted)" }}>
+                                <td className="px-3 py-2 text-[var(--ink)]" colSpan={4}>Total Loss</td>
+                                <td className="px-3 py-2 text-right font-bold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* Sign-off Bar */}
+                    <div className="border border-[var(--border)] mt-6 mb-4">
+                        <div className="flex text-sm">
+                            <div className="w-1/2 text-center py-3 border-r border-[var(--border)]">
+                                <p>Prepared By</p>
+                                <p className="font-semibold mt-1 text-[var(--ink)]">SyedSoft</p>
+                            </div>
+                            <div className="w-1/2 text-center py-3">
+                                <p>Approved By</p>
+                                <p className="font-semibold mt-1 text-[var(--ink)]">Afrasiab Mobile Accesories</p>
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex justify-between items-start text-xs text-[var(--muted)]">
+                        <p className="italic max-w-[70%]">This is a computer generated document, does not required any signature</p>
+                        <p>Print Time: {new Date().toLocaleString()}</p>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -243,6 +254,6 @@ export default function WastageDetail() {
                     <WastageDetailPdfTemplate wastage={wastage} labels={labels} />
                 </PdfModal>
             )}
-        </div>
+        </>
     );
 }

@@ -1,14 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrder, useGetOrderPayments, useGetOrderPaymentStatus, useDeleteOrderPayment, useRecalculateOrderPaidAmount } from "../services/orders.service.js";
-import { Receipt, Package, DollarSign, CreditCard, FileText, Copy, Download, Trash2, RefreshCw, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Receipt, Download, RefreshCw, ArrowLeft } from "lucide-react";
 import OrderDetailsPdfTemplate from "../components/OrderDetailsPdfTemplate.jsx";
 import OrderPaymentPdfTemplate from "../components/OrderPaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { useState } from "react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { usePermissionGuard } from "../../../shared/hooks/usePermissionGuard.js";
-import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
-import React from "react";
 
 export default function OrderDetailsPage() {
     const { id } = useParams();
@@ -29,6 +27,10 @@ export default function OrderDetailsPage() {
 
     const totalPaid = paymentStatus?.totalPaid ?? order?.paid ?? 0;
     const remainingAmount = paymentStatus?.remainingAmount ?? order?.remainingAmount ?? 0;
+    const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—";
+    const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
+    const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
+    const totalItemTax = (order?.items || []).reduce((sum, it) => sum + ((it.taxAmount || 0) * (it.quantity || 0)), 0);
 
     const handleDeletePayment = async (paymentId) => {
         try {
@@ -57,12 +59,6 @@ export default function OrderDetailsPage() {
     const handlePaymentPdf = (payment) => {
         setSelectedPayment(payment);
         setShowPaymentPdfModal(true);
-    };
-
-    const handleCopyOrderNumber = () => {
-        if (order?.orderNumber) {
-            navigator.clipboard.writeText(order.orderNumber);
-        }
     };
 
     if (isLoading) {
@@ -118,13 +114,6 @@ export default function OrderDetailsPage() {
                                 </h1>
                                 <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
                                     <span>{order.orderNumber || "—"}</span>
-                                    <button
-                                        onClick={handleCopyOrderNumber}
-                                        className="p-0.5 rounded hover:bg-[var(--hover)] transition-all"
-                                        title="Copy order number"
-                                    >
-                                        <Copy size={13} className="text-[var(--muted)]" />
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -149,369 +138,156 @@ export default function OrderDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Paper sheet */}
+                    {/* Paper sheet - PDF-style layout */}
                     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm px-8 py-8">
 
-                        {/* Status row */}
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${
-                                    order?.status === "completed" ? "bg-green-100 text-green-700" :
-                                    order?.status === "pending" ? "bg-yellow-100 text-yellow-700" :
-                                    order?.status === "cancelled" ? "bg-red-100 text-red-700" :
-                                    "bg-blue-100 text-blue-700"
-                                }`}>
-                                    {order?.status || "Unknown"}
-                                </span>
-                                {order?.isPosOrder && (
-                                    <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700">
-                                        POS Order
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-[var(--muted)]">
-                                Created {new Date(order?.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
-                            </p>
-                        </div>
-
-                        <div className="h-px bg-[var(--border)] mt-6 mb-2" />
-
-                        {/* Order Details */}
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] pt-3 pb-3">Order Details</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Order ID</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] truncate">{order?._id || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Customer Name</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{order?.customerName || "Walk-in Customer"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Customer Type</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{order?.customerType || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Customer ID</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] truncate">{order?.customerId || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Served By</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{order?.waiter || "Not specified"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Order Type</p>
-                                <p className="text-sm font-semibold text-[var(--ink)] capitalize">{order?.orderType || "Retail"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Staff ID</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{order?.staffId || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Last Updated</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">
-                                    {order?.updatedAt ? new Date(order.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : "—"}
-                                </p>
+                        {/* Company Header */}
+                        <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center leading-none mb-2">
+                                <span className="text-3xl font-extrabold tracking-wide text-[var(--ink)]" style={{ letterSpacing: "2px" }}>LOGIN</span>
+                                <span className="text-xs font-semibold tracking-[0.3em] text-[var(--muted)] mt-1">LARAIB</span>
                             </div>
                         </div>
 
-                        {order?.note && (
-                            <p className="text-sm text-[var(--muted)] mt-4 italic">
-                                {order.note}
-                            </p>
-                        )}
+                        <h2 className="text-2xl font-bold text-center text-[var(--ink)] mb-6">
+                            Afrasiab Mobile Accesories
+                        </h2>
 
-                        <div className="h-px bg-[var(--border)] mt-7 mb-2" />
-
-                        {/* Financial Details */}
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] pt-3 pb-3">Financial Details</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-6 gap-y-4">
+                        {/* Customer / Order Meta Row */}
+                        <div className="flex justify-between items-start mb-6 gap-6">
                             <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Subtotal</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">Rs {(order?.subtotal ?? 0).toLocaleString()}</p>
+                                <p className="text-xs font-semibold text-[var(--muted)] mb-1">Customer:</p>
+                                <p className="text-sm font-bold text-[var(--ink)] uppercase">{order?.customerName || "Walk-in Customer"}</p>
+                                {order?.customerType && <p className="text-xs text-[var(--muted)] capitalize">Type: {order.customerType}</p>}
+                                {order?.customerId && <p className="text-xs text-[var(--muted)]">Customer ID: {order.customerId}</p>}
                             </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Tax</p>
-                                <p className="text-sm font-semibold text-[var(--ink)]">Rs {(order?.totalTaxAmount ?? 0).toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Discount</p>
-                                <p className="text-sm font-semibold text-red-600">Rs {(order?.discountAmount ?? 0).toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Paid</p>
-                                <p className="text-sm font-semibold text-green-600">Rs {totalPaid.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Remaining</p>
-                                <p className="text-sm font-semibold text-orange-600">Rs {remainingAmount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Amount</p>
-                                <p className="text-sm font-semibold text-[var(--accent-2)]">Rs {(order?.totalAmount ?? 0).toLocaleString()}</p>
+                            <div className="flex flex-col gap-2 min-w-[240px]">
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Order #: {order?.orderNumber || "—"}</span>
+                                    <span className="font-semibold text-[var(--ink)]">Date: {date}</span>
+                                </div>
+                                <div className="border border-[var(--border)] px-3 py-2 flex justify-between text-sm" style={{ background: "var(--surface-muted)" }}>
+                                    <span className="font-semibold text-[var(--ink)]">Status:</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                        order?.status === "completed" ? "bg-green-100 text-green-700" :
+                                        order?.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                                        order?.status === "cancelled" ? "bg-red-100 text-red-700" :
+                                        "bg-blue-100 text-blue-700"
+                                    }`}>{order?.status || "—"}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="h-px bg-[var(--border)] mt-7 mb-2" />
+                        {/* Items Table - PDF style */}
+                        <table className="w-full border-collapse mb-4 text-sm">
+                            <thead>
+                                <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">#</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Unit Price</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Disc</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Tax</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(order?.items || []).map((item, index) => {
+                                    const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
+                                    const itemTax = (item.taxAmount || 0) * (item.quantity || 0);
+                                    const itemDiscount = item.discountAmount || 0;
+                                    const finalTotal = lineTotal - itemDiscount + itemTax;
 
-                        {/* Items */}
-                        <div className="flex items-center justify-between pt-3 pb-3">
-                            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                                Items ({order?.items?.length || 0})
-                            </p>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-[var(--border)]">
-                                        <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Product</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Portion</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Qty</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Unit Price</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Tax</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Discount</th>
-                                        <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Total</th>
-                                        <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--border)]">
-                                    {order?.items?.map((item, index) => {
-                                        const isItemExpanded = expandedItems[index];
-                                        const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                                        const totalTax = (item.taxAmount || 0) * (item.quantity || 0);
-                                        const totalDiscount = item.discountAmount || 0;
-                                        const finalTotal = lineTotal - totalDiscount + totalTax;
-                                        return (
-                                            <React.Fragment key={index}>
-                                                <tr>
-                                                    <td className="py-3">
-                                                        <p className="font-medium text-[var(--ink)]">{item.name || "—"}</p>
-                                                        {item.batchNumber && (
-                                                            <p className="text-xs text-[var(--muted)]">Batch: {item.batchNumber}</p>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 text-center">
-                                                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--surface-muted)] text-[var(--ink)] capitalize">
-                                                            {item.portionType || "full"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 text-center text-[var(--ink)]">{item.quantity || 0}</td>
-                                                    <td className="py-3 text-right text-[var(--ink)]">Rs {(item.unitPrice || 0).toLocaleString()}</td>
-                                                    <td className="py-3 text-right text-[var(--ink)]">
-                                                        <div className="text-xs">
-                                                            <span className="text-[var(--muted)]">{item.taxPercent || 0}%</span>
-                                                            {item.taxAmount > 0 && <span className="ml-1">({totalTax.toFixed(2)})</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 text-right text-red-600">
-                                                        <div className="text-xs">
-                                                            <span>{item.discountPercent || 0}%</span>
-                                                            {item.discountAmount > 0 && <span className="ml-1">({totalDiscount.toFixed(2)})</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 text-right font-semibold text-[var(--accent-2)]">
-                                                        Rs {finalTotal.toLocaleString()}
-                                                    </td>
-                                                    <td className="py-3">
-                                                        <button
-                                                            onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
-                                                            className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
-                                                            title={isItemExpanded ? "Hide details" : "Show details"}
-                                                        >
-                                                            {isItemExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {isItemExpanded && (
-                                                    <tr>
-                                                        <td colSpan="8" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Item Details</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Product ID:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.product || "—"}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Original Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.originalPrice || 0).toLocaleString()}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Batch ID:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.batchId || "—"}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Batch Number:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.batchNumber || "—"}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Price Calculation</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Unit Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.unitPrice || 0).toLocaleString()}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Line Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {lineTotal.toLocaleString()}</span>
-                                                                        </div>
-                                                                        <div className="h-px my-1" style={{ background: "var(--border)" }}></div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Tax ({item.taxPercent || 0}%):</span>
-                                                                            <span className="font-mono text-green-600" style={{ color: "var(--ink)" }}>Rs {totalTax.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount ({item.discountPercent || 0}%):</span>
-                                                                            <span className="font-mono text-red-600" style={{ color: "var(--ink)" }}>-Rs {totalDiscount.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="h-px my-1" style={{ background: "var(--border)" }}></div>
-                                                                        <div className="flex justify-between font-semibold">
-                                                                            <span style={{ color: "var(--ink)" }}>Final Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {finalTotal.toLocaleString()}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="h-px bg-[var(--border)] mt-7 mb-2" />
-
-                        {/* Payments */}
-                        <div className="flex items-center justify-between pt-3 pb-3">
-                            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                                Payments ({paymentStatus.transactionCount || payments.length})
-                            </p>
-                        </div>
-
-                        {payments.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-[var(--border)]">
-                                            <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Date</th>
-                                            <th className="py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Method</th>
-                                            <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Amount</th>
-                                            <th className="py-2 text-right text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider">Notes</th>
-                                            <th className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--muted)] tracking-wider"></th>
+                                    return (
+                                        <tr key={index} className="border-b border-[var(--border)]">
+                                            <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
+                                            <td className="px-3 py-2 text-[var(--ink)]">
+                                                {item.name || "—"}
+                                                {item.portionType && <span className="text-xs text-[var(--muted)] capitalize"> ({item.portionType})</span>}
+                                                {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
+                                            </td>
+                                            <td className="px-3 py-2 text-right text-[var(--ink)]">{item.quantity || 0}</td>
+                                            <td className="px-3 py-2 text-right text-[var(--ink)]">{(item.unitPrice || 0).toLocaleString()}</td>
+                                            <td className="px-3 py-2 text-right text-red-600">
+                                                {item.discountPercent || 0}%
+                                                {itemDiscount > 0 && <span className="block text-[10px] text-[var(--muted)]">-{itemDiscount.toLocaleString()}</span>}
+                                            </td>
+                                            <td className="px-3 py-2 text-right text-green-700">
+                                                {item.taxPercent || 0}%
+                                                {itemTax > 0 && <span className="block text-[10px] text-[var(--muted)]">+{itemTax.toLocaleString()}</span>}
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">{finalTotal.toLocaleString()}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[var(--border)]">
-                                        {payments.map((payment, index) => {
-                                            const isPaymentExpanded = expandedItems[`payment-${index}`];
-                                            return (
-                                                <React.Fragment key={index}>
-                                                    <tr>
-                                                        <td className="py-3 text-sm text-[var(--ink)]">
-                                                            {new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}
-                                                        </td>
-                                                        <td className="py-3">
-                                                            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                                                payment.method === 'cash' ? 'bg-green-100 text-green-800' :
-                                                                payment.method === 'credit' ? 'bg-blue-100 text-blue-800' :
-                                                                'bg-purple-100 text-purple-800'
-                                                            }`}>
-                                                                {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
-                                                                 payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
-                                                                 payment.method || "—"}</span>
-                                                        </td>
-                                                        <td className="py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(payment.amount || 0).toLocaleString()}</td>
-                                                        <td className="py-3 text-right text-[var(--muted)]">{payment.notes || "—"}</td>
-                                                        <td className="py-3">
-                                                            <div className="flex gap-1">
-                                                                <button
-                                                                    onClick={() => handlePaymentPdf(payment)}
-                                                                    className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
-                                                                    title="Download Payment Receipt"
-                                                                >
-                                                                    <Download size={15} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setExpandedItems(prev => ({ ...prev, [`payment-${index}`]: !prev[`payment-${index}`] }))}
-                                                                    className="p-1.5 hover:bg-[var(--hover)] text-[var(--muted)] rounded-lg"
-                                                                    title={isPaymentExpanded ? "Hide details" : "Show details"}
-                                                                >
-                                                                    {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    {isPaymentExpanded && (
-                                                        <tr>
-                                                            <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Payment Items</p>
-                                                                    <div className="overflow-x-auto">
-                                                                        <table className="w-full text-xs">
-                                                                            <thead>
-                                                                                <tr className="border-b border-[var(--border)]">
-                                                                                    <th className="px-3 py-2 text-left text-[var(--muted)] font-medium">Product</th>
-                                                                                    <th className="px-3 py-2 text-center text-[var(--muted)] font-medium">Portion</th>
-                                                                                    <th className="px-3 py-2 text-center text-[var(--muted)] font-medium">Qty</th>
-                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Unit Price</th>
-                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Tax</th>
-                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Discount</th>
-                                                                                    <th className="px-3 py-2 text-right text-[var(--muted)] font-medium">Total</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                {order?.items?.map((item, itemIndex) => {
-                                                                                    const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                                                                                    const totalTax = (item.taxAmount || 0) * (item.quantity || 0);
-                                                                                    const totalDiscount = item.discountAmount || 0;
-                                                                                    const finalTotal = lineTotal - totalDiscount + totalTax;
-                                                                                    return (
-                                                                                        <tr key={itemIndex} className="border-b border-[var(--border)]">
-                                                                                            <td className="px-3 py-2 text-[var(--ink)]">{item.name || "—"}</td>
-                                                                                            <td className="px-3 py-2 text-center capitalize text-[var(--ink)]">{item.portionType || "full"}</td>
-                                                                                            <td className="px-3 py-2 text-center text-[var(--ink)]">{item.quantity || 0}</td>
-                                                                                            <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {(item.unitPrice || 0).toLocaleString()}</td>
-                                                                                            <td className="px-3 py-2 text-right text-[var(--ink)]">
-                                                                                                <div className="text-xs">
-                                                                                                    <span className="text-[var(--muted)]">{item.taxPercent || 0}%</span>
-                                                                                                    {item.taxAmount > 0 && <span className="ml-1">({totalTax.toFixed(2)})</span>}
-                                                                                                </div>
-                                                                                            </td>
-                                                                                            <td className="px-3 py-2 text-right text-red-600">
-                                                                                                <div className="text-xs">
-                                                                                                    <span>{item.discountPercent || 0}%</span>
-                                                                                                    {item.discountAmount > 0 && <span className="ml-1">({totalDiscount.toFixed(2)})</span>}
-                                                                                                </div>
-                                                                                            </td>
-                                                                                            <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {finalTotal.toLocaleString()}</td>
-                                                                                        </tr>
-                                                                                    );
-                                                                                })}
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                    );
+                                })}
+                                <tr className="font-semibold" style={{ background: "var(--surface-muted)" }}>
+                                    <td className="px-3 py-2 text-[var(--ink)]" colSpan={2}>Sub Total</td>
+                                    <td className="px-3 py-2 text-right text-[var(--ink)]">{totalQty}</td>
+                                    <td className="px-3 py-2"></td>
+                                    <td className="px-3 py-2 text-right text-[var(--ink)]">{totalItemDiscount.toLocaleString()}</td>
+                                    <td className="px-3 py-2 text-right text-[var(--ink)]">{totalItemTax.toLocaleString()}</td>
+                                    <td className="px-3 py-2 text-right text-[var(--ink)]">{(order?.subtotal ?? 0).toLocaleString()}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        {/* Payment Summary / Totals Row */}
+                        <div className="flex justify-between gap-6 mb-6">
+                            <div className="border border-[var(--border)] p-3 text-sm min-w-[260px]" style={{ background: "var(--surface-muted)" }}>
+                                <p className="font-semibold mb-2 text-[var(--ink)]">Payment Summary:</p>
+                                <div className="flex justify-between py-1">
+                                    <span>Total Amount</span>
+                                    <span>{(order?.totalAmount ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between py-1">
+                                    <span>Total Paid</span>
+                                    <span>{totalPaid.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between py-1 font-bold border-t border-[var(--border)] mt-1 pt-1">
+                                    <span>Remaining Balance</span>
+                                    <span>{remainingAmount.toLocaleString()}</span>
+                                </div>
                             </div>
-                        ) : (
-                            <p className="text-sm text-[var(--muted)] py-6 text-center">No payments recorded yet</p>
-                        )}
+
+                            <div className="border border-[var(--border)] min-w-[280px] text-sm">
+                                <div className="flex justify-between px-3 py-2 border-b border-[var(--border)]">
+                                    <span>Subtotal</span>
+                                    <span>{(order?.subtotal ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between px-3 py-2 border-b border-[var(--border)] text-red-600">
+                                    <span>Discount</span>
+                                    <span>-{(order?.discountAmount ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between px-3 py-2 border-b border-[var(--border)] text-green-700">
+                                    <span>Tax</span>
+                                    <span>+{(order?.totalTaxAmount ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between px-3 py-2 font-bold text-[var(--accent-2)]">
+                                    <span>Total Amount</span>
+                                    <span>{(order?.totalAmount ?? 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sign-off Bar */}
+                        <div className="border border-[var(--border)] mb-4">
+                            <div className="flex text-sm">
+                                <div className="w-1/2 text-center py-3 border-r border-[var(--border)]">
+                                    <p>Prepared By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">SyedSoft</p>
+                                </div>
+                                <div className="w-1/2 text-center py-3">
+                                    <p>Approved By</p>
+                                    <p className="font-semibold mt-1 text-[var(--ink)]">Afrasiab Mobile Accesories</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-between items-start text-xs text-[var(--muted)]">
+                            <p className="italic max-w-[70%]">This is a computer generated document, does not required any signature</p>
+                            <p>Print Time: {new Date().toLocaleString()}</p>
+                        </div>
                     </div>
                 </div>
             </div>
