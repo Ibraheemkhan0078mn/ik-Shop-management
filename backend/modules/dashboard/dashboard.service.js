@@ -790,7 +790,7 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
                 quantity: 0
             },
             options: {
-                populate: ['product'],
+                populate: ['product', 'supplier'],
                 sort: { updatedAt: -1 },
                 skip: (page - 1) * limit,
                 limit
@@ -802,9 +802,12 @@ export const getOutOfStockProducts = async (page = 1, limit = 10) => {
 
         const outOfStockBatches = batchesWithStatus.filter(b => b.stockStatus === 'empty');
 
-        const total = await countBatchService({
-            isActive: true,
-            quantity: 0
+        const total = await countDocs({
+            model: BatchModel,
+            filter: {
+                isActive: true,
+                quantity: 0
+            }
         });
 
         const data = outOfStockBatches.map(b => ({
@@ -973,7 +976,6 @@ export const getSalesByCategory = async (range = '30D') => {
         });
 
         const products = await findProductService({ isActive: true }, { populate: 'category' });
-        const categories = await findCategoryService({});
 
         // Create lookup maps
         const productMap = {};
