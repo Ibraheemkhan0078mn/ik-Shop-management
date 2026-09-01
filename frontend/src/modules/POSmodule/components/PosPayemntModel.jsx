@@ -400,7 +400,15 @@ export default function PosPaymentModal({
             if (selectedCustomer?.qarzaAccountId) {
                 setQarzaAccountId(selectedCustomer.qarzaAccountId);
                 setHybridQarzaAccountId(selectedCustomer.qarzaAccountId);
+            } else {
+                // Clear qarza accounts if customer doesn't have one
+                setQarzaAccountId("");
+                setHybridQarzaAccountId("");
             }
+        } else {
+            // Clear qarza accounts when switching to walkin or no customer selected
+            setQarzaAccountId("");
+            setHybridQarzaAccountId("");
         }
     }, [selectedCustomerId, customerType, customersData]);
 
@@ -755,13 +763,15 @@ export default function PosPaymentModal({
                                                     onChange={(value) => setQarzaAccountId(value)}
                                                     placeholder={labels.searchAccount}
                                                     type="customer"
+                                                    disabled={customerType === "regular" && !!selectedCustomerId}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowQarzaModal(true)}
                                                     className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
-                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
+                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)', opacity: customerType === "regular" && selectedCustomerId ? 0.5 : 1, cursor: customerType === "regular" && selectedCustomerId ? 'not-allowed' : 'pointer' }}
                                                     title="Create new account"
+                                                    disabled={customerType === "regular" && !!selectedCustomerId}
                                                 >
                                                     <Plus size={17} strokeWidth={2.25} />
                                                 </button>
@@ -778,7 +788,10 @@ export default function PosPaymentModal({
                                                     className="rounded-xl px-4 py-3 border text-xs sm:text-sm"
                                                     style={{ backgroundColor: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.3)', color: 'var(--accent-2)' }}
                                                 >
-                                                    Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be charged to this qarza account.
+                                                    {customerType === "regular" && selectedCustomerId 
+                                                        ? <>Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be charged to customer's qarza account (auto-selected).</>
+                                                        : <>Full payment of <span className="font-semibold">Rs {total.toLocaleString()}</span> will be charged to this qarza account.</>
+                                                    }
                                                 </div>
                                             </div>
                                         </div>
@@ -850,13 +863,15 @@ export default function PosPaymentModal({
                                                     onChange={(value) => setHybridQarzaAccountId(value)}
                                                     placeholder={labels.selectQarzaAccount}
                                                     type="customer"
+                                                    disabled={customerType === "regular" && !!selectedCustomerId}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowQarzaModal(true)}
                                                     className="flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 shrink-0"
-                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)' }}
+                                                    style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--accent-2)', opacity: customerType === "regular" && selectedCustomerId ? 0.5 : 1, cursor: customerType === "regular" && selectedCustomerId ? 'not-allowed' : 'pointer' }}
                                                     title="Create new account"
+                                                    disabled={customerType === "regular" && !!selectedCustomerId}
                                                 >
                                                     <Plus size={17} strokeWidth={2.25} />
                                                 </button>

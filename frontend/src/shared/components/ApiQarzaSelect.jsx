@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import { QarzaService } from "../../modules/qarza/api/qarzaSearchApi.js";
 
-const ApiQarzaSelect = ({ value, onChange, placeholder = "Search qarza accounts...", type = null }) => {
+const ApiQarzaSelect = ({ value, onChange, placeholder = "Search qarza accounts...", type = null, disabled = false }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
@@ -51,13 +51,20 @@ const ApiQarzaSelect = ({ value, onChange, placeholder = "Search qarza accounts.
 
     return (
         <div ref={ref} className="relative w-full">
-            <button type="button" onClick={() => setOpen(p => !p)}
+            <button type="button" onClick={() => !disabled && setOpen(p => !p)}
+                disabled={disabled}
                 className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition text-left"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: selected ? "var(--ink)" : "var(--muted)" }}>
+                style={{ 
+                    background: "var(--surface)", 
+                    border: "1px solid var(--border)", 
+                    color: selected ? "var(--ink)" : "var(--muted)",
+                    opacity: disabled ? 0.5 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer'
+                }}>
                 <span className="truncate">{selected?.label || placeholder}</span>
                 <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
             </button>
-            {open && (
+            {open && !disabled && (
                 <div className="absolute z-50 w-full mt-1 rounded-xl shadow-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                     <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
                         <input 
