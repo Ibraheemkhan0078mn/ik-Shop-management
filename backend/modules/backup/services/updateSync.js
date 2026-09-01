@@ -1,13 +1,12 @@
 import { getLocalChangeTrackModel } from "../../../configs/connect.db.js";
-import { getOnlineChangeTrackModel } from "../../../configs/onlineConnect.db.js";
-import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
+import { uploadChangeTrack } from "./uploadChangeTrack.js";
 
 export async function onlineDocsUploadSyncUpdate(modelsArray, uploadType = "required", loggedInUserData) {
   try {
     if (uploadType === "all") {
-      await allUpdateUpload(modelsArray);
+      await allUpdateUpload(modelsArray, loggedInUserData);
     } else {
-      await requiredUpdateUpload(modelsArray);
+      await requiredUpdateUpload(modelsArray, loggedInUserData);
     }
   } catch (error) {
     console.log(error?.message || error?.stack);
@@ -105,11 +104,10 @@ async function allUpdateUpload(modelsArray) {
   }
 }
 
-async function requiredUpdateUpload(modelsArray) {
+async function requiredUpdateUpload(modelsArray, loggedInUserData) {
   try {
     const localChangeTrackModel = getLocalChangeTrackModel();
-    const onlineChangeTrackModel = getOnlineChangeTrackModel();
-    const { deviceId } = await deviceIdentityCheckFunction();
+    const userId = loggedInUserData?._id?.toString();
 
     const updateChangeTrackDocs = await localChangeTrackModel.find({ operationType: "update" }).lean();
     if (updateChangeTrackDocs.length === 0) return;
@@ -130,30 +128,31 @@ async function requiredUpdateUpload(modelsArray) {
       const operations = await buildBulkOps(eachModel, insertIds, updateIds);
 
       if (operations.length > 0) {
+        // Upload documents to online DB
         const bulkWriteResult = await eachModel.online.bulkWrite(operations);
 
-        const syncedDocumentIds = new Set(
-          [...insertIds, ...updateIds].map(id => id.toString())
-        );
-        const syncedChangeTrackDocs = modelChangeTrackDocs.filter(doc =>
-          syncedDocumentIds.has(doc.documentId?.toString())
-        );
+        // If documents uploaded successfully, upload their change tracks
+        if (isBulkWriteComplete(bulkWriteResult, operations.length)) {
+          const syncedDocumentIds = new Set([...insertIds, ...updateIds].map(id => id.toString()));
+          const syncedChangeTrackDocs = modelChangeTrackDocs.filter(doc =>
+            syncedDocumentIds.has(doc.documentId?.toString())
+          );
 
-        const changeTrackOperations = syncedChangeTrackDocs.map(doc => ({
-          updateOne: {
-            filter: { _id: doc._id },
-            update: { $set: { ...doc, updatedUsers: [deviceId] } },
-            upsert: true,
-          },
-        }));
+          // Upload change tracks using the new function
+          const changeTrackUploadResult = await uploadChangeTrack(
+            syncedChangeTrackDocs,
+            eachModel.online.modelName,
+            "update",
+            userId
+          );
 
-        const changeTrackResult = await onlineChangeTrackModel.bulkWrite(changeTrackOperations);
-
-        if (
-          isBulkWriteComplete(bulkWriteResult, operations.length) &&
-          isBulkWriteComplete(changeTrackResult, changeTrackOperations.length)
-        ) {
-          await localChangeTrackModel.deleteMany({ _id: { $in: syncedChangeTrackDocs.map(doc => doc._id) } });
+          // Clear local change tracks only if upload was successful
+          if (changeTrackUploadResult.success) {
+            await localChangeTrackModel.deleteMany({ 
+              _id: { $in: syncedChangeTrackDocs.map(doc => doc._id) } 
+            });
+            console.log(`✅ Cleared ${syncedChangeTrackDocs.length} local change tracks for ${eachModel.local.modelName}`);
+          }
         }
       } else {
         continue;

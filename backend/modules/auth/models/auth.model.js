@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        lastSyncTime: {
+            type: Date,
+            default: null,
+        },
         // Sync Fields
         createdTimeForSync: { type: Date, default: Date.now },
         updateTimeForSync: { type: Date, default: Date.now },

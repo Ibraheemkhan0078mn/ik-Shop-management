@@ -5,8 +5,10 @@ import {
   getLocalActivityLogModel,
   getLocalChangeTrackModel,
   getLocalDbInstance,
+  getLocalUserModel,
 } from "../../../configs/connect.db.js";
 import { getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
+import { uploadChangeTrack } from "./uploadChangeTrack.js";
 
 const ignoredModelNames = new Set([
   "Users",
@@ -24,7 +26,7 @@ function getOnlineModel(modelName, onlineDbInstance, localModel) {
   );
 }
 
-export async function liveUpload(operation, modelName, documentId) {
+export async function liveUpload(operation, modelName, documentId, userId = null) {
   const onlineDbInstance = getOnlineDbInstance();
   if (!onlineDbInstance || onlineDbInstance.readyState !== 1) {
     return false;
@@ -64,7 +66,20 @@ export async function liveUpload(operation, modelName, documentId) {
     );
   }
 
+  // Upload change track to online DB
   const localChangeTrackModel = getLocalChangeTrackModel();
+  const changeTrackDoc = await localChangeTrackModel.findOne({
+    documentId: documentId.toString(),
+    modelName,
+    operationType: operation,
+  }).lean();
+
+  if (changeTrackDoc && userId) {
+    // Upload change track using the new function
+    await uploadChangeTrack([changeTrackDoc], modelName, operation, userId);
+  }
+
+  // Clear local change track after successful upload
   await localChangeTrackModel.deleteMany({
     documentId: documentId.toString(),
     modelName,
@@ -96,7 +111,8 @@ function buildDescription(operation, modelName, documentId, operatedBy) {
 export async function changeTrackDocsCreationFunc(
   operation = "update",
   modelName,
-  documentId
+  documentId,
+  userId = null
 ) {
   try {
 
@@ -218,7 +234,20 @@ export async function changeTrackDocsCreationFunc(
     }
     // ────────────────────────────────────────────────────────────────────────
 
-    liveUpload(operation, modelName, documentId).catch((syncErr) => {
+    // Attempt to get userId if not provided
+    if (!userId) {
+      try {
+        const LocalUserModel = getLocalUserModel();
+        const users = await LocalUserModel.find({ role: "admin" }).limit(1).lean();
+        if (users && users.length > 0) {
+          userId = users[0]._id.toString();
+        }
+      } catch (err) {
+        console.log("Could not fetch userId for live upload:", err);
+      }
+    }
+
+    liveUpload(operation, modelName, documentId, userId).catch((syncErr) => {
       console.log("Error while uploading live change to online DB: ", syncErr);
     });
 

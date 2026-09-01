@@ -6,6 +6,7 @@ import { onlineDocsUploadSyncInsert } from "./insertSync.js";
 import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 import { imageFullSync } from "./imageFullSync.js";
 import { cleanupStaleOnlineChangeTracks } from "./cleanupStaleChangeTracks.js";
+import { updateUserSyncTime } from "./updateUserSyncTime.js";
 
 
 
@@ -87,6 +88,11 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
         // NEW: Cleanup stale online change tracks (7+ days old)
         await cleanupStaleOnlineChangeTracks()
+
+        // Update user's lastSyncTime after successful sync
+        if (loggedInUserData?._id) {
+            await updateUserSyncTime(loggedInUserData._id.toString());
+        }
 
         // Keep old functions for backward compatibility
         // await imgDelete(modelArray, loggedInUserData)

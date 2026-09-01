@@ -1,14 +1,13 @@
 import { getLocalChangeTrackModel } from "../../../configs/connect.db.js";
-import { getOnlineChangeTrackModel } from "../../../configs/onlineConnect.db.js";
-import { deviceIdentityCheckFunction } from "./deviceIdentityCheckFunction.js";
+import { uploadChangeTrack } from "./uploadChangeTrack.js";
 
 export async function onlineDocsUploadSyncInsert(modelsArray, uploadType = "required", loggedInUserData) {
   try {
     console.log("The online docs uplaos sync inset is running", uploadType, loggedInUserData)
     if (uploadType === "all") {
-      await allInsertUpload(modelsArray);
+      await allInsertUpload(modelsArray, loggedInUserData);
     } else {
-      await requiredInsertUpload(modelsArray);
+      await requiredInsertUpload(modelsArray, loggedInUserData);
     }
   } catch (error) {
     console.log(error?.message || error?.stack);
@@ -108,11 +107,10 @@ async function allInsertUpload(modelsArray) {
   }
 }
 
-async function requiredInsertUpload(modelsArray) {
+async function requiredInsertUpload(modelsArray, loggedInUserData) {
   try {
     const localChangeTrackModel = getLocalChangeTrackModel();
-    const onlineChangeTrackModel = getOnlineChangeTrackModel();
-    const { deviceId } = await deviceIdentityCheckFunction();
+    const userId = loggedInUserData?._id?.toString();
 
     const createChangeTrackDocs = await localChangeTrackModel.find({ operationType: "create" }).lean();
     if (createChangeTrackDocs.length === 0) return;
@@ -133,25 +131,34 @@ async function requiredInsertUpload(modelsArray) {
       const operations = await buildBulkOps(eachModel, insertIds, updateIds);
 
       if (operations.length > 0) {
+        // Upload documents to online DB
         const bulkWriteResult = await eachModel.online.bulkWrite(operations);
 
-        const changeTrackOperations = modelChangeTrackDocs.map(doc => ({
-          updateOne: {
-            filter: { _id: doc._id },
-            update: { $set: { ...doc, updatedUsers: [deviceId] } },
-            upsert: true,
-          },
-        }));
+        // If documents uploaded successfully, upload their change tracks
+        if (isBulkWriteComplete(bulkWriteResult, operations.length)) {
+          const syncedDocumentIds = new Set([...insertIds, ...updateIds].map(id => id.toString()));
+          const syncedChangeTrackDocs = modelChangeTrackDocs.filter(doc =>
+            syncedDocumentIds.has(doc.documentId?.toString())
+          );
 
-        const changeTrackResult = await onlineChangeTrackModel.bulkWrite(changeTrackOperations);
+          // Upload change tracks using the new function
+          const changeTrackUploadResult = await uploadChangeTrack(
+            syncedChangeTrackDocs,
+            eachModel.online.modelName,
+            "create",
+            userId
+          );
 
-        if (
-          isBulkWriteComplete(bulkWriteResult, operations.length) &&
-          isBulkWriteComplete(changeTrackResult, changeTrackOperations.length)
-        ) {
-          await localChangeTrackModel.deleteMany({ _id: { $in: modelChangeTrackDocs.map(doc => doc._id) } });
+          // Clear local change tracks only if upload was successful
+          if (changeTrackUploadResult.success) {
+            await localChangeTrackModel.deleteMany({ 
+              _id: { $in: syncedChangeTrackDocs.map(doc => doc._id) } 
+            });
+            console.log(`✅ Cleared ${syncedChangeTrackDocs.length} local change tracks for ${eachModel.local.modelName}`);
+          }
         }
       } else {
+        // No operations needed, clear the change tracks
         await localChangeTrackModel.deleteMany({ _id: { $in: modelChangeTrackDocs.map(doc => doc._id) } });
       }
 
