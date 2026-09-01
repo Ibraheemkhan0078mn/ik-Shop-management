@@ -84,6 +84,7 @@ export const DEFAULT_PERMISSIONS = [
   "staff.update",
   "staff.delete",
   "staff.details",
+  "staff.attendance",
   "staff.payments.view",
   "staff.payments.create",
   "staff.payments.delete",

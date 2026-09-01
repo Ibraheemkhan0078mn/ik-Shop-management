@@ -97,12 +97,12 @@ function PaymentMethodRow({ paymentMethod, onEdit, onDelete }) {
             </td>
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <PermissionGuard execute={() => onEdit?.()} permission="settings.view" isConfirmation={true}>
+                    <PermissionGuard execute={() => onEdit?.()} permission="settings.paymentMethods" isConfirmation={true}>
                         <button onClick={(e) => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
                             Edit
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="settings.view" isConfirmation={true}>
+                    <PermissionGuard execute={() => onDelete?.()} permission="settings.paymentMethods" isConfirmation={true}>
                         <button onClick={(e) => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}>
                             Delete
                         </button>

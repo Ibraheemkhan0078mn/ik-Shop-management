@@ -54,7 +54,7 @@ export default function OrderDetailsPage() {
         }
     };
 
-    const canDeletePayments = hasPermission('orders:delete');
+    const canDeletePayments = hasPermission('orders.delete');
 
     const handlePaymentPdf = (payment) => {
         setSelectedPayment(payment);
@@ -118,7 +118,7 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {hasPermission('orders:edit') && (
+                            {hasPermission('orders.update') && (
                                 <button
                                     onClick={handleRecalculate}
                                     className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"

@@ -463,7 +463,7 @@ export default function ProductDetail() {
                                                     {getBatchStatusBadge(status)}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <PermissionGuard execute={() => handleDeleteBatch(batch)} permission="product.delete" isConfirmation={true}>
+                                                    <PermissionGuard execute={() => handleDeleteBatch(batch)} permission="products.delete" isConfirmation={true}>
                                                         <button
                                                             disabled={batch.quantity > 0}
                                                             className={`p-2 rounded-lg transition-all ${

@@ -104,8 +104,8 @@ export default function PurchaseDetail() {
         setShowPaymentPdfModal(true);
     };
 
-    const canEditPayments = hasPermission('purchases:edit');
-    const canDeletePayments = hasPermission('purchases:delete');
+    const canEditPayments = hasPermission('purchases.update');
+    const canDeletePayments = hasPermission('purchases.delete');
 
     return (
         <>
@@ -131,7 +131,7 @@ export default function PurchaseDetail() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {hasPermission('purchases:edit') && (
+                            {hasPermission('purchases.update') && (
                                 <button
                                     onClick={handleRecalculate}
                                     className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
@@ -494,7 +494,7 @@ export default function PurchaseDetail() {
                             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
                                 Payments ({paymentStatus.transactionCount || payments.length})
                             </h3>
-                            {hasPermission('purchases:create') && paymentStatusText !== 'full' && (
+                            {hasPermission('purchases.create') && paymentStatusText !== 'full' && (
                                 <button
                                     onClick={() => {
                                         setEditingPayment(null);
