@@ -4,13 +4,11 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import QarzaAccountModal from "../../qarza/components/QarzaAccountModal.jsx";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
-import ApiQarzaSelect from "../../../shared/components/ApiQarzaSelect.jsx";
 
 export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, onClose, onSuccess }) {
     const isEditing = Boolean(payment);
     const [paymentDate, setPaymentDate] = useState(payment?.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     const [paymentMethod, setPaymentMethod] = useState(payment?.paymentMethod || "cash");
-    const [creditAccountId, setCreditAccountId] = useState(payment?.creditAccount?._id || "");
     const [cashAmount, setCashAmount] = useState(payment?.cashAmount?.toString() || "");
     const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(payment?.paymentMethodId || "");
     const [showQarzaModal, setShowQarzaModal] = useState(false);
@@ -45,9 +43,9 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
             purchaseReturn: purchaseReturn._id,
             paymentDate,
             paymentMethod,
+            supplier: purchaseReturn.supplier,
             paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
-            creditAccount: null,
             cashAmount: 0,
             creditAmount: 0,
         };
@@ -58,12 +56,7 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
             paymentData.cashAmount = editingAmount;
         } else if (paymentMethod === 'credit') {
             // Credit mode: full refund automatically
-            if (!creditAccountId) {
-                showError("Please select a credit account");
-                return;
-            }
             paymentData.amount = editingAmount;
-            paymentData.creditAccount = creditAccountId;
             paymentData.creditAmount = editingAmount;
         } else if (paymentMethod === 'hybrid') {
             // Hybrid mode: user enters cash, rest goes to credit
@@ -72,14 +65,9 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                 showError("Cash amount must be greater than 0 and less than or equal to remaining amount");
                 return;
             }
-            if (!creditAccountId) {
-                showError("Please select a credit account");
-                return;
-            }
             const credit = editingAmount - cash;
             paymentData.amount = editingAmount;
             paymentData.cashAmount = cash;
-            paymentData.creditAccount = creditAccountId;
             paymentData.creditAmount = credit;
         }
 
@@ -226,24 +214,11 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
 
                     {paymentMethod === 'credit' && (
                         <div>
-                            <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
-                            <div className="flex gap-2">
-                                <ApiQarzaSelect
-                                    value={creditAccountId}
-                                    onChange={(value) => setCreditAccountId(value)}
-                                    placeholder="Select credit account"
-                                    type="supplier"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowQarzaModal(true)}
-                                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                    title="Create new account"
-                                >
-                                    <Plus size={16} />
-                                </button>
+                            <label className="block text-sm text-[var(--muted)] mb-1">Supplier</label>
+                            <div className="px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface-muted)]">
+                                <span className="text-sm text-[var(--ink)]">{purchaseReturn?.supplier?.name || 'Unknown Supplier'}</span>
                             </div>
-                            <p className="text-xs text-[var(--muted)] mt-1">Full refund of Rs {remainingAmount.toLocaleString()} will be charged to this account.</p>
+                            <p className="text-xs text-[var(--muted)] mt-1">Full refund of Rs {remainingAmount.toLocaleString()} will be charged to this supplier.</p>
                         </div>
                     )}
 
@@ -287,25 +262,12 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm text-[var(--muted)] mb-1">Select Credit Account</label>
-                                <div className="flex gap-2">
-                                    <ApiQarzaSelect
-                                        value={creditAccountId}
-                                        onChange={(value) => setCreditAccountId(value)}
-                                        placeholder="Select credit account"
-                                        type="supplier"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowQarzaModal(true)}
-                                        className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
-                                        title="Create new account"
-                                    >
-                                        <Plus size={16} />
-                                    </button>
+                                <label className="block text-sm text-[var(--muted)] mb-1">Supplier</label>
+                                <div className="px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface-muted)]">
+                                    <span className="text-sm text-[var(--ink)]">{purchaseReturn?.supplier?.name || 'Unknown Supplier'}</span>
                                 </div>
                                 <p className="text-xs text-[var(--muted)] mt-1">
-                                    Remaining Rs {(remainingAmount - (parseFloat(cashAmount) || 0)).toLocaleString()} will be charged to this account.
+                                    Remaining Rs {(remainingAmount - (parseFloat(cashAmount) || 0)).toLocaleString()} will be charged to this supplier.
                                 </p>
                             </div>
                         </>
