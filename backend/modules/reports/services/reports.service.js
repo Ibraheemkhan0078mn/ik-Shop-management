@@ -2029,7 +2029,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
     // Fetch current period data using service functions
     const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivable, qarzaPayable, staffList] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
-        findPurchaseService(dateFilter),
+        findPurchaseService(dateFilter, { populate: 'supplier' }),
         findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
         findWastageService(dateFilter),
         findPurchaseReturnService(dateFilter),
@@ -2128,9 +2128,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const totalPayable = qarzaPayable.reduce((sum, q) => sum + (q.balance || 0), 0);
     const qarzaPayableCount = qarzaPayable.length;
 
-    const grossProfit = totalSales - totalPurchases;
+    const grossProfit = totalSales - totalCostOfGoodsSold;
     const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
-    const netProfit = totalSales - totalPurchases - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
+    // Net profit calculation: Sales - COGS - Expenses - Wastage - Salaries - Product Returns + Purchase Returns
+    const netProfit = totalSales - totalCostOfGoodsSold - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
     const netMarginPercentage = totalSales > 0 ? Number(((netProfit / totalSales) * 100).toFixed(1)) : 0;
 
     // Calculate previous period totals
@@ -2188,7 +2189,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
     // Calculate sales by payment method
     const salesByPaymentMethodMap = {};
     orders.forEach(order => {
-        const method = order.paymentMethod || 'unknown';
+        const method = order.paymentMethod || 'Cash'; // Default to 'Cash' instead of 'unknown'
         if (!salesByPaymentMethodMap[method]) {
             salesByPaymentMethodMap[method] = { total: 0, count: 0 };
         }
@@ -2204,7 +2205,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
     // Calculate purchases by supplier
     const purchasesBySupplierMap = {};
     purchases.forEach(purchase => {
-        const supplierName = purchase.supplierName || 'unknown';
+        const supplierName = purchase.supplier?.name || 'Unknown Supplier';
         if (!purchasesBySupplierMap[supplierName]) {
             purchasesBySupplierMap[supplierName] = { total: 0, count: 0 };
         }
@@ -2302,28 +2303,242 @@ const prepareMainBusinessReport = async (filters = {}) => {
     }));
 
     // Get transaction lists (limited to 100, sorted by createdAt desc)
-    const salesList = orders
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 100)
-        .map(order => ({
-            _id: order._id,
-            orderNumber: order.orderNumber,
-            totalAmount: order.totalAmount,
-            paymentMethod: order.paymentMethod,
-            customerName: order.customerName,
-            createdAt: order.createdAt
-        }));
+    // Fetch batch details for sales to include cost prices and detailed information
+    const salesList = await Promise.all(
+        orders
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 100)
+            .map(async (order) => {
+                // Fetch batch details for each item in the order
+                const itemsWithBatchDetails = await Promise.all(
+                    (order.items || []).map(async (item) => {
+                        let costPrice = 0;
+                        let batchSalePrice = 0;
+                        let batchNumber = item.batchNumber || 'N/A';
+                        let batchDiscount = 0;
+                        let batchDiscountType = 'percentage';
+                        
+                        // Fetch batch details to get cost price
+                        if (item.batchId) {
+                            try {
+                                const batch = await findByIdBatchService(item.batchId);
+                                if (batch) {
+                                    // Extract cost price from batch's purchasePrice field
+                                    costPrice = Number(batch.purchasePrice) || 0;
+                                    batchSalePrice = Number(batch.sellingPrice) || 0;
+                                    batchNumber = batch.batchNumber || batchNumber;
+                                    batchDiscount = batch.discount?.amount || 0;
+                                    batchDiscountType = batch.discount?.type || 'percentage';
+                                } else {
+                                    console.warn(`Batch not found for batchId: ${item.batchId}, product: ${item.name}`);
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching batch ${item.batchId} for product ${item.name}:`, error);
+                                // Keep default values if batch fetch fails
+                            }
+                        } else {
+                            console.warn(`No batchId for item: ${item.name} in order, cannot fetch cost price`);
+                        }
+                        
+                        // Calculate totals for this item
+                        const itemCostTotal = costPrice * (item.quantity || 0);
+                        const itemSaleTotal = (item.unitPrice || 0) * (item.quantity || 0);
+                        const itemProfit = itemSaleTotal - itemCostTotal;
+                        const itemMargin = itemSaleTotal > 0 ? ((itemProfit / itemSaleTotal) * 100).toFixed(2) : 0;
+                        
+                        return {
+                            productName: item.name,
+                            quantity: item.quantity || 0,
+                            // Prices
+                            costPrice: costPrice,
+                            batchSalePrice: batchSalePrice,
+                            unitPrice: item.unitPrice || 0,
+                            originalPrice: item.originalPrice || 0,
+                            // Totals
+                            lineTotal: item.lineTotal || 0,
+                            itemTotal: item.itemTotal || 0,
+                            itemCostTotal: itemCostTotal,
+                            itemSaleTotal: itemSaleTotal,
+                            itemProfit: itemProfit,
+                            itemMargin: itemMargin,
+                            // Tax
+                            taxAmount: item.taxAmount || 0,
+                            taxPercent: item.taxPercent || 0,
+                            taxType: item.taxType || 'percentage',
+                            // Discount
+                            discountAmount: item.discountAmount || 0,
+                            discountPercent: item.discountPercent || 0,
+                            discountType: item.discountType || 'percentage',
+                            // Batch info
+                            batchId: item.batchId,
+                            batchNumber: batchNumber,
+                            batchDiscount: batchDiscount,
+                            batchDiscountType: batchDiscountType,
+                            // Other
+                            portionType: item.portionType || 'full',
+                            customInput: item.customInput || false
+                        };
+                    })
+                );
+                
+                // Calculate order-level totals by summing all items
+                const totalCostPrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
+                const totalSalePrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemSaleTotal, 0);
+                const totalItemCosts = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
+                
+                // Calculate margin and profit from summed values
+                const orderProfit = totalSalePrice - totalCostPrice;
+                const orderMargin = totalSalePrice > 0 ? ((orderProfit / totalSalePrice) * 100).toFixed(2) : 0;
+                
+                // Calculate total discounts and taxes from items
+                const totalItemDiscounts = itemsWithBatchDetails.reduce((sum, item) => sum + item.discountAmount, 0);
+                const totalItemTaxes = itemsWithBatchDetails.reduce((sum, item) => sum + item.taxAmount, 0);
+                
+                return {
+                    _id: order._id,
+                    orderNumber: order.orderNumber,
+                    // Order totals
+                    totalAmount: order.totalAmount || 0,
+                    subtotal: order.subtotal || 0,
+                    discountAmount: order.discountAmount || 0,
+                    discountType: order.discountType || 'percentage',
+                    totalTaxAmount: order.totalTaxAmount || 0,
+                    // Calculated totals from items
+                    totalCostPrice: totalCostPrice,
+                    totalSalePrice: totalSalePrice,
+                    totalItemCosts: totalItemCosts,
+                    totalItemDiscounts: totalItemDiscounts,
+                    totalItemTaxes: totalItemTaxes,
+                    // Profit and margin calculations
+                    orderProfit: orderProfit,
+                    orderMargin: orderMargin,
+                    profitMargin: order.totalAmount > 0 ? ((orderProfit / order.totalAmount) * 100).toFixed(2) : 0,
+                    // Customer and order info
+                    paymentMethod: order.paymentMethod,
+                    customerName: order.customerName || 'Walk-in',
+                    customerType: order.customerType,
+                    customerId: order.customerId,
+                    orderType: order.orderType || 'retail',
+                    waiter: order.waiter || '',
+                    staffId: order.staffId,
+                    note: order.note || '',
+                    isPosOrder: order.isPosOrder || false,
+                    status: order.status || 'completed',
+                    // Items with all details
+                    items: itemsWithBatchDetails,
+                    createdAt: order.createdAt
+                };
+            })
+    );
 
-    const purchasesList = purchases
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 100)
-        .map(purchase => ({
-            _id: purchase._id,
-            invoiceNumber: purchase.invoiceNumber,
-            totalAmount: purchase.totalAmount,
-            supplierName: purchase.supplierName,
-            createdAt: purchase.createdAt
-        }));
+    const purchasesList = await Promise.all(
+        purchases
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 100)
+            .map(async (purchase) => {
+                // Fetch product and batch details for each item in the purchase
+                const itemsWithDetails = await Promise.all(
+                    (purchase.items || []).map(async (item) => {
+                        let productName = 'Unknown';
+                        let batchNumber = 'N/A';
+                        let productDetails = null;
+                        
+                        // Fetch product details
+                        if (item.product) {
+                            try {
+                                const products = await findProductService({ _id: item.product });
+                                if (products && products[0]) {
+                                    productName = products[0].name;
+                                    productDetails = {
+                                        productCode: products[0].productCode,
+                                        category: products[0].category?.name || 'Uncategorized'
+                                    };
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching product ${item.product}:`, error);
+                            }
+                        }
+                        
+                        // Fetch batch details
+                        if (item.batch) {
+                            try {
+                                const batch = await findByIdBatchService(item.batch);
+                                if (batch) {
+                                    batchNumber = batch.batchNumber || 'N/A';
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching batch ${item.batch}:`, error);
+                            }
+                        }
+                        
+                        // Calculate item totals
+                        const itemSubtotal = (item.price || 0) * (item.quantity || 0);
+                        const itemDiscountAmount = item.discountType === 'fixed' 
+                            ? (item.discount || 0)
+                            : (itemSubtotal * (item.discount || 0) / 100);
+                        const itemTaxAmount = item.taxType === 'fixed'
+                            ? (item.tax || 0)
+                            : ((itemSubtotal - itemDiscountAmount) * (item.tax || 0) / 100);
+                        const itemTotal = itemSubtotal - itemDiscountAmount + itemTaxAmount;
+                        
+                        return {
+                            productName: productName,
+                            productCode: productDetails?.productCode || 'N/A',
+                            category: productDetails?.category || 'N/A',
+                            batchNumber: batchNumber,
+                            quantity: item.quantity || 0,
+                            price: item.price || 0,
+                            costPrice: item.costPrice || 0,
+                            discount: item.discount || 0,
+                            discountType: item.discountType || 'percentage',
+                            discountAmount: itemDiscountAmount,
+                            tax: item.tax || 0,
+                            taxType: item.taxType || 'percentage',
+                            taxAmount: itemTaxAmount,
+                            mfgDate: item.mfgDate || null,
+                            expiryDate: item.expiryDate || null,
+                            itemSubtotal: itemSubtotal,
+                            itemTotal: itemTotal,
+                            productId: item.product,
+                            batchId: item.batch
+                        };
+                    })
+                );
+                
+                // Calculate purchase-level totals
+                const totalItemsSubtotal = itemsWithDetails.reduce((sum, item) => sum + item.itemSubtotal, 0);
+                const totalItemsDiscount = itemsWithDetails.reduce((sum, item) => sum + item.discountAmount, 0);
+                const totalItemsTax = itemsWithDetails.reduce((sum, item) => sum + item.taxAmount, 0);
+                
+                return {
+                    _id: purchase._id,
+                    invoiceNumber: purchase.invoiceNumber || 'N/A',
+                    supplierName: purchase.supplier?.name || 'Unknown Supplier',
+                    supplierId: purchase.supplier?._id || purchase.supplier,
+                    // Amounts
+                    totalAmount: purchase.totalAmount || 0,
+                    subtotal: purchase.subtotal || 0,
+                    discount: purchase.discount || 0,
+                    discountType: purchase.discountType || 'percentage',
+                    gst: purchase.gst || 0,
+                    gstType: purchase.gstType || 'percentage',
+                    shippingCost: purchase.shippingCost || 0,
+                    paidAmount: purchase.paidAmount || 0,
+                    // Calculated totals
+                    totalItemsSubtotal: totalItemsSubtotal,
+                    totalItemsDiscount: totalItemsDiscount,
+                    totalItemsTax: totalItemsTax,
+                    // Status and dates
+                    status: purchase.status || 'ordered',
+                    paymentStatus: purchase.paymentStatus || 'pending',
+                    date: purchase.date || purchase.createdAt,
+                    notes: purchase.notes || '',
+                    // Items with all details
+                    items: itemsWithDetails,
+                    createdAt: purchase.createdAt
+                };
+            })
+    );
 
     const expensesList = expenses
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -2396,6 +2611,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
             totalWastage,
             totalReceivable,
             totalPayable,
+            totalCostOfGoodsSold,
             grossProfit,
             grossMarginPercentage,
             netProfit,
@@ -2466,13 +2682,13 @@ const prepareMainBusinessReport = async (filters = {}) => {
         },
         breakdowns: {
             salesByPaymentMethod: salesByPaymentMethod.map(item => ({
-                method: item._id || 'unknown',
+                method: item._id || 'Cash',
                 total: item.total,
                 count: item.count,
                 percentage: totalSales > 0 ? ((item.total / totalSales) * 100).toFixed(1) : 0
             })),
             purchasesBySupplier: purchasesBySupplier.map(item => ({
-                supplierName: item._id || 'unknown',
+                supplierName: item._id || 'Unknown Supplier',
                 total: item.total,
                 count: item.count,
                 percentage: totalPurchases > 0 ? ((item.total / totalPurchases) * 100).toFixed(1) : 0
@@ -2514,16 +2730,55 @@ const prepareMainBusinessReport = async (filters = {}) => {
                 id: sale._id,
                 orderNumber: sale.orderNumber,
                 amount: sale.totalAmount,
+                subtotal: sale.subtotal,
+                discountAmount: sale.discountAmount,
+                discountType: sale.discountType,
+                totalTaxAmount: sale.totalTaxAmount,
+                // Cost and profit calculations
+                totalCostPrice: sale.totalCostPrice,
+                totalSalePrice: sale.totalSalePrice,
+                totalItemCosts: sale.totalItemCosts,
+                totalItemDiscounts: sale.totalItemDiscounts,
+                totalItemTaxes: sale.totalItemTaxes,
+                orderProfit: sale.orderProfit,
+                orderMargin: sale.orderMargin,
+                profitMargin: sale.profitMargin,
+                // Customer and order details
                 paymentMethod: sale.paymentMethod,
                 customerName: sale.customerName,
+                customerType: sale.customerType,
+                customerId: sale.customerId,
+                orderType: sale.orderType,
+                waiter: sale.waiter,
+                staffId: sale.staffId,
+                note: sale.note,
+                isPosOrder: sale.isPosOrder,
+                status: sale.status,
+                // All items with full details
+                items: sale.items,
                 date: sale.createdAt
             })),
             purchases: purchasesList.map(purchase => ({
                 id: purchase._id,
                 invoiceNumber: purchase.invoiceNumber,
                 amount: purchase.totalAmount,
+                subtotal: purchase.subtotal,
+                discount: purchase.discount,
+                discountType: purchase.discountType,
+                gst: purchase.gst,
+                gstType: purchase.gstType,
+                shippingCost: purchase.shippingCost,
+                paidAmount: purchase.paidAmount,
+                totalItemsSubtotal: purchase.totalItemsSubtotal,
+                totalItemsDiscount: purchase.totalItemsDiscount,
+                totalItemsTax: purchase.totalItemsTax,
                 supplierName: purchase.supplierName,
-                date: purchase.createdAt
+                supplierId: purchase.supplierId,
+                status: purchase.status,
+                paymentStatus: purchase.paymentStatus,
+                notes: purchase.notes,
+                items: purchase.items,
+                date: purchase.date || purchase.createdAt
             })),
             expenses: expensesList.map(expense => ({
                 id: expense._id,
