@@ -1,6 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef, useEffect } from "react";
-import { Plus, Check, X, DollarSign, Eye, Copy, RotateCcw, Edit, Trash2, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Check, X, DollarSign, Eye, Copy, RotateCcw, Edit, Trash2, Filter, ChevronDown, ChevronUp, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
@@ -13,6 +13,9 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import { useProducts } from "../../productsModule/services/product.service.js";
+import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
+import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
 
 export default function ProductPurchasePage() {
     const navigate = useNavigate();
@@ -22,6 +25,11 @@ export default function ProductPurchasePage() {
     
     const [deletePurchase] = useDeletePurchase();
     const [updateStatus] = useUpdatePurchaseStatus();
+    const { data: productsData } = useProducts({ page: 1, limit: 1000 });
+    const { data: suppliersData } = useAllSuppliers();
+
+    const products = productsData || [];
+    const suppliers = suppliersData || [];
 
     const [modal,        setModal]        = useState(null);
     const [paymentModal, setPaymentModal] = useState(null);
@@ -31,13 +39,23 @@ export default function ProductPurchasePage() {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [expandAll, setExpandAll] = useState(false);
     const [expandedRows, setExpandedRows] = useState({});
+    
+    // New filter states
+    const [filterStartDate, setFilterStartDate] = useState("");
+    const [filterEndDate, setFilterEndDate] = useState("");
+    const [filterProducts, setFilterProducts] = useState([]);
+    const [filterSupplier, setFilterSupplier] = useState("");
 
     const listRef = useRef(null);
 
-    const hasActiveFilter = filterId !== "";
+    const hasActiveFilter = filterId !== "" || filterStartDate !== "" || filterEndDate !== "" || filterProducts.length > 0 || filterSupplier !== "";
 
     const clearFilter = () => {
         setFilterId("");
+        setFilterStartDate("");
+        setFilterEndDate("");
+        setFilterProducts([]);
+        setFilterSupplier("");
     };
 
     // Debounce filter input
@@ -149,10 +167,10 @@ export default function ProductPurchasePage() {
 
                                 {/* Filter Dropdown */}
                                 {showFilterDropdown && (
-                                    <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
-                                        <div className="flex items-center justify-between mb-3">
+                                    <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4 max-h-[80vh] overflow-y-auto">
+                                        <div className="flex items-center justify-between mb-4">
                                             <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
-                                                {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                                {language === "en" ? "Filter" : "فلٹر"}
                                             </span>
                                             {hasActiveFilter && (
                                                 <button
@@ -160,13 +178,13 @@ export default function ProductPurchasePage() {
                                                     className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
                                                 >
                                                     <X size={12} />
-                                                    {language === "en" ? "Clear" : "صاف"}
+                                                    {language === "en" ? "Clear All" : "سب صاف"}
                                                 </button>
                                             )}
                                         </div>
 
-                                        {/* ID Filter */}
-                                        <div>
+                                        {/* Invoice Number Filter */}
+                                        <div className="mb-4">
                                             <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
                                                 {language === "en" ? "Invoice Number" : "انوائس نمبر"}
                                             </label>
@@ -176,6 +194,85 @@ export default function ProductPurchasePage() {
                                                 value={filterId}
                                                 onChange={(e) => setFilterId(e.target.value)}
                                                 className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                            />
+                                        </div>
+
+                                        {/* Date Range Filter */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold mb-2 text-(--muted)">
+                                                {language === "en" ? "Date Range" : "تاریخ کی حد"}
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="block text-[10px] text-(--muted) mb-1">
+                                                        {language === "en" ? "From" : "سے"}
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={filterStartDate}
+                                                        onChange={(e) => setFilterStartDate(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-xs rounded-lg border border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-(--muted) mb-1">
+                                                        {language === "en" ? "To" : "تک"}
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={filterEndDate}
+                                                        onChange={(e) => setFilterEndDate(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-xs rounded-lg border border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Products Filter */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                                {language === "en" ? "Products" : "پروڈکٹس"}
+                                            </label>
+                                            <SearchableSelect
+                                                placeholder={language === "en" ? "Search products..." : "پروڈکٹس تلاش کریں..."}
+                                                options={products.map(p => ({ value: p._id, label: p.name }))}
+                                                value={filterProducts}
+                                                onChange={setFilterProducts}
+                                                isMulti={true}
+                                                className="w-full"
+                                            />
+                                            {filterProducts.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {filterProducts.map(productId => {
+                                                        const product = products.find(p => p._id === productId);
+                                                        return (
+                                                            <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-(--accent-2)/10 text-(--accent-2) rounded-md text-xs">
+                                                                {product?.name || productId}
+                                                                <button
+                                                                    onClick={() => setFilterProducts(prev => prev.filter(id => id !== productId))}
+                                                                    className="hover:text-red-500"
+                                                                >
+                                                                    <X size={10} />
+                                                                </button>
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Supplier Filter */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                                {language === "en" ? "Supplier" : "سپلائر"}
+                                            </label>
+                                            <SearchableSelect
+                                                placeholder={language === "en" ? "Select supplier..." : "سپلائر منتخب کریں..."}
+                                                options={suppliers.map(s => ({ value: s._id, label: s.name }))}
+                                                value={filterSupplier}
+                                                onChange={setFilterSupplier}
+                                                isMulti={false}
+                                                className="w-full"
                                             />
                                         </div>
                                     </div>
@@ -193,7 +290,13 @@ export default function ProductPurchasePage() {
                 limit={20}
                 dataKey="data"
                 wrapperClassName="flex-1"
-                queryArgs={debouncedFilterId ? { invoiceNumber: debouncedFilterId } : {}}
+                queryArgs={{
+                    ...(debouncedFilterId && { invoiceNumber: debouncedFilterId }),
+                    ...(filterStartDate && { startDate: filterStartDate }),
+                    ...(filterEndDate && { endDate: filterEndDate }),
+                    ...(filterProducts.length > 0 && { products: filterProducts.join(',') }),
+                    ...(filterSupplier && { supplier: filterSupplier }),
+                }}
                 renderItems={(purchases) => (
                     <div className="overflow-x-auto rounded-2xl overflow-hidden border-edge">
                         <table className="w-full text-sm text-left">
