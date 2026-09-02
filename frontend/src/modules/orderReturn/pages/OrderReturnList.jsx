@@ -1,7 +1,7 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter, DollarSign } from "lucide-react";
+import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -56,6 +56,8 @@ const OrderReturnList = () => {
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [expandAll, setExpandAll] = useState(false);
+    const [expandedRows, setExpandedRows] = useState({});
 
     const hasActiveFilter = filterId !== "";
 
@@ -206,57 +208,73 @@ const OrderReturnList = () => {
                         </div>
                     }
                     rightActions={
-                        <div className="relative">
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                onClick={() => setExpandAll(!expandAll)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
-                                    hasActiveFilter 
+                                    expandAll 
                                         ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
                                         : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
                                 }`}
+                                title={expandAll ? "Collapse All" : "Expand All"}
                             >
-                                <Filter size={16} />
+                                {expandAll ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 <span className="text-xs font-bold uppercase tracking-wider">
-                                    {language === "en" ? "Filter" : "فلٹر"}
+                                    {expandAll ? "Collapse" : "Expand"}
                                 </span>
-                                {hasActiveFilter && (
-                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
-                                )}
                             </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                        hasActiveFilter 
+                                            ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                            : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    }`}
+                                >
+                                    <Filter size={16} />
+                                    <span className="text-xs font-bold uppercase tracking-wider">
+                                        {language === "en" ? "Filter" : "فلٹر"}
+                                    </span>
+                                    {hasActiveFilter && (
+                                        <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                    )}
+                                </button>
 
-                            {/* Filter Dropdown */}
-                            {showFilterDropdown && (
-                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
-                                            {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
-                                        </span>
-                                        {hasActiveFilter && (
-                                            <button
-                                                onClick={clearFilter}
-                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
-                                            >
-                                                <X size={12} />
-                                                {language === "en" ? "Clear" : "صاف"}
-                                            </button>
-                                        )}
-                                    </div>
+                                {/* Filter Dropdown */}
+                                {showFilterDropdown && (
+                                    <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                                {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                            </span>
+                                            {hasActiveFilter && (
+                                                <button
+                                                    onClick={clearFilter}
+                                                    className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                                >
+                                                    <X size={12} />
+                                                    {language === "en" ? "Clear" : "صاف"}
+                                                </button>
+                                            )}
+                                        </div>
 
-                                    {/* ID Filter */}
-                                    <div>
-                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                            {language === "en" ? "Return Number" : "ریٹرن نمبر"}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter return number..."
-                                            value={filterId}
-                                            onChange={(e) => setFilterId(e.target.value)}
-                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
-                                        />
+                                        {/* ID Filter */}
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                                {language === "en" ? "Return Number" : "ریٹرن نمبر"}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter return number..."
+                                                value={filterId}
+                                                onChange={(e) => setFilterId(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     }
                 />
@@ -286,6 +304,8 @@ const OrderReturnList = () => {
                                         <ReturnRow
                                             key={returnItem._id}
                                             returnItem={returnItem}
+                                            isExpanded={expandAll || expandedRows[returnItem._id]}
+                                            onToggleExpand={() => setExpandedRows(prev => ({ ...prev, [returnItem._id]: !prev[returnItem._id] }))}
                                             onView={() => handleView(returnItem)}
                                             onEdit={() => handleEdit(returnItem)}
                                             onDelete={() => handleDelete(returnItem._id)}
@@ -308,7 +328,7 @@ const OrderReturnList = () => {
 
 // ---- Subcomponents ---------------------------------------------------------
 
-function ReturnRow({ returnItem, onView, onEdit, onDelete, onPayment }) {
+function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onDelete, onPayment }) {
     const refundStatusStyle = {
         pending: "bg-gray-100 text-gray-700",
         partial: "bg-yellow-100 text-yellow-700",
@@ -327,57 +347,91 @@ function ReturnRow({ returnItem, onView, onEdit, onDelete, onPayment }) {
     const isFullyRefunded = returnItem.refundStatus === 'fully_refunded';
     const showPaymentIcon = isApproved && !isFullyRefunded;
 
+    const items = returnItem?.items || [];
+
     return (
-        <tr className="border-b border-edge transition-colors hover:bg-primary-hover">
-            <td className="px-4 py-3 font-medium text-ink">{returnItem.returnNumber}</td>
-            <td className="px-4 py-3 text-ink-subtle hidden sm:table-cell">
-                {returnItem.referenceOrderNumber}
-            </td>
-            <td className="px-4 py-3 text-ink hidden md:table-cell">
-                {returnItem.customerName || "—"}
-            </td>
-            <td className="px-4 py-3 text-ink-subtle text-center hidden sm:table-cell">
-                {returnItem.items?.length || 0}
-            </td>
-            <td className="px-4 py-3 text-right font-semibold text-primary">
-                Rs {(returnItem.totalRefundAmount || 0).toLocaleString()}
-            </td>
-            <td className="px-4 py-3 text-right font-semibold text-green-600">
-                Rs {(returnItem.refundedAmount || 0).toLocaleString()}
-            </td>
-            <td className="px-4 py-3 text-right font-semibold text-orange-600">
-                Rs {((returnItem.totalRefundAmount || 0) - (returnItem.refundedAmount || 0)).toLocaleString()}
-            </td>
-            <td className="px-4 py-3 text-center">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${refundStatusStyle[returnItem.refundStatus] || refundStatusStyle.pending}`}>
-                    {getRefundStatusLabel(returnItem.refundStatus)}
-                </span>
-            </td>
-            <td className="px-4 py-3 text-center">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(returnItem.returnStatus)}`}>
-                    {returnItem.returnStatus}
-                </span>
-            </td>
-            <td className="px-4 py-3 text-ink-subtle hidden md:table-cell">
-                {new Date(returnItem.returnDate || returnItem.createdAt).toLocaleDateString()}
-            </td>
-            <td className="px-4 py-3">
-                <div className="flex gap-1 justify-center">
-                    <RowAction icon={Eye} title="View Details" onClick={onView} className="text-ink-subtle" />
-                    {showPaymentIcon && (
-                        <RowAction icon={DollarSign} title="Process Payment" onClick={onPayment} className="text-green-600" hoverBg="hover:bg-green-100" />
+        <>
+            <tr className="border-b border-edge transition-colors hover:bg-primary-hover">
+                <td className="px-4 py-3 font-medium text-ink">{returnItem.returnNumber}</td>
+                <td className="px-4 py-3 text-ink-subtle hidden sm:table-cell">
+                    {returnItem.referenceOrderNumber}
+                </td>
+                <td className="px-4 py-3 text-ink hidden md:table-cell">
+                    {returnItem.customerName || "—"}
+                </td>
+                <td className="px-4 py-3 text-ink-subtle text-center hidden sm:table-cell">
+                    <div className="text-sm font-medium">{items.length}</div>
+                    {items.length > 0 && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpand();
+                            }}
+                            className="text-xs text-(--accent-2) hover:underline mt-1"
+                        >
+                            {isExpanded ? "Hide items" : "Show items"}
+                        </button>
                     )}
-                    {!isApproved && (
-                        <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
-                            <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
+                </td>
+                <td className="px-4 py-3 text-right font-semibold text-primary">
+                    Rs {(returnItem.totalRefundAmount || 0).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-semibold text-green-600">
+                    Rs {(returnItem.refundedAmount || 0).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-semibold text-orange-600">
+                    Rs {((returnItem.totalRefundAmount || 0) - (returnItem.refundedAmount || 0)).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${refundStatusStyle[returnItem.refundStatus] || refundStatusStyle.pending}`}>
+                        {getRefundStatusLabel(returnItem.refundStatus)}
+                    </span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(returnItem.returnStatus)}`}>
+                        {returnItem.returnStatus}
+                    </span>
+                </td>
+                <td className="px-4 py-3 text-ink-subtle hidden md:table-cell">
+                    {new Date(returnItem.returnDate || returnItem.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3">
+                    <div className="flex gap-1 justify-center">
+                        <RowAction icon={Eye} title="View Details" onClick={onView} className="text-ink-subtle" />
+                        {showPaymentIcon && (
+                            <RowAction icon={DollarSign} title="Process Payment" onClick={onPayment} className="text-green-600" hoverBg="hover:bg-green-100" />
+                        )}
+                        {!isApproved && (
+                            <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
+                                <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />
+                            </PermissionGuard>
+                        )}
+                        <PermissionGuard execute={onDelete} permission="orderReturns.delete" isConfirmation={true}>
+                            <RowAction icon={Trash2} title="Delete" onClick={() => {}} className="text-red-500" hoverBg="hover:bg-red-100" />
                         </PermissionGuard>
-                    )}
-                    <PermissionGuard execute={onDelete} permission="orderReturns.delete" isConfirmation={true}>
-                        <RowAction icon={Trash2} title="Delete" onClick={() => {}} className="text-red-500" hoverBg="hover:bg-red-100" />
-                    </PermissionGuard>
-                </div>
-            </td>
-        </tr>
+                    </div>
+                </td>
+            </tr>
+            {/* Expandable item details row */}
+            {isExpanded && items.length > 0 && (
+                <tr className="bg-(--surface-muted)">
+                    <td colSpan="11" className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2 text-sm">
+                            {items.map((item, idx) => {
+                                const itemName = item.name || item.product?.name || item.productName || String(item.product);
+                                const quantity = item.quantity || item.returnQuantity || 0;
+                                return (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-(--surface) border border-(--border) rounded-md">
+                                        <span className="font-semibold text-(--accent-2)">{quantity}×</span>
+                                        <span className="text-(--ink)">{itemName}</span>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
     );
 }
 

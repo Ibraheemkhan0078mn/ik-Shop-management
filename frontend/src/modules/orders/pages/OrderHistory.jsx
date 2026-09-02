@@ -6,7 +6,7 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import {
     Eye, Trash2, X, Receipt, Calendar,
     User, Clock, Package, DollarSign, CreditCard, Wallet, Smartphone,
-    Percent, FileText, ShoppingBag, TrendingUp, Filter, Copy, RotateCcw
+    Percent, FileText, ShoppingBag, TrendingUp, Filter, Copy, RotateCcw, ChevronDown, ChevronUp
 } from "lucide-react";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
@@ -367,6 +367,8 @@ export default function OrderHistory() {
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [expandAll, setExpandAll] = useState(false);
+    const [expandedRows, setExpandedRows] = useState({});
     const [deleteOrder] = useDeleteOrder();
     const paginatedListRef = useRef(null);
 
@@ -419,57 +421,73 @@ export default function OrderHistory() {
                         />
                     }
                     rightActions={
-                        <div className="relative">
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                onClick={() => setExpandAll(!expandAll)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
-                                    hasActiveFilter 
+                                    expandAll 
                                         ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
                                         : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
                                 }`}
+                                title={expandAll ? "Collapse All" : "Expand All"}
                             >
-                                <Filter size={16} />
+                                {expandAll ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 <span className="text-xs font-bold uppercase tracking-wider">
-                                    {language === "en" ? "Filter" : "فلٹر"}
+                                    {expandAll ? "Collapse" : "Expand"}
                                 </span>
-                                {hasActiveFilter && (
-                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
-                                )}
                             </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                        hasActiveFilter 
+                                            ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                            : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                    }`}
+                                >
+                                    <Filter size={16} />
+                                    <span className="text-xs font-bold uppercase tracking-wider">
+                                        {language === "en" ? "Filter" : "فلٹر"}
+                                    </span>
+                                    {hasActiveFilter && (
+                                        <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                    )}
+                                </button>
 
-                            {/* Filter Dropdown */}
-                            {showFilterDropdown && (
-                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
-                                            {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
-                                        </span>
-                                        {hasActiveFilter && (
-                                            <button
-                                                onClick={clearFilter}
-                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
-                                            >
-                                                <X size={12} />
-                                                {language === "en" ? "Clear" : "صاف"}
-                                            </button>
-                                        )}
-                                    </div>
+                                {/* Filter Dropdown */}
+                                {showFilterDropdown && (
+                                    <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                                {language === "en" ? "Filter by ID" : "آئی ڈی سے فلٹر کریں"}
+                                            </span>
+                                            {hasActiveFilter && (
+                                                <button
+                                                    onClick={clearFilter}
+                                                    className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                                >
+                                                    <X size={12} />
+                                                    {language === "en" ? "Clear" : "صاف"}
+                                                </button>
+                                            )}
+                                        </div>
 
-                                    {/* ID Filter */}
-                                    <div>
-                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                            {language === "en" ? "Order Number" : "آرڈر نمبر"}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter order number..."
-                                            value={filterId}
-                                            onChange={(e) => setFilterId(e.target.value)}
-                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
-                                        />
+                                        {/* ID Filter */}
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                                {language === "en" ? "Order Number" : "آرڈر نمبر"}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter order number..."
+                                                value={filterId}
+                                                onChange={(e) => setFilterId(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     }
                 />
@@ -527,81 +545,18 @@ export default function OrderHistory() {
                                 </thead>
                                 <tbody>
                                     {orders.map((order, index) => (
-                                        <tr key={order._id || order.id}
-                                            className="transition-all duration-150 hover:bg-(--surface-muted)"
-                                            style={{ background: index % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-(--ink) whitespace-nowrap">{order.orderNumber || "—"}</span>
-                                                    <button
-                                                        onClick={() => navigator.clipboard.writeText(order.orderNumber)}
-                                                        className="p-1 rounded hover:bg-(--surface-muted) transition-all"
-                                                        title="Copy order number"
-                                                    >
-                                                        <Copy size={12} className="text-(--muted)" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <p className="font-semibold text-(--ink) truncate">{order.customerName || "Walk-in"}</p>
-                                                {order.waiter && (
-                                                    <p className="text-xs text-(--muted) truncate mt-0.5">Served by {order.waiter}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5 hidden sm:table-cell">
-                                                <p className="font-medium text-(--ink) whitespace-nowrap">
-                                                    {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </p>
-                                                <p className="text-xs text-(--muted) whitespace-nowrap">
-                                                    {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center hidden md:table-cell">
-                                                <StockBadgeLike qty={order.items?.length || 0} />
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                <span className="font-semibold text-green-600 whitespace-nowrap">
-                                                    Rs {(order.paidAmount ?? order.paid ?? 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                <span className="font-semibold text-orange-600 whitespace-nowrap">
-                                                    Rs {(order.remainingAmount ?? 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                <span className="font-bold text-(--accent-2) whitespace-nowrap">
-                                                    Rs {(order.totalAmount || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex gap-1.5 justify-center">
-                                                    <button
-                                                        onClick={() => navigate(`/order-history/${order._id}`)}
-                                                        id={`order-history-view-${order._id}`}
-                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
-                                                    >
-                                                        <Eye size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setReturnModalOrderId(order._id)}
-                                                        id={`order-history-return-${order._id}`}
-                                                        className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-orange-400 hover:text-orange-500"
-                                                        title="Return Order"
-                                                    >
-                                                        <RotateCcw size={15} />
-                                                    </button>
-                                                    <PermissionGuard permission="orders.delete">
-                                                        <ConfirmDialog message={language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟"} onConfirm={() => handleDelete(order._id)}>
-                                                            <button id={`order-history-delete-${order._id}`}
-                                                                className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
-                                                                <Trash2 size={15} />
-                                                            </button>
-                                                        </ConfirmDialog>
-                                                    </PermissionGuard>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <OrderRow
+                                            key={order._id || order.id}
+                                            order={order}
+                                            index={index}
+                                            isExpanded={expandAll || expandedRows[order._id]}
+                                            onToggleExpand={() => setExpandedRows(prev => ({ ...prev, [order._id]: !prev[order._id] }))}
+                                            navigate={navigate}
+                                            setReturnModalOrderId={setReturnModalOrderId}
+                                            handleDelete={handleDelete}
+                                            language={language}
+                                            user={user}
+                                        />
                                     ))}
                                 </tbody>
                             </table>
@@ -634,6 +589,121 @@ function StockBadgeLike({ qty }) {
             style={{ background: qty > 0 ? "rgba(15,118,110,0.12)" : "rgba(100,100,100,0.1)", color: qty > 0 ? "var(--accent-2)" : "var(--muted)" }}>
             {qty ?? 0}
         </span>
+    );
+}
+
+function OrderRow({ order, index, isExpanded, onToggleExpand, navigate, setReturnModalOrderId, handleDelete, language, user }) {
+    const items = order?.items || [];
+
+    return (
+        <>
+            <tr
+                className="transition-all duration-150 hover:bg-(--surface-muted)"
+                style={{ background: index % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}
+            >
+                <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-(--ink) whitespace-nowrap">{order.orderNumber || "—"}</span>
+                        <button
+                            onClick={() => navigator.clipboard.writeText(order.orderNumber)}
+                            className="p-1 rounded hover:bg-(--surface-muted) transition-all"
+                            title="Copy order number"
+                        >
+                            <Copy size={12} className="text-(--muted)" />
+                        </button>
+                    </div>
+                </td>
+                <td className="px-5 py-3.5">
+                    <p className="font-semibold text-(--ink) truncate">{order.customerName || "Walk-in"}</p>
+                    {order.waiter && (
+                        <p className="text-xs text-(--muted) truncate mt-0.5">Served by {order.waiter}</p>
+                    )}
+                </td>
+                <td className="px-5 py-3.5 hidden sm:table-cell">
+                    <p className="font-medium text-(--ink) whitespace-nowrap">
+                        {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                    <p className="text-xs text-(--muted) whitespace-nowrap">
+                        {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                </td>
+                <td className="px-5 py-3.5 text-center hidden md:table-cell">
+                    <div className="text-sm font-medium">{items.length}</div>
+                    {items.length > 0 && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpand();
+                            }}
+                            className="text-xs text-(--accent-2) hover:underline mt-1"
+                        >
+                            {isExpanded ? "Hide items" : "Show items"}
+                        </button>
+                    )}
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                    <span className="font-semibold text-green-600 whitespace-nowrap">
+                        Rs {(order.paidAmount ?? order.paid ?? 0).toLocaleString()}
+                    </span>
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                    <span className="font-semibold text-orange-600 whitespace-nowrap">
+                        Rs {(order.remainingAmount ?? 0).toLocaleString()}
+                    </span>
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                    <span className="font-bold text-(--accent-2) whitespace-nowrap">
+                        Rs {(order.totalAmount || 0).toLocaleString()}
+                    </span>
+                </td>
+                <td className="px-5 py-3.5">
+                    <div className="flex gap-1.5 justify-center">
+                        <button
+                            onClick={() => navigate(`/order-history/${order._id}`)}
+                            id={`order-history-view-${order._id}`}
+                            className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"
+                        >
+                            <Eye size={15} />
+                        </button>
+                        <button
+                            onClick={() => setReturnModalOrderId(order._id)}
+                            id={`order-history-return-${order._id}`}
+                            className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-orange-400 hover:text-orange-500"
+                            title="Return Order"
+                        >
+                            <RotateCcw size={15} />
+                        </button>
+                        <PermissionGuard permission="orders.delete">
+                            <ConfirmDialog message={language === "en" ? "Delete this order?" : "کیا آپ یہ آرڈر حذف کرنا چاہتے ہیں؟"} onConfirm={() => handleDelete(order._id)}>
+                                <button id={`order-history-delete-${order._id}`}
+                                    className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-red-400 hover:text-red-500">
+                                    <Trash2 size={15} />
+                                </button>
+                            </ConfirmDialog>
+                        </PermissionGuard>
+                    </div>
+                </td>
+            </tr>
+            {/* Expandable item details row */}
+            {isExpanded && items.length > 0 && (
+                <tr className="bg-(--surface-muted)">
+                    <td colSpan="8" className="px-5 py-3">
+                        <div className="flex flex-wrap gap-2 text-sm">
+                            {items.map((item, idx) => {
+                                const itemName = item.name || item.product?.name || item.productName || String(item.product);
+                                const quantity = item.quantity || 0;
+                                return (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-(--surface) border border-(--border) rounded-md">
+                                        <span className="font-semibold text-(--accent-2)">{quantity}×</span>
+                                        <span className="text-(--ink)">{itemName}</span>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
     );
 }
 

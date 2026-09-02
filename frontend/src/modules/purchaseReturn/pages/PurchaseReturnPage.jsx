@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter, DollarSign, Eye } from "lucide-react";
+import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter, DollarSign, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -38,6 +38,8 @@ export default function PurchaseReturnPage() {
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
     const [debouncedFilterInvoiceId, setDebouncedFilterInvoiceId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [expandAll, setExpandAll] = useState(false);
+    const [expandedRows, setExpandedRows] = useState({});
 
     const hasActiveFilter = filterId !== "" || filterInvoiceId !== "";
 
@@ -172,71 +174,87 @@ export default function PurchaseReturnPage() {
                     </>
                 }
                 rightActions={
-                    <div className="relative">
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                            onClick={() => setExpandAll(!expandAll)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
-                                hasActiveFilter 
+                                expandAll 
                                     ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
                                     : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
                             }`}
+                            title={expandAll ? "Collapse All" : "Expand All"}
                         >
-                            <Filter size={16} />
+                            {expandAll ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             <span className="text-xs font-bold uppercase tracking-wider">
-                                {language === "en" ? "Filter" : "فلٹر"}
+                                {expandAll ? "Collapse" : "Expand"}
                             </span>
-                            {hasActiveFilter && (
-                                <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
-                            )}
                         </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-150 ${
+                                    hasActiveFilter 
+                                        ? "border-(--accent-2) text-(--accent-2) bg-(--accent-2)/10" 
+                                        : "border-(--border) text-(--muted) bg-(--surface-muted) hover:border-(--accent-2) hover:text-(--accent-2)"
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    {language === "en" ? "Filter" : "فلٹر"}
+                                </span>
+                                {hasActiveFilter && (
+                                    <div className="w-2 h-2 rounded-full bg-(--accent-2)" />
+                                )}
+                            </button>
 
-                        {/* Filter Dropdown */}
-                        {showFilterDropdown && (
-                            <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
-                                        {language === "en" ? "Filter" : "فلٹر"}
-                                    </span>
-                                    {hasActiveFilter && (
-                                        <button
-                                            onClick={clearFilter}
-                                            className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
-                                        >
-                                            <X size={12} />
-                                            {language === "en" ? "Clear" : "صاف"}
-                                        </button>
-                                    )}
-                                </div>
+                            {/* Filter Dropdown */}
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-(--border) bg-(--surface) shadow-xl z-50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-(--muted)">
+                                            {language === "en" ? "Filter" : "فلٹر"}
+                                        </span>
+                                        {hasActiveFilter && (
+                                            <button
+                                                onClick={clearFilter}
+                                                className="flex items-center gap-1 text-xs text-(--accent-2) hover:underline"
+                                            >
+                                                <X size={12} />
+                                                {language === "en" ? "Clear" : "صاف"}
+                                            </button>
+                                        )}
+                                    </div>
 
-                                {/* Return Hash Filter */}
-                                <div className="mb-3">
-                                    <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                        {language === "en" ? "Return Hash" : "ریٹرن ہاش"}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter return hash..."
-                                        value={filterId}
-                                        onChange={(e) => setFilterId(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
-                                    />
-                                </div>
+                                    {/* Return Hash Filter */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Return Hash" : "ریٹرن ہاش"}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter return hash..."
+                                            value={filterId}
+                                            onChange={(e) => setFilterId(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        />
+                                    </div>
 
-                                {/* Purchase Invoice ID Filter */}
-                                <div>
-                                    <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
-                                        {language === "en" ? "Purchase Invoice ID" : "خرید انوائس آئی ڈی"}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter purchase invoice ID..."
-                                        value={filterInvoiceId}
-                                        onChange={(e) => setFilterInvoiceId(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
-                                    />
+                                    {/* Purchase Invoice ID Filter */}
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Purchase Invoice ID" : "خرید انوائس آئی ڈی"}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter purchase invoice ID..."
+                                            value={filterInvoiceId}
+                                            onChange={(e) => setFilterInvoiceId(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm rounded-xl border-2 border-(--border) bg-(--surface-muted) outline-none focus:border-(--accent-2) transition-all"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 }
             />
@@ -270,6 +288,8 @@ export default function PurchaseReturnPage() {
                                         <PurchaseReturnRow
                                             key={pr._id}
                                             purchaseReturn={pr}
+                                            isExpanded={expandAll || expandedRows[pr._id]}
+                                            onToggleExpand={() => setExpandedRows(prev => ({ ...prev, [pr._id]: !prev[pr._id] }))}
                                             onEdit={() => setModal({ mode: "update", id: pr._id })}
                                             onDelete={() => handleDelete(pr._id)}
                                             onPayment={() => setPaymentModal(pr)}
@@ -289,7 +309,7 @@ export default function PurchaseReturnPage() {
     );
 }
 
-function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete, onPayment }) {
+function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit, onDelete, onPayment }) {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -303,6 +323,8 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete, onPayment }) {
     const totalRefundAmount = purchaseReturn?.totalRefundAmount || 0;
     const refundedAmount = purchaseReturn?.refundedAmount || 0;
     const remainingAmount = totalRefundAmount - refundedAmount;
+
+    const items = purchaseReturn?.items || [];
 
     const getStatusLabel = (status) => {
         switch (status) {
@@ -325,73 +347,105 @@ function PurchaseReturnRow({ purchaseReturn, onEdit, onDelete, onPayment }) {
     };
 
     return (
-        <tr className="transition border-b border-edge hover:bg-surface-muted">
-            <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
-                {purchaseReturn?.purchaseReturnNumber ?? "—"}
-            </td>
-            <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                {purchaseReturn?.purchase?.invoiceNumber ?? "—"}
-            </td>
-            <td className="px-4 py-3 text-xs text-ink">
-                {purchaseReturn?.supplier?.name ?? "—"}
-            </td>
-            <td className="px-4 py-3 text-center text-ink">
-                {purchaseReturn?.totalItems ?? purchaseReturn?.items?.length ?? 0}
-            </td>
-            <td className="px-4 py-3 text-right">
-                <div className="text-xs">
-                    <div className="font-semibold tabular-nums text-primary">Rs {totalRefundAmount.toLocaleString()}</div>
-                    <div className="text-[10px] text-green-600">Paid: Rs {refundedAmount.toLocaleString()}</div>
-                    <div className="text-[10px] text-orange-600">Rem: Rs {remainingAmount.toLocaleString()}</div>
-                </div>
-            </td>
-            <td className="px-4 py-3 text-center">
-                <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${statusClass}`}>
-                    {getStatusLabel(status)}
-                </span>
-            </td>
-            <td className="px-4 py-3 text-xs text-ink-muted">
-                {date}
-            </td>
-            <td className="px-4 py-3">
-                <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                        onClick={handleViewDetails}
-                        className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
-                        title="View Details"
-                    >
-                        <Eye className="w-3 h-3" />
-                    </button>
-                    {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
+        <>
+            <tr className="transition border-b border-edge hover:bg-surface-muted">
+                <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
+                    {purchaseReturn?.purchaseReturnNumber ?? "—"}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-ink-muted">
+                    {purchaseReturn?.purchase?.invoiceNumber ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-xs text-ink">
+                    {purchaseReturn?.supplier?.name ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-center text-ink">
+                    <div className="text-sm font-medium">{items.length}</div>
+                    {items.length > 0 && (
                         <button
-                            onClick={handlePaymentClick}
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
-                            title="Record Refund"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpand();
+                            }}
+                            className="text-xs text-(--accent-2) hover:underline mt-1"
                         >
-                            <DollarSign className="w-3 h-3" />
+                            {isExpanded ? "Hide items" : "Show items"}
                         </button>
                     )}
-                    {purchaseReturn?.status !== 'approved' && (
-                        <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
+                </td>
+                <td className="px-4 py-3 text-right">
+                    <div className="text-xs">
+                        <div className="font-semibold tabular-nums text-primary">Rs {totalRefundAmount.toLocaleString()}</div>
+                        <div className="text-[10px] text-green-600">Paid: Rs {refundedAmount.toLocaleString()}</div>
+                        <div className="text-[10px] text-orange-600">Rem: Rs {remainingAmount.toLocaleString()}</div>
+                    </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${statusClass}`}>
+                        {getStatusLabel(status)}
+                    </span>
+                </td>
+                <td className="px-4 py-3 text-xs text-ink-muted">
+                    {date}
+                </td>
+                <td className="px-4 py-3">
+                    <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={handleViewDetails}
+                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                            title="View Details"
+                        >
+                            <Eye className="w-3 h-3" />
+                        </button>
+                        {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
                             <button
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
-                                title={labels.edit}
+                                onClick={handlePaymentClick}
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
+                                title="Record Refund"
                             >
-                                <Pencil className="w-3 h-3" />
+                                <DollarSign className="w-3 h-3" />
+                            </button>
+                        )}
+                        {purchaseReturn?.status !== 'approved' && (
+                            <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
+                                <button
+                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-primary-hover text-primary border border-edge-brand hover:bg-primary-hover/80 flex items-center gap-1"
+                                    title={labels.edit}
+                                >
+                                    <Pencil className="w-3 h-3" />
+                                </button>
+                            </PermissionGuard>
+                        )}
+                        <PermissionGuard execute={onDelete} permission="purchaseReturns.delete" isConfirmation={true}>
+                            <button
+                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
+                                title={labels.delete}
+                            >
+                                <Trash2 className="w-3 h-3" />
                             </button>
                         </PermissionGuard>
-                    )}
-                    <PermissionGuard execute={onDelete} permission="purchaseReturns.delete" isConfirmation={true}>
-                        <button
-                            className="px-3 py-1 text-xs rounded-lg font-medium transition bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 flex items-center gap-1"
-                            title={labels.delete}
-                        >
-                            <Trash2 className="w-3 h-3" />
-                        </button>
-                    </PermissionGuard>
-                </div>
-            </td>
-        </tr>
+                    </div>
+                </td>
+            </tr>
+            {/* Expandable item details row */}
+            {isExpanded && items.length > 0 && (
+                <tr className="bg-(--surface-muted)">
+                    <td colSpan="8" className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2 text-sm">
+                            {items.map((item, idx) => {
+                                const itemName = item.name || item.product?.name || item.productName || String(item.product);
+                                const quantity = item.quantity || item.returnQuantity || 0;
+                                return (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-(--surface) border border-(--border) rounded-md">
+                                        <span className="font-semibold text-(--accent-2)">{quantity}×</span>
+                                        <span className="text-(--ink)">{itemName}</span>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
     );
 }
 
