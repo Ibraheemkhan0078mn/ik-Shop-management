@@ -44,6 +44,7 @@ export default function PurchaseReturnPaymentModal({ purchaseReturn, payment, on
             paymentDate,
             paymentMethod,
             supplier: purchaseReturn.supplier,
+            creditAccount: purchaseReturn.supplier?.qarzaAccountId || null,
             paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
             cashAmount: 0,

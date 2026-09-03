@@ -68,6 +68,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
             // Credit mode: full payment automatically
             paymentData.amount = editingAmount;
             paymentData.creditAmount = editingAmount;
+            paymentData.creditAccount = purchase.supplier?.qarzaAccountId;
         } else if (paymentMethod === 'hybrid') {
             // Hybrid mode: user enters cash, rest goes to credit
             const cash = parseFloat(cashAmount) || 0;
@@ -79,6 +80,7 @@ export default function PurchasePaymentModal({ purchase, payment, paymentStatus,
             paymentData.amount = editingAmount;
             paymentData.cashAmount = cash;
             paymentData.creditAmount = credit;
+            paymentData.creditAccount = purchase.supplier?.qarzaAccountId;
         }
 
         try {

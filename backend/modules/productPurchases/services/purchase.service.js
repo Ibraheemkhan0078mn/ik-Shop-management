@@ -37,7 +37,7 @@ const getPurchases = async () => {
 const getPurchaseById = async (id) => {
     const result = await findByIdPurchaseService(id, {
         populate: [
-            { path: "supplier", select: "name" },
+            { path: "supplier", select: "name qarzaAccountId" },
             { path: "items.product", select: "name productCode" },
             { path: "items.batch", select: "batchNumber" }
         ]

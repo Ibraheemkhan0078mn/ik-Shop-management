@@ -12,6 +12,7 @@ import {
 import { 
     findByIdPaymentMethodService 
 } from "../../settings/services/paymentMethod.crud.js";
+import { findByIdSupplierService } from "../../suppliers/services/supplier.crud.js";
 import { 
     createPurchaseReturnTransaction,
     getTransactions,
@@ -27,6 +28,17 @@ export const createPurchaseReturnPayment = async (paymentData) => {
 
     if (purchaseReturn.status !== 'approved') {
         throw new Error("Cannot make refund for purchase return that is not approved");
+    }
+
+    let creditAccount = paymentData.creditAccount;
+    if (paymentData.paymentMethod === 'credit' || paymentData.paymentMethod === 'hybrid') {
+        const supplierId = purchaseReturn.supplier?._id || purchaseReturn.supplier;
+        const supplier = await findByIdSupplierService(supplierId);
+        creditAccount = creditAccount || supplier?.qarzaAccountId;
+
+        if (!creditAccount) {
+            throw new Error("Supplier credit account not found");
+        }
     }
 
     // Get payment method name if paymentMethodId is provided
@@ -45,7 +57,7 @@ export const createPurchaseReturnPayment = async (paymentData) => {
         amount: paymentData.amount,
         cashAmount: paymentData.cashAmount || 0,
         creditAmount: paymentData.creditAmount || 0,
-        creditAccount: paymentData.creditAccount,
+        creditAccount,
         paymentMethodId: paymentData.paymentMethodId,
         paymentMethodName: paymentMethodName,
         paymentDate: paymentData.paymentDate,
@@ -58,9 +70,9 @@ export const createPurchaseReturnPayment = async (paymentData) => {
 
     // Handle credit account refunds (qarza account balance updates only)
     if (paymentData.paymentMethod === 'credit' || paymentData.paymentMethod === 'hybrid') {
-        if (paymentData.creditAccount) {
-            const creditAccount = await findByIdQarzaAccountService(paymentData.creditAccount);
-            if (!creditAccount) {
+        if (creditAccount) {
+            const account = await findByIdQarzaAccountService(creditAccount);
+            if (!account) {
                 throw new Error("Credit account not found");
             }
 
@@ -68,7 +80,7 @@ export const createPurchaseReturnPayment = async (paymentData) => {
             
             // Create qarza payment for credit portion
             const qarzaPayment = await createQarzaPaymentService({
-                qarzaAccountId: paymentData.creditAccount,
+                qarzaAccountId: creditAccount,
                 amount: creditRefundAmount,
                 type: 'cashout', // We're reducing credit owed to us, so it's cashout
                 date: paymentData.paymentDate,
@@ -77,8 +89,8 @@ export const createPurchaseReturnPayment = async (paymentData) => {
             });
 
             // Update credit account balance (decrease balance since we owe them less)
-            await updateQarzaAccountService(creditAccount._id, {
-                balance: creditAccount.balance - creditRefundAmount
+            await updateQarzaAccountService(account._id, {
+                balance: account.balance - creditRefundAmount
             });
         }
     }

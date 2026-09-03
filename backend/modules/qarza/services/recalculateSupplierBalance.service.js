@@ -6,6 +6,7 @@ import { getTransactions } from "../../transactions/services/transaction.service
  * This service recalculates the balance for a supplier account based on:
  * - Manual qarza transactions (sourceType: 'qarza')
  * - Purchase credit transactions (sourceType: 'purchase')
+ * - Purchase return refund transactions (sourceType: 'purchaseReturn')
  * Excludes sale transactions
  */
 export const recalculateSupplierBalance = async (qarzaAccountId) => {
@@ -24,7 +25,8 @@ export const recalculateSupplierBalance = async (qarzaAccountId) => {
                 {
                     $or: [
                         { sourceType: 'qarza', sourceId: qarzaAccountId },
-                        { sourceType: 'purchase', creditAccount: qarzaAccountId }
+                        { sourceType: 'purchase', creditAccount: qarzaAccountId },
+                        { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId }
                     ]
                 }
             ]
