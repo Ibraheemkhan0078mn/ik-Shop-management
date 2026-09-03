@@ -483,6 +483,27 @@ export const approvePurchaseReturnData = asyncHandler(async (req, res) => {
         await adjustStock(item.product, item.batch, 'decr', item.quantity);
     }
 
+    // Auto-create credit transaction for purchase return linked to supplier's qarza account
+    const { getPurchaseReturnById } = await import("../services/purchaseReturn.service.js");
+    const purchaseReturnWithSupplier = await getPurchaseReturnById(id);
+    if (purchaseReturnWithSupplier?.supplier?.qarzaAccountId) {
+        const { createPurchaseReturnTransaction } = await import("../../transactions/services/transaction.service.js");
+        await createPurchaseReturnTransaction({
+            purchaseReturn: id,
+            paymentMethod: 'credit',
+            amount: existing.totalRefundAmount,
+            cashAmount: 0,
+            creditAmount: existing.totalRefundAmount,
+            creditAccount: purchaseReturnWithSupplier.supplier.qarzaAccountId,
+            paymentDate: new Date(),
+            notes: `Auto-created credit transaction on approval for purchase return ${existing.purchaseReturnNumber}`,
+            createdBy: userId,
+        });
+    }
+
+    // Recalculate purchase return refund amount after auto transaction creation
+    await recalculatePurchaseReturnRefundAmount(id);
+
     const approved = await updatePurchaseReturnService(id, {
         status: "approved",
         approvedBy: userId,

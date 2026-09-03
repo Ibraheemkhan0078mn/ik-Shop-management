@@ -435,6 +435,13 @@ const deletePurchase = async (id, BatchModel, ProductModel) => {
         }
     }
 
+    // Delete all related transactions
+    const transactions = await getTransactions({ sourceType: 'purchase', sourceId: id });
+    for (const transaction of transactions) {
+        const { deleteTransaction } = await import("../../transactions/services/transaction.service.js");
+        await deleteTransaction(transaction._id);
+    }
+
     return await deleteOnePurchaseService(id);
 };
 

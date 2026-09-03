@@ -29,7 +29,7 @@ const getPurchaseReturnById = async (id) => {
     return await findByIdPurchaseReturnService(id, {
         populate: [
             { path: "purchase", select: "invoiceNumber date totalAmount" },
-            { path: "supplier", select: "name" },
+            { path: "supplier", select: "name qarzaAccountId" },
             { path: "items.product", select: "name productCode" },
             { path: "items.batch", select: "batchNumber" }
         ]
@@ -64,6 +64,13 @@ const updatePurchaseReturn = async (id, data) => {
 };
 
 const deletePurchaseReturn = async (id) => {
+    // Delete all related transactions
+    const transactions = await getTransactions({ sourceType: 'purchaseReturn', sourceId: id });
+    for (const transaction of transactions) {
+        const { deleteTransaction } = await import("../../transactions/services/transaction.service.js");
+        await deleteTransaction(transaction._id);
+    }
+
     return await deleteOnePurchaseReturnService(id);
 };
 

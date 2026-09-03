@@ -355,6 +355,27 @@ export const updatePurchaseStatus = asyncHandler(async (req, res) => {
             // Increment master product stock
             await updateProductService(item.product, { $inc: { currentStockLevel: item.quantity } });
         }
+
+        // Auto-create credit transaction for purchase linked to supplier's qarza account
+        const { getPurchaseById } = await import("../services/purchase.service.js");
+        const purchaseWithSupplier = await getPurchaseById(id);
+        if (purchaseWithSupplier?.supplier?.qarzaAccountId) {
+            const { createPurchaseTransaction } = await import("../../transactions/services/transaction.service.js");
+            await createPurchaseTransaction({
+                purchase: id,
+                paymentMethod: 'credit',
+                amount: purchase.totalAmount,
+                cashAmount: 0,
+                creditAmount: purchase.totalAmount,
+                creditAccount: purchaseWithSupplier.supplier.qarzaAccountId,
+                paymentDate: new Date(),
+                notes: `Auto-created credit transaction on delivery for purchase ${purchase.invoiceNumber}`,
+                createdBy: req.user?._id,
+            });
+        }
+
+        // Recalculate purchase paid amount after auto transaction creation
+        await recalculatePurchasePaidAmount(id);
     }
 
     await updatePurchaseService(id, { status });

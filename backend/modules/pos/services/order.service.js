@@ -33,6 +33,13 @@ const findOrderByNumber = async (orderNumber) => {
 };
 
 const orderDelete = async (id) => {
+    // Delete all related transactions
+    const transactions = await getTransactions({ sourceType: 'sale', sourceId: id });
+    for (const transaction of transactions) {
+        const { deleteTransaction } = await import("../../transactions/services/transaction.service.js");
+        await deleteTransaction(transaction._id);
+    }
+
     return await deleteOneOrderService(id);
 };
 

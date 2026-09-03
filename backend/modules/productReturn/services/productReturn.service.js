@@ -109,7 +109,9 @@ const getPaginatedProductReturns = async (filters = {}) => {
 };
 
 const getProductReturnById = async (id) => {
-    return await findByIdProductReturnService(id, { populate: ["referenceOrderId", "items.productId"] });
+    return await findByIdProductReturnService(id, { 
+        populate: ["referenceOrderId", "items.productId", "customerId"]
+    });
 };
 
 const updateProductReturn = async (id, updateData) => {
@@ -152,11 +154,19 @@ const deleteProductReturn = async (id) => {
         throw new Error("Product return not found");
     }
 
-    // If approved, decrement stock before deletion
+    // Only increment stock if return was approved
     if (existing.returnStatus === 'approved') {
+        // Increment stock for all items before deletion
         for (const item of existing.items) {
-            await adjustStock(item.productId, item.batchId, 'decr', item.quantity);
+            await adjustStock(item.productId, item.batchId, 'incr', item.quantity);
         }
+    }
+
+    // Delete all related transactions
+    const transactions = await getTransactions({ sourceType: 'orderReturn', sourceId: id });
+    for (const transaction of transactions) {
+        const { deleteTransaction } = await import("../../transactions/services/transaction.service.js");
+        await deleteTransaction(transaction._id);
     }
 
     return await deleteOneProductReturnService(id);

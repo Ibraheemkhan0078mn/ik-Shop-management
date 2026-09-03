@@ -146,12 +146,34 @@ export const updateReturnStatusData = asyncHandler(async (req, res, next) => {
 // Approve order return
 export const approveOrderReturnData = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
+    const userId = req.user?._id;
 
     const productReturn = await updateReturnStatus(id, 'approved');
 
     if (!productReturn) {
         return next(new ErrorResponse("Product return not found", 404));
     }
+
+    // Auto-create credit transaction for order return linked to customer's qarza account
+    const { getProductReturnById } = await import("../services/productReturn.service.js");
+    const productReturnWithCustomer = await getProductReturnById(id);
+    if (productReturnWithCustomer?.customerId?.qarzaAccountId) {
+        const { createOrderReturnTransaction } = await import("../../transactions/services/transaction.service.js");
+        await createOrderReturnTransaction({
+            productReturn: id,
+            paymentMethod: 'credit',
+            amount: productReturn.totalRefundAmount,
+            cashAmount: 0,
+            creditAmount: productReturn.totalRefundAmount,
+            creditAccount: productReturnWithCustomer.customerId.qarzaAccountId,
+            paymentDate: new Date(),
+            notes: `Auto-created credit transaction on approval for order return ${productReturn.returnNumber}`,
+            createdBy: userId,
+        });
+    }
+
+    // Recalculate product return refund amount after auto transaction creation
+    await recalculateProductReturnRefundAmount(id);
 
     res.status(200).json({
         success: true,
