@@ -2073,14 +2073,36 @@ const prepareMainBusinessReport = async (filters = {}) => {
     for (const order of orders) {
         if (order.items) {
             for (const item of order.items) {
-                let costPrice = 0;
+                let effectiveCostPrice = 0;
+                
                 if (item.batchId) {
                     const batch = await findByIdBatchService(item.batchId);
                     if (batch && batch.purchasePrice) {
-                        costPrice = batch.purchasePrice;
+                        // Start with base purchase price
+                        let baseCostPrice = batch.purchasePrice;
+                        
+                        // Apply batch-level discount if exists
+                        if (batch.discount && batch.discount.amount > 0) {
+                            if (batch.discount.type === 'percentage') {
+                                baseCostPrice = baseCostPrice * (1 - (batch.discount.amount / 100));
+                            } else {
+                                // For fixed discount, it's usually applied at purchase level, not per unit
+                                // We'll handle this when we have the full purchase context
+                                baseCostPrice = baseCostPrice - (batch.discount.amount || 0);
+                            }
+                        }
+                        
+                        // Apply batch-level tax if exists
+                        if (batch.gst && batch.gst > 0) {
+                            // GST is typically a percentage tax
+                            baseCostPrice = baseCostPrice * (1 + (batch.gst / 100));
+                        }
+                        
+                        effectiveCostPrice = baseCostPrice;
                     }
                 }
-                totalCostOfGoodsSold += costPrice * (item.quantity || 0);
+                
+                totalCostOfGoodsSold += effectiveCostPrice * (item.quantity || 0);
             }
         }
     }
@@ -2323,12 +2345,46 @@ const prepareMainBusinessReport = async (filters = {}) => {
                             try {
                                 const batch = await findByIdBatchService(item.batchId);
                                 if (batch) {
-                                    // Extract cost price from batch's purchasePrice field
-                                    costPrice = Number(batch.purchasePrice) || 0;
+                                    // Start with base purchase price
+                                    let baseCostPrice = Number(batch.purchasePrice) || 0;
+                                    
+                                    // Calculate effective cost price including purchase tax and discount
+                                    let effectiveCostPrice = baseCostPrice;
+                                    let purchaseDiscount = 0;
+                                    let purchaseTax = 0;
+                                    
+                                    // Apply batch-level discount if exists
+                                    if (batch.discount && batch.discount.amount > 0) {
+                                        if (batch.discount.type === 'percentage') {
+                                            purchaseDiscount = baseCostPrice * (batch.discount.amount / 100);
+                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
+                                        } else {
+                                            // Fixed discount amount
+                                            purchaseDiscount = batch.discount.amount || 0;
+                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
+                                        }
+                                    }
+                                    
+                                    // Apply batch-level tax if exists
+                                    if (batch.gst && batch.gst > 0) {
+                                        // GST is typically a percentage tax
+                                        purchaseTax = effectiveCostPrice * (batch.gst / 100);
+                                        effectiveCostPrice = effectiveCostPrice + purchaseTax;
+                                    }
+                                    
+                                    // Use effective cost price for calculations
+                                    costPrice = effectiveCostPrice;
                                     batchSalePrice = Number(batch.sellingPrice) || 0;
                                     batchNumber = batch.batchNumber || batchNumber;
-                                    batchDiscount = batch.discount?.amount || 0;
+                                    batchDiscount = purchaseDiscount;
                                     batchDiscountType = batch.discount?.type || 'percentage';
+                                    
+                                    // Store additional purchase cost breakdown
+                                    item.basePurchasePrice = baseCostPrice;
+                                    item.purchaseDiscount = purchaseDiscount;
+                                    item.purchaseTax = purchaseTax;
+                                    item.effectiveCostPrice = effectiveCostPrice;
+                                    
                                 } else {
                                     console.warn(`Batch not found for batchId: ${item.batchId}, product: ${item.name}`);
                                 }
@@ -2351,6 +2407,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
                             quantity: item.quantity || 0,
                             // Prices
                             costPrice: costPrice,
+                            basePurchasePrice: item.basePurchasePrice || costPrice,
+                            purchaseDiscount: item.purchaseDiscount || 0,
+                            purchaseTax: item.purchaseTax || 0,
+                            effectiveCostPrice: item.effectiveCostPrice || costPrice,
                             batchSalePrice: batchSalePrice,
                             unitPrice: item.unitPrice || 0,
                             originalPrice: item.originalPrice || 0,

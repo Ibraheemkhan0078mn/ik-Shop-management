@@ -132,7 +132,7 @@ function renderTransactionRow(transaction, type, formatDate, onExpandOrder) {
 
 function getTableHeaders(type, labels) {
     switch (type) {
-        case 'sales': return [labels.orderNumber, labels.customer, labels.paymentMethod, 'Total Cost', 'Total Sale', labels.amount, 'Profit (Margin)', labels.date];
+        case 'sales': return [labels.orderNumber, labels.customer, labels.paymentMethod, 'Effective Cost', 'Total Sale', labels.amount, 'Profit (Margin)', labels.date];
         case 'purchases': return [labels.invoiceNumber, labels.supplier, 'Subtotal', 'Discount', 'Tax', labels.amount, 'Status', labels.date];
         case 'expenses': return [labels.title, labels.category, labels.description, labels.amount, labels.date];
         case 'wastages': return [labels.product, labels.quantity, labels.costPrice, labels.totalLoss, labels.date];
@@ -215,10 +215,10 @@ function TransactionTable({ transactions, type, labels }) {
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Product</th>
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Qty</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost/Unit</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Purchase Cost</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale/Unit</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Discount</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Tax</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale Discount</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale Tax</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Item Total</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Profit</th>
                                                             </tr>
@@ -235,9 +235,17 @@ function TransactionTable({ transactions, type, labels }) {
                                                                     <td className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>{item.batchNumber || 'N/A'}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>
-                                                                        Rs {item.costPrice?.toLocaleString() || 0}
-                                                                        <div className="text-xs mt-0.5" style={{ color: '#10b981' }}>
-                                                                            (Total: {item.itemCostTotal?.toLocaleString()})
+                                                                        <div className="space-y-0.5">
+                                                                            <div>Rs {item.costPrice?.toLocaleString() || 0}</div>
+                                                                            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+                                                                                Base: {item.basePurchasePrice?.toLocaleString() || 0}
+                                                                                {item.purchaseDiscount > 0 && (
+                                                                                    <div style={{ color: '#f59e0b' }}>-Disc: {item.purchaseDiscount?.toLocaleString()}</div>
+                                                                                )}
+                                                                                {item.purchaseTax > 0 && (
+                                                                                    <div style={{ color: '#8b5cf6' }}>+Tax: {item.purchaseTax?.toLocaleString()}</div>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>
