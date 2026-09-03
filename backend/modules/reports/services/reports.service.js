@@ -709,13 +709,51 @@ export const getPurchaseReport = async (filters = {}) => {
 
     const [data, total] = await Promise.all([
         findPurchaseService(matchQuery, {
-            populate: ["supplier"],
+            populate: [
+                { path: "supplier", select: "name" },
+                { path: "items.product", select: "name productCode" },
+                { path: "items.batch", select: "batchNumber" }
+            ],
             sort: { createdAt: -1 },
             skip,
             limit
         }),
         countPurchaseService(matchQuery)
     ]);
+
+    // Fetch purchase returns for each purchase
+    const { findPurchaseReturnService } = await import("../../purchaseReturn/services/purchaseReturn.crud.js");
+    const purchaseIds = data.map(p => p._id);
+    const allReturns = await findPurchaseReturnService({ purchase: { $in: purchaseIds } }, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ]
+    });
+
+    // Create map of purchase returns by purchase ID
+    const purchaseReturnsMap = new Map();
+    if (allReturns && allReturns.length > 0) {
+        allReturns.forEach(ret => {
+            const purchaseId = ret.purchase?.toString();
+            if (purchaseId) {
+                if (!purchaseReturnsMap.has(purchaseId)) {
+                    purchaseReturnsMap.set(purchaseId, []);
+                }
+                purchaseReturnsMap.get(purchaseId).push(ret);
+            }
+        });
+    }
+
+    // Attach purchase returns to data
+    const enrichedData = data.map(purchase => {
+        const plainPurchase = purchase.toObject ? purchase.toObject() : purchase;
+        return {
+            ...plainPurchase,
+            purchaseReturns: purchaseReturnsMap.get(purchase._id.toString()) || []
+        };
+    });
 
     // Calculate totals and KPIs from the data
     const totalPurchases = data.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
@@ -742,7 +780,7 @@ export const getPurchaseReport = async (filters = {}) => {
         if (!supplierMap[supplierId]) {
             supplierMap[supplierId] = {
                 supplierId,
-                supplierName: purchase.supplierName || 'Unknown',
+                supplierName: purchase.supplier?.name || 'Unknown',
                 totalAmount: 0,
                 paidAmount: 0,
                 dueAmount: 0,
@@ -759,7 +797,7 @@ export const getPurchaseReport = async (filters = {}) => {
     const supplierBreakdown = Object.values(supplierMap).sort((a, b) => b.totalAmount - a.totalAmount);
 
     return {
-        data,
+        data: enrichedData,
         total,
         page,
         limit,
@@ -1332,7 +1370,7 @@ export const getPurchaseKPIReport = async (filters = {}) => {
     const [purchases, purchaseReturns, supplierList, previousPurchases] = await Promise.all([
         findPurchaseService(purchaseFilter),
         findPurchaseReturnService(purchaseFilter),
-        findSupplierService({ isActive: true }).select("name type email phone address"),
+        findSupplierService({ isActive: true }, { select: "name type email phone address" }),
         previousPurchaseFilter ? findPurchaseService(previousPurchaseFilter) : []
     ]);
 

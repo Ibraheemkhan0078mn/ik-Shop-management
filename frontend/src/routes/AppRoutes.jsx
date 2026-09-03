@@ -31,6 +31,7 @@ import ProductSubCategoriesPage from "../modules/productsModule/pages/ProductSub
 import BrandPage from "../modules/productsModule/pages/BrandPage.jsx";
 import MainBusinessReport from "../modules/reports/pages/MainBusinessReport.jsx";
 import PurchaseReport from "../modules/reports/pages/PurchaseReport.jsx";
+import PurchaseKPIReport from "../modules/reports/pages/PurchaseKPIReport.jsx";
 import InventoryReport from "../modules/reports/pages/InventoryReport.jsx";
 import CustomerReport from "../modules/reports/pages/CustomerReport.jsx";
 import SupplierReport from "../modules/reports/pages/SupplierReport.jsx";
@@ -97,6 +98,7 @@ function AppRoutes() {
             <Route path="/reports/main-business" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
             <Route path="/reports/sales" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
             <Route path="/reports/purchases" element={<ProtectedRoute><PurchaseReport /></ProtectedRoute>} />
+            <Route path="/reports/purchases-kpi" element={<ProtectedRoute><PurchaseKPIReport /></ProtectedRoute>} />
             <Route path="/reports/inventory" element={<ProtectedRoute><InventoryReport /></ProtectedRoute>} />
             <Route path="/reports/customers" element={<ProtectedRoute><CustomerReport /></ProtectedRoute>} />
             <Route path="/reports/suppliers" element={<ProtectedRoute><SupplierReport /></ProtectedRoute>} />

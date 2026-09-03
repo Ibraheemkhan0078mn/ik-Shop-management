@@ -142,6 +142,7 @@ export const reportsApi = baseApi.injectEndpoints({
                 url: "/reports/purchases-kpi",
                 params,
             }),
+            transformResponse: (raw) => raw.data,
             providesTags: ["Reports"],
         }),
 

@@ -30,6 +30,7 @@ export const ROUTE_PERMISSIONS = {
     "/reports": "reports.view",
     "/reports/sales": "reports.view",
     "/reports/purchases": "reports.view",
+    "/reports/purchases-kpi": "reports.view",
     "/reports/expenses": "reports.view",
     "/reports/inventory": "reports.view",
     "/accounts": "accounts.view",
