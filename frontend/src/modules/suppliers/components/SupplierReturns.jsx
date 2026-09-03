@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { Eye, RotateCcw, DollarSign } from "lucide-react";
+import { Eye, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGetSupplierPurchaseReturnsQuery } from "../../purchaseReturn/services/purchaseReturn.service.js";
 import { useSupplierPurchaseReturnKPIs } from "../services/suppliers.service.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
-import PurchaseReturnPaymentModal from "../../purchaseReturn/components/PurchaseReturnPaymentModal.jsx";
 
 export default function SupplierReturns({ supplierId }) {
     const navigate = useNavigate();
@@ -14,7 +13,6 @@ export default function SupplierReturns({ supplierId }) {
         return firstDay.toISOString().split('T')[0];
     });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-    const [paymentModal, setPaymentModal] = useState(null);
 
     // Fetch KPIs from backend
     const { data: kpiData } = useSupplierPurchaseReturnKPIs({ supplierId, startDate, endDate });
@@ -136,15 +134,6 @@ export default function SupplierReturns({ supplierId }) {
                                                         >
                                                             <Eye className="w-3 h-3" />
                                                         </button>
-                                                        {status === 'approved' && remaining > 0 && (
-                                                            <button 
-                                                                onClick={() => setPaymentModal(returnItem)}
-                                                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
-                                                                title="Process Refund"
-                                                            >
-                                                                <DollarSign className="w-3 h-3" />
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -162,14 +151,6 @@ export default function SupplierReturns({ supplierId }) {
                     </div>
                 }
             />
-
-            {paymentModal && (
-                <PurchaseReturnPaymentModal
-                    purchaseReturn={paymentModal}
-                    onClose={() => setPaymentModal(null)}
-                    onSuccess={() => setPaymentModal(null)}
-                />
-            )}
         </div>
     );
 }

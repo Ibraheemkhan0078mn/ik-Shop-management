@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Trash2, Eye, EyeOff, Download } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Eye, EyeOff, Download } from "lucide-react";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
-import { useGetOrderReturnByIdQuery, useGetOrderReturnPaymentsQuery, useDeleteOrderReturnPaymentMutation, useRecalculateOrderReturnMutation } from "../api/orderReturn.api.js";
+import { useGetOrderReturnByIdQuery, useGetOrderReturnPaymentsQuery, useRecalculateOrderReturnMutation } from "../api/orderReturn.api.js";
 import OrderReturnPaymentModal from "../components/OrderReturnPaymentModal.jsx";
 import OrderReturnPdfTemplate from "../components/OrderReturnPdfTemplate.jsx";
 import OrderReturnPaymentPdfTemplate from "../components/OrderReturnPaymentPdfTemplate.jsx";
@@ -26,7 +26,6 @@ export default function OrderReturnDetail() {
 
     const { data: orderReturn, isLoading, refetch } = useGetOrderReturnByIdQuery(id);
     const { data: paymentsData, refetch: refetchPayments } = useGetOrderReturnPaymentsQuery(id);
-    const [deletePayment] = useDeleteOrderReturnPaymentMutation();
     const [recalculateOrderReturn] = useRecalculateOrderReturnMutation();
 
     const payments = paymentsData || [];
@@ -37,17 +36,6 @@ export default function OrderReturnDetail() {
     const remainingAmount = totalRefundAmount - refundedAmount;
     const refundStatus = orderReturn?.refundStatus || 'pending';
 
-    const handleDeletePayment = async (paymentId) => {
-        try {
-            await deletePayment({ id, paymentId }).unwrap();
-            await recalculateOrderReturn(id).unwrap();
-            showSuccess("Refund deleted successfully");
-            refetchPayments();
-            refetch();
-        } catch (error) {
-            showError(error?.data?.message || "Failed to delete refund");
-        }
-    };
 
     const handleRecalculate = async () => {
         try {
@@ -422,13 +410,6 @@ export default function OrderReturnDetail() {
                                                                     title={isPaymentExpanded ? "Hide details" : "Show details"}
                                                                 >
                                                                     {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeletePayment(payment._id)}
-                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
-                                                                    title="Delete Refund"
-                                                                >
-                                                                    <Trash2 size={15} />
                                                                 </button>
                                                             </div>
                                                         </td>

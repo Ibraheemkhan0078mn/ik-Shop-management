@@ -1,12 +1,11 @@
 // ─── pages/OrderReturnList.jsx ────────────────────────────────────────────
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Eye, Trash2, Edit, ChevronLeft, ChevronRight, PackageX, CheckCircle, Check, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getOrderReturnLabels } from "../labels/orderReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import OrderReturnModal from "../components/OrderReturnModal.jsx";
-import OrderReturnPaymentModal from "../components/OrderReturnPaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { useGetPaginatedOrderReturnsQuery, useDeleteOrderReturnMutation, useApproveOrderReturnMutation } from "../api/orderReturn.api.js";
@@ -52,7 +51,6 @@ const OrderReturnList = () => {
     const [isViewMode, setIsViewMode] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [approvalModal, setApprovalModal] = useState(false);
-    const [paymentModal, setPaymentModal] = useState(null);
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -169,16 +167,6 @@ const OrderReturnList = () => {
                 />
             )}
 
-            {paymentModal && (
-                <OrderReturnPaymentModal
-                    orderReturn={paymentModal}
-                    onClose={() => setPaymentModal(null)}
-                    onSuccess={() => {
-                        setPaymentModal(null);
-                        refetch();
-                    }}
-                />
-            )}
 
             {/* ── Heading section ── */}
             <div className="flex-none px-6 pt-4">
@@ -309,7 +297,6 @@ const OrderReturnList = () => {
                                             onView={() => handleView(returnItem)}
                                             onEdit={() => handleEdit(returnItem)}
                                             onDelete={() => handleDelete(returnItem._id)}
-                                            onPayment={() => setPaymentModal(returnItem)}
                                         />
                                     ))}
                                 </tbody>
@@ -328,7 +315,7 @@ const OrderReturnList = () => {
 
 // ---- Subcomponents ---------------------------------------------------------
 
-function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onDelete, onPayment }) {
+function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onDelete }) {
     const refundStatusStyle = {
         pending: "bg-gray-100 text-gray-700",
         partial: "bg-yellow-100 text-yellow-700",
@@ -344,8 +331,6 @@ function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onD
     };
 
     const isApproved = returnItem.returnStatus === 'approved';
-    const isFullyRefunded = returnItem.refundStatus === 'fully_refunded';
-    const showPaymentIcon = isApproved && !isFullyRefunded;
 
     const items = returnItem?.items || [];
 
@@ -398,9 +383,6 @@ function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onD
                 <td className="px-4 py-3">
                     <div className="flex gap-1 justify-center">
                         <RowAction icon={Eye} title="View Details" onClick={onView} className="text-ink-subtle" />
-                        {showPaymentIcon && (
-                            <RowAction icon={DollarSign} title="Process Payment" onClick={onPayment} className="text-green-600" hoverBg="hover:bg-green-100" />
-                        )}
                         {!isApproved && (
                             <PermissionGuard execute={onEdit} permission="orderReturns.update" isConfirmation={true}>
                                 <RowAction icon={Edit} title="Edit" onClick={() => {}} className="text-primary" />

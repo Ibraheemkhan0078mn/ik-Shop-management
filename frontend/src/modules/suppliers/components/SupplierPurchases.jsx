@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Edit, Trash2, DollarSign, Check, X, RotateCcw, Copy, ShoppingCart } from "lucide-react";
+import { Eye, Edit, Trash2, RotateCcw, Check, X, Copy, ShoppingCart } from "lucide-react";
 import { usePurchasesBySupplier, useDeletePurchase, useUpdatePurchaseStatus } from "../../productPurchases/services/purchases.service.js";
 import { useSupplierPurchaseKPIs } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { getPurchaseLabels } from "../../productPurchases/labels/purchaseLabels.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
-import PurchasePaymentModal from "../../productPurchases/components/PurchasePaymentModal.jsx";
 import PurchaseReturnModal from "../../purchaseReturn/components/PurchaseReturnModal.jsx";
 import PurchaseModal from "../../productPurchases/components/PurchaseModal.jsx";
 
@@ -18,7 +17,6 @@ export default function SupplierPurchases({ supplierId }) {
         return firstDay.toISOString().split('T')[0];
     });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-    const [paymentModal, setPaymentModal] = useState(null);
     const [returnModal, setReturnModal] = useState(null);
     const [purchaseModal, setPurchaseModal] = useState(null);
 
@@ -57,29 +55,11 @@ export default function SupplierPurchases({ supplierId }) {
         }
     };
 
-    const getPaymentStatusColor = (status) => {
-        switch (status) {
-            case 'pending': return 'bg-gray-100 text-gray-800 border-gray-300';
-            case 'partial': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'full': return 'bg-green-100 text-green-800 border-green-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
-
     const getStatusLabel = (status) => {
         switch (status) {
             case 'ordered': return purchaseLabels.ordered || 'Ordered';
             case 'delivered': return purchaseLabels.delivered || 'Delivered';
             case 'rejected': return purchaseLabels.rejected || 'Rejected';
-            default: return status;
-        }
-    };
-
-    const getPaymentStatusLabel = (status) => {
-        switch (status) {
-            case 'pending': return purchaseLabels.paymentPending || 'Pending';
-            case 'partial': return purchaseLabels.paymentPartial || 'Partial';
-            case 'full': return purchaseLabels.paymentFull || 'Full';
             default: return status;
         }
     };
@@ -146,7 +126,6 @@ export default function SupplierPurchases({ supplierId }) {
                                             <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Remaining</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Status</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Payment</th>
                                             <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Actions</th>
                                         </tr>
                                     </thead>
@@ -156,7 +135,6 @@ export default function SupplierPurchases({ supplierId }) {
                                             const paidAmount = purchase.paidAmount || 0;
                                             const remainingAmount = totalAmount - paidAmount;
                                             const status = purchase.status || 'ordered';
-                                            const paymentStatus = purchase.paymentStatus || 'pending';
                                             const dateStr = purchase.date || purchase.createdAt || "";
                                             const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
 
@@ -199,11 +177,6 @@ export default function SupplierPurchases({ supplierId }) {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(paymentStatus)}`}>
-                                                            {getPaymentStatusLabel(paymentStatus)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3">
                                                         <div className="flex justify-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
                                                             <button 
                                                                 onClick={() => navigate(`/purchases/${purchase._id}`)}
@@ -229,15 +202,6 @@ export default function SupplierPurchases({ supplierId }) {
                                                                         <X className="w-3 h-3" />
                                                                     </button>
                                                                 </>
-                                                            )}
-                                                            {status === 'delivered' && remainingAmount > 0 && (
-                                                                <button 
-                                                                    onClick={() => setPaymentModal(purchase)}
-                                                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
-                                                                    title={purchaseLabels.pay || "Pay"}
-                                                                >
-                                                                    <DollarSign className="w-3 h-3" />
-                                                                </button>
                                                             )}
                                                             {status === 'delivered' && (
                                                                 <button 
@@ -281,13 +245,6 @@ export default function SupplierPurchases({ supplierId }) {
                 />
             </div>
 
-            {paymentModal && (
-                <PurchasePaymentModal
-                    purchase={paymentModal}
-                    onClose={() => setPaymentModal(null)}
-                    onSuccess={() => setPaymentModal(null)}
-                />
-            )}
             {returnModal && (
                 <PurchaseReturnModal
                     mode="create"

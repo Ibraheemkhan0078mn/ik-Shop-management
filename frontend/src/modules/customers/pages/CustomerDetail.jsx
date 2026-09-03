@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw, DollarSign } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw } from "lucide-react";
 import { useCustomer, useCustomerOrderKPIs, useCustomerOrderReturnKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
@@ -133,10 +133,6 @@ export default function CustomerDetail() {
         setSelectedReturn(returnItem);
         setIsEditMode(true);
         setReturnModalOrderId(null);
-    };
-
-    const handlePaymentOrderReturn = (returnItem) => {
-        setPaymentModal(returnItem);
     };
 
     const handleCreateQarzaAccount = async () => {
@@ -691,16 +687,6 @@ export default function CustomerDetail() {
                                                         >
                                                             <Eye size={15} />
                                                         </button>
-                                                        {(returnItem.returnStatus === 'approved' || returnItem.status === 'approved') && 
-                                                         (returnItem.refundStatus !== 'fully_refunded' && returnItem.refundStatus !== 'completed') && (
-                                                            <button
-                                                                onClick={() => handlePaymentOrderReturn(returnItem)}
-                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-green-400 hover:text-green-600"
-                                                                title="Process Payment"
-                                                            >
-                                                                <DollarSign size={15} />
-                                                            </button>
-                                                        )}
                                                         <PermissionGuard 
                                                             execute={() => handleEditOrderReturn(returnItem)} 
                                                             permission="orderReturns.update" 

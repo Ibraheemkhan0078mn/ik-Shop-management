@@ -2,13 +2,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter, DollarSign, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, CheckCircle, Pencil, Trash2, Check, X, Filter, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList, { usePaginatedFetch } from "../../../shared/components/PaginatedList.jsx";
 import PurchaseReturnModal from "../components/PurchaseReturnModal.jsx";
-import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { deletePurchaseReturnApi, getPaginatedPurchaseReturnsApi, approvePurchaseReturnApi } from "../api/purchaseReturnApi.js";
@@ -31,7 +30,6 @@ export default function PurchaseReturnPage() {
 
     const [modal, setModal] = useState(null);
     const [approvalModal, setApprovalModal] = useState(false);
-    const [paymentModal, setPaymentModal] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [filterId, setFilterId] = useState("");
     const [filterInvoiceId, setFilterInvoiceId] = useState("");
@@ -129,16 +127,6 @@ export default function PurchaseReturnPage() {
                 />
             )}
 
-            {paymentModal && (
-                <PurchaseReturnPaymentModal
-                    purchaseReturn={paymentModal}
-                    onClose={() => setPaymentModal(null)}
-                    onSuccess={() => {
-                        setPaymentModal(null);
-                        setRefreshKey((v) => v + 1);
-                    }}
-                />
-            )}
 
             {approvalModal && (
                 <PurchaseReturnApprovalModal
@@ -292,7 +280,6 @@ export default function PurchaseReturnPage() {
                                             onToggleExpand={() => setExpandedRows(prev => ({ ...prev, [pr._id]: !prev[pr._id] }))}
                                             onEdit={() => setModal({ mode: "update", id: pr._id })}
                                             onDelete={() => handleDelete(pr._id)}
-                                            onPayment={() => setPaymentModal(pr)}
                                         />
                                     ))}
                                 </tbody>
@@ -309,7 +296,7 @@ export default function PurchaseReturnPage() {
     );
 }
 
-function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit, onDelete, onPayment }) {
+function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit, onDelete }) {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -334,11 +321,6 @@ function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit,
             case 'rejected': return labels.rejected;
             default: return status;
         }
-    };
-
-    const handlePaymentClick = (e) => {
-        e.stopPropagation();
-        onPayment();
     };
 
     const handleViewDetails = (e) => {
@@ -396,15 +378,6 @@ function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit,
                         >
                             <Eye className="w-3 h-3" />
                         </button>
-                        {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
-                            <button
-                                onClick={handlePaymentClick}
-                                className="px-3 py-1 text-xs rounded-lg font-medium transition bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 flex items-center gap-1"
-                                title="Record Refund"
-                            >
-                                <DollarSign className="w-3 h-3" />
-                            </button>
-                        )}
                         {purchaseReturn?.status !== 'approved' && (
                             <PermissionGuard execute={onEdit} permission="purchaseReturns.update" isConfirmation={true}>
                                 <button

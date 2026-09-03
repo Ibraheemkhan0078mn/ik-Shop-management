@@ -1,13 +1,12 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef, useEffect } from "react";
-import { Plus, Check, X, DollarSign, Eye, Copy, RotateCcw, Edit, Trash2, Filter, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { Plus, Check, X, Eye, Copy, RotateCcw, Edit, Trash2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PurchaseModal from "../components/PurchaseModal.jsx";
-import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
 import PurchaseReturnModal from "../../purchaseReturn/components/PurchaseReturnModal.jsx";
 import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
@@ -32,7 +31,6 @@ export default function ProductPurchasePage() {
     const suppliers = suppliersData || [];
 
     const [modal,        setModal]        = useState(null);
-    const [paymentModal, setPaymentModal] = useState(null);
     const [returnModal,  setReturnModal]  = useState(null);
     const [filterId, setFilterId] = useState("");
     const [debouncedFilterId, setDebouncedFilterId] = useState("");
@@ -92,16 +90,6 @@ export default function ProductPurchasePage() {
                     mode={modal.mode}
                     purchaseId={modal.id}
                     onClose={() => setModal(null)}
-                />
-            )}
-            {paymentModal && (
-                <PurchasePaymentModal
-                    purchase={paymentModal}
-                    onClose={() => setPaymentModal(null)}
-                    onSuccess={() => {
-                        setPaymentModal(null);
-                        listRef.current?.refetch();
-                    }}
                 />
             )}
             {returnModal && (
@@ -323,7 +311,6 @@ export default function ProductPurchasePage() {
                                         onEdit={() => setModal({ mode: "update", id: p._id })}
                                         onDelete={() => handleDelete(p._id)}
                                         onStatusUpdate={handleStatusUpdate}
-                                        onPayment={() => setPaymentModal(p)}
                                         onReturn={() => setReturnModal({ purchaseId: p._id })}
                                         onView={(purchase) => navigate(`/purchases/${purchase._id}`)}
                                     />
@@ -342,7 +329,7 @@ export default function ProductPurchasePage() {
     );
 }
 
-function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, onStatusUpdate, onPayment, onReturn, onView }) {
+function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, onStatusUpdate, onReturn, onView }) {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getPurchaseLabels(language);
@@ -480,16 +467,6 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
                                     </button>
                                 </PermissionGuard>
                             </>
-                        )}
-                        {status === 'delivered' && remainingAmount > 0 && (
-                            <PermissionGuard execute={() => onPayment?.()} permission="purchases.payment" isConfirmation={true}>
-                                <button 
-                                    className="px-3 py-1 text-xs rounded-lg font-medium transition bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
-                                    title={labels.pay}
-                                >
-                                    <DollarSign className="w-3 h-3" />
-                                </button>
-                            </PermissionGuard>
                         )}
                         {status === 'delivered' && (
                             <PermissionGuard execute={() => onReturn?.()} permission="purchases.return" isConfirmation={false}>

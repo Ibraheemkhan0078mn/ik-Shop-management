@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Plus } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
-import { useGetPurchaseReturnPaymentsQuery, useDeletePurchaseReturnPaymentMutation, useRecalculatePurchaseReturnMutation } from "../services/purchaseReturn.service.js";
+import { useGetPurchaseReturnPaymentsQuery, useRecalculatePurchaseReturnMutation } from "../services/purchaseReturn.service.js";
 import PurchaseReturnDetailPdfTemplate from "../components/PurchaseReturnDetailPdfTemplate.jsx";
 import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
-import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const STATUS_STYLE = {
     draft: { background: "rgba(107,114,128,0.1)", color: "#6b7280", text: "Draft" },
@@ -34,7 +33,6 @@ export default function PurchaseReturnDetail() {
 
     // Transaction/Refund hooks
     const { data: paymentsData, refetch: refetchPayments } = useGetPurchaseReturnPaymentsQuery(id);
-    const [deletePayment] = useDeletePurchaseReturnPaymentMutation();
     const [recalculatePurchaseReturn] = useRecalculatePurchaseReturnMutation();
 
     const payments = paymentsData?.data || paymentsData || [];
@@ -45,15 +43,6 @@ export default function PurchaseReturnDetail() {
     const remainingAmount = totalRefundAmount - refundedAmount;
     const refundStatus = purchaseReturn?.refundStatus || 'pending';
 
-    const handleDeletePayment = async (paymentId) => {
-        try {
-            await deletePayment({ id, paymentId }).unwrap();
-            showSuccess("Refund deleted successfully");
-            refetchPayments();
-        } catch (error) {
-            showError(error?.data?.message || "Failed to delete refund");
-        }
-    };
 
     const handleRecalculate = async () => {
         try {
@@ -452,17 +441,6 @@ export default function PurchaseReturnDetail() {
                                                                 >
                                                                     {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
                                                                 </button>
-                                                                <ConfirmDialog
-                                                                    onConfirm={() => handleDeletePayment(payment._id)}
-                                                                    message="Are you sure you want to delete this refund?"
-                                                                >
-                                                                    <button
-                                                                        className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
-                                                                        title="Delete refund"
-                                                                    >
-                                                                        <Trash2 size={15} />
-                                                                    </button>
-                                                                </ConfirmDialog>
                                                             </div>
                                                         </td>
                                                     </tr>

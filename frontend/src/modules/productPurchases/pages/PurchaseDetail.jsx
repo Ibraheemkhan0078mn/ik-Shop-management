@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, Plus, Download, RefreshCw, Eye, EyeOff } from "lucide-react";
-import { usePurchase, useGetPurchasePayments, useDeletePurchasePayment, useGetPurchasePaymentStatus, useRecalculatePurchasePaidAmount } from "../services/purchases.service.js";
+import { ArrowLeft, Plus, Download, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { usePurchase, useGetPurchasePayments, useGetPurchasePaymentStatus, useRecalculatePurchasePaidAmount } from "../services/purchases.service.js";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import PurchasePaymentModal from "../components/PurchasePaymentModal.jsx";
@@ -10,7 +10,6 @@ import PaymentPdfTemplate from "../components/PaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import { usePermissionGuard } from "../../../shared/hooks/usePermissionGuard.js";
-import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 
 const STATUS_STYLE = {
     ordered: { background: "rgba(180,83,9,0.1)", color: "#d97706", text: "Ordered" },
@@ -38,7 +37,6 @@ export default function PurchaseDetail() {
     const { data: purchaseData, isLoading, refetch: refetchPurchase } = usePurchase(id);
     const { data: paymentsData, refetch: refetchPayments } = useGetPurchasePayments(id);
     const { data: paymentStatusData, refetch: refetchPaymentStatus } = useGetPurchasePaymentStatus(id);
-    const [deletePayment] = useDeletePurchasePayment();
     const [recalculatePurchasePaidAmount] = useRecalculatePurchasePaidAmount();
 
     const purchase = purchaseData?.data || purchaseData;
@@ -63,23 +61,6 @@ export default function PurchaseDetail() {
     const totalCash = paymentStatus.totalCash || 0;
     const totalCredit = paymentStatus.totalCredit || 0;
 
-    const handleEditPayment = (payment) => {
-        setEditingPayment(payment);
-        setShowPaymentModal(true);
-    };
-
-    const handleDeletePayment = async (paymentId) => {
-        try {
-            await deletePayment({ paymentId, purchaseId: id }).unwrap();
-            await recalculatePurchasePaidAmount(id).unwrap();
-            showSuccess("Payment deleted successfully");
-            refetchPurchase();
-            refetchPayments();
-            refetchPaymentStatus();
-        } catch (error) {
-            showError(error?.data?.message || "Failed to delete payment");
-        }
-    };
 
     const handlePaymentSuccess = async () => {
         setShowPaymentModal(false);
@@ -104,8 +85,6 @@ export default function PurchaseDetail() {
         setShowPaymentPdfModal(true);
     };
 
-    const canEditPayments = hasPermission('purchases.update');
-    const canDeletePayments = hasPermission('purchases.delete');
 
     return (
         <>
@@ -558,28 +537,6 @@ export default function PurchaseDetail() {
                                                                 >
                                                                     {isPaymentExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
                                                                 </button>
-                                                                {canEditPayments && (
-                                                                    <button
-                                                                        onClick={() => handleEditPayment(payment)}
-                                                                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg"
-                                                                        title="Edit payment"
-                                                                    >
-                                                                        <Edit size={15} />
-                                                                    </button>
-                                                                )}
-                                                                {canDeletePayments && (
-                                                                    <ConfirmDialog
-                                                                        onConfirm={() => handleDeletePayment(payment._id)}
-                                                                        message="Are you sure you want to delete this payment?"
-                                                                    >
-                                                                        <button
-                                                                            className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg"
-                                                                            title="Delete payment"
-                                                                        >
-                                                                            <Trash2 size={15} />
-                                                                        </button>
-                                                                    </ConfirmDialog>
-                                                                )}
                                                     </div>
                                                 </td>
                                             </tr>
