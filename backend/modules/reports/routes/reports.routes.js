@@ -8,6 +8,7 @@ import {
     getPurchaseReportData,
     getFinancialReportData,
     getCreditDebitReportData,
+    getCreditsDebitsAccountDataAPI,
     getExpenseReportData,
     getSupplierReportData,
     getWastageReportData,
@@ -83,6 +84,9 @@ router.get("/financial", getFinancialReportData);
 
 // Credit/Debit Report (Qarza)
 router.get("/credit-debit", getCreditDebitReportData);
+
+// Credits/Debits Account Data (for integration)
+router.get("/credits-debits-data", getCreditsDebitsAccountDataAPI);
 
 // Expense Report
 router.get("/expenses", getExpenseReportData);

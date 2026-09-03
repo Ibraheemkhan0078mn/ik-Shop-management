@@ -908,7 +908,7 @@ export default function MainBusinessReport() {
                                     { label: labels.receivable, value: summary.totalReceivable, isCurrency: true, color: COLORS.qarza },
                                     { label: labels.payable, value: summary.totalPayable, isCurrency: true, color: COLORS.qarzaPayable },
                                 ]}
-                                isExpanded={!!expandedSections.qarza} onToggle={() => toggleSection('qarza')} labels={labels}
+                                isExpanded={false} onToggle={() => {}} labels={labels}
                             />
                         </div>
                     </div>

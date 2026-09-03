@@ -81,6 +81,15 @@ export const reportsApi = baseApi.injectEndpoints({
             }),
             providesTags: ["Reports"],
         }),
+        
+        // Credits/Debits Account Data for integration
+        getCreditsDebitsAccountData: builder.query({
+            query: (params) => ({
+                url: "/reports/credits-debits-data",
+                params,
+            }),
+            providesTags: ["Reports"],
+        }),
 
         // Expense Report
         getExpenseReport: builder.query({
@@ -313,6 +322,7 @@ export const {
     useGetPurchaseReportQuery,
     useGetFinancialReportQuery,
     useGetCreditDebitReportQuery,
+    useGetCreditsDebitsAccountDataQuery,
     useGetExpenseReportQuery,
     useGetExpenseKPIReportQuery,
     useGetExpenseCategoryBreakdownQuery,

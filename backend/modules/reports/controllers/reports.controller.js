@@ -6,6 +6,7 @@ import {
     getPurchaseReport,
     getFinancialReport,
     getCreditDebitReport,
+    getCreditsDebitsAccountData,
     getExpenseReport,
     getSupplierReport,
     getWastageReport,
@@ -224,6 +225,18 @@ export const getCreditDebitReportData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Credit/Debit report retrieved successfully",
         ...report,
+    });
+});
+
+// Credits/Debits Account Data (for integration with other reports)
+export const getCreditsDebitsAccountDataAPI = asyncHandler(async (req, res, next) => {
+    const filters = req.query;
+    const data = await getCreditsDebitsAccountData(filters);
+
+    res.status(200).json({
+        success: true,
+        message: "Credits/Debits account data retrieved successfully",
+        data: data,
     });
 });
 

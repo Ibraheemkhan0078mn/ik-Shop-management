@@ -2269,7 +2269,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
     }
 
     // Fetch current period data using service functions
-    const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, qarzaReceivable, qarzaPayable, staffList] = await Promise.all([
+    const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, staffList] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter, { populate: 'supplier' }),
         findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
@@ -2277,10 +2277,16 @@ const prepareMainBusinessReport = async (filters = {}) => {
         findPurchaseReturnService(dateFilter),
         findProductReturnService(dateFilter),
         findStaffSalaryPaymentService({ ...dateFilter, status: 'paid' }),
-        findQarzaAccountService({ ...dateFilter, type: "receivable" }),
-        findQarzaAccountService({ ...dateFilter, type: "payable" }),
         findStaffService({})
     ]);
+
+    // Get credits/debits account data using the shared service
+    const creditsDebitsData = await getCreditsDebitsAccountData({
+        fromDate,
+        toDate,
+        period,
+        accountTypes: ['customer', 'supplier', 'general'] // Get all types
+    });
 
     // Fetch previous period data for comparison
     const [previousOrders, previousPurchases, previousExpenses, previousWastages, previousPurchaseReturns, previousProductReturns, previousSalaryPayments] = await Promise.all([
@@ -2346,11 +2352,14 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const staffCount = uniqueStaffPaid.size;
     const avgSalaryPerStaff = staffCount > 0 ? totalSalaries / staffCount : 0;
 
-    const totalReceivable = qarzaReceivable.reduce((sum, q) => sum + (q.balance || 0), 0);
-    const qarzaReceivableCount = qarzaReceivable.length;
-
-    const totalPayable = qarzaPayable.reduce((sum, q) => sum + (q.balance || 0), 0);
-    const qarzaPayableCount = qarzaPayable.length;
+    // Use credits/debits data from the shared service
+    const totalReceivable = creditsDebitsData.summary.totalToReceive;
+    const totalPayable = creditsDebitsData.summary.totalToGive;
+    const qarzaReceivableCount = creditsDebitsData.accountsByType.customer?.count || 0;
+    const qarzaPayableCount = creditsDebitsData.accountsByType.supplier?.count || 0;
+    const generalAccountsCount = creditsDebitsData.accountsByType.general?.count || 0;
+    const totalCreditsDebitsBalance = creditsDebitsData.summary.totalBalance;
+    const totalCreditsDebitsPayments = creditsDebitsData.summary.totalPaymentsInPeriod;
 
     // Net profit calculation: Sales - COGS - Expenses - Wastage - Salaries - Product Returns + Purchase Returns
     const netProfit = totalSales - totalCostOfGoodsSold - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
@@ -2703,6 +2712,9 @@ const prepareMainBusinessReport = async (filters = {}) => {
             retailSales,
             wholesaleSales,
             salesMargin,
+            // Credits/Debits summary data
+            totalCreditsDebitsBalance,
+            totalCreditsDebitsPayments,
         },
         details: {
             salesCount,
@@ -2714,6 +2726,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
             salaryPaymentCount,
             qarzaReceivableCount,
             qarzaPayableCount,
+            generalAccountsCount,
             avgOrderValue,
             supplierCount,
             avgPurchaseValue,
@@ -2721,6 +2734,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
             avgSalaryPerStaff,
             staffCount,
             wastagePercentOfPurchases,
+            // Credits/Debits details
+            totalCreditsDebitsAccounts: creditsDebitsData.summary.totalAccounts,
+            activeCreditsDebitsAccounts: creditsDebitsData.summary.activeAccounts,
+            accountsWithBalance: creditsDebitsData.summary.accountsWithBalance,
         },
         comparison: {
             previous: {
@@ -2807,6 +2824,23 @@ const prepareMainBusinessReport = async (filters = {}) => {
                 total: item.total,
                 count: item.count,
                 percentage: totalSalaries > 0 ? ((item.total / totalSalaries) * 100).toFixed(1) : 0
+            })),
+            // Credits/Debits breakdowns
+            creditsDebitsByAccountType: Object.entries(creditsDebitsData.accountsByType).map(([type, data]) => ({
+                accountType: type,
+                accountsCount: data.count,
+                totalBalance: data.totalBalance,
+                totalCashIn: data.totalCashIn,
+                totalCashOut: data.totalCashOut,
+                totalToReceive: data.totalToReceive,
+                totalToGive: data.totalToGive,
+                percentage: creditsDebitsData.summary.totalAccounts > 0 ? ((data.count / creditsDebitsData.summary.totalAccounts) * 100).toFixed(1) : 0
+            })),
+            creditsDebitsPaymentsByType: Object.entries(creditsDebitsData.paymentsByType).map(([type, data]) => ({
+                paymentType: type,
+                total: data.total,
+                count: data.count,
+                percentage: creditsDebitsData.summary.totalPaymentsInPeriod > 0 ? ((data.total / creditsDebitsData.summary.totalPaymentsInPeriod) * 100).toFixed(1) : 0
             }))
         },
         transactions: {
@@ -2899,7 +2933,25 @@ const prepareMainBusinessReport = async (filters = {}) => {
                 amount: payment.amount,
                 staffName: payment.staffName,
                 date: payment.paidAt
-            }))
+            })),
+            creditsDebitsTransactions: creditsDebitsData.rawPayments
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 100)
+                .map(payment => {
+                    // Find account details
+                    const account = creditsDebitsData.rawAccounts.find(acc => acc._id.toString() === payment.qarzaAccountId?.toString());
+                    return {
+                        id: payment._id,
+                        amount: payment.amount || 0,
+                        type: payment.type,
+                        accountName: account?.name || 'Unknown Account',
+                        accountType: account?.type || 'general',
+                        paymentMethod: payment.paymentMethod,
+                        source: payment.source || 'manual',
+                        notes: payment.notes || '',
+                        date: payment.createdAt
+                    };
+                })
         }
     };
 };
@@ -3049,35 +3101,279 @@ export const getFinancialReport = async (filters = {}) => {
     };
 };
 
-// Credit/Debit Report (Qarza)
+// Shared service to get credit/debit account data for integration with other reports
+export const getCreditsDebitsAccountData = async (filters = {}) => {
+    const { fromDate, toDate, period, accountTypes = [] } = filters;
+
+    // Build date filter for payments if provided
+    let dateFilter = {};
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const { startOfWeek, endOfWeek } = getWeekRange();
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const { startOfMonth, endOfMonth } = getMonthRange();
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+    }
+
+    // Build account filter
+    let accountFilter = {};
+    if (accountTypes.length > 0) {
+        accountFilter.type = { $in: accountTypes };
+    }
+
+    // Fetch accounts and payments
+    const [allAccounts, paymentsInPeriod] = await Promise.all([
+        findQarzaAccountService(accountFilter),
+        findQarzaPaymentService(dateFilter)
+    ]);
+
+    // Process accounts by type
+    const accountsByType = allAccounts.reduce((acc, account) => {
+        const type = account.type || 'general';
+        if (!acc[type]) {
+            acc[type] = {
+                accounts: [],
+                count: 0,
+                totalBalance: 0,
+                totalCashIn: 0,
+                totalCashOut: 0,
+                totalToReceive: 0,
+                totalToGive: 0
+            };
+        }
+
+        const accountBalance = account.overall || 0;
+        const cashIn = account.cashIn || 0;
+        const cashOut = account.cashOut || 0;
+        
+        let accountStatus = 'balanced';
+        if (accountBalance > 0) {
+            accountStatus = 'toReceive';
+        } else if (accountBalance < 0) {
+            accountStatus = 'toGive';
+        }
+
+        const accountData = {
+            id: account._id,
+            name: account.name,
+            type: account.type,
+            balance: accountBalance,
+            cashIn: cashIn,
+            cashOut: cashOut,
+            status: accountStatus,
+            phoneNo: account.phoneNo,
+            address: account.address,
+            isActive: account.isActive
+        };
+
+        acc[type].accounts.push(accountData);
+        acc[type].count += 1;
+        acc[type].totalBalance += accountBalance;
+        acc[type].totalCashIn += cashIn;
+        acc[type].totalCashOut += cashOut;
+        
+        if (accountStatus === 'toReceive') {
+            acc[type].totalToReceive += Math.abs(accountBalance);
+        } else if (accountStatus === 'toGive') {
+            acc[type].totalToGive += Math.abs(accountBalance);
+        }
+
+        return acc;
+    }, {});
+
+    // Process payments by type and source
+    const paymentsByType = paymentsInPeriod.reduce((acc, payment) => {
+        const paymentType = payment.type || 'manual';
+        const source = payment.source || 'manual';
+        
+        if (!acc[paymentType]) {
+            acc[paymentType] = {
+                total: 0,
+                count: 0,
+                bySource: {}
+            };
+        }
+        
+        if (!acc[paymentType].bySource[source]) {
+            acc[paymentType].bySource[source] = { total: 0, count: 0 };
+        }
+
+        const amount = payment.amount || 0;
+        acc[paymentType].total += amount;
+        acc[paymentType].count += 1;
+        acc[paymentType].bySource[source].total += amount;
+        acc[paymentType].bySource[source].count += 1;
+
+        return acc;
+    }, {});
+
+    // Calculate overall totals
+    const totalAccounts = allAccounts.length;
+    const totalBalance = allAccounts.reduce((sum, account) => sum + (account.overall || 0), 0);
+    const totalCashIn = allAccounts.reduce((sum, account) => sum + (account.cashIn || 0), 0);
+    const totalCashOut = allAccounts.reduce((sum, account) => sum + (account.cashOut || 0), 0);
+    const totalToReceive = allAccounts.filter(a => (a.overall || 0) > 0).reduce((sum, account) => sum + (account.overall || 0), 0);
+    const totalToGive = allAccounts.filter(a => (a.overall || 0) < 0).reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
+    const totalPaymentsInPeriod = paymentsInPeriod.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+    return {
+        accountsByType,
+        paymentsByType,
+        summary: {
+            totalAccounts,
+            totalBalance,
+            totalCashIn,
+            totalCashOut,
+            totalToReceive,
+            totalToGive,
+            netBalance: totalCashIn - totalCashOut,
+            totalPaymentsInPeriod,
+            paymentsCountInPeriod: paymentsInPeriod.length,
+            activeAccounts: allAccounts.filter(a => a.isActive).length,
+            accountsWithBalance: allAccounts.filter(a => Math.abs(a.overall || 0) > 0).length
+        },
+        // Raw data for further processing if needed
+        rawAccounts: allAccounts,
+        rawPayments: paymentsInPeriod
+    };
+};
+
+// Credit/Debit Report (Qarza) - Enhanced version with better data aggregation
 export const getCreditDebitReport = async (filters = {}) => {
-    const { type, search, page = 1, limit = 20 } = filters;
+    const { type, search, page = 1, limit = 20, fromDate, toDate, period } = filters;
+
+    // Build date filter if provided
+    let dateFilter = {};
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const { startOfWeek, endOfWeek } = getWeekRange();
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const { startOfMonth, endOfMonth } = getMonthRange();
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    }
 
     const matchQuery = {};
-    if (type) matchQuery.type = type;
+    if (type && type !== 'all') matchQuery.type = type;
     if (search) matchQuery.name = { $regex: search, $options: "i" };
 
     const skip = (page - 1) * limit;
 
-    // Fetch data using service functions
-    const [data, total] = await Promise.all([
-        findQarzaAccountService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    // Fetch all accounts and payments data using service functions
+    const [allAccounts, allPayments, data, total] = await Promise.all([
+        findQarzaAccountService({}),
+        findQarzaPaymentService(dateFilter),
+        findQarzaAccountService(matchQuery, { 
+            sort: { createdAt: -1 }, 
+            skip, 
+            limit 
+        }),
         countQarzaAccountService(matchQuery)
     ]);
 
     // Get recent payments for each account using service function
     const accountsWithPayments = await Promise.all(
         data.map(async (account) => {
-            const payments = await findQarzaPaymentService({ account: account._id })
-                .sort({ createdAt: -1 })
-                .limit(5);
-            return { ...account.toObject(), recentPayments: payments };
+            const payments = await findQarzaPaymentService({ 
+                qarzaAccountId: account._id,
+                ...dateFilter 
+            }, {
+                sort: { createdAt: -1 },
+                limit: 10
+            });
+            
+            // Calculate account balance and status
+            let totalCashIn = 0;
+            let totalCashOut = 0;
+            
+            payments.forEach(payment => {
+                if (payment.type === 'cashin' || payment.type === 'credit_received') {
+                    totalCashIn += payment.amount || 0;
+                } else if (payment.type === 'cashout' || payment.type === 'credit_given') {
+                    totalCashOut += payment.amount || 0;
+                }
+            });
+            
+            const currentBalance = account.overall || (account.cashIn - account.cashOut) || 0;
+            const remainingBalance = totalCashIn - totalCashOut;
+            
+            let accountStatus = 'cleared';
+            if (currentBalance > 0) {
+                accountStatus = account.type === 'customer' ? 'toReceive' : 'toGive';
+            } else if (currentBalance < 0) {
+                accountStatus = account.type === 'customer' ? 'toGive' : 'toReceive';
+            }
+
+            return { 
+                ...account.toObject(), 
+                recentPayments: payments,
+                currentBalance: currentBalance,
+                remainingBalance: remainingBalance,
+                accountStatus: accountStatus,
+                totalTransactions: payments.length
+            };
         })
     );
 
-    // Calculate totals manually
-    const totalBalance = data.reduce((sum, account) => sum + (account.balance || 0), 0);
-    const totalAccounts = data.length;
+    // Calculate enhanced summary with all account types
+    const summaryByType = allAccounts.reduce((acc, account) => {
+        const accountType = account.type || 'general';
+        if (!acc[accountType]) {
+            acc[accountType] = {
+                count: 0,
+                totalBalance: 0,
+                totalCashIn: 0,
+                totalCashOut: 0,
+                toReceive: 0,
+                toGive: 0
+            };
+        }
+        
+        acc[accountType].count += 1;
+        acc[accountType].totalBalance += account.overall || 0;
+        acc[accountType].totalCashIn += account.cashIn || 0;
+        acc[accountType].totalCashOut += account.cashOut || 0;
+        
+        if (account.status === 'toReceive') {
+            acc[accountType].toReceive += Math.abs(account.overall || 0);
+        } else if (account.status === 'toGive') {
+            acc[accountType].toGive += Math.abs(account.overall || 0);
+        }
+        
+        return acc;
+    }, {});
+
+    // Calculate payment activity within date range
+    const paymentsByType = allPayments.reduce((acc, payment) => {
+        const paymentType = payment.type || 'other';
+        if (!acc[paymentType]) {
+            acc[paymentType] = { count: 0, total: 0 };
+        }
+        acc[paymentType].count += 1;
+        acc[paymentType].total += payment.overall || 0;
+        return acc;
+    }, {});
+
+    // Overall totals
+    const totalBalance = allAccounts.reduce((sum, account) => sum + (account.overall || 0), 0);
+    const totalCashIn = allAccounts.reduce((sum, account) => sum + (account.cashIn || 0), 0);
+    const totalCashOut = allAccounts.reduce((sum, account) => sum + (account.cashOut || 0), 0);
+    const totalToReceive = allAccounts.filter(a => a.status === 'toReceive').reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
+    const totalToGive = allAccounts.filter(a => a.status === 'toGive').reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
 
     return {
         data: accountsWithPayments,
@@ -3086,8 +3382,20 @@ export const getCreditDebitReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
+            totalAccounts: allAccounts.length,
             totalBalance,
-            totalAccounts
+            totalCashIn,
+            totalCashOut,
+            totalToReceive,
+            totalToGive,
+            netBalance: totalCashIn - totalCashOut,
+            summaryByType,
+            paymentsByType,
+            totalTransactions: allPayments.length,
+            // Additional KPIs
+            avgAccountBalance: allAccounts.length > 0 ? totalBalance / allAccounts.length : 0,
+            activeAccounts: allAccounts.filter(a => a.isActive).length,
+            accountsWithBalance: allAccounts.filter(a => Math.abs(a.overall || 0) > 0).length
         }
     };
 };
