@@ -892,106 +892,105 @@ export const getCustomerPaymentsSummary = async (req, res) => {
     }
 };
 
-export const getCreditsDebitsReport = async (req, res) => {
-    try {
-        const {
-            startDate,
-            endDate,
-            accountId,
-            accountType,
-            transactionType,
-            direction,
-            source,
-            status,
-            sortBy,
-            page = 1,
-            limit = 20
-        } = req.query;
-        console.log(req.query, "the query")
+export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
+    const {
+        startDate,
+        endDate,
+        accountId,
+        accountType,
+        transactionType,
+        direction,
+        source,
+        status,
+        sortBy,
+        page = 1,
+        limit = 20
+    } = req.query;
+    console.log(req.query, "the query")
 
-        const QarzaAccountModel = getLocalQarzaAccountModel();
+    const QarzaAccountModel = getLocalQarzaAccountModel();
 
-        // Build transaction filter based on date range and account type
-        let transactionFilter = {};
-        
-        // Build date filter first
-        let dateFilter = {};
-        if (startDate || endDate) {
-            dateFilter.transactionDate = {};
-            if (startDate) {
-                const start = new Date(startDate);
-                start.setHours(0, 0, 0, 0);
-                dateFilter.transactionDate.$gte = start;
-            }
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                dateFilter.transactionDate.$lte = end;
-            }
+    // Build transaction filter based on date range and account type
+    let transactionFilter = {};
+    
+    // Build date filter first
+    let dateFilter = {};
+    if (startDate || endDate) {
+        dateFilter.transactionDate = {};
+        if (startDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            dateFilter.transactionDate.$gte = start;
         }
-        
-        // If accountType filter is applied, use specific transaction sources
-        // Otherwise, show all transactions from all sources for all account types
-        if (accountType === 'customer') {
-            // Customer: manual qarza + POS sale credit + order return refunds
-            const sourceFilter = {
-                $and: [
-                    { sourceType: { $ne: 'purchase' } },
-                    {
-                        $or: [
-                            { sourceType: 'qarza' },
-                            { sourceType: 'sale' },
-                            { sourceType: 'orderReturn' }
-                        ]
-                    }
-                ]
-            };
-            // Merge date filter with source filter
-            if (Object.keys(dateFilter).length > 0) {
-                transactionFilter = { $and: [sourceFilter, dateFilter] };
-            } else {
-                transactionFilter = sourceFilter;
-            }
-        } else if (accountType === 'supplier') {
-            // Supplier: manual qarza + purchase credit + purchase return refunds
-            const sourceFilter = {
-                $and: [
-                    { sourceType: { $ne: 'sale' } },
-                    {
-                        $or: [
-                            { sourceType: 'qarza' },
-                            { sourceType: 'purchase' },
-                            { sourceType: 'purchaseReturn' }
-                        ]
-                    }
-                ]
-            };
-            // Merge date filter with source filter
-            if (Object.keys(dateFilter).length > 0) {
-                transactionFilter = { $and: [sourceFilter, dateFilter] };
-            } else {
-                transactionFilter = sourceFilter;
-            }
-        } else if (accountType === 'general') {
-            // General: only manual qarza transactions
-            const sourceFilter = { sourceType: 'qarza' };
-            // Merge date filter with source filter
-            if (Object.keys(dateFilter).length > 0) {
-                transactionFilter = { $and: [sourceFilter, dateFilter] };
-            } else {
-                transactionFilter = sourceFilter;
-            }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateFilter.transactionDate.$lte = end;
+        }
+    }
+    
+    // If accountType filter is applied, use specific transaction sources
+    // Otherwise, show all transactions from all sources for all account types
+    if (accountType === 'customer') {
+        // Customer: manual qarza + POS sale credit + order return refunds
+        const sourceFilter = {
+            $and: [
+                { sourceType: { $ne: 'purchase' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza' },
+                        { sourceType: 'sale' },
+                        { sourceType: 'orderReturn' }
+                    ]
+                }
+            ]
+        };
+        // Merge date filter with source filter
+        if (Object.keys(dateFilter).length > 0) {
+            transactionFilter = { $and: [sourceFilter, dateFilter] };
         } else {
-            // All account types: show all transactions from all sources without restrictions
-            const sourceFilter = {
-                $or: [
-                    { sourceType: 'qarza' },
-                    { sourceType: 'sale' },
-                    { sourceType: 'orderReturn' },
-                    { sourceType: 'purchase' },
-                    { sourceType: 'purchaseReturn' }
-                ]
-            };
+            transactionFilter = sourceFilter;
+        }
+    } else if (accountType === 'supplier') {
+        // Supplier: manual qarza + purchase credit + purchase return refunds
+        const sourceFilter = {
+            $and: [
+                { sourceType: { $ne: 'sale' } },
+                {
+                    $or: [
+                        { sourceType: 'qarza' },
+                        { sourceType: 'purchase' },
+                        { sourceType: 'purchaseReturn' }
+                    ]
+                }
+            ]
+        };
+        // Merge date filter with source filter
+        if (Object.keys(dateFilter).length > 0) {
+            transactionFilter = { $and: [sourceFilter, dateFilter] };
+        } else {
+            transactionFilter = sourceFilter;
+        }
+    } else if (accountType === 'general') {
+        // General: only manual qarza transactions
+        const sourceFilter = { sourceType: 'qarza' };
+        // Merge date filter with source filter
+        if (Object.keys(dateFilter).length > 0) {
+            transactionFilter = { $and: [sourceFilter, dateFilter] };
+        } else {
+            transactionFilter = sourceFilter;
+        }
+    } else {
+        // All account types: show all transactions from all sources without restrictions
+        const sourceFilter = {
+            $or: [
+                { sourceType: 'qarza' },
+                { sourceType: 'sale' },
+                { sourceType: 'orderReturn' },
+                { sourceType: 'purchase' },
+                { sourceType: 'purchaseReturn' }
+            ]
+        };
             // Merge date filter with source filter
             if (Object.keys(dateFilter).length > 0) {
                 transactionFilter = { $and: [sourceFilter, dateFilter] };
@@ -1214,11 +1213,7 @@ export const getCreditsDebitsReport = async (req, res) => {
                 }
             }
         });
-    } catch (err) {
-        console.log(err);
-        return res.json({ success: false, msg: "Error getting credits/debits report" });
-    }
-};
+});
 
 export const getAccountLedger = async (req, res) => {
     try {

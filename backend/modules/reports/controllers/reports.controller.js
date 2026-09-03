@@ -175,13 +175,20 @@ export const getStaffKPIReportData = asyncHandler(async (req, res, next) => {
 // Sales Report
 export const getSalesReportData = asyncHandler(async (req, res, next) => {
     const filters = req.query;
-    const report = await getSalesReport(filters);
+    try {
+        const report = await getSalesReport(filters);
 
-    res.status(200).json({
-        success: true,
-        message: "Sales report retrieved successfully",
-        ...report,
-    });
+        res.status(200).json({
+            success: true,
+            message: "Sales report retrieved successfully",
+            ...report,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message || "Failed to retrieve sales report",
+        });
+    }
 });
 
 // Purchase Report

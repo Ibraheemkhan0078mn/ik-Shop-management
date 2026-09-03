@@ -190,121 +190,363 @@ export const getDashboardSummary = async (filters = {}) => {
     };
 };
 
-// Sales Report
-export const getSalesReport = async (filters = {}) => {
-    const { fromDate, toDate, customerType, customerId, paymentStatus, sortBy, sortOrder, search, page = 1, limit = 20 } = filters;
+// Reusable function to generate sales report data with detailed profit calculations
+// This extracts the sales logic from prepareMainBusinessReport for reuse
+export const generateSalesReportData = async (filters = {}) => {
+    const { fromDate, toDate, period = "all", page = 1, limit = 100, orderId } = filters;
 
-    const matchQuery = { status: "completed" };
+    let dateFilter = {};
+    let orderFilter = { status: "completed" };
+
+    // Apply orderId filter if provided - when orderId is provided, ignore all other filters
+    if (orderId) {
+        // Check if it's a valid MongoDB ObjectId (24-character hex string)
+        if (/^[0-9a-fA-F]{24}$/.test(orderId)) {
+            orderFilter = { _id: orderId }; // Search by MongoDB ObjectId
+        } else {
+            // Otherwise, treat it as an order number (human-readable)
+            // Use $or to try multiple search strategies
+            orderFilter = {
+                $or: [
+                    { orderNumber: orderId }, // Exact match
+                    { orderNumber: { $regex: orderId, $options: 'i' } }, // Partial match (case-insensitive)
+                    { orderNumber: { $regex: `^${orderId}$`, $options: 'i' } } // Exact match (case-insensitive)
+                ]
+            };
+        }
+        // Clear date filter and status filter when orderId is specified
+        dateFilter = {};
+        // Remove status filter to find the order regardless of status
+        delete orderFilter.status;
+    }
     
-    // Date filter
-    if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
-        matchQuery.createdAt = dateFilter.createdAt;
+    if (period === "custom" && fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
+    } else if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "yesterday") {
+        const { startOfDay, endOfDay } = getYesterdayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const { startOfWeek, endOfWeek } = getWeekRange();
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const { startOfMonth, endOfMonth } = getMonthRange();
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "last3months" || period === "3month") {
+        const now = new Date();
+        const startOfLast3Months = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const endOfLast3Months = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfLast3Months, $lte: endOfLast3Months } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+    } else if (period === "all") {
+        dateFilter = {};
     }
 
-    // Customer type filter
-    if (customerType && customerType !== "all") {
-        // Use frontend values directly (walkin, regular) as database now uses same values
-        matchQuery.customerType = customerType;
-    }
+    // Fetch orders
+    const orders = await findOrderService({ ...dateFilter, ...orderFilter });
 
-    // Specific customer filter
-    if (customerId) {
-        matchQuery.customerId = customerId;
-    }
-
-    // Payment status filter
-    // Search filter
-    if (search) {
-        matchQuery.$or = [
-            { orderNumber: { $regex: search, $options: "i" } },
-            { customerName: { $regex: search, $options: "i" } }
-        ];
-    }
-
-    const allOrders = await findOrderService(matchQuery, { sort: { createdAt: -1 } });
-    const ordersWithStats = await Promise.all(allOrders.map(async (order) => {
-        const payment = await calculateOrderPaymentStatus(order._id, order.totalAmount || 0);
+    // If orderId was specified but no order found, return empty results
+    if (orderId && orders.length === 0) {
         return {
-            ...(order.toObject ? order.toObject() : order),
-            itemsCount: order.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || 0,
-            paidAmount: payment.totalPaid,
-            dueAmount: payment.remainingAmount,
-            paymentStatus: payment.paymentStatus,
-            totalCash: payment.totalCash,
-            totalCredit: payment.totalCredit,
+            data: [],
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+            summary: {
+                totalSales: 0,
+                totalDiscount: 0,
+                totalCostOfGoodsSold: 0,
+                grossProfit: 0,
+                grossMarginPercentage: 0,
+                salesCount: 0,
+                retailSales: 0,
+                wholesaleSales: 0,
+                avgOrderValue: 0,
+                salesMargin: 0
+            },
+            breakdowns: {
+                salesByPaymentMethod: []
+            }
         };
+    }
+
+    // Calculate totals
+    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
+    const salesCount = orders.length;
+
+    // Calculate retail vs wholesale sales
+    const retailSales = orders
+        .filter(order => order.orderType === 'retail' || order.customerType === 'regular')
+        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    const wholesaleSales = orders
+        .filter(order => order.orderType === 'wholesale' || order.customerType === 'wholesale')
+        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+    // Calculate average order value
+    const avgOrderValue = salesCount > 0 ? totalSales / salesCount : 0;
+
+    // Calculate sales margin (revenue - cost of goods sold)
+    let totalCostOfGoodsSold = 0;
+    for (const order of orders) {
+        if (order.items) {
+            for (const item of order.items) {
+                let effectiveCostPrice = 0;
+                
+                if (item.batchId) {
+                    const batch = await findByIdBatchService(item.batchId);
+                    if (batch && batch.purchasePrice) {
+                        // Start with base purchase price
+                        let baseCostPrice = batch.purchasePrice;
+                        
+                        // Apply batch-level discount if exists
+                        if (batch.discount && batch.discount.amount > 0) {
+                            if (batch.discount.type === 'percentage') {
+                                baseCostPrice = baseCostPrice * (1 - (batch.discount.amount / 100));
+                            } else {
+                                baseCostPrice = baseCostPrice - (batch.discount.amount || 0);
+                            }
+                        }
+                        
+                        // Apply batch-level tax if exists
+                        if (batch.gst && batch.gst > 0) {
+                            baseCostPrice = baseCostPrice * (1 + (batch.gst / 100));
+                        }
+                        
+                        effectiveCostPrice = baseCostPrice;
+                    }
+                }
+                
+                totalCostOfGoodsSold += effectiveCostPrice * (item.quantity || 0);
+            }
+        }
+    }
+    const salesMargin = totalSales - totalCostOfGoodsSold;
+
+    const grossProfit = totalSales - totalCostOfGoodsSold;
+    const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
+
+    // Calculate sales by payment method
+    const salesByPaymentMethodMap = {};
+    orders.forEach(order => {
+        const method = order.paymentMethod || 'Cash';
+        if (!salesByPaymentMethodMap[method]) {
+            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
+        }
+        salesByPaymentMethodMap[method].total += order.totalAmount || 0;
+        salesByPaymentMethodMap[method].count += 1;
+    });
+    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
+        method,
+        total: data.total,
+        count: data.count,
+        percentage: totalSales > 0 ? ((data.total / totalSales) * 100).toFixed(1) : 0
     }));
 
-    const filteredOrders = paymentStatus && paymentStatus !== "all"
-        ? ordersWithStats.filter(order => paymentStatus === "unpaid"
-            ? order.paymentStatus === "pending"
-            : order.paymentStatus === (paymentStatus === "paid" ? "full" : "partial"))
-        : ordersWithStats;
-
-    // Sort after payment status and item totals are available.
-    const sortField = sortBy === "amount" ? "totalAmount" : sortBy === "items" ? "itemsCount" : "createdAt";
-    const sortDirection = sortOrder === "asc" ? 1 : -1;
-    filteredOrders.sort((left, right) => {
-        const leftValue = sortField === "createdAt" ? new Date(left.createdAt).getTime() : Number(left[sortField] || 0);
-        const rightValue = sortField === "createdAt" ? new Date(right.createdAt).getTime() : Number(right[sortField] || 0);
-        return (leftValue - rightValue) * sortDirection;
-    });
-
-    const skip = (page - 1) * limit;
-    const orders = filteredOrders.slice(skip, skip + limit);
-
-    // Populate products for each order using service
-    const populatedOrders = await Promise.all(
-        orders.map(async (order) => {
-            const populatedOrder = await findByIdOrderService(order._id, { populate: ['items.product'] });
-            return {
-                ...order,
-                items: populatedOrder?.items || order.items
-            };
-        })
+    // Get transaction list with detailed batch information (same as main business report)
+    const salesList = await Promise.all(
+        orders
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 100)
+            .map(async (order) => {
+                // Fetch batch details for each item in the order
+                const itemsWithBatchDetails = await Promise.all(
+                    (order.items || []).map(async (item) => {
+                        let costPrice = 0;
+                        let batchSalePrice = 0;
+                        let batchNumber = item.batchNumber || 'N/A';
+                        let batchDiscount = 0;
+                        let batchDiscountType = 'percentage';
+                        
+                        // Fetch batch details to get cost price
+                        if (item.batchId) {
+                            try {
+                                const batch = await findByIdBatchService(item.batchId);
+                                if (batch) {
+                                    // Start with base purchase price
+                                    let baseCostPrice = Number(batch.purchasePrice) || 0;
+                                    
+                                    // Calculate effective cost price including purchase tax and discount
+                                    let effectiveCostPrice = baseCostPrice;
+                                    let purchaseDiscount = 0;
+                                    let purchaseTax = 0;
+                                    
+                                    // Apply batch-level discount if exists
+                                    if (batch.discount && batch.discount.amount > 0) {
+                                        if (batch.discount.type === 'percentage') {
+                                            purchaseDiscount = baseCostPrice * (batch.discount.amount / 100);
+                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
+                                        } else {
+                                            purchaseDiscount = batch.discount.amount || 0;
+                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
+                                        }
+                                    }
+                                    
+                                    // Apply batch-level tax if exists
+                                    if (batch.gst && batch.gst > 0) {
+                                        purchaseTax = effectiveCostPrice * (batch.gst / 100);
+                                        effectiveCostPrice = effectiveCostPrice + purchaseTax;
+                                    }
+                                    
+                                    // Use effective cost price for calculations
+                                    costPrice = effectiveCostPrice;
+                                    batchSalePrice = Number(batch.sellingPrice) || 0;
+                                    batchNumber = batch.batchNumber || batchNumber;
+                                    batchDiscount = purchaseDiscount;
+                                    batchDiscountType = batch.discount?.type || 'percentage';
+                                    
+                                    // Store additional purchase cost breakdown
+                                    item.basePurchasePrice = baseCostPrice;
+                                    item.purchaseDiscount = purchaseDiscount;
+                                    item.purchaseTax = purchaseTax;
+                                    item.effectiveCostPrice = effectiveCostPrice;
+                                    
+                                } else {
+                                    console.warn(`Batch not found for batchId: ${item.batchId}, product: ${item.name}`);
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching batch ${item.batchId} for product ${item.name}:`, error.message);
+                                // Continue with costPrice = 0 if batch lookup fails - don't fail the entire request
+                            }
+                        } else {
+                            console.warn(`No batchId for item: ${item.name} in order, cannot fetch cost price`);
+                        }
+                        
+                        // Calculate totals for this item
+                        const itemCostTotal = costPrice * (item.quantity || 0);
+                        const itemSaleTotal = (item.unitPrice || 0) * (item.quantity || 0);
+                        const itemProfit = itemSaleTotal - itemCostTotal;
+                        const itemMargin = itemSaleTotal > 0 ? ((itemProfit / itemSaleTotal) * 100).toFixed(2) : 0;
+                        
+                        return {
+                            productName: item.name,
+                            quantity: item.quantity || 0,
+                            // Prices
+                            costPrice: costPrice,
+                            basePurchasePrice: item.basePurchasePrice || costPrice,
+                            purchaseDiscount: item.purchaseDiscount || 0,
+                            purchaseTax: item.purchaseTax || 0,
+                            effectiveCostPrice: item.effectiveCostPrice || costPrice,
+                            batchSalePrice: batchSalePrice,
+                            unitPrice: item.unitPrice || 0,
+                            originalPrice: item.originalPrice || 0,
+                            // Totals
+                            lineTotal: item.lineTotal || 0,
+                            itemTotal: item.itemTotal || 0,
+                            itemCostTotal: itemCostTotal,
+                            itemSaleTotal: itemSaleTotal,
+                            itemProfit: itemProfit,
+                            itemMargin: itemMargin,
+                            // Tax
+                            taxAmount: item.taxAmount || 0,
+                            taxPercent: item.taxPercent || 0,
+                            taxType: item.taxType || 'percentage',
+                            // Discount
+                            discountAmount: item.discountAmount || 0,
+                            discountPercent: item.discountPercent || 0,
+                            discountType: item.discountType || 'percentage',
+                            // Batch info
+                            batchId: item.batchId,
+                            batchNumber: batchNumber,
+                            batchDiscount: batchDiscount,
+                            batchDiscountType: batchDiscountType,
+                            // Other
+                            portionType: item.portionType || 'full',
+                            customInput: item.customInput || false
+                        };
+                    })
+                );
+                
+                // Calculate order-level totals by summing all items
+                const totalCostPrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
+                const totalSalePrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemSaleTotal, 0);
+                const totalItemCosts = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
+                
+                // Calculate margin and profit from summed values
+                const orderProfit = totalSalePrice - totalCostPrice;
+                const orderMargin = totalSalePrice > 0 ? ((orderProfit / totalSalePrice) * 100).toFixed(2) : 0;
+                
+                // Calculate total discounts and taxes from items
+                const totalItemDiscounts = itemsWithBatchDetails.reduce((sum, item) => sum + item.discountAmount, 0);
+                const totalItemTaxes = itemsWithBatchDetails.reduce((sum, item) => sum + item.taxAmount, 0);
+                
+                return {
+                    id: order._id,
+                    orderNumber: order.orderNumber,
+                    // Order totals
+                    amount: order.totalAmount || 0,
+                    subtotal: order.subtotal || 0,
+                    discountAmount: order.discountAmount || 0,
+                    discountType: order.discountType || 'percentage',
+                    totalTaxAmount: order.totalTaxAmount || 0,
+                    // Calculated totals from items
+                    totalCostPrice: totalCostPrice,
+                    totalSalePrice: totalSalePrice,
+                    totalItemCosts: totalItemCosts,
+                    totalItemDiscounts: totalItemDiscounts,
+                    totalItemTaxes: totalItemTaxes,
+                    // Profit and margin calculations
+                    orderProfit: orderProfit,
+                    orderMargin: orderMargin,
+                    profitMargin: order.totalAmount > 0 ? ((orderProfit / order.totalAmount) * 100).toFixed(2) : 0,
+                    // Customer and order info
+                    paymentMethod: order.paymentMethod,
+                    customerName: order.customerName || 'Walk-in',
+                    customerType: order.customerType,
+                    customerId: order.customerId,
+                    orderType: order.orderType || 'retail',
+                    waiter: order.waiter || '',
+                    staffId: order.staffId,
+                    note: order.note || '',
+                    isPosOrder: order.isPosOrder || false,
+                    status: order.status || 'completed',
+                    // Items with all details
+                    items: itemsWithBatchDetails,
+                    date: order.createdAt
+                };
+            })
     );
 
-    const total = filteredOrders.length;
-
-    // KPIs describe every order matching the active filters, not only the current page.
-    const totalSales = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    const totalPaid = filteredOrders.reduce((sum, order) => sum + (order.paidAmount || 0), 0);
-    const totalDue = filteredOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
-    const totalItems = filteredOrders.reduce((sum, order) => sum + (order.itemsCount || 0), 0);
-    const totalOrders = filteredOrders.length;
-    const totalCash = filteredOrders.reduce((sum, order) => sum + (order.totalCash || 0), 0);
-    const totalCredit = filteredOrders.reduce((sum, order) => sum + (order.totalCredit || 0), 0);
-    const totalCustomers = new Set(filteredOrders.map(order => order.customerId?.toString() || order.customerName).filter(Boolean)).size;
-
-    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-    // Add rank to each order
-    const rankedData = populatedOrders.map((order, index) => ({
-        ...order,
-        rank: skip + index + 1
-    }));
+    // Pagination
+    const skip = (page - 1) * limit;
+    const paginatedSales = salesList.slice(skip, skip + limit);
+    const total = salesList.length;
 
     return {
-        data: rankedData,
+        data: paginatedSales,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
             totalSales,
-            totalOrders,
-            totalPaid,
-            totalDue,
-            averageOrderValue,
-            totalItems,
-            totalCash,
-            totalCredit,
-            totalCustomers,
-            totalPendingOrders: filteredOrders.filter(order => order.paymentStatus === "pending").length,
-            totalPartialOrders: filteredOrders.filter(order => order.paymentStatus === "partial").length,
+            totalDiscount,
+            totalCostOfGoodsSold,
+            grossProfit,
+            grossMarginPercentage,
+            salesCount,
+            retailSales,
+            wholesaleSales,
+            avgOrderValue,
+            salesMargin
+        },
+        breakdowns: {
+            salesByPaymentMethod
         }
     };
+};
+
+// Sales Report (updated to use the reusable function)
+export const getSalesReport = async (filters = {}) => {
+    return await generateSalesReportData(filters);
 };
 
 // Purchase Report
@@ -2051,62 +2293,22 @@ const prepareMainBusinessReport = async (filters = {}) => {
         findStaffSalaryPaymentService({ ...previousDateFilter, status: 'paid' })
     ]);
 
-    // Calculate current period totals
-    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
-    const salesCount = orders.length;
-
-    // Calculate retail vs wholesale sales
-    const retailSales = orders
-        .filter(order => order.orderType === 'retail' || order.customerType === 'regular')
-        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    // Use the reusable generateSalesReportData function for sales calculations
+    const salesReportData = await generateSalesReportData({ fromDate, toDate, period, page: 1, limit: 100 });
     
-    const wholesaleSales = orders
-        .filter(order => order.orderType === 'wholesale' || order.customerType === 'wholesale')
-        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
-    // Calculate average order value
-    const avgOrderValue = salesCount > 0 ? totalSales / salesCount : 0;
-
-    // Calculate sales margin (revenue - cost of goods sold)
-    let totalCostOfGoodsSold = 0;
-    for (const order of orders) {
-        if (order.items) {
-            for (const item of order.items) {
-                let effectiveCostPrice = 0;
-                
-                if (item.batchId) {
-                    const batch = await findByIdBatchService(item.batchId);
-                    if (batch && batch.purchasePrice) {
-                        // Start with base purchase price
-                        let baseCostPrice = batch.purchasePrice;
-                        
-                        // Apply batch-level discount if exists
-                        if (batch.discount && batch.discount.amount > 0) {
-                            if (batch.discount.type === 'percentage') {
-                                baseCostPrice = baseCostPrice * (1 - (batch.discount.amount / 100));
-                            } else {
-                                // For fixed discount, it's usually applied at purchase level, not per unit
-                                // We'll handle this when we have the full purchase context
-                                baseCostPrice = baseCostPrice - (batch.discount.amount || 0);
-                            }
-                        }
-                        
-                        // Apply batch-level tax if exists
-                        if (batch.gst && batch.gst > 0) {
-                            // GST is typically a percentage tax
-                            baseCostPrice = baseCostPrice * (1 + (batch.gst / 100));
-                        }
-                        
-                        effectiveCostPrice = baseCostPrice;
-                    }
-                }
-                
-                totalCostOfGoodsSold += effectiveCostPrice * (item.quantity || 0);
-            }
-        }
-    }
-    const salesMargin = totalSales - totalCostOfGoodsSold;
+    // Extract sales data from the report
+    const totalSales = salesReportData.summary.totalSales;
+    const totalDiscount = salesReportData.summary.totalDiscount;
+    const salesCount = salesReportData.summary.salesCount;
+    const retailSales = salesReportData.summary.retailSales;
+    const wholesaleSales = salesReportData.summary.wholesaleSales;
+    const avgOrderValue = salesReportData.summary.avgOrderValue;
+    const totalCostOfGoodsSold = salesReportData.summary.totalCostOfGoodsSold;
+    const salesMargin = salesReportData.summary.salesMargin;
+    const grossProfit = salesReportData.summary.grossProfit;
+    const grossMarginPercentage = salesReportData.summary.grossMarginPercentage;
+    const salesByPaymentMethod = salesReportData.breakdowns.salesByPaymentMethod;
+    const salesList = salesReportData.data;
 
     const totalPurchases = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
     const purchaseCount = purchases.length;
@@ -2150,8 +2352,6 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const totalPayable = qarzaPayable.reduce((sum, q) => sum + (q.balance || 0), 0);
     const qarzaPayableCount = qarzaPayable.length;
 
-    const grossProfit = totalSales - totalCostOfGoodsSold;
-    const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
     // Net profit calculation: Sales - COGS - Expenses - Wastage - Salaries - Product Returns + Purchase Returns
     const netProfit = totalSales - totalCostOfGoodsSold - totalExpenses - totalWastage - totalSalaries - totalProductReturns + totalPurchaseReturns;
     const netMarginPercentage = totalSales > 0 ? Number(((netProfit / totalSales) * 100).toFixed(1)) : 0;
@@ -2208,21 +2408,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const netProfitChange = calculateChange(netProfit, previousNetProfit);
     const netMarginChange = calculateChange(netMarginPercentage, previousNetMarginPercentage);
 
-    // Calculate sales by payment method
-    const salesByPaymentMethodMap = {};
-    orders.forEach(order => {
-        const method = order.paymentMethod || 'Cash'; // Default to 'Cash' instead of 'unknown'
-        if (!salesByPaymentMethodMap[method]) {
-            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
-        }
-        salesByPaymentMethodMap[method].total += order.totalAmount || 0;
-        salesByPaymentMethodMap[method].count += 1;
-    });
-    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
-        _id: method,
-        total: data.total,
-        count: data.count
-    }));
+    // Sales by payment method is now provided by generateSalesReportData
+    // No need to recalculate here
 
     // Calculate purchases by supplier
     const purchasesBySupplierMap = {};
@@ -2325,171 +2512,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
     }));
 
     // Get transaction lists (limited to 100, sorted by createdAt desc)
-    // Fetch batch details for sales to include cost prices and detailed information
-    const salesList = await Promise.all(
-        orders
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 100)
-            .map(async (order) => {
-                // Fetch batch details for each item in the order
-                const itemsWithBatchDetails = await Promise.all(
-                    (order.items || []).map(async (item) => {
-                        let costPrice = 0;
-                        let batchSalePrice = 0;
-                        let batchNumber = item.batchNumber || 'N/A';
-                        let batchDiscount = 0;
-                        let batchDiscountType = 'percentage';
-                        
-                        // Fetch batch details to get cost price
-                        if (item.batchId) {
-                            try {
-                                const batch = await findByIdBatchService(item.batchId);
-                                if (batch) {
-                                    // Start with base purchase price
-                                    let baseCostPrice = Number(batch.purchasePrice) || 0;
-                                    
-                                    // Calculate effective cost price including purchase tax and discount
-                                    let effectiveCostPrice = baseCostPrice;
-                                    let purchaseDiscount = 0;
-                                    let purchaseTax = 0;
-                                    
-                                    // Apply batch-level discount if exists
-                                    if (batch.discount && batch.discount.amount > 0) {
-                                        if (batch.discount.type === 'percentage') {
-                                            purchaseDiscount = baseCostPrice * (batch.discount.amount / 100);
-                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
-                                        } else {
-                                            // Fixed discount amount
-                                            purchaseDiscount = batch.discount.amount || 0;
-                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
-                                        }
-                                    }
-                                    
-                                    // Apply batch-level tax if exists
-                                    if (batch.gst && batch.gst > 0) {
-                                        // GST is typically a percentage tax
-                                        purchaseTax = effectiveCostPrice * (batch.gst / 100);
-                                        effectiveCostPrice = effectiveCostPrice + purchaseTax;
-                                    }
-                                    
-                                    // Use effective cost price for calculations
-                                    costPrice = effectiveCostPrice;
-                                    batchSalePrice = Number(batch.sellingPrice) || 0;
-                                    batchNumber = batch.batchNumber || batchNumber;
-                                    batchDiscount = purchaseDiscount;
-                                    batchDiscountType = batch.discount?.type || 'percentage';
-                                    
-                                    // Store additional purchase cost breakdown
-                                    item.basePurchasePrice = baseCostPrice;
-                                    item.purchaseDiscount = purchaseDiscount;
-                                    item.purchaseTax = purchaseTax;
-                                    item.effectiveCostPrice = effectiveCostPrice;
-                                    
-                                } else {
-                                    console.warn(`Batch not found for batchId: ${item.batchId}, product: ${item.name}`);
-                                }
-                            } catch (error) {
-                                console.error(`Error fetching batch ${item.batchId} for product ${item.name}:`, error);
-                                // Keep default values if batch fetch fails
-                            }
-                        } else {
-                            console.warn(`No batchId for item: ${item.name} in order, cannot fetch cost price`);
-                        }
-                        
-                        // Calculate totals for this item
-                        const itemCostTotal = costPrice * (item.quantity || 0);
-                        const itemSaleTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                        const itemProfit = itemSaleTotal - itemCostTotal;
-                        const itemMargin = itemSaleTotal > 0 ? ((itemProfit / itemSaleTotal) * 100).toFixed(2) : 0;
-                        
-                        return {
-                            productName: item.name,
-                            quantity: item.quantity || 0,
-                            // Prices
-                            costPrice: costPrice,
-                            basePurchasePrice: item.basePurchasePrice || costPrice,
-                            purchaseDiscount: item.purchaseDiscount || 0,
-                            purchaseTax: item.purchaseTax || 0,
-                            effectiveCostPrice: item.effectiveCostPrice || costPrice,
-                            batchSalePrice: batchSalePrice,
-                            unitPrice: item.unitPrice || 0,
-                            originalPrice: item.originalPrice || 0,
-                            // Totals
-                            lineTotal: item.lineTotal || 0,
-                            itemTotal: item.itemTotal || 0,
-                            itemCostTotal: itemCostTotal,
-                            itemSaleTotal: itemSaleTotal,
-                            itemProfit: itemProfit,
-                            itemMargin: itemMargin,
-                            // Tax
-                            taxAmount: item.taxAmount || 0,
-                            taxPercent: item.taxPercent || 0,
-                            taxType: item.taxType || 'percentage',
-                            // Discount
-                            discountAmount: item.discountAmount || 0,
-                            discountPercent: item.discountPercent || 0,
-                            discountType: item.discountType || 'percentage',
-                            // Batch info
-                            batchId: item.batchId,
-                            batchNumber: batchNumber,
-                            batchDiscount: batchDiscount,
-                            batchDiscountType: batchDiscountType,
-                            // Other
-                            portionType: item.portionType || 'full',
-                            customInput: item.customInput || false
-                        };
-                    })
-                );
-                
-                // Calculate order-level totals by summing all items
-                const totalCostPrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
-                const totalSalePrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemSaleTotal, 0);
-                const totalItemCosts = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
-                
-                // Calculate margin and profit from summed values
-                const orderProfit = totalSalePrice - totalCostPrice;
-                const orderMargin = totalSalePrice > 0 ? ((orderProfit / totalSalePrice) * 100).toFixed(2) : 0;
-                
-                // Calculate total discounts and taxes from items
-                const totalItemDiscounts = itemsWithBatchDetails.reduce((sum, item) => sum + item.discountAmount, 0);
-                const totalItemTaxes = itemsWithBatchDetails.reduce((sum, item) => sum + item.taxAmount, 0);
-                
-                return {
-                    _id: order._id,
-                    orderNumber: order.orderNumber,
-                    // Order totals
-                    totalAmount: order.totalAmount || 0,
-                    subtotal: order.subtotal || 0,
-                    discountAmount: order.discountAmount || 0,
-                    discountType: order.discountType || 'percentage',
-                    totalTaxAmount: order.totalTaxAmount || 0,
-                    // Calculated totals from items
-                    totalCostPrice: totalCostPrice,
-                    totalSalePrice: totalSalePrice,
-                    totalItemCosts: totalItemCosts,
-                    totalItemDiscounts: totalItemDiscounts,
-                    totalItemTaxes: totalItemTaxes,
-                    // Profit and margin calculations
-                    orderProfit: orderProfit,
-                    orderMargin: orderMargin,
-                    profitMargin: order.totalAmount > 0 ? ((orderProfit / order.totalAmount) * 100).toFixed(2) : 0,
-                    // Customer and order info
-                    paymentMethod: order.paymentMethod,
-                    customerName: order.customerName || 'Walk-in',
-                    customerType: order.customerType,
-                    customerId: order.customerId,
-                    orderType: order.orderType || 'retail',
-                    waiter: order.waiter || '',
-                    staffId: order.staffId,
-                    note: order.note || '',
-                    isPosOrder: order.isPosOrder || false,
-                    status: order.status || 'completed',
-                    // Items with all details
-                    items: itemsWithBatchDetails,
-                    createdAt: order.createdAt
-                };
-            })
-    );
+    // Sales list is now provided by generateSalesReportData
+    // No need to regenerate here
 
     const purchasesList = await Promise.all(
         purchases
