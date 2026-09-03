@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, ShoppingCart, CreditCard, AlertCircle, TrendingUp, Package } from "lucide-react";
+import { DollarSign, TrendingUp, Package, RefreshCw } from "lucide-react";
 
 function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
     return (
@@ -53,39 +53,39 @@ export default function SalesKPIReportPdfTemplate({ summary = {}, sales = [], la
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <KpiCard
-                    label={labels.totalSales}
-                    value={summary.totalSales}
+                    label="Net Sales"
+                    value={summary.netSales ?? summary.totalSales}
                     icon={DollarSign}
                     color="#3b82f6"
                 />
                 <KpiCard
-                    label={labels.totalOrders}
-                    value={summary.totalOrders}
-                    icon={ShoppingCart}
-                    color="#3b82f6"
-                    isCurrency={false}
-                />
-                <KpiCard
-                    label={labels.totalPaid}
-                    value={summary.totalPaid}
-                    icon={CreditCard}
+                    label="Net Profit"
+                    value={summary.netProfit ?? summary.grossProfit}
+                    icon={TrendingUp}
                     color="#10b981"
                 />
                 <KpiCard
-                    label={labels.totalDue}
-                    value={summary.totalDue}
-                    icon={AlertCircle}
+                    label="Returns"
+                    value={summary.totalReturnRefunds}
+                    icon={RefreshCw}
                     color="#ef4444"
                 />
                 <KpiCard
-                    label={labels.averageOrderValue}
-                    value={summary.averageOrderValue}
-                    icon={TrendingUp}
-                    color="#f59e0b"
+                    label="Net COGS"
+                    value={summary.netCOGS ?? summary.totalCostOfGoodsSold}
+                    icon={Package}
+                    color="#3b82f6"
                 />
                 <KpiCard
-                    label={labels.totalItemsSold}
-                    value={summary.totalItems}
+                    label="Orders"
+                    value={summary.salesCount}
+                    icon={TrendingUp}
+                    color="#f59e0b"
+                    isCurrency={false}
+                />
+                <KpiCard
+                    label="Net Margin"
+                    value={`${summary.netMarginPercentage ?? summary.grossMarginPercentage ?? 0}%`}
                     icon={Package}
                     color="#3b82f6"
                     isCurrency={false}
@@ -106,34 +106,34 @@ export default function SalesKPIReportPdfTemplate({ summary = {}, sales = [], la
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.date}</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customer}</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.items}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.total}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.paymentStatus}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Gross Sales</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Returns</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Net Sales</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Net Profit</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">Return Docs</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
                             {sales.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="10" className="px-4 py-8 text-center text-[var(--muted)]">
                                         {labels.noDataFound}
                                     </td>
                                 </tr>
                             ) : (
                                 sales.slice(0, 50).map((sale) => (
-                                    <tr key={sale._id} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{sale.rank}</td>
+                                    <tr key={sale.id || sale._id} className="hover:bg-[var(--surface-muted)] transition-colors">
+                                        <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{sale.orderNumber || "—"}</td>
                                         <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{sale.orderNumber || "—"}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--muted)]">{formatDate(sale.createdAt)}</td>
+                                        <td className="px-4 py-3 text-sm text-[var(--muted)]">{formatDate(sale.date || sale.createdAt)}</td>
                                         <td className="px-4 py-3 text-sm text-[var(--ink)]">{sale.customerName || "—"}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">{sale.itemsCount || 0}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--accent-2)]">Rs {(sale.totalAmount || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-green-600 font-medium">Rs {(sale.paidAmount || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-red-600 font-medium">Rs {(sale.dueAmount || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">{sale.items?.length || sale.itemsCount || 0}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--accent-2)]">Rs {(sale.grossSales || sale.amount || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-red-600 font-medium">Rs {(sale.returnRefunds || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--accent-2)]">Rs {(sale.netSales || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">Rs {(sale.netProfit || 0).toLocaleString()}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(sale.paymentStatus)}`}>
-                                                {getPaymentStatusLabel(sale.paymentStatus)}
-                                            </span>
+                                            {sale.returns?.length || 0}
                                         </td>
                                     </tr>
                                 ))

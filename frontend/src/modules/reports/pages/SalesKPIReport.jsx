@@ -44,11 +44,12 @@ function renderTransactionRow(transaction, type, formatDate, onExpandOrder) {
                     <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.customerName || 'Walk-in'}</td>
                     <td className="px-4 py-2.5 text-sm capitalize" style={{ color: 'var(--muted)' }}>{transaction.paymentMethod}</td>
                     <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {transaction.totalCostPrice?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {transaction.totalSalePrice?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: transaction.orderProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                        Rs {transaction.orderProfit?.toLocaleString() || 0}
-                        <div className="text-xs mt-0.5">({transaction.orderMargin}%)</div>
+                    <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {transaction.grossSales?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: '#dc2626' }}>Rs {transaction.returnRefunds?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.netSales?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-2.5 text-sm font-semibold text-right tabular-nums" style={{ color: transaction.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                        Rs {transaction.netProfit?.toLocaleString() || 0}
+                        <div className="text-xs mt-0.5">({transaction.netMargin || 0}%)</div>
                     </td>
                     <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date)}</td>
                 </>
@@ -60,7 +61,7 @@ function renderTransactionRow(transaction, type, formatDate, onExpandOrder) {
 
 function getTableHeaders(type, labels) {
     switch (type) {
-        case 'sales': return [labels.orderNumber, labels.customer, labels.paymentMethod, 'Effective Cost', 'Total Sale', labels.amount, 'Profit (Margin)', labels.date];
+        case 'sales': return [labels.orderNumber, labels.customer, labels.paymentMethod, 'COGS', 'Gross Sales', 'Returns', 'Net Sales', 'Net Profit (Margin)', labels.date];
         default: return [];
     }
 }
@@ -215,6 +216,31 @@ function TransactionTable({ transactions, type, labels }) {
                                                         </tfoot>
                                                     </table>
                                                 </div>
+                                                {transaction.returns?.length > 0 && (
+                                                    <div className="mt-3 rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                                                        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide" style={{ background: 'var(--app-bg)', color: 'var(--muted)' }}>
+                                                            Return Documents ({transaction.returns.length})
+                                                        </div>
+                                                        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                                                            {transaction.returns.map((returnDocument) => (
+                                                                <div key={returnDocument.id} className="px-3 py-2 text-sm">
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <span className="font-semibold" style={{ color: 'var(--ink)' }}>{returnDocument.returnNumber || 'Return'}</span>
+                                                                        <span className="font-semibold" style={{ color: '#dc2626' }}>Rs {returnDocument.totalRefundAmount?.toLocaleString() || 0}</span>
+                                                                    </div>
+                                                                    <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                                                                        {formatDate(returnDocument.returnDate)} · {returnDocument.returnStatus} · {returnDocument.refundStatus}
+                                                                    </div>
+                                                                    {returnDocument.items?.length > 0 && (
+                                                                        <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                                                                            {returnDocument.items.map((item) => `${item.productName} x${item.quantity}`).join(', ')}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {transaction.note && (
                                                     <div className="mt-2 p-2 rounded" style={{ background: 'var(--app-bg)' }}>
                                                         <p className="text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>Note:</p>
@@ -394,18 +420,18 @@ export default function SalesKPIReport() {
             ) : (
                 <div>
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                             <div className="flex items-center gap-2">
                                 <div className="rounded-lg p-2" style={{ background: `${COLORS.sales}17` }}>
                                     <ShoppingCart size={18} style={{ color: COLORS.sales }} />
                                 </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Total Sales</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Net Sales</p>
                             </div>
                             <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.totalSales || 0).toLocaleString()}
+                                Rs {(summary.netSales ?? summary.totalSales ?? 0).toLocaleString()}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: COLORS.sales }}>Profit: Rs {(summary.grossProfit || 0).toLocaleString()} ({summary.grossMarginPercentage || 0}%)</p>
+                            <p className="text-xs mt-1" style={{ color: COLORS.sales }}>Gross: Rs {(summary.totalSales || 0).toLocaleString()}</p>
                         </div>
 
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
@@ -413,12 +439,12 @@ export default function SalesKPIReport() {
                                 <div className="rounded-lg p-2" style={{ background: `${COLORS.sales}17` }}>
                                     <DollarSign size={18} style={{ color: COLORS.sales }} />
                                 </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Gross Profit</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Net Profit</p>
                             </div>
                             <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.grossProfit || 0).toLocaleString()}
+                                Rs {(summary.netProfit ?? summary.grossProfit ?? 0).toLocaleString()}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Margin: {summary.grossMarginPercentage || 0}%</p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Margin: {summary.netMarginPercentage ?? summary.grossMarginPercentage ?? 0}%</p>
                         </div>
 
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
@@ -439,12 +465,25 @@ export default function SalesKPIReport() {
                                 <div className="rounded-lg p-2" style={{ background: `${COLORS.sales}17` }}>
                                     <TrendingUp size={18} style={{ color: COLORS.sales }} />
                                 </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>COGS</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Net COGS</p>
                             </div>
                             <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.totalCostOfGoodsSold || 0).toLocaleString()}
+                                Rs {(summary.netCOGS ?? summary.totalCostOfGoodsSold ?? 0).toLocaleString()}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Cost of goods sold</p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>After returned stock</p>
+                        </div>
+
+                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg p-2" style={{ background: `${COLORS.productReturns}17` }}>
+                                    <RefreshCw size={18} style={{ color: COLORS.productReturns }} />
+                                </div>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Returns</p>
+                            </div>
+                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: '#dc2626' }}>
+                                Rs {(summary.totalReturnRefunds || 0).toLocaleString()}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{summary.returnCount || 0} return documents</p>
                         </div>
 
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>

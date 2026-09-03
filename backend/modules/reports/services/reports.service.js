@@ -251,6 +251,23 @@ export const generateSalesReportData = async (filters = {}) => {
     // Fetch orders
     const orders = await findOrderService({ ...dateFilter, ...orderFilter });
 
+    // Returns are reported against the order date so a filtered sale remains auditable
+    // even when its approved return was processed later.
+    const orderIds = orders.map(order => order._id);
+    const productReturns = orderIds.length > 0
+        ? await findProductReturnService({
+            referenceOrderId: { $in: orderIds },
+            returnStatus: { $in: ['approved', 'completed'] },
+            isDeleted: false
+        })
+        : [];
+    const returnsByOrder = productReturns.reduce((map, productReturn) => {
+        const key = String(productReturn.referenceOrderId);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(productReturn);
+        return map;
+    }, new Map());
+
     // If orderId was specified but no order found, return empty results
     if (orderId && orders.length === 0) {
         return {
@@ -265,6 +282,13 @@ export const generateSalesReportData = async (filters = {}) => {
                 totalCostOfGoodsSold: 0,
                 grossProfit: 0,
                 grossMarginPercentage: 0,
+                totalReturnRefunds: 0,
+                returnedCOGS: 0,
+                netSales: 0,
+                netCOGS: 0,
+                netProfit: 0,
+                netMarginPercentage: 0,
+                returnCount: 0,
                 salesCount: 0,
                 retailSales: 0,
                 wholesaleSales: 0,
@@ -277,7 +301,7 @@ export const generateSalesReportData = async (filters = {}) => {
         };
     }
 
-    // Calculate totals
+    // Calculate gross sales totals. Return-adjusted totals are calculated below.
     const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
     const salesCount = orders.length;
@@ -329,7 +353,36 @@ export const generateSalesReportData = async (filters = {}) => {
             }
         }
     }
-    const salesMargin = totalSales - totalCostOfGoodsSold;
+    const totalReturnRefunds = productReturns.reduce((sum, productReturn) => sum + (productReturn.totalRefundAmount || 0), 0);
+    const returnCount = productReturns.length;
+    let returnedCOGS = 0;
+    for (const productReturn of productReturns) {
+        const order = orders.find(candidate => String(candidate._id) === String(productReturn.referenceOrderId));
+        for (const returnedItem of productReturn.items || []) {
+            const soldItem = order?.items?.find(item => String(item.batchId) === String(returnedItem.batchId) && String(item.product) === String(returnedItem.productId));
+            let costPrice = 0;
+            if (returnedItem.batchId) {
+                const batch = await findByIdBatchService(returnedItem.batchId);
+                if (batch) {
+                    costPrice = Number(batch.purchasePrice) || 0;
+                    if (batch.discount?.amount > 0) {
+                        costPrice = batch.discount.type === 'percentage'
+                            ? costPrice * (1 - batch.discount.amount / 100)
+                            : costPrice - batch.discount.amount;
+                    }
+                    if (batch.gst > 0) costPrice *= 1 + batch.gst / 100;
+                }
+            } else if (soldItem) {
+                costPrice = Number(soldItem.purchasePrice) || 0;
+            }
+            returnedCOGS += costPrice * (returnedItem.quantity || 0);
+        }
+    }
+    const netSales = totalSales - totalReturnRefunds;
+    const netCOGS = totalCostOfGoodsSold - returnedCOGS;
+    const netProfit = netSales - netCOGS;
+    const netMarginPercentage = netSales > 0 ? Number(((netProfit / netSales) * 100).toFixed(1)) : 0;
+    const salesMargin = netProfit;
 
     const grossProfit = totalSales - totalCostOfGoodsSold;
     const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
@@ -474,6 +527,34 @@ export const generateSalesReportData = async (filters = {}) => {
                 const orderProfit = totalSalePrice - totalCostPrice;
                 const orderMargin = totalSalePrice > 0 ? ((orderProfit / totalSalePrice) * 100).toFixed(2) : 0;
                 
+                const orderReturns = returnsByOrder.get(String(order._id)) || [];
+                const returns = orderReturns.map(productReturn => ({
+                    id: productReturn._id,
+                    returnNumber: productReturn.returnNumber,
+                    returnDate: productReturn.returnDate,
+                    returnStatus: productReturn.returnStatus,
+                    refundStatus: productReturn.refundStatus,
+                    totalRefundAmount: productReturn.totalRefundAmount || 0,
+                    items: (productReturn.items || []).map(returnedItem => ({
+                        productId: returnedItem.productId,
+                        productName: returnedItem.productName,
+                        batchId: returnedItem.batchId,
+                        quantity: returnedItem.quantity || 0,
+                        refundAmount: returnedItem.refundAmount || 0,
+                        returnReason: returnedItem.returnReason
+                    }))
+                }));
+                const returnRefunds = returns.reduce((sum, productReturn) => sum + productReturn.totalRefundAmount, 0);
+                const returnedQuantity = returns.reduce((sum, productReturn) => sum + productReturn.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+                const orderReturnedCOGS = returns.reduce((sum, productReturn) => sum + productReturn.items.reduce((itemSum, returnedItem) => {
+                    const soldItem = itemsWithBatchDetails.find(item => String(item.batchId) === String(returnedItem.batchId) && item.productName === returnedItem.productName);
+                    return itemSum + (soldItem?.costPrice || 0) * returnedItem.quantity;
+                }, 0), 0);
+                const grossSales = order.totalAmount || 0;
+                const orderNetSales = grossSales - returnRefunds;
+                const orderNetCOGS = totalCostPrice - orderReturnedCOGS;
+                const orderNetProfit = orderNetSales - orderNetCOGS;
+
                 // Calculate total discounts and taxes from items
                 const totalItemDiscounts = itemsWithBatchDetails.reduce((sum, item) => sum + item.discountAmount, 0);
                 const totalItemTaxes = itemsWithBatchDetails.reduce((sum, item) => sum + item.taxAmount, 0);
@@ -497,6 +578,15 @@ export const generateSalesReportData = async (filters = {}) => {
                     orderProfit: orderProfit,
                     orderMargin: orderMargin,
                     profitMargin: order.totalAmount > 0 ? ((orderProfit / order.totalAmount) * 100).toFixed(2) : 0,
+                    grossSales,
+                    returns,
+                    returnedQuantity,
+                    returnRefunds,
+                    returnedCOGS: orderReturnedCOGS,
+                    netSales: orderNetSales,
+                    netCOGS: orderNetCOGS,
+                    netProfit: orderNetProfit,
+                    netMargin: orderNetSales > 0 ? Number(((orderNetProfit / orderNetSales) * 100).toFixed(2)) : 0,
                     // Customer and order info
                     paymentMethod: order.paymentMethod,
                     customerName: order.customerName || 'Walk-in',
@@ -532,6 +622,13 @@ export const generateSalesReportData = async (filters = {}) => {
             totalCostOfGoodsSold,
             grossProfit,
             grossMarginPercentage,
+            totalReturnRefunds,
+            returnedCOGS,
+            netSales,
+            netCOGS,
+            netProfit,
+            netMarginPercentage,
+            returnCount,
             salesCount,
             retailSales,
             wholesaleSales,
