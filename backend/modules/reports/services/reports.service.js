@@ -355,6 +355,9 @@ export const generateSalesReportData = async (filters = {}) => {
     }
     const totalReturnRefunds = productReturns.reduce((sum, productReturn) => sum + (productReturn.totalRefundAmount || 0), 0);
     const returnCount = productReturns.length;
+    const totalReturnedQuantity = productReturns.reduce((sum, productReturn) => (
+        sum + (productReturn.items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    ), 0);
     let returnedCOGS = 0;
     for (const productReturn of productReturns) {
         const order = orders.find(candidate => String(candidate._id) === String(productReturn.referenceOrderId));
@@ -623,6 +626,7 @@ export const generateSalesReportData = async (filters = {}) => {
             grossProfit,
             grossMarginPercentage,
             totalReturnRefunds,
+            totalReturnedQuantity,
             returnedCOGS,
             netSales,
             netCOGS,
@@ -924,7 +928,7 @@ export const getSalesKPIReport = async (filters = {}) => {
     const [orders, productReturns, staffList, previousOrders] = await Promise.all([
         findOrderService(orderFilter),
         findProductReturnService(dateFilter),
-        findStaffService({}).select('name _id'),
+        findStaffService({}, { select: 'name _id' }),
         previousOrderFilter ? findOrderService(previousOrderFilter) : []
     ]);
 
@@ -3107,6 +3111,65 @@ const getPreparedMainBusinessReport = async (filters = {}) => {
 };
 
 export const getMainBusinessReport = (filters = {}) => getPreparedMainBusinessReport(filters);
+
+export const getMainBusinessKPIOnlyReport = async (filters = {}) => {
+    const [salesReport, purchases, inventory, customers, staff, suppliers, expenses, creditsDebits] = await Promise.all([
+        generateSalesReportData(filters),
+        getPurchaseKPIReport(filters),
+        getInventoryKPIReport(filters),
+        getCustomerKPIReport(filters),
+        getStaffKPIReport(filters),
+        getSupplierKPIReport(filters),
+        getExpenseKPIReport(filters),
+        getCreditsDebitsAccountData({ ...filters, accountTypes: ['customer', 'supplier', 'general'] })
+    ]);
+
+    const salesSummary = salesReport.summary || {};
+    const purchaseSummary = purchases.summary || {};
+    const inventorySummary = inventory || {};
+    const customerSummary = customers.summary || {};
+    const staffSummary = staff.summary || staff.data?.summary || {};
+    const supplierSummary = suppliers.summary || {};
+    const expenseSummary = expenses.summary || {};
+    const creditSummary = creditsDebits.summary || {};
+    const grossProfit = Number(salesSummary.grossProfit || 0);
+    const totalSales = Number(salesSummary.totalRevenue || salesSummary.totalSales || 0);
+    const totalExpenses = Number(expenseSummary.totalExpenses || 0);
+    const totalPurchases = Number(purchaseSummary.totalAmountPurchased || purchaseSummary.totalPurchases || 0);
+    const salesReturnAmount = Number(salesSummary.totalReturnRefunds || salesSummary.totalReturns || 0);
+    const purchaseReturnAmount = Number(purchaseSummary.totalPurchaseReturns || purchaseSummary.totalReturns || 0);
+    const totalReturns = salesReturnAmount + purchaseReturnAmount;
+
+    return {
+        period: filters.period || (filters.fromDate || filters.toDate ? 'custom' : 'all'),
+        summary: {
+            sales: salesSummary,
+            purchases: purchaseSummary,
+            inventory: inventorySummary,
+            customers: customerSummary,
+            staff: staffSummary,
+            suppliers: supplierSummary,
+            expenses: expenseSummary,
+            creditsDebits: creditSummary,
+            analysis: {
+                grossProfit,
+                netProfit: Number(salesSummary.netProfit || 0),
+                netSales: Number(salesSummary.netSales || totalSales),
+                netCOGS: Number(salesSummary.netCOGS || 0),
+                returnedQuantity: Number(salesSummary.totalReturnedQuantity || 0),
+                totalDiscount: Number(salesSummary.totalDiscount || 0),
+                netOperatingResult: Number(salesSummary.netProfit || grossProfit) - totalExpenses,
+                netMarginPercentage: Number(salesSummary.netMarginPercentage || 0),
+                salesToPurchaseRatio: totalPurchases > 0 ? Number((totalSales / totalPurchases).toFixed(2)) : 0,
+                expenseToSalesRatio: totalSales > 0 ? Number(((totalExpenses / totalSales) * 100).toFixed(1)) : 0,
+                returnAmount: totalReturns,
+                salesReturnAmount,
+                purchaseReturnAmount,
+                returnRate: totalSales > 0 ? Number(((salesReturnAmount / totalSales) * 100).toFixed(1)) : 0
+            }
+        }
+    };
+};
 
 export const getMainBusinessReportKPI = async (filters = {}) => {
     const report = await getPreparedMainBusinessReport(filters);

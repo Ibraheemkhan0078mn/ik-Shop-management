@@ -12,6 +12,7 @@ import {
     getWastageReport,
     getActivityReport,
     getMainBusinessReport,
+    getMainBusinessKPIOnlyReport,
     getMainBusinessReportKPI,
     getMainBusinessReportData as getMainBusinessReportDataService,
     getPurchaseReturnReport,
@@ -68,6 +69,15 @@ export const getMainBusinessReportKPIData = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: "Main business KPI report retrieved successfully",
+        data: report,
+    });
+});
+
+export const getMainBusinessKPIOnlyReportData = asyncHandler(async (req, res) => {
+    const report = await getMainBusinessKPIOnlyReport(req.query);
+    res.status(200).json({
+        success: true,
+        message: "Main business KPI-only report retrieved successfully",
         data: report,
     });
 });

@@ -68,6 +68,68 @@ function getTableHeaders(type, labels) {
 
 const MAX_TRANSACTIONS_DISPLAY = 50;
 
+function formatMoney(value) {
+    return `Rs ${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
+function ProfitCalculation({ transaction }) {
+    const returnedQuantity = transaction.returnedQuantity || 0;
+    const returnRefunds = transaction.returnRefunds || 0;
+    const returnedCOGS = transaction.returnedCOGS || 0;
+    const netSales = transaction.netSales ?? transaction.amount ?? 0;
+    const netCOGS = transaction.netCOGS ?? transaction.totalCostPrice ?? 0;
+    const netProfit = transaction.netProfit ?? 0;
+
+    return (
+        <div className="rounded border p-3" style={{ background: 'var(--app-bg)', borderColor: 'var(--border)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Profit Calculation</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                <div>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>1. Cost of sold items</p>
+                    {transaction.items?.map((item, index) => (
+                        <p key={index} className="mt-1" style={{ color: 'var(--muted)' }}>
+                            {item.productName || 'Product'}: {formatMoney(item.costPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemCostTotal)}</strong>
+                        </p>
+                    ))}
+                </div>
+                <div>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>2. Gross sales</p>
+                    {transaction.items?.map((item, index) => (
+                        <p key={index} className="mt-1" style={{ color: 'var(--muted)' }}>
+                            {item.productName || 'Product'}: {formatMoney(item.unitPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemTotal || item.itemSaleTotal)}</strong>
+                        </p>
+                    ))}
+                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
+                        Sale price after item discounts and tax = <strong style={{ color: 'var(--ink)' }}>{formatMoney(transaction.grossSales)}</strong>
+                    </p>
+                    {(transaction.discountAmount || 0) > 0 && (
+                        <p className="mt-1" style={{ color: '#f59e0b' }}>Order discount included: {formatMoney(transaction.discountAmount)}</p>
+                    )}
+                </div>
+                <div>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>3. Remove returned sale</p>
+                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
+                        {formatMoney(transaction.grossSales)} - {formatMoney(returnRefunds)} refund = <strong style={{ color: 'var(--ink)' }}>{formatMoney(netSales)} net sales</strong>
+                    </p>
+                    <p className="mt-1" style={{ color: '#dc2626' }}>Returned quantity: {returnedQuantity}</p>
+                </div>
+                <div>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>4. Remove returned stock cost</p>
+                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
+                        {formatMoney(transaction.totalCostPrice)} - {formatMoney(returnedCOGS)} returned cost = <strong style={{ color: 'var(--ink)' }}>{formatMoney(netCOGS)} net COGS</strong>
+                    </p>
+                </div>
+            </div>
+            <div className="mt-3 pt-3 border-t flex flex-wrap items-center justify-between gap-2" style={{ borderColor: 'var(--border)' }}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Net sales - Net COGS = Net profit</span>
+                <span className="text-base font-bold tabular-nums" style={{ color: netProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                    {formatMoney(netSales)} - {formatMoney(netCOGS)} = {formatMoney(netProfit)} ({transaction.netMargin ?? 0}%)
+                </span>
+            </div>
+        </div>
+    );
+}
+
 function TransactionTable({ transactions, type, labels }) {
     const [expandedOrderId, setExpandedOrderId] = React.useState(null);
 
@@ -207,15 +269,19 @@ function TransactionTable({ transactions, type, labels }) {
                                                                 <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {transaction.totalSalePrice?.toLocaleString() || 0}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#f59e0b' }}>Rs {transaction.totalItemDiscounts?.toLocaleString() || 0}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#8b5cf6' }}>Rs {transaction.totalItemTaxes?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: transaction.orderProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                                                                    Rs {transaction.orderProfit?.toLocaleString() || 0}
-                                                                    <div className="text-xs mt-0.5">({transaction.orderMargin}%)</div>
+                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>
+                                                                    Rs {transaction.netSales?.toLocaleString() || transaction.amount?.toLocaleString() || 0}
+                                                                    <div className="text-xs mt-0.5" style={{ color: '#dc2626' }}>Returned: {transaction.returnedQuantity || 0}</div>
+                                                                </td>
+                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: transaction.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                                                                    Rs {transaction.netProfit?.toLocaleString() || 0}
+                                                                    <div className="text-xs mt-0.5">Net ({transaction.netMargin ?? transaction.orderMargin ?? 0}%)</div>
                                                                 </td>
                                                             </tr>
                                                         </tfoot>
                                                     </table>
                                                 </div>
+                                                <ProfitCalculation transaction={transaction} />
                                                 {transaction.returns?.length > 0 && (
                                                     <div className="mt-3 rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                                                         <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide" style={{ background: 'var(--app-bg)', color: 'var(--muted)' }}>
@@ -415,7 +481,7 @@ export default function SalesKPIReport() {
 
             {showLoader ? (
                 <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 rounded-full" style={{ borderColor: 'var(--accent-2)' }}></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent-2)' }}></div>
                 </div>
             ) : (
                 <div>

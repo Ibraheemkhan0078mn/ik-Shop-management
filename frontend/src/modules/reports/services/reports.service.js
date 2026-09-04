@@ -23,6 +23,12 @@ export const reportsApi = baseApi.injectEndpoints({
             providesTags: ["Reports"],
         }),
 
+        getMainBusinessKPIOnlyReport: builder.query({
+            query: (params) => ({ url: "/reports/main-business/kpi-only", params }),
+            transformResponse: (raw) => raw.data,
+            providesTags: ["Reports"],
+        }),
+
         getMainBusinessReportData: builder.query({
             query: (params) => ({ url: "/reports/main-business/data", params }),
             transformResponse: (raw) => raw.data,
@@ -318,6 +324,7 @@ export const {
     useGetDashboardSummaryQuery,
     useGetMainBusinessReportQuery,
     useGetMainBusinessReportKPIQuery,
+    useGetMainBusinessKPIOnlyReportQuery,
     useGetMainBusinessReportDataQuery,
     useGetSalesReportQuery,
     useGetPurchaseReportQuery,
