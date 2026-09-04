@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import ordersApi from "./orderApi";
+import { baseApi } from "../../../app/rtkBaseApi.js";
 
 // ✅ Get all orders
 export const getOrders = createAsyncThunk(
@@ -18,9 +19,10 @@ export const getOrders = createAsyncThunk(
 // ✅ Add new order (POS checkout)
 export const addOrder = createAsyncThunk(
   "orders/addOrder",
-  async (body, { rejectWithValue }) => {
+  async (body, { dispatch, rejectWithValue }) => {
     try {
       const { data } = await ordersApi.addOrder(body);
+        dispatch(baseApi.util.invalidateTags(["Orders", "Product", "Batch", "Reports", "Qarza"]));
       return data.order || data.data?.order;
     } catch (error) {
       console.error("addOrder error:", error);
@@ -32,9 +34,10 @@ export const addOrder = createAsyncThunk(
 // ✅ Edit order (update payment, etc.)
 export const editOrder = createAsyncThunk(
   "orders/editOrder",
-  async ({ id, body }, { rejectWithValue }) => {
+  async ({ id, body }, { dispatch, rejectWithValue }) => {
     try {
       const { data } = await ordersApi.editOrder({ id, body });
+        dispatch(baseApi.util.invalidateTags(["Orders", "Product", "Batch", "Reports", "Qarza"]));
       return data.order || data.data?.order;
     } catch (error) {
       console.error("editOrder error:", error);
@@ -46,9 +49,10 @@ export const editOrder = createAsyncThunk(
 // ✅ Delete order
 export const deleteOrder = createAsyncThunk(
   "orders/deleteOrder",
-  async (id, { rejectWithValue }) => {
+  async (id, { dispatch, rejectWithValue }) => {
     try {
       const { data } = await ordersApi.deleteOrder(id);
+        dispatch(baseApi.util.invalidateTags(["Orders", "Product", "Batch", "Reports", "Qarza"]));
       return data.id || data.data?.id;
     } catch (error) {
       console.error("deleteOrder error:", error);

@@ -36,31 +36,31 @@ export const purchaseApi = baseApi.injectEndpoints({
         // Create
         createPurchase: build.mutation({
             query: (body) => ({ url: "/purchases", method: "POST", body }),
-            invalidatesTags: ["Purchase", "Product", "Batch"],
+            invalidatesTags: ["Purchase", "Product", "Batch", "Reports", "Qarza"],
         }),
 
         // Update
         updatePurchase: build.mutation({
             query: ({ id, ...body }) => ({ url: `/purchases/updatePurchase/${id}`, method: "PUT", body }),
-            invalidatesTags: (result, error, { id }) => [{ type: "Purchase", id }, "Purchase", "Product", "Batch"],
+            invalidatesTags: (result, error, { id }) => [{ type: "Purchase", id }, "Purchase", "Product", "Batch", "Reports", "Qarza"],
         }),
 
         // Delete
         deletePurchase: build.mutation({
             query: (id) => ({ url: `/purchases/${id}`, method: "DELETE" }),
-            invalidatesTags: ["Purchase", "Product", "Batch"],
+            invalidatesTags: ["Purchase", "Product", "Batch", "Reports", "Qarza"],
         }),
 
         // Update Status
         updatePurchaseStatus: build.mutation({
             query: ({ id, status }) => ({ url: `/purchases/${id}/status`, method: "PUT", body: { status } }),
-            invalidatesTags: ["Purchase", "Product", "Batch"],
+            invalidatesTags: ["Purchase", "Product", "Batch", "Reports", "Qarza"],
         }),
 
         // Create Payment
         createPurchasePayment: build.mutation({
             query: ({ id, ...body }) => ({ url: `/purchases/${id}/payments`, method: "POST", body }),
-            invalidatesTags: ["Purchase"],
+            invalidatesTags: ["Purchase", "Qarza"],
         }),
 
         // Get Payments
@@ -84,7 +84,7 @@ export const purchaseApi = baseApi.injectEndpoints({
                 method: "PUT", 
                 body 
             }),
-            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", { type: "Purchase", id: `payments-${purchaseId}` }],
+            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", "Qarza", { type: "Purchase", id: `payments-${purchaseId}` }],
         }),
 
         // Delete Payment
@@ -93,7 +93,7 @@ export const purchaseApi = baseApi.injectEndpoints({
                 url: `/purchases/payments/${paymentId}`, 
                 method: "DELETE" 
             }),
-            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", { type: "Purchase", id: `payments-${purchaseId}` }],
+            invalidatesTags: (result, error, { purchaseId }) => ["Purchase", "Qarza", { type: "Purchase", id: `payments-${purchaseId}` }],
         }),
 
         // Get Purchases by Supplier
@@ -116,7 +116,7 @@ export const purchaseApi = baseApi.injectEndpoints({
         recalculatePurchasePaidAmount: build.mutation({
             query: (id) => ({ url: `/purchases/${id}/recalculate-payment`, method: "POST" }),
             transformResponse: (raw) => raw.data || raw,
-            invalidatesTags: (result, error, id) => ["Purchase", { type: "Purchase", id }, { type: "Purchase", id: `payments-${id}` }, { type: "Purchase", id: `payment-status-${id}` }],
+            invalidatesTags: (result, error, id) => ["Purchase", "Qarza", { type: "Purchase", id }, { type: "Purchase", id: `payments-${id}` }, { type: "Purchase", id: `payment-status-${id}` }],
         }),
     }),
 });

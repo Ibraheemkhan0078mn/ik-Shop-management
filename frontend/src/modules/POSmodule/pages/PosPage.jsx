@@ -38,6 +38,11 @@ const generateLineItemId = () => `${Date.now()}-${Math.random().toString(36).sub
 const isSameCartLine = (cartItem, lineItemId) =>
   cartItem.lineItemId === lineItemId;
 
+const isSameStockLine = (firstItem, secondItem) =>
+  firstItem._id === secondItem._id && firstItem.batchId === secondItem.batchId;
+
+const getStockLimit = (cartItem) => Number(cartItem.stockLimit ?? cartItem.currentStockLevel ?? 0);
+
 const buildOrderItemsFromCart = (cart) =>
   cart.map((cartItem) => ({
     product: cartItem._id,
@@ -275,14 +280,25 @@ export default function PosPage() {
   }, [cartItems]);
 
   // ── Cart Actions ──────────────────────────────────────────────────────────
-  const incrementQty = (lineItemId) =>
-    setCartItems((prev) =>
-      prev.map((item) =>
-        isSameCartLine(item, lineItemId)
-          ? { ...item, qty: item.qty + 1 }
-          : item
-      )
-    );
+  const incrementQty = (lineItemId) => {
+    setCartItems((prev) => {
+      const targetItem = prev.find((item) => isSameCartLine(item, lineItemId));
+      if (!targetItem) return prev;
+
+      const totalQuantity = prev
+        .filter((item) => isSameStockLine(item, targetItem))
+        .reduce((sum, item) => sum + item.qty, 0);
+      const maxQuantity = getStockLimit(targetItem);
+      if (totalQuantity >= maxQuantity) {
+        showError(isUrdu ? `اس آئٹم کا زیادہ سے زیادہ اسٹاک ${maxQuantity} ہے` : `Only ${maxQuantity} units are available`);
+        return prev;
+      }
+
+      return prev.map((item) =>
+        isSameCartLine(item, lineItemId) ? { ...item, qty: item.qty + 1 } : item
+      );
+    });
+  };
 
   const decrementQty = (lineItemId) =>
     setCartItems((prev) =>
@@ -302,13 +318,23 @@ export default function PosPage() {
 
   const setCartItemQty = (lineItemId, newQty) => {
     if (newQty < 1) return;
-    setCartItems((prev) =>
-      prev.map((item) =>
-        isSameCartLine(item, lineItemId)
-          ? { ...item, qty: newQty }
-          : item
-      )
-    );
+    setCartItems((prev) => {
+      const targetItem = prev.find((item) => isSameCartLine(item, lineItemId));
+      if (!targetItem) return prev;
+
+      const otherQuantity = prev
+        .filter((item) => item !== targetItem && isSameStockLine(item, targetItem))
+        .reduce((sum, item) => sum + item.qty, 0);
+      const maxQuantity = getStockLimit(targetItem);
+      if (otherQuantity + newQty > maxQuantity) {
+        showError(isUrdu ? `اس آئٹم کا زیادہ سے زیادہ اسٹاک ${maxQuantity} ہے` : `Only ${maxQuantity} units are available`);
+        return prev;
+      }
+
+      return prev.map((item) =>
+        isSameCartLine(item, lineItemId) ? { ...item, qty: newQty } : item
+      );
+    });
   };
 
   // Custom price change handler
@@ -397,6 +423,14 @@ export default function PosPage() {
       const duplicateExists = prev.some((item) =>
         item._id === product._id && item.batchId === batchId
       );
+      const currentQuantity = prev
+        .filter((item) => item._id === product._id && item.batchId === batchId)
+        .reduce((sum, item) => sum + item.qty, 0);
+      const stockLimit = Number(selectedBatch?.quantity ?? product.currentStockLevel ?? 0);
+      if (currentQuantity >= stockLimit) {
+        showError(isUrdu ? `اس آئٹم کا زیادہ سے زیادہ اسٹاک ${stockLimit} ہے` : `Only ${stockLimit} units are available`);
+        return prev;
+      }
 
       // If duplicate exists and not forced, show confirmation dialog
       if (duplicateExists && !forceAdd) {
@@ -423,6 +457,7 @@ export default function PosPage() {
           portionType,
           batchId,
           batchNumber: selectedBatch?.batchNumber || null,
+          stockLimit: Number(selectedBatch?.quantity ?? product.currentStockLevel ?? 0),
           // Tax and discount fields
           taxPercent,
           taxType,

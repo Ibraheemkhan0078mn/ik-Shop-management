@@ -291,6 +291,7 @@ export default function ProductPurchasePage() {
                             <thead>
                                 <tr className="text-xs uppercase tracking-wider bg-surface-muted border-b border-edge text-ink-muted">
                                     <th className="px-4 py-3 font-semibold">{labels.invoice}</th>
+                                    <th className="px-4 py-3 font-semibold">{labels.supplier || "Supplier"}</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
                                     <th className="px-4 py-3 font-semibold text-right">{labels.total}</th>
                                     <th className="px-4 py-3 font-semibold text-right">{labels.paid || "Paid"}</th>
@@ -404,6 +405,9 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
                             </button>
                         )}
                     </div>
+                </td>
+                <td className="px-4 py-3 text-ink">
+                    {purchase?.supplier?.name || "—"}
                 </td>
                 <td className="px-4 py-3 text-center text-ink">
                     <div className="text-sm font-medium">{items.length}</div>

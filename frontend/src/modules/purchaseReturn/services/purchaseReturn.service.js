@@ -37,7 +37,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["PurchaseReturn", "Product", "Batch"],
+            invalidatesTags: ["PurchaseReturn", "Product", "Batch", "Reports", "Qarza"],
         }),
         updatePurchaseReturn: build.mutation({
             query: ({ id, ...data }) => ({
@@ -45,28 +45,28 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch"],
+            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch", "Reports", "Qarza"],
         }),
         deletePurchaseReturn: build.mutation({
             query: (id) => ({
                 url: `/purchase-returns/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["PurchaseReturn", "Product", "Batch"],
+            invalidatesTags: ["PurchaseReturn", "Product", "Batch", "Reports", "Qarza"],
         }),
         submitPurchaseReturn: build.mutation({
             query: (id) => ({
                 url: `/purchase-returns/${id}/submit`,
                 method: "PUT",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Reports", "Qarza"],
         }),
         approvePurchaseReturn: build.mutation({
             query: (id) => ({
                 url: `/purchase-returns/${id}/approve`,
                 method: "PUT",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Product", "Batch", "Reports", "Qarza"],
         }),
         rejectPurchaseReturn: build.mutation({
             query: ({ id, rejectionReason }) => ({
@@ -74,7 +74,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: { rejectionReason },
             }),
-            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Reports", "Qarza"],
         }),
         generatePurchaseReturnNumber: build.mutation({
             query: () => ({ url: "/purchase-returns/generate-number", method: "GET" }),
@@ -87,7 +87,7 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Qarza"],
         }),
         getPurchaseReturnPayments: build.query({
             query: (id) => ({ url: `/purchase-returns/${id}/payments` }),
@@ -98,14 +98,14 @@ export const purchaseReturnApi = baseApi.injectEndpoints({
                 url: `/purchase-returns/${id}/payments/${paymentId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturnPayments"],
+            invalidatesTags: (result, error, { id }) => [{ type: "PurchaseReturn", id }, "PurchaseReturnPayments", "Qarza"],
         }),
         recalculatePurchaseReturn: build.mutation({
             query: (id) => ({
                 url: `/purchase-returns/${id}/recalculate`,
                 method: "PUT",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn"],
+            invalidatesTags: (result, error, id) => [{ type: "PurchaseReturn", id }, "PurchaseReturn", "Qarza"],
         }),
     }),
 });

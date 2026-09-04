@@ -390,6 +390,7 @@ function CartItemRow({ cartItem, portionLabel, onIncrement, onDecrement, onRemov
                     <input
                         type="number"
                         min={1}
+                        max={cartItem.stockLimit > 0 ? cartItem.stockLimit : undefined}
                         value={qtyInput}
                         onChange={(e) => {
                             e.stopPropagation();
