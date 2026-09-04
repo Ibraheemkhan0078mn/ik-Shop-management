@@ -81,6 +81,7 @@ export default function CustomerDetail() {
     const [createQarzaAccount] = useCreateQarzaAccount();
     const [recalculateCustomerBalance] = useRecalculateCustomerBalance();
     const [isRecalculating, setIsRecalculating] = useState(false);
+    const [transactionSource, setTransactionSource] = useState("all");
     const [updateCustomer] = useUpdateCustomer();
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [deleteOrderReturn] = useDeleteOrderReturnMutation();
@@ -334,6 +335,16 @@ export default function CustomerDetail() {
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
                             <div className="flex gap-2">
+                                <select
+                                    value={transactionSource}
+                                    onChange={(e) => setTransactionSource(e.target.value)}
+                                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                                >
+                                    <option value="all">All</option>
+                                    <option value="order">Orders</option>
+                                    <option value="orderReturn">Order Returns</option>
+                                    <option value="manual">Manual</option>
+                                </select>
                                 <button
                                     onClick={handleRecalculateBalance}
                                     disabled={isRecalculating}
@@ -421,7 +432,7 @@ export default function CustomerDetail() {
                                         </div>
                                     );
                                 }}
-                                queryArgs={{ qarzaAccountId }}
+                                queryArgs={{ qarzaAccountId, source: transactionSource }}
                             />
                         </div>
                     </div>

@@ -94,9 +94,9 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Supplier payments (manual + purchase credit)
         getSupplierPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all" } = {}) => ({
                 url: "/qarzaRoutes/payments/supplier",
-                params: { qarzaAccountId, page, limit, type },
+                params: { qarzaAccountId, page, limit, type, source },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),
@@ -112,9 +112,9 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Customer payments (manual + POS credit)
         getCustomerPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all" } = {}) => ({
                 url: "/qarzaRoutes/payments/customer",
-                params: { qarzaAccountId, page, limit, type },
+                params: { qarzaAccountId, page, limit, type, source },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),

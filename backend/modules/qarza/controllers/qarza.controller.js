@@ -236,7 +236,7 @@ export const getManualPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type } = req.query;
+        let { qarzaAccountId, type, source = 'all' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -285,7 +285,7 @@ export const getSupplierPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type } = req.query;
+        let { qarzaAccountId, type, source = 'all' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -296,10 +296,16 @@ export const getSupplierPayments = async (req, res) => {
         // 2. Purchase credit transactions (sourceType: 'purchase', creditAccount matches)
         // 3. Purchase return refund transactions (sourceType: 'purchaseReturn', creditAccount matches)
         // Explicitly exclude sale transactions
+        const sourceQueries = {
+            purchase: { sourceType: 'purchase', creditAccount: qarzaAccountId },
+            purchaseReturn: { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId },
+            manual: { sourceType: 'qarza', sourceId: qarzaAccountId },
+        };
+        const sourceFilter = sourceQueries[source];
         let query = {
             $and: [
                 { sourceType: { $ne: 'sale' } },
-                {
+                sourceFilter || {
                     $or: [
                         { sourceType: 'qarza', sourceId: qarzaAccountId },
                         { sourceType: 'purchase', creditAccount: qarzaAccountId },
@@ -346,7 +352,7 @@ export const getCustomerPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type } = req.query;
+        let { qarzaAccountId, type, source = 'all' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -357,10 +363,16 @@ export const getCustomerPayments = async (req, res) => {
         // 2. POS sale credit transactions (sourceType: 'sale', creditAccount matches, creditAmount > 0)
         // 3. Order return refund transactions (sourceType: 'orderReturn', creditAccount matches)
         // Explicitly exclude purchase transactions
+        const sourceQueries = {
+            order: { sourceType: 'sale', creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },
+            orderReturn: { sourceType: 'orderReturn', creditAccount: qarzaAccountId },
+            manual: { sourceType: 'qarza', sourceId: qarzaAccountId },
+        };
+        const sourceFilter = sourceQueries[source];
         let query = {
             $and: [
                 { sourceType: { $ne: 'purchase' } },
-                {
+                sourceFilter || {
                     $or: [
                         { sourceType: 'qarza', sourceId: qarzaAccountId },
                         { sourceType: 'sale', creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },

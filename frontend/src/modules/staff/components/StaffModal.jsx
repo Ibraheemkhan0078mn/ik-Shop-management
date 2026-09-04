@@ -124,8 +124,8 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
 
         // Always required
         if (!form.fullName?.trim()) newErrors.fullName = "Full name is required";
-        if (!form.cnic?.trim()) newErrors.cnic = "CNIC is required";
-        if (!form.phone?.trim()) newErrors.phone = "Phone is required";
+        if (!String(form.cnic ?? "").trim()) newErrors.cnic = "CNIC is required";
+        if (!String(form.phone ?? "").trim()) newErrors.phone = "Phone is required";
         if (!form.role?.trim()) newErrors.role = "Role is required";
 
         setErrors(newErrors);
@@ -171,7 +171,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
     if (!isCreate && isFetching && !staffData) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
-                <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm animate-pulse">
+                <div className="bg-[var(--surface)] rounded-2xl p-8 text-[var(--muted)] text-sm">
                     {labels.loading || "Loading..."}
                 </div>
             </div>
@@ -188,7 +188,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
             }}
         >
             <div 
-                className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+                className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -210,7 +210,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
 
                 {/* Banner */}
                 {banner && (
-                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200 group hover:bg-red-500/20 transition-colors">
+                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-500 group hover:bg-red-500/20 transition-colors">
                         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                         <span className="flex-1">{banner}</span>
                         <button
@@ -300,6 +300,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             error={errors.cnic}
                             required
                             placeholder="XXXXX-XXXXXXX-X"
+                            type="number"
                         />
 
                         {/* Phone */}
@@ -311,6 +312,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                             error={errors.phone}
                             required
                             placeholder="+92 XXX XXXXXXX"
+                            type="number"
                         />
 
                         {/* Role */}
@@ -362,6 +364,7 @@ export default function StaffModal({ mode = "create", staffId = null, open, onCl
                                 onChange={updateField}
                                 error={errors.emergencyContact}
                                 placeholder="+92 XXX XXXXXXX"
+                                type="number"
                             />
 
                             {/* Status Toggle */}

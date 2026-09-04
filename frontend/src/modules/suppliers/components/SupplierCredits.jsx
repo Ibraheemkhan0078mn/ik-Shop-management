@@ -11,6 +11,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
     const [modal, setModal] = useState(null);
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [isRecalculating, setIsRecalculating] = useState(false);
+    const [transactionSource, setTransactionSource] = useState("all");
 
     const { data: summary } = useSupplierPaymentsSummary(qarzaAccountId);
     const accountExists = summary?.accountExists !== false;
@@ -123,6 +124,16 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
                         <div className="flex gap-2">
+                            <select
+                                value={transactionSource}
+                                onChange={(e) => setTransactionSource(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                            >
+                                <option value="all">All</option>
+                                <option value="purchase">Purchases</option>
+                                <option value="purchaseReturn">Purchase Returns</option>
+                                <option value="manual">Manual</option>
+                            </select>
                             <button
                                 onClick={handleRecalculateBalance}
                                 disabled={isRecalculating}
@@ -145,7 +156,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                             limit={20}
                             dataKey="data"
                             wrapperClassName="h-full"
-                            queryArgs={{ qarzaAccountId }}
+                            queryArgs={{ qarzaAccountId, source: transactionSource }}
                             renderItems={(items) => {
                                 if (!items?.length) return null;
                                 return (

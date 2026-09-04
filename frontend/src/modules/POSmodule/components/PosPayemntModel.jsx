@@ -291,11 +291,21 @@ export default function PosPaymentModal({
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', type: 'warning' });
 
     const discountAmt = Math.max(0, Number(orderDiscount) || 0);
+
+    const getItemDiscountLimit = (item, index, discountType = itemDiscountTypes[index] || 'percentage') => {
+        const lineTotal = Number(item.unitPrice || 0) * Number(item.qty || 0);
+        const configuredLimit = Number(item.maxDiscountPercent) || 0;
+        if (!configuredLimit || !lineTotal) return 0;
+        const maxAmount = item.discountLimitType === 'fixed'
+            ? configuredLimit * Number(item.qty || 0)
+            : (lineTotal * configuredLimit) / 100;
+        return discountType === 'percentage' ? (maxAmount / lineTotal) * 100 : maxAmount;
+    };
     
     // Calculate discounted cart items with per-item discounts applied
     const discountedCartItems = cartItems.map((item, index) => {
-        const itemDiscountValue = Number(itemDiscounts[index]) || 0;
         const discountType = itemDiscountTypes[index] || 'percentage';
+        const configuredDiscountValue = Number(itemDiscounts[index]) || 0;
         
         // Use originalBatchPrice if available (when custom price was set), otherwise use unitPrice
         const baseUnitPrice = item.originalBatchPrice || item.unitPrice;
@@ -303,6 +313,10 @@ export default function PosPaymentModal({
         
         // Calculate lineTotal (base amount before discount)
         const lineTotal = currentUnitPrice * (item.qty || 0);
+        const maxDiscountValue = getItemDiscountLimit(item, index, discountType);
+        const itemDiscountValue = maxDiscountValue > 0
+            ? Math.min(configuredDiscountValue, maxDiscountValue)
+            : configuredDiscountValue;
         let discountAmount = 0;
         let discountPercent = 0;
         
@@ -589,7 +603,10 @@ export default function PosPaymentModal({
                                     <div className="flex gap-2">
                                         <select
                                             value={orderDiscountType}
-                                            onChange={(e) => setOrderDiscountType(e.target.value)}
+                                            onChange={(e) => {
+                                                setOrderDiscountType(e.target.value);
+                                                setOrderDiscount("");
+                                            }}
                                             className="px-3 py-2 border rounded-lg text-sm"
                                             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)", minWidth: "90px" }}
                                         >
@@ -1095,6 +1112,10 @@ export default function PosPaymentModal({
                                                                     value={itemDiscountTypes[index] || 'percentage'}
                                                                     onChange={(e) => {
                                                                         const value = e.target.value;
+                                                                        setItemDiscounts(prev => ({
+                                                                            ...prev,
+                                                                            [index]: ""
+                                                                        }));
                                                                         setItemDiscountTypes(prev => ({
                                                                             ...prev,
                                                                             [index]: value
@@ -1109,6 +1130,7 @@ export default function PosPaymentModal({
                                                                 <input
                                                                     type="number"
                                                                     min="0"
+                                                                    max={getItemDiscountLimit(item, index)}
                                                                     placeholder="0"
                                                                     value={itemDiscounts[index] || ""}
                                                                     onWheel={e => e.target.blur()}
@@ -1116,31 +1138,17 @@ export default function PosPaymentModal({
                                                                         const value = e.target.value;
                                                                         const numValue = Number(value);
                                                                         
-                                                                        // Validate max discount based on type
-                                                                        if (item.maxDiscountPercent > 0) {
-                                                                            if (itemDiscountTypes[index] === 'percentage') {
-                                                                                if (numValue > item.maxDiscountPercent) {
-                                                                                    setAlertConfig({
-                                                                                        show: true,
-                                                                                        message: `Maximum discount allowed is ${item.maxDiscountPercent}%`,
-                                                                                        type: 'warning'
-                                                                                    });
-                                                                                    return;
-                                                                                }
-                                                                            } else {
-                                                                                // Fixed amount validation
-                                                                                const maxFixed = item.discountLimitType === 'fixed' 
-                                                                                    ? (item.maxDiscountPercent || 0) * item.qty 
-                                                                                    : (item.unitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100;
-                                                                                if (numValue > maxFixed) {
-                                                                                    setAlertConfig({
-                                                                                        show: true,
-                                                                                        message: `Maximum discount allowed is Rs ${maxFixed.toFixed(2)}`,
-                                                                                        type: 'warning'
-                                                                                    });
-                                                                                    return;
-                                                                                }
-                                                                            }
+                                                                        const discountType = itemDiscountTypes[index] || 'percentage';
+                                                                        const maxValue = getItemDiscountLimit(item, index, discountType);
+                                                                        if (maxValue > 0 && numValue > maxValue) {
+                                                                            setAlertConfig({
+                                                                                show: true,
+                                                                                message: discountType === 'percentage'
+                                                                                    ? `Maximum discount allowed is ${maxValue.toFixed(2)}%`
+                                                                                    : `Maximum discount allowed is Rs ${maxValue.toFixed(2)}`,
+                                                                                type: 'warning'
+                                                                            });
+                                                                            return;
                                                                         }
                                                                         
                                                                         setItemDiscounts(prev => ({

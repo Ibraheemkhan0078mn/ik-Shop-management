@@ -488,6 +488,7 @@ export const approvePurchaseReturnData = asyncHandler(async (req, res) => {
     const purchaseReturnWithSupplier = await getPurchaseReturnById(id);
     if (purchaseReturnWithSupplier?.supplier?.qarzaAccountId) {
         const { createPurchaseReturnTransaction } = await import("../../transactions/services/transaction.service.js");
+        const { recalculateSupplierBalance } = await import("../../qarza/services/recalculateSupplierBalance.service.js");
         await createPurchaseReturnTransaction({
             purchaseReturn: id,
             paymentMethod: 'credit',
@@ -499,6 +500,7 @@ export const approvePurchaseReturnData = asyncHandler(async (req, res) => {
             notes: `Auto-created credit transaction on approval for purchase return ${existing.purchaseReturnNumber}`,
             createdBy: userId,
         });
+        await recalculateSupplierBalance(purchaseReturnWithSupplier.supplier.qarzaAccountId);
     }
 
     // Recalculate purchase return refund amount after auto transaction creation

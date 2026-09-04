@@ -92,7 +92,7 @@ export default function StaffForm({ isEdit = false }) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="flex items-center gap-3 px-6 py-3 rounded-2xl border border-edge bg-surface-muted text-primary">
-                    <div className="w-5 h-5 border-2 border-edge border-t-primary rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-edge border-t-primary rounded-full" />
                     <span className="text-xs font-semibold uppercase tracking-wide">{labels.loading}</span>
                 </div>
             </div>
@@ -155,7 +155,7 @@ export default function StaffForm({ isEdit = false }) {
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.cnic} <span className="text-red-500">*</span></label>
-                                <input type="text" name="cnic" value={formData.cnic} onChange={handleChange} required className={inputCls} placeholder="XXXXX-XXXXXXX-X" />
+                                <input type="number" name="cnic" value={formData.cnic} onChange={handleChange} required className={inputCls} placeholder="CNIC" />
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.role} <span className="text-red-500">*</span></label>
@@ -178,11 +178,11 @@ export default function StaffForm({ isEdit = false }) {
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.phone} <span className="text-red-500">*</span></label>
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className={inputCls} placeholder="+92 XXX XXXXXXX" />
+                                <input type="number" name="phone" value={formData.phone} onChange={handleChange} required className={inputCls} placeholder="Phone" />
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.emergencyContact || "Emergency Contact"}</label>
-                                <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className={inputCls} placeholder="+92 XXX XXXXXXX" />
+                                <input type="number" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className={inputCls} placeholder="Emergency contact" />
                             </div>
                             <div>
                                 <label className={labelCls}>{labels.status}</label>
@@ -217,7 +217,7 @@ export default function StaffForm({ isEdit = false }) {
                         <button type="submit" disabled={isCreating || isUpdating}
                             className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
                             {isCreating || isUpdating
-                                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
+                                ? <>Saving...</>
                                 : <><Save size={16} /> {isEdit ? "Update Staff" : "Create Staff"}</>}
                         </button>
                     </div>
