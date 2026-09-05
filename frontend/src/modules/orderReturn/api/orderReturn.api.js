@@ -47,7 +47,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["OrderReturn", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: ["OrderReturn", "Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         // Update order return
         updateOrderReturn: build.mutation({
@@ -56,7 +56,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         // Delete order return
         deleteOrderReturn: build.mutation({
@@ -64,7 +64,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["OrderReturn", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: ["OrderReturn", "Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         // Update return status
         updateReturnStatus: build.mutation({
@@ -73,7 +73,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "PATCH",
                 body: { status },
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         // Approve order return
         approveOrderReturn: build.mutation({
@@ -81,7 +81,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${id}/approve`,
                 method: "PATCH",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturn", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturn", "Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         addOrderReturnRefund: build.mutation({
             query: ({ id, ...data }) => ({
@@ -89,7 +89,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturn", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         getOrderReturnRefunds: build.query({
             query: (id) => ({ url: `/product-returns/${id}/refunds` }),
@@ -101,7 +101,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${returnId}/refunds/${refundId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, { returnId }) => [{ type: "OrderReturn", returnId }, "OrderReturnRefunds", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { returnId }) => [{ type: "OrderReturn", id: returnId }, "OrderReturn", "OrderReturnRefunds", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         updateOrderReturnRefund: build.mutation({
             query: ({ returnId, refundId, ...data }) => ({
@@ -109,7 +109,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: (result, error, { returnId }) => [{ type: "OrderReturn", returnId }, "OrderReturnRefunds", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { returnId }) => [{ type: "OrderReturn", id: returnId }, "OrderReturn", "OrderReturnRefunds", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         // Order return payment endpoints (new transaction system)
         addOrderReturnPayment: build.mutation({
@@ -118,7 +118,7 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         getOrderReturnPayments: build.query({
             query: (id) => ({ url: `/product-returns/${id}/payments` }),
@@ -130,14 +130,14 @@ export const orderReturnApi = baseApi.injectEndpoints({
                 url: `/product-returns/${id}/payments/${paymentId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments", "Reports", "Qarza"],
+            invalidatesTags: (result, error, { id }) => [{ type: "OrderReturn", id }, "OrderReturnPayments", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
         recalculateOrderReturn: build.mutation({
             query: (id) => ({
                 url: `/product-returns/${id}/recalculate`,
                 method: "PATCH",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "Reports", "Qarza"],
+            invalidatesTags: (result, error, id) => [{ type: "OrderReturn", id }, "OrderReturn", "Orders", "Reports", "Qarza", "Customer", "CustomerOrderKPIs", "CustomerOrderReturnKPIs"],
         }),
     }),
 });

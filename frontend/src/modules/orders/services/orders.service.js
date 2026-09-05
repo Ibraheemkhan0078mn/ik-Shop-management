@@ -35,11 +35,11 @@ export const ordersApi = baseApi.injectEndpoints({
         }),
         createOrder: build.mutation({
             query: (orderData) => ({ url: "/orders", method: "POST", body: orderData }),
-            invalidatesTags: ["Orders", "OrderNumber", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: ["Orders", "OrderNumber", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs"],
         }),
         deleteOrder: build.mutation({
             query: (id) => ({ url: `/orders/${id}`, method: "DELETE" }),
-            invalidatesTags: ["Orders", "Product", "Batch", "Reports", "Qarza"],
+            invalidatesTags: ["Orders", "Product", "Batch", "Reports", "Qarza", "Customer", "CustomerOrderKPIs"],
         }),
         // Get Order Payments
         getOrderPayments: build.query({
@@ -56,7 +56,7 @@ export const ordersApi = baseApi.injectEndpoints({
         // Create Order Payment
         createOrderPayment: build.mutation({
             query: ({ orderId, ...body }) => ({ url: `/orders/${orderId}/payments`, method: "POST", body }),
-            invalidatesTags: ["Orders", "Qarza"],
+            invalidatesTags: ["Orders", "Qarza", "Customer", "CustomerOrderKPIs"],
         }),
         // Update Order Payment
         updateOrderPayment: build.mutation({
@@ -65,7 +65,7 @@ export const ordersApi = baseApi.injectEndpoints({
                 method: "PUT", 
                 body 
             }),
-            invalidatesTags: (result, error, { orderId }) => ["Orders", "Qarza", { type: "Orders", id: `payments-${orderId}` }],
+            invalidatesTags: (result, error, { orderId }) => ["Orders", "Qarza", "Customer", "CustomerOrderKPIs", { type: "Orders", id: `payments-${orderId}` }],
         }),
         // Delete Order Payment
         deleteOrderPayment: build.mutation({
@@ -73,12 +73,12 @@ export const ordersApi = baseApi.injectEndpoints({
                 url: `/orders/payments/${paymentId}`, 
                 method: "DELETE" 
             }),
-            invalidatesTags: (result, error, { orderId }) => ["Orders", "Qarza", { type: "Orders", id: `payments-${orderId}` }],
+            invalidatesTags: (result, error, { orderId }) => ["Orders", "Qarza", "Customer", "CustomerOrderKPIs", { type: "Orders", id: `payments-${orderId}` }],
         }),
         // Recalculate Order Paid Amount
         recalculateOrderPaidAmount: build.mutation({
             query: (orderId) => ({ url: `/orders/${orderId}/recalculate-payment`, method: "POST" }),
-            invalidatesTags: (result, error, orderId) => ["Orders", "Qarza", { type: "Orders", id: orderId }],
+            invalidatesTags: (result, error, orderId) => ["Orders", "Qarza", "Customer", "CustomerOrderKPIs", { type: "Orders", id: orderId }],
         }),
     }),
 });

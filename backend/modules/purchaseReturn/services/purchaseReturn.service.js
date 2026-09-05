@@ -64,11 +64,20 @@ const updatePurchaseReturn = async (id, data) => {
 };
 
 const deletePurchaseReturn = async (id) => {
+    const purchaseReturn = await getPurchaseReturnById(id);
+
     // Delete all related transactions
     const transactions = await getTransactions({ sourceType: 'purchaseReturn', sourceId: id });
     for (const transaction of transactions) {
         const { deleteTransaction } = await import("../../transactions/services/transaction.service.js");
         await deleteTransaction(transaction._id);
+    }
+
+    // Recalculate the supplier balance after removing the return transactions.
+    const qarzaAccountId = purchaseReturn?.supplier?.qarzaAccountId;
+    if (qarzaAccountId) {
+        const { recalculateSupplierBalance } = await import("../../qarza/services/recalculateSupplierBalance.service.js");
+        await recalculateSupplierBalance(qarzaAccountId);
     }
 
     return await deleteOnePurchaseReturnService(id);

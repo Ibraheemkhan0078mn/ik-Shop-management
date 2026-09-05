@@ -12,7 +12,8 @@ import {
 } from "../services/purchaseReturn.crud.js";
 import {
     getPurchaseReturnSummary,
-    calculateReturnedQuantitiesByBatch
+    calculateReturnedQuantitiesByBatch,
+    deletePurchaseReturn
 } from "../services/purchaseReturn.service.js";
 import { findByIdBatchService } from "../../productPurchases/services/batch.crud.js";
 import { findByIdPurchaseService, findOnePurchaseService } from "../../productPurchases/services/purchase.crud.js";
@@ -446,7 +447,7 @@ export const deletePurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
-    await deleteOnePurchaseReturnService(id);
+    await deletePurchaseReturn(id);
     return ApiResponse(res, 200, "Purchase return deleted successfully", {});
 });
 

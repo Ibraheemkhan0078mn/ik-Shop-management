@@ -77,6 +77,8 @@ export const baseApi = createApi({
         "PurchaseReturn",
         "OrderReturn",
         "Customer",
+        "CustomerOrderKPIs",
+        "CustomerOrderReturnKPIs",
         "Staff",
         "SalaryPayment",
         "SaleBill",
