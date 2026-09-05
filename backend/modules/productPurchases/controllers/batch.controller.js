@@ -82,7 +82,15 @@ export const deleteBatchData = asyncHandler(async (req, res, next) => {
 
 export const generateBatchNumberData = asyncHandler(async (req, res, next) => {
     try {
-        const batchNumber = await generateBatchNumber();
+        let reservedBatchNumbers = req.query.reservedBatchNumbers || [];
+        if (typeof reservedBatchNumbers === "string") {
+            try {
+                reservedBatchNumbers = JSON.parse(reservedBatchNumbers);
+            } catch {
+                reservedBatchNumbers = [];
+            }
+        }
+        const batchNumber = await generateBatchNumber(reservedBatchNumbers);
 
         res.status(200).json({
             success: true,

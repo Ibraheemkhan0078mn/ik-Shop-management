@@ -54,7 +54,11 @@ export const batchApi = baseApi.injectEndpoints({
 
         // Generate batch number
         generateBatchNumber: build.mutation({
-            query: () => ({ url: "/batches/generate-number", method: "GET" }),
+            query: ({ reservedBatchNumbers = [] } = {}) => ({
+                url: "/batches/generate-number",
+                method: "GET",
+                params: { reservedBatchNumbers: JSON.stringify(reservedBatchNumbers) },
+            }),
             transformResponse: (raw) => raw.data || raw,
         }),
     }),

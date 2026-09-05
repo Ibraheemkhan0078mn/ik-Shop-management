@@ -1,4 +1,4 @@
-import { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService } from "./batch.crud.js";
+import { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, countBatchService } from "./batch.crud.js";
 import { handleProductStockQuantity } from "./ChangeProductStockQuantity.js";
 import { calculateBatchesStockStatus, calculateBatchStockStatus } from "./batchStockStatus.service.js";
 import { updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
@@ -23,7 +23,7 @@ const getBatchById = async (id) => {
 const createBatch = async (batchData, ProductModel) => {
     const existingBatch = await findOneBatchService({
         batchNumber: batchData.batchNumber,
-    });
+    }, { includeDeleted: true });
 
     if (existingBatch) {
         throw new Error("Batch number already exists");
@@ -55,7 +55,7 @@ const updateBatch = async (id, updateData, ProductModel) => {
     ) {
         const batchExists = await findOneBatchService({
             batchNumber: updateData.batchNumber,
-        });
+        }, { includeDeleted: true });
         if (batchExists) {
             throw new Error("Batch number already in use");
         }
@@ -88,22 +88,19 @@ const deleteBatch = async (id, ProductModel) => {
     return await deleteOneBatchService(id);
 };
 
-const generateBatchNumber = async () => {
-    const allBatches = await findBatchService({ batchNumber: /^PB-\d+$/ }, {
-        sort: { batchNumber: -1 },
-        limit: 1
-    });
+const generateBatchNumber = async (reservedBatchNumbers = []) => {
+    const batchNumberPattern = /^PB-\d+$/;
+    const batchCount = await countBatchService(batchNumberPattern, { includeDeleted: true });
+    const reserved = new Set(Array.isArray(reservedBatchNumbers) ? reservedBatchNumbers : []);
+    let nextNumber = batchCount + 1;
+    let nextBatchNumber = `PB-${String(nextNumber).padStart(3, "0")}`;
 
-    let nextNumber = 1;
-    if (allBatches && allBatches.length > 0) {
-        const lastBatch = allBatches[0];
-        const match = lastBatch.batchNumber.match(/^PB-(\d+)$/);
-        if (match) {
-            nextNumber = parseInt(match[1]) + 1;
-        }
+    while (reserved.has(nextBatchNumber) || await findOneBatchService({ batchNumber: nextBatchNumber }, { includeDeleted: true })) {
+        nextNumber += 1;
+        nextBatchNumber = `PB-${String(nextNumber).padStart(3, "0")}`;
     }
 
-    return `PB-${String(nextNumber).padStart(3, '0')}`;
+    return nextBatchNumber;
 };
 
 export { getBatches, createBatch, updateBatch, deleteBatch, generateBatchNumber, getBatchById };

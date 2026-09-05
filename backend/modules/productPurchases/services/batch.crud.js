@@ -11,9 +11,9 @@ const findBatchService = (query = {}, options = {}) => {
     return findDocs({ model: BatchModel, filter: query, options });
 };
 
-const findOneBatchService = (query) => {
+const findOneBatchService = (query, options = {}) => {
     const BatchModel = getLocalBatchModel();
-    return findOneDoc({ model: BatchModel, filter: query });
+    return findOneDoc({ model: BatchModel, filter: query, options });
 };
 
 const findByIdBatchService = (id) => {
@@ -36,9 +36,9 @@ const deleteManyBatchService = (query) => {
     return deleteDocs({ model: BatchModel, filter: query, options: { many: true } });
 };
 
-const countBatchService = (query) => {
+const countBatchService = (query, options = {}) => {
     const BatchModel = getLocalBatchModel();
-    return countDocs({ model: BatchModel, filter: query });
+    return countDocs({ model: BatchModel, filter: query, options });
 };
 
 export { createBatchService, findBatchService, findOneBatchService, findByIdBatchService, updateBatchService, deleteOneBatchService, deleteManyBatchService, countBatchService };

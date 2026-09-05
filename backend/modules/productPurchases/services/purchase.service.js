@@ -143,27 +143,17 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
         
         let batchNumber = item.batchNumber;
         
-        // If batchNumber is not provided, generate a unique one via API
-        if (!batchNumber) {
-            let isUnique = false;
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            while (!isUnique && attempts < maxAttempts) {
+        // New batches must never reuse a number, including a soft-deleted number.
+        if (item.isNewBatch) {
+            let existingBatch = batchNumber
+                ? await findOneBatchService({ batchNumber }, { includeDeleted: true })
+                : true;
+            while (existingBatch) {
                 batchNumber = await generateBatchNumber();
-                const existingBatch = await findOneBatchService({
-                    batchNumber: batchNumber,
-                    product: item.product,
-                });
-                if (!existingBatch) {
-                    isUnique = true;
-                }
-                attempts++;
+                existingBatch = await findOneBatchService({ batchNumber }, { includeDeleted: true });
             }
-            
-            if (!isUnique) {
-                throw new Error("Failed to generate unique batch number after multiple attempts");
-            }
+        } else if (!batchNumber) {
+            batchNumber = await generateBatchNumber();
         }
 
         let batch = await findOneBatchService({

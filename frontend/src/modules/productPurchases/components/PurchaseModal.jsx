@@ -17,9 +17,7 @@ import { SupplierService } from "../../suppliers/services/suppliers.service.js";
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
 const sanitize = (v) => String(v || "").trim().replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-_]/g, "").toUpperCase();
-const makeBatch = (stamp) => `BAT-${stamp}-GEN`;
 const makeInvoice = (name, stamp) => `PI-${stamp.slice(-6)}`;
-const getBatchStamp = (bn) => { const m = /^BAT-([^-]+)-/.exec(bn || ""); return m?.[1] || Date.now().toString(); };
 
 const emptyItem = () => ({
     item: "", name: "", quantity: "", unit: "", perItemPrice: "", costPrice: "",
@@ -409,7 +407,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [addedItems, setAddedItems] = useState([]);
     const [itemForm, setItemForm] = useState(emptyItem());
     const [editingIndex, setEditingIndex] = useState(null);
-    const [batchStamp, setBatchStamp] = useState(() => Date.now().toString());
     const [generatedBatchNumber, setGeneratedBatchNumber] = useState(null);
     const [generatedInvoiceNumber, setGeneratedInvoiceNumber] = useState(null);
     const [showProductModal, setShowProductModal] = useState(false);
@@ -418,6 +415,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const [expandedItems, setExpandedItems] = useState({});
     const [isRecalculating, setIsRecalculating] = useState(false);
     const hasRecalculatedRef = useRef(false);
+    const batchGenerationRequestRef = useRef(0);
 
     const supplierOptions = useMemo(() => {
         if (isUpdate && bill.supplier) {
@@ -591,26 +589,15 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         }
     }, [bill.invoiceNumber, previousBills, isUpdate, generatePurchaseNumber]);
 
-    // batch number (new mode)
-    useEffect(() => {
-        if (itemForm.batchMode !== "new") return;
-        
-        // Call API only once when switching to new mode
-        if (!generatedBatchNumber) {
-            generateBatchNumber().then((result) => {
-                if (result?.data?.batchNumber) {
-                    setGeneratedBatchNumber(result.data.batchNumber);
-                }
-            });
-        }
-    }, [itemForm.batchMode, generatedBatchNumber, generateBatchNumber]);
-
     // Update batch number in form when generated
     useEffect(() => {
         if (itemForm.batchMode !== "new") return;
-        const bn = generatedBatchNumber || makeBatch(batchStamp);
-        setItemForm(p => p.batchNumber === bn ? p : { ...p, batchNumber: bn, batchSelection: "" });
-    }, [itemForm.batchMode, batchStamp, generatedBatchNumber]);
+        if (!generatedBatchNumber) {
+            setItemForm(p => p.batchNumber ? { ...p, batchNumber: "", batchSelection: "" } : p);
+            return;
+        }
+        setItemForm(p => p.batchNumber === generatedBatchNumber ? p : { ...p, batchNumber: generatedBatchNumber, batchSelection: "" });
+    }, [itemForm.batchMode, generatedBatchNumber]);
 
     // autofill from existing batch
     useEffect(() => {
@@ -737,6 +724,26 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const handleBillChange = e => setBill(p => ({ ...p, [e.target.name]: e.target.value }));
     const handleItemChange = e => setItemForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
+    const requestGeneratedBatchNumber = (productId = itemForm.item) => {
+        if (!productId) return;
+
+        const requestId = ++batchGenerationRequestRef.current;
+        const reservedBatchNumbers = addedItems
+            .map(item => item.batchNumber)
+            .filter(Boolean);
+
+        setGeneratedBatchNumber(null);
+        generateBatchNumber({ reservedBatchNumbers }).unwrap().then((result) => {
+            if (requestId === batchGenerationRequestRef.current && result?.batchNumber) {
+                setGeneratedBatchNumber(result.batchNumber);
+            }
+        }).catch(() => {
+            if (requestId === batchGenerationRequestRef.current) {
+                showError(labels.batchNumberRequired);
+            }
+        });
+    };
+
     const handleBatchSelect = (val) => {
         const b = availableBatches.find(b => b._id === val);
         if (!b) {
@@ -759,7 +766,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         if (itemForm.batchMode === "existing" && !itemForm.batchSelection) return showError(labels.selectBatch);
 
         const prod = productsList.find(p => p._id === itemForm.item);
-        const batchNo = itemForm.batchMode === "new" ? makeBatch(batchStamp) : itemForm.batchNumber?.trim();
+        const batchNo = itemForm.batchNumber?.trim();
         if (!batchNo) return showError(labels.batchNumberRequired);
 
         if (editingIndex === null && addedItems.some(it => it.item === itemForm.item)) {
@@ -786,12 +793,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         } else {
             setAddedItems(p => [...p, row]);
         }
+        batchGenerationRequestRef.current += 1;
         setItemForm(emptyItem());
-        setBatchStamp(Date.now().toString());
+        setGeneratedBatchNumber(null);
     };
 
     const handleEditItem = (it, idx) => {
-        setBatchStamp(getBatchStamp(it.batchNumber));
         const hasExistingBatch = it.batchId && it.batchMode === "existing";
         setItemForm({
             item: it.item, name: it.name, quantity: it.quantity, unit: it.unit,
@@ -848,7 +855,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
             items: addedItems.map(it => ({
                 product: it.item,
-                batchNumber: it.batchMode === "existing" ? it.batchNumber : undefined, // Only send batchNumber for existing batches
+                batchNumber: it.batchNumber,
+                isNewBatch: it.batchMode === "new",
                 quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
                 discount: it.discount, discountType: it.discountType,
                 tax: it.tax, taxType: it.taxType,
@@ -916,7 +924,6 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                 productName={itemForm.name}
                                                 onChange={(val, productData) => { 
                                                     if (productData) { 
-                                                        setBatchStamp(Date.now().toString()); 
                                                         setItemForm(() => ({ 
                                                             ...emptyItem(), 
                                                             item: productData._id, 
@@ -925,6 +932,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                             discountType: productData.discountType ?? "percentage", 
                                                             taxType: productData.taxType ?? "percentage" 
                                                         })); 
+                                                        requestGeneratedBatchNumber(productData._id);
                                                     } 
                                                 }}
                                                 placeholder={labels.product + "…"} 
@@ -939,18 +947,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <Field>
                                         <Label>{labels.batchMode}</Label>
                                         <div className="flex gap-2">
-                                            <Btn variant={itemForm.batchMode === "new" ? "active" : "inactive"} size="sm" className="flex-1" onClick={() => { 
-                                                setBatchStamp(Date.now().toString()); 
-                                                setItemForm(() => ({ 
-                                                    ...emptyItem(), 
-                                                    item: itemForm.item, 
-                                                    name: itemForm.name, 
-                                                    unit: itemForm.unit, 
-                                                    discountType: itemForm.discountType, 
-                                                    taxType: itemForm.taxType,
+                                                <Btn variant={itemForm.batchMode === "new" ? "active" : "inactive"} size="sm" className="flex-1" onClick={() => { 
+                                                setItemForm(p => ({
+                                                    ...p,
                                                     batchMode: "new",
-                                                    batchSelection: ""
+                                                    batchSelection: "",
+                                                    batchNumber: "",
                                                 })); 
+                                                requestGeneratedBatchNumber();
                                             }}>{labels.new}</Btn>
                                             <Btn variant={itemForm.batchMode === "existing" ? "active" : "inactive"} size="sm" className="flex-1" disabled={!itemForm.item || availableBatches.length === 0} onClick={() => setItemForm(p => ({ ...p, batchMode: "existing" }))}>{labels.existing}</Btn>
                                         </div>
@@ -1119,7 +1123,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             {frequentItems.map((f, i) => {
                                                 const prod = productsList.find(p => p._id === (f.product?._id ?? f.item?._id ?? f.product ?? f.item));
                                                 return prod ? (
-                                                    <button key={i} onClick={() => { setBatchStamp(Date.now().toString()); setItemForm({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", perItemPrice: f.avgPrice }); }}
+                                                    <button key={i} onClick={() => { setItemForm({ ...emptyItem(), item: prod._id, name: prod.name, unit: prod.unit ?? "unit", perItemPrice: f.avgPrice }); requestGeneratedBatchNumber(prod._id); }}
                                                         className="text-xs px-3 py-1.5 rounded-xl font-medium transition" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}>{prod.name} ×{f.count}</button>
                                                 ) : null;
                                             })}
