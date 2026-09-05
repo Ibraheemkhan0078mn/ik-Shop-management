@@ -31,19 +31,20 @@ html {
 }
 
 body {
-    font-family: "Segoe UI", "Iowan Old Style", "Georgia", serif;
+    font-family: var(--font-body, "Segoe UI", "Iowan Old Style", "Georgia", serif);
     color: var(--ink);
-    background: var(--app-bg);
+    background: var(--canvas-gradient, var(--app-bg));
+    letter-spacing: var(--letter-spacing, normal);
 }
 
 .font-display {
-    font-family: "Iowan Old Style", "Georgia", serif;
+    font-family: var(--font-display, "Iowan Old Style", "Georgia", serif);
     letter-spacing: -0.01em;
 }
 
 /* ---------- App / Sidebar BG ---------- */
 .bg-app-bg {
-    background: linear-gradient(180deg, var(--app-bg), var(--app-bg-2));
+    background: var(--canvas-gradient, linear-gradient(180deg, var(--app-bg), var(--app-bg-2)));
 }
 
 /* ---------- Sidebar Base ---------- */
@@ -55,7 +56,11 @@ body {
     /* compact but readable */
     font-size: 0.875rem;
     /* matches tab text */
+    box-shadow: var(--shadow-card, none);
 }
+
+.rounded-2xl { border-radius: var(--radius-card, 1rem); }
+.rounded-xl { border-radius: var(--radius-card, 0.75rem); }
 
 /* ---------- Sidebar Header/Footer ---------- */
 .sidebar-header {
@@ -86,7 +91,7 @@ body {
 
 .sidebar-item-active {
     @apply text-white font-semibold;
-    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    background: var(--sidebar-gradient, linear-gradient(90deg, var(--accent-2), #0b5f59));
     border: 1px solid rgba(15, 118, 110, 0.45);
     box-shadow: 0 8px 20px rgba(15, 118, 110, 0.16);
 }
@@ -97,7 +102,7 @@ body {
 
 .sidebar-item-active:hover {
     color: white;
-    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    background: var(--sidebar-gradient, linear-gradient(90deg, var(--accent-2), #0b5f59));
 }
 
 
@@ -128,7 +133,7 @@ body {
 
 .btn-add:hover {
     @apply text-white shadow-md;
-    background: linear-gradient(90deg, var(--accent-2), #0b5f59);
+    background: var(--button-gradient, linear-gradient(90deg, var(--accent-2), #0b5f59));
     transform: translateY(-1px);
 }
 
@@ -138,7 +143,7 @@ body {
 
 .btn-back:hover {
     @apply text-white shadow-md;
-    background: linear-gradient(90deg, var(--accent), #92400e);
+    background: var(--button-gradient, linear-gradient(90deg, var(--accent), #92400e));
     transform: translateY(-1px);
 }
 

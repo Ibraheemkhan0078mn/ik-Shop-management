@@ -41,6 +41,8 @@ export default function EachQarzaAccountRecords() {
     const [recalculateGeneralBalance] = useRecalculateGeneralBalance();
     const [isRecalculating, setIsRecalculating] = useState(false);
     const accountName = summary?.account?.name || "";
+    const overallBalance = Number(summary?.overall || 0);
+    const overallStatus = overallBalance > 0 ? "To Give" : overallBalance < 0 ? "To Receive" : "Balanced";
 
     const [modal, setModal] = useState(null);
     const [showPdfModal, setShowPdfModal] = useState(false);
@@ -354,6 +356,11 @@ export default function EachQarzaAccountRecords() {
                             <p className="text-xl font-black tabular-nums" style={{ color }}>
                                 Rs {Math.abs(value).toLocaleString()}
                             </p>
+                            {label === "Overall" && (
+                                <p className="text-xs font-bold uppercase tracking-wider mt-2" style={{ color }}>
+                                    {overallStatus}
+                                </p>
+                            )}
                         </div>
                     ))}
                 </div>

@@ -38,9 +38,9 @@ export const recalculateGeneralAccountBalance = async (qarzaAccountId) => {
         // Determine status
         let status = 'balanced';
         if (overall > 0) {
-            status = 'toReceive';
-        } else if (overall < 0) {
             status = 'toGive';
+        } else if (overall < 0) {
+            status = 'toReceive';
         }
 
         // Update account with calculated values

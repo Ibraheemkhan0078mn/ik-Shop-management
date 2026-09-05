@@ -46,9 +46,9 @@ function BalanceBadge({ accountData }) {
     if (remaining === 0 || status === 'cleared') {
         return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#10b98117', color: '#10b981', borderColor: '#10b98140' }}>Balanced</span>;
     } else if (remaining > 0) {
-        return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#10b98117', color: '#10b981', borderColor: '#10b98140' }}>receive ({remaining.toLocaleString()})</span>;
+        return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#dc262617', color: '#dc2626', borderColor: '#dc262640' }}>To Give ({remaining.toLocaleString()})</span>;
     }
-    return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#dc262617', color: '#dc2626', borderColor: '#dc262640' }}>give ({Math.abs(remaining).toLocaleString()})</span>;
+    return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#10b98117', color: '#10b981', borderColor: '#10b98140' }}>To Receive ({Math.abs(remaining).toLocaleString()})</span>;
 }
 
 export default function CreditsDebitsReport() {

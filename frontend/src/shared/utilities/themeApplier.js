@@ -9,6 +9,14 @@ const cssVarMap = {
   accent: "--accent",
   accent2: "--accent-2",
   border: "--border",
+  fontBody: "--font-body",
+  fontDisplay: "--font-display",
+  radiusCard: "--radius-card",
+  shadowCard: "--shadow-card",
+  canvasGradient: "--canvas-gradient",
+  sidebarGradient: "--sidebar-gradient",
+  buttonGradient: "--button-gradient",
+  letterSpacing: "--letter-spacing",
 };
 
 export function getApiUrl(path = "") {
@@ -24,9 +32,9 @@ export function getApiUrl(path = "") {
 
 export function applyTheme(colors) {
   const root = document.documentElement;
+  Object.values(cssVarMap).forEach((cssVar) => root.style.removeProperty(cssVar));
 
   if (!colors || typeof colors !== "object") {
-    Object.values(cssVarMap).forEach((cssVar) => root.style.removeProperty(cssVar));
     return;
   }
 

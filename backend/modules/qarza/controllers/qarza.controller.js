@@ -150,11 +150,11 @@ export const getPaginatedQarzaAccounts = async (req, res) => {
         // Filter by balance status using stored status field
         if (filterBalance && filterBalance !== "all") {
             if (filterBalance === "toGive") {
-                query.status = "toGive";
+                query.overall = { $gt: 0 };
             } else if (filterBalance === "toReceive") {
-                query.status = "toReceive";
+                query.overall = { $lt: 0 };
             } else if (filterBalance === "balanced") {
-                query.status = "balanced";
+                query.overall = 0;
             }
             accounts = await getAllQarzaAccountsService(query);
         }

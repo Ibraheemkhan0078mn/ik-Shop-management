@@ -13,6 +13,10 @@ const ALLOWED_COLOR_KEYS = [
     "appBg", "appBg2", "surface", "surfaceMuted",
     "ink", "muted", "accent", "accent2", "border",
 ];
+const ALLOWED_STYLE_KEYS = [
+    "fontBody", "fontDisplay", "radiusCard", "shadowCard",
+    "canvasGradient", "sidebarGradient", "buttonGradient", "letterSpacing",
+];
 
 const isValidCssColor = (value) => {
     if (typeof value !== "string" || value.trim() === "") return false;
@@ -26,6 +30,17 @@ const sanitizeColors = (colors = {}) => {
     const clean = {};
     const errors = [];
     for (const key of Object.keys(colors)) {
+        if (ALLOWED_STYLE_KEYS.includes(key)) {
+            const value = colors[key];
+            if (value === null || value === undefined || value === "") {
+                clean[key] = null;
+            } else if (typeof value === "string" && value.length <= 300) {
+                clean[key] = value;
+            } else {
+                errors.push(`Invalid style value for "${key}"`);
+            }
+            continue;
+        }
         if (!ALLOWED_COLOR_KEYS.includes(key)) continue;
         const value = colors[key];
         if (value === null || value === undefined || value === "") {

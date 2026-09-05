@@ -3511,9 +3511,9 @@ export const getCreditDebitReport = async (filters = {}) => {
             
             let accountStatus = 'cleared';
             if (currentBalance > 0) {
-                accountStatus = account.type === 'customer' ? 'toReceive' : 'toGive';
+                accountStatus = 'toGive';
             } else if (currentBalance < 0) {
-                accountStatus = account.type === 'customer' ? 'toGive' : 'toReceive';
+                accountStatus = 'toReceive';
             }
 
             return { 
@@ -3546,9 +3546,9 @@ export const getCreditDebitReport = async (filters = {}) => {
         acc[accountType].totalCashIn += account.cashIn || 0;
         acc[accountType].totalCashOut += account.cashOut || 0;
         
-        if (account.status === 'toReceive') {
+        if (account.overall < 0) {
             acc[accountType].toReceive += Math.abs(account.overall || 0);
-        } else if (account.status === 'toGive') {
+        } else if (account.overall > 0) {
             acc[accountType].toGive += Math.abs(account.overall || 0);
         }
         
@@ -3570,8 +3570,8 @@ export const getCreditDebitReport = async (filters = {}) => {
     const totalBalance = allAccounts.reduce((sum, account) => sum + (account.overall || 0), 0);
     const totalCashIn = allAccounts.reduce((sum, account) => sum + (account.cashIn || 0), 0);
     const totalCashOut = allAccounts.reduce((sum, account) => sum + (account.cashOut || 0), 0);
-    const totalToReceive = allAccounts.filter(a => a.status === 'toReceive').reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
-    const totalToGive = allAccounts.filter(a => a.status === 'toGive').reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
+    const totalToReceive = allAccounts.filter(a => (a.overall || 0) < 0).reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
+    const totalToGive = allAccounts.filter(a => (a.overall || 0) > 0).reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
 
     return {
         data: accountsWithPayments,

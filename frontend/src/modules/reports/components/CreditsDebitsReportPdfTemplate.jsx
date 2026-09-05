@@ -27,9 +27,9 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
         if (remaining === 0 || status === 'cleared') {
             return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-green-100 text-green-800 border-green-300">Balanced</span>;
         } else if (remaining > 0) {
-            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-green-100 text-green-800 border-green-300">receive ({remaining.toLocaleString()})</span>;
+            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-red-100 text-red-800 border-red-300">To Give ({remaining.toLocaleString()})</span>;
         } else {
-            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-red-100 text-red-800 border-red-300">give ({Math.abs(remaining).toLocaleString()})</span>;
+            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-green-100 text-green-800 border-green-300">To Receive ({Math.abs(remaining).toLocaleString()})</span>;
         }
     };
 
