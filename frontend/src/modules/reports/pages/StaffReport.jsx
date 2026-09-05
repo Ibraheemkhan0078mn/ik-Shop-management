@@ -57,7 +57,7 @@ function Avatar({ name }) {
 
 function KpiCard({ label, value, sub, icon: Icon, color }) {
     return (
-        <div className="rounded-2xl border p-4 transition-shadow hover:shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="rounded-2xl border p-4 flex-[1_1_220px] min-w-0 transition-shadow hover:shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}17` }}>
                     <Icon size={18} style={{ color }} />
@@ -207,7 +207,7 @@ export default function StaffReport() {
             ) : (
                 <div>
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+                    <div className="flex flex-wrap gap-3 mb-6">
                         <KpiCard label={labels.totalStaff} value={summary.totalStaff || 0} icon={Users} color="var(--accent-2)" />
                         <KpiCard label={labels.totalExpectedSalary} value={`Rs ${(summary.totalExpectedSalary || 0).toLocaleString()}`} icon={DollarSign} color="#3b82f6" />
                         <KpiCard label={labels.totalSalariesPaid} value={`Rs ${(summary.totalSalariesPaid || 0).toLocaleString()}`} icon={DollarSign} color="#10b981" />

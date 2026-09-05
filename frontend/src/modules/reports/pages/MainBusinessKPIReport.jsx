@@ -188,7 +188,10 @@ export default function MainBusinessKPIReport() {
                         </MetricSection>
                         <MetricSection title="Staff" icon={Users} color={COLORS.staff}>
                             <KpiCard label="Staff" value={number(staffKpi.totalStaff)} icon={Users} color={COLORS.staff} />
+                            <KpiCard label="Expected Salary" value={currency(staffKpi.totalExpectedSalary)} icon={DollarSign} color={COLORS.staff} />
                             <KpiCard label="Salary Paid" value={currency(staffKpi.totalSalariesPaid)} icon={Wallet} color={COLORS.staff} />
+                            <KpiCard label="Remaining Salary" value={currency(staffKpi.remainingSalary)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Advances" value={currency(staffKpi.totalAdvances)} icon={Wallet} color={COLORS.expenses} />
                         </MetricSection>
                         <MetricSection title="Credits and Debits" icon={Wallet} color={COLORS.accounts}>
                             <KpiCard label="To Receive" value={currency(creditDebitKpi.totalToReceive)} icon={Wallet} color={COLORS.analysis} />

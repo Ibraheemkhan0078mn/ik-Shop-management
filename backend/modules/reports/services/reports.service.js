@@ -53,6 +53,11 @@ import {
     findStaffAttendanceService,
 } from '../../staff/services/staffAttendance.crud.js';
 import {
+    getSalaryBreakdown,
+    getPercentageBreakdown,
+    calculatePaymentSummary,
+} from '../../staff/services/staff.service.js';
+import {
     findQarzaAccountService,
     countQarzaAccountService,
 } from '../../qarza/services/qarzaAccount.crud.js';
@@ -85,6 +90,16 @@ const buildDateFilter = (fromDate, toDate) => {
         filter.createdAt = { ...filter.createdAt, $lte: endDate };
     }
     return filter;
+};
+
+const getCanonicalStaffCompensation = async (staffId, fromDate, toDate) => {
+    const paymentSummary = await calculatePaymentSummary(staffId, fromDate || null, toDate || null);
+    const [salaryBreakdown, percentageBreakdown] = await Promise.all([
+        getSalaryBreakdown(staffId, paymentSummary.startDate, paymentSummary.endDate),
+        getPercentageBreakdown(staffId, paymentSummary.startDate, paymentSummary.endDate),
+    ]);
+
+    return { paymentSummary, salaryBreakdown, percentageBreakdown };
 };
 
 // Helper function to get today's date range
@@ -4402,16 +4417,8 @@ export const getStaffReport = async (filters = {}) => {
 
     const staffWithStats = await Promise.all(
         data.map(async (staff) => {
-            // Get salary payments with date filter using service function
-            const salaryPayments = await findStaffSalaryPaymentService({ 
-                staffId: staff._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            });
-            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            
-            // Get advance/deductions
-            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
-            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
+            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
+            const { paymentSummary } = compensation;
 
             // Get orders handled by this staff using service function
             const orderFilter = {
@@ -4457,29 +4464,6 @@ export const getStaffReport = async (filters = {}) => {
                 }
             });
 
-            // Calculate expected salary based on salary type
-            let expectedSalary = 0;
-            if (staff.salaryType === 'fixed') {
-                expectedSalary = staff.monthlySalary || 0;
-            } else if (staff.salaryType === 'daily') {
-                // For daily wage, calculate based on present days
-                let presentDays = 0;
-                attendanceRecords.forEach(record => {
-                    const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
-                    if (staffAttendance && (staffAttendance.status === 'present' || staffAttendance.status === 'late')) {
-                        presentDays++;
-                    }
-                });
-                expectedSalary = (staff.dailyRate || 0) * presentDays;
-            }
-
-            // Calculate remaining salary
-            const remainingSalary = expectedSalary - totalPaid;
-
-            // Calculate net payable
-            const monthlySalary = staff.salaryType === 'fixed' ? (staff.monthlySalary || 0) : 0;
-            const netPayable = monthlySalary - totalPaid - deductions + advance;
-
             return {
                 ...staff,
                 totalOrders,
@@ -4489,13 +4473,13 @@ export const getStaffReport = async (filters = {}) => {
                 totalPresentDays,
                 totalAbsentDays,
                 totalWorkingHours,
-                expectedSalary,
-                salaryPaid: totalPaid,
-                remainingSalary,
-                advance,
-                deductions,
-                netPayable,
-                paymentCount: salaryPayments.length,
+                expectedSalary: paymentSummary.totalEarnings,
+                salaryPaid: paymentSummary.totalPaid,
+                remainingSalary: paymentSummary.totalRemaining,
+                advance: paymentSummary.totalAdvance,
+                salaryType: paymentSummary.salaryType,
+                salaryBreakdown: compensation.salaryBreakdown,
+                percentageBreakdown: compensation.percentageBreakdown,
             };
         })
     );
@@ -4503,13 +4487,8 @@ export const getStaffReport = async (filters = {}) => {
     // Calculate statistics for ALL staff (for KPI summary)
     const allStaffWithStats = await Promise.all(
         allStaff.map(async (staff) => {
-            const salaryPayments = await findStaffSalaryPaymentService({ 
-                staffId: staff._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            });
-            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
-            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
+            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
+            const { paymentSummary } = compensation;
 
             const orderFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
@@ -4547,8 +4526,9 @@ export const getStaffReport = async (filters = {}) => {
             return {
                 totalSales,
                 totalOrders,
-                totalPaid,
-                advance,
+                totalPaid: paymentSummary.totalPaid,
+                advance: paymentSummary.totalAdvance,
+                totalEarnings: paymentSummary.totalEarnings,
                 totalPresentDays,
                 totalAbsentDays,
                 totalWorkingHours
@@ -4665,33 +4645,8 @@ export const getStaffKPIReport = async (filters = {}) => {
     // Calculate statistics for ALL staff
     const allStaffWithStats = await Promise.all(
         allStaff.map(async (staff) => {
-            const salaryPayments = await findStaffSalaryPaymentService({ 
-                staffId: staff._id,
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            });
-            const totalPaid = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const advance = salaryPayments.reduce((sum, payment) => sum + (payment.advance || 0), 0);
-            const deductions = salaryPayments.reduce((sum, payment) => sum + (payment.deduction || 0), 0);
-
-            // Calculate expected salary based on salary type
-            let expectedSalary = 0;
-            if (staff.salaryType === 'fixed') {
-                expectedSalary = staff.monthlySalary || 0;
-            } else if (staff.salaryType === 'daily') {
-                // For daily wage, calculate based on present days
-                const attendanceFilter = {
-                    ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-                };
-                const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
-                let presentDays = 0;
-                attendanceRecords.forEach(record => {
-                    const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
-                    if (staffAttendance && (staffAttendance.status === 'present' || staffAttendance.status === 'late')) {
-                        presentDays++;
-                    }
-                });
-                expectedSalary = (staff.dailyRate || 0) * presentDays;
-            }
+            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
+            const { paymentSummary } = compensation;
 
             const orderFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
@@ -4729,9 +4684,10 @@ export const getStaffKPIReport = async (filters = {}) => {
             return {
                 totalSales,
                 totalOrders,
-                totalPaid,
-                advance,
-                expectedSalary,
+                totalPaid: paymentSummary.totalPaid,
+                advance: paymentSummary.totalAdvance,
+                expectedSalary: paymentSummary.totalEarnings,
+                totalRemaining: paymentSummary.totalRemaining,
                 totalPresentDays,
                 totalAbsentDays,
                 totalWorkingHours
@@ -4744,13 +4700,11 @@ export const getStaffKPIReport = async (filters = {}) => {
     const grandTotalOrders = allStaffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
     const grandTotalSalaryPaid = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPaid, 0);
     const totalExpectedSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.expectedSalary, 0);
+    const remainingSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.totalRemaining, 0);
     const totalAdvances = allStaffWithStats.reduce((sum, staff) => sum + staff.advance, 0);
     const totalWorkingHours = allStaffWithStats.reduce((sum, staff) => sum + staff.totalWorkingHours, 0);
     const totalPresentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPresentDays, 0);
     const totalAbsentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalAbsentDays, 0);
-    
-    // Calculate remaining salary
-    const remainingSalary = totalExpectedSalary - grandTotalSalaryPaid;
     
     // Calculate average salary
     const averageSalary = total > 0 ? grandTotalSalaryPaid / total : 0;
