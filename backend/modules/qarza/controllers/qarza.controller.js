@@ -301,19 +301,19 @@ export const getSupplierPayments = async (req, res) => {
             purchaseReturn: { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId },
             manual: { sourceType: 'qarza', sourceId: qarzaAccountId },
         };
-        const sourceFilter = sourceQueries[source];
-        let query = {
-            $and: [
-                { sourceType: { $ne: 'sale' } },
-                sourceFilter || {
-                    $or: [
-                        { sourceType: 'qarza', sourceId: qarzaAccountId },
-                        { sourceType: 'purchase', creditAccount: qarzaAccountId },
-                        { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId }
-                    ]
-                }
-            ]
-        };
+        const sourceFilter = source === 'all'
+            ? {
+                $or: [
+                    { sourceType: 'qarza', sourceId: qarzaAccountId },
+                    { sourceType: 'purchase', creditAccount: qarzaAccountId },
+                    { sourceType: 'purchaseReturn', creditAccount: qarzaAccountId }
+                ]
+            }
+            : sourceQueries[source];
+        if (!sourceFilter) {
+            return res.json({ success: true, data: [], page, limit, total: 0, totalPages: 0 });
+        }
+        const query = sourceFilter;
         
         // Apply type filter (map to creditType)
         if (type && type !== 'all' && type !== 'undefined') {
@@ -364,23 +364,23 @@ export const getCustomerPayments = async (req, res) => {
         // 3. Order return refund transactions (sourceType: 'orderReturn', creditAccount matches)
         // Explicitly exclude purchase transactions
         const sourceQueries = {
-            order: { sourceType: 'sale', creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },
+            order: { sourceType: { $in: ['sale', 'pos-order'] }, creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },
             orderReturn: { sourceType: 'orderReturn', creditAccount: qarzaAccountId },
             manual: { sourceType: 'qarza', sourceId: qarzaAccountId },
         };
-        const sourceFilter = sourceQueries[source];
-        let query = {
-            $and: [
-                { sourceType: { $ne: 'purchase' } },
-                sourceFilter || {
-                    $or: [
-                        { sourceType: 'qarza', sourceId: qarzaAccountId },
-                        { sourceType: 'sale', creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },
-                        { sourceType: 'orderReturn', creditAccount: qarzaAccountId }
-                    ]
-                }
-            ]
-        };
+        const sourceFilter = source === 'all'
+            ? {
+                $or: [
+                    { sourceType: 'qarza', sourceId: qarzaAccountId },
+                    { sourceType: { $in: ['sale', 'pos-order'] }, creditAccount: qarzaAccountId, creditAmount: { $gt: 0 } },
+                    { sourceType: 'orderReturn', creditAccount: qarzaAccountId }
+                ]
+            }
+            : sourceQueries[source];
+        if (!sourceFilter) {
+            return res.json({ success: true, data: [], page, limit, total: 0, totalPages: 0 });
+        }
+        const query = sourceFilter;
         
         // Apply type filter (map to creditType)
         if (type && type !== 'all' && type !== 'undefined') {

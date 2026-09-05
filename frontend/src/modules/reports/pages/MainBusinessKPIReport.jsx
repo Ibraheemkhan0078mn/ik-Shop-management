@@ -1,6 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { Activity, AlertCircle, BarChart3, Calendar, DollarSign, Package, RefreshCw, ShoppingCart, Truck, Users, Wallet } from "lucide-react";
-import { useGetMainBusinessKPIOnlyReportQuery } from "../services/reports.service.js";
+import { Activity, AlertCircle, BarChart3, Calendar, Check, DollarSign, Package, RefreshCw, ShoppingCart, Truck, Users, Wallet, XCircle } from "lucide-react";
+import {
+    useGetMainBusinessKPIOnlyReportQuery,
+    useGetPurchaseReportQuery,
+    useGetInventoryKPIReportQuery,
+    useGetSupplierKPIReportQuery,
+    useGetCustomerKPIReportQuery,
+    useGetExpenseKPIReportQuery,
+    useGetStaffKPIReportQuery,
+    useGetCreditsDebitsAccountDataQuery,
+} from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
@@ -47,11 +56,30 @@ export default function MainBusinessKPIReport() {
     const [toDate, setToDate] = useState("");
     const filters = useMemo(() => ({ period, ...(period === "custom" && fromDate && toDate ? { fromDate, toDate } : {}) }), [period, fromDate, toDate]);
     const { data, isLoading, isFetching, error, refetch } = useGetMainBusinessKPIOnlyReportQuery(filters);
+    const { data: purchaseReport } = useGetPurchaseReportQuery(filters);
+    const { data: inventoryReport } = useGetInventoryKPIReportQuery(filters);
+    const { data: supplierReport } = useGetSupplierKPIReportQuery(filters);
+    const { data: customerReport } = useGetCustomerKPIReportQuery(filters);
+    const { data: expenseReport } = useGetExpenseKPIReportQuery(filters);
+    const { data: staffReport } = useGetStaffKPIReportQuery(filters);
+    const { data: creditDebitReport } = useGetCreditsDebitsAccountDataQuery({ accountTypes: ['customer', 'supplier', 'general'] });
 
     if (error) showError(error?.data?.message || "Failed to load main business KPI report");
 
     const summary = data?.summary || {};
-    const { sales = {}, purchases = {}, inventory = {}, customers = {}, staff = {}, suppliers = {}, expenses = {}, creditsDebits: accounts = {}, analysis = {} } = summary;
+    const { sales = {}, customers = {}, staff = {}, suppliers = {}, creditsDebits: accounts = {}, analysis = {} } = summary;
+    const purchaseSummary = purchaseReport?.summary || {};
+    const purchaseRows = purchaseReport?.data || [];
+    const purchaseReturns = purchaseRows.flatMap((purchase) => purchase.purchaseReturns || []);
+    const totalPurchaseReturns = purchaseReturns.reduce((sum, purchaseReturn) => sum + (Number(purchaseReturn.totalAmount) || 0), 0);
+    const newStockPrice = purchaseRows.reduce((sum, purchase) => sum + (purchase.items || []).reduce((itemSum, item) => itemSum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)), 0), 0);
+    const topSupplier = purchaseReport?.supplierBreakdown?.[0]?.supplierName || "—";
+    const inventoryKpi = inventoryReport?.data || {};
+    const supplierKpi = supplierReport?.data?.summary || {};
+    const customerKpi = customerReport?.data?.data?.summary || {};
+    const expenseKpi = expenseReport?.data?.summary || {};
+    const staffKpi = staffReport?.data?.data?.summary || {};
+    const creditDebitKpi = creditDebitReport?.summary || {};
     const periodOptions = [["all", "All time"], ["today", labels.today], ["month", labels.thisMonth], ["3month", labels.last3Months], ["year", labels.thisYear], ["custom", labels.customRange]];
     const loading = isLoading || isFetching;
 
@@ -100,10 +128,10 @@ export default function MainBusinessKPIReport() {
                 <>
                     <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
                         <KpiCard label="Net Sales" value={currency(analysis.netSales || sales.netSales || sales.totalSales)} sub={`${number(sales.salesCount)} orders after returns`} icon={ShoppingCart} color={COLORS.sales} />
-                        <KpiCard label="Purchases" value={currency(purchases.totalAmountPurchased || purchases.totalPurchases)} sub={`${number(purchases.totalPurchaseOrders || purchases.totalBills)} bills`} icon={Package} color={COLORS.purchases} />
+                        <KpiCard label="Purchases" value={currency(purchaseSummary.totalPurchases)} sub={`${number(purchaseSummary.totalBills)} bills`} icon={Package} color={COLORS.purchases} />
                         <KpiCard label="Net Profit" value={currency(analysis.netProfit)} sub={`${analysis.netMarginPercentage || 0}% margin after returns`} icon={BarChart3} color={analysis.netProfit >= 0 ? COLORS.analysis : COLORS.expenses} />
-                        <KpiCard label="Expenses" value={currency(expenses.totalExpenses)} sub={`${number(expenses.expenseCount)} transactions`} icon={DollarSign} color={COLORS.expenses} />
-                        <KpiCard label="Inventory Stock" value={number(inventory.currentStock)} sub={`${number(inventory.totalProducts)} products`} icon={Package} color={COLORS.inventory} />
+                        <KpiCard label="Expenses" value={currency(expenseKpi.totalExpenses)} sub={`${number(expenseKpi.expenseCount)} transactions`} icon={DollarSign} color={COLORS.expenses} />
+                        <KpiCard label="Inventory Stock" value={number(inventoryKpi.currentStock)} sub={`${number(inventoryKpi.totalProducts)} products`} icon={Package} color={COLORS.inventory} />
                         <KpiCard label="Net Operating" value={currency(analysis.netOperatingResult)} sub={`${analysis.expenseToSalesRatio || 0}% expense ratio`} icon={Activity} color={analysis.netOperatingResult >= 0 ? COLORS.analysis : COLORS.expenses} />
                     </div>
 
@@ -114,40 +142,59 @@ export default function MainBusinessKPIReport() {
                             <KpiCard label="Orders" value={number(sales.salesCount)} sub={`Average: ${currency(sales.avgOrderValue)}`} icon={Package} color={COLORS.sales} />
                             <KpiCard label="Net COGS" value={currency(sales.netCOGS)} sub={`Returned COGS: ${currency(sales.returnedCOGS)}`} icon={BarChart3} color={COLORS.purchases} />
                             <KpiCard label="Returns" value={currency(sales.totalReturnRefunds)} sub={`${number(sales.returnCount)} documents / ${number(sales.totalReturnedQuantity)} items`} icon={RefreshCw} color={COLORS.expenses} />
+                            <KpiCard label="Top Customer" value={customerKpi.topCustomer || "—"} sub={currency(customerKpi.topCustomerAmount)} icon={Users} color={COLORS.customers} />
                             <KpiCard label="Discount" value={currency(sales.totalDiscount)} sub="Order discounts" icon={Wallet} color={COLORS.sales} />
                         </MetricSection>
                         <MetricSection title="Purchasing and Suppliers" icon={Truck} color={COLORS.purchases}>
-                            <KpiCard label="Purchase Returns" value={currency(purchases.totalPurchaseReturns || purchases.totalReturns)} icon={RefreshCw} color={COLORS.expenses} />
-                            <KpiCard label="Outstanding" value={currency(purchases.totalUnpaid)} icon={Wallet} color={COLORS.purchases} />
-                            <KpiCard label="Active Suppliers" value={number(suppliers.activeSuppliers)} icon={Truck} color={COLORS.suppliers} />
-                            <KpiCard label="Purchase Trend" value={`${purchases.purchaseTrend || 0}%`} icon={Activity} color={COLORS.purchases} />
+                            <KpiCard label="Total Purchases" value={number(purchaseSummary.totalBills || purchaseSummary.totalPurchases)} sub={currency(purchaseSummary.totalPurchases)} icon={Package} color={COLORS.purchases} />
+                            <KpiCard label="Total Returns" value={number(purchaseReturns.length)} sub={currency(totalPurchaseReturns)} icon={RefreshCw} color={COLORS.expenses} />
+                            <KpiCard label="New Stock Price" value={currency(newStockPrice)} icon={DollarSign} color={COLORS.inventory} />
+                            <KpiCard label="Top Supplier" value={topSupplier} icon={Truck} color={COLORS.suppliers} />
+                            <KpiCard label="Total Delivered" value={number(purchaseSummary.totalDeliveredCount)} icon={Check} color={COLORS.analysis} />
+                            <KpiCard label="Total Rejected" value={number(purchaseSummary.totalRejectedCount)} icon={XCircle} color={COLORS.expenses} />
                         </MetricSection>
                     </div>
 
                     <div className="flex flex-wrap gap-3 sm:gap-4">
                         <MetricSection title="Inventory" icon={Package} color={COLORS.inventory}>
-                            <KpiCard label="Purchased Qty" value={number(inventory.purchasedQuantity)} icon={Package} color={COLORS.inventory} />
-                            <KpiCard label="Low Stock Signals" value={number(inventory.orderReturnQuantity)} icon={AlertCircle} color={COLORS.expenses} />
-                            <KpiCard label="Wastage Qty" value={number(inventory.wastageQuantity)} icon={AlertCircle} color={COLORS.expenses} />
-                            <KpiCard label="Sales Revenue" value={currency(inventory.totalRevenue)} icon={DollarSign} color={COLORS.analysis} />
+                            <KpiCard label="Products" value={number(inventoryKpi.totalProducts)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Current Stock" value={number(inventoryKpi.currentStock)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Purchased Qty" value={number(inventoryKpi.purchasedQuantity)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Purchase Returns" value={number(inventoryKpi.purchaseReturnQuantity)} icon={RefreshCw} color={COLORS.expenses} />
+                            <KpiCard label="Orders" value={number(inventoryKpi.orderQuantity)} icon={ShoppingCart} color={COLORS.sales} />
+                            <KpiCard label="Wastage Qty" value={number(inventoryKpi.wastageQuantity)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Sales Revenue" value={currency(inventoryKpi.totalRevenue)} icon={DollarSign} color={COLORS.analysis} />
                         </MetricSection>
-                        <MetricSection title="People" icon={Users} color={COLORS.customers}>
-                            <KpiCard label="Customers" value={number(customers.totalCustomers)} icon={Users} color={COLORS.customers} />
-                            <KpiCard label="Active Customers" value={number(customers.activeCustomers)} icon={Users} color={COLORS.customers} />
-                            <KpiCard label="Staff" value={number(staff.totalStaff)} icon={Users} color={COLORS.staff} />
-                            <KpiCard label="Salary Paid" value={currency(staff.totalPaid)} icon={Wallet} color={COLORS.staff} />
+                        <MetricSection title="Customers" icon={Users} color={COLORS.customers}>
+                            <KpiCard label="Customers" value={number(customerKpi.totalCustomers)} icon={Users} color={COLORS.customers} />
+                            <KpiCard label="Total Sales" value={currency(customerKpi.totalSales)} icon={DollarSign} color={COLORS.sales} />
+                            <KpiCard label="Average Order" value={currency(customerKpi.avgOrderValue)} icon={ShoppingCart} color={COLORS.sales} />
+                            <KpiCard label="Total Due" value={currency(customerKpi.totalDue)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Top Customer" value={customerKpi.topCustomer || "—"} sub={currency(customerKpi.topCustomerAmount)} icon={Users} color={COLORS.customers} />
+                            <KpiCard label="New Customers" value={number(customerKpi.newCustomers)} icon={Users} color={COLORS.customers} />
                         </MetricSection>
-                        <MetricSection title="Suppliers and Expenses" icon={Truck} color={COLORS.suppliers}>
-                            <KpiCard label="Total Suppliers" value={number(suppliers.totalSuppliers)} icon={Truck} color={COLORS.suppliers} />
-                            <KpiCard label="Expense Average" value={currency(expenses.averageExpense)} icon={DollarSign} color={COLORS.expenses} />
-                            <KpiCard label="Highest Expense" value={currency(expenses.highestExpense)} icon={AlertCircle} color={COLORS.expenses} />
-                            <KpiCard label="Expense Trend" value={`${number(expenses.expenseCount)} txns`} icon={Activity} color={COLORS.expenses} />
+                        <MetricSection title="Suppliers" icon={Truck} color={COLORS.suppliers}>
+                            <KpiCard label="Total Suppliers" value={number(supplierKpi.totalSuppliers)} icon={Truck} color={COLORS.suppliers} />
+                            <KpiCard label="Active Suppliers" value={number(supplierKpi.activeSuppliers)} icon={Truck} color={COLORS.suppliers} />
+                            <KpiCard label="Purchase Orders" value={number(supplierKpi.totalPurchaseOrders)} icon={Package} color={COLORS.purchases} />
+                            <KpiCard label="Purchase Amount" value={currency(supplierKpi.totalPurchaseAmount)} icon={DollarSign} color={COLORS.purchases} />
+                            <KpiCard label="Unpaid Amount" value={currency(supplierKpi.totalUnpaid)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Purchase Returns" value={currency(supplierKpi.totalReturns)} icon={RefreshCw} color={COLORS.expenses} />
+                        </MetricSection>
+                        <MetricSection title="Expenses" icon={DollarSign} color={COLORS.expenses}>
+                            <KpiCard label="Expense Average" value={currency(expenseKpi.averageExpense)} icon={DollarSign} color={COLORS.expenses} />
+                            <KpiCard label="Highest Expense" value={currency(expenseKpi.highestExpense)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Expense Trend" value={`${number(expenseKpi.expenseCount)} txns`} icon={Activity} color={COLORS.expenses} />
+                        </MetricSection>
+                        <MetricSection title="Staff" icon={Users} color={COLORS.staff}>
+                            <KpiCard label="Staff" value={number(staffKpi.totalStaff)} icon={Users} color={COLORS.staff} />
+                            <KpiCard label="Salary Paid" value={currency(staffKpi.totalSalariesPaid)} icon={Wallet} color={COLORS.staff} />
                         </MetricSection>
                         <MetricSection title="Credits and Debits" icon={Wallet} color={COLORS.accounts}>
-                            <KpiCard label="To Receive" value={currency(accounts.totalToReceive)} icon={Wallet} color={COLORS.analysis} />
-                            <KpiCard label="To Give" value={currency(accounts.totalToGive)} icon={Wallet} color={COLORS.expenses} />
-                            <KpiCard label="Accounts" value={number(accounts.totalAccounts)} icon={Users} color={COLORS.accounts} />
-                            <KpiCard label="Account Balance" value={currency(accounts.totalBalance)} icon={DollarSign} color={COLORS.accounts} />
+                            <KpiCard label="To Receive" value={currency(creditDebitKpi.totalToReceive)} icon={Wallet} color={COLORS.analysis} />
+                            <KpiCard label="To Give" value={currency(creditDebitKpi.totalToGive)} icon={Wallet} color={COLORS.expenses} />
+                            <KpiCard label="Accounts" value={number(creditDebitKpi.totalAccounts)} icon={Users} color={COLORS.accounts} />
+                            <KpiCard label="Account Balance" value={currency(creditDebitKpi.totalBalance)} icon={DollarSign} color={COLORS.accounts} />
                         </MetricSection>
                     </div>
                 </>

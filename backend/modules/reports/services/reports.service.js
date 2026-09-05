@@ -57,8 +57,14 @@ import {
     countQarzaAccountService,
 } from '../../qarza/services/qarzaAccount.crud.js';
 import {
+    getAllQarzaAccounts as getAllQarzaAccountsService,
+} from '../../qarza/services/qarza.service.js';
+import {
     findQarzaPaymentService,
 } from '../../qarza/services/qarzaPayment.crud.js';
+import {
+    getTransactions,
+} from '../../transactions/services/transaction.service.js';
 import {
     findProductReturnService,
     countProductReturnService,
@@ -3121,7 +3127,7 @@ export const getMainBusinessKPIOnlyReport = async (filters = {}) => {
         getStaffKPIReport(filters),
         getSupplierKPIReport(filters),
         getExpenseKPIReport(filters),
-        getCreditsDebitsAccountData({ ...filters, accountTypes: ['customer', 'supplier', 'general'] })
+        getCreditsDebitsAccountData({ accountTypes: ['customer', 'supplier', 'general'] })
     ]);
 
     const salesSummary = salesReport.summary || {};
@@ -3301,27 +3307,7 @@ export const getFinancialReport = async (filters = {}) => {
 
 // Shared service to get credit/debit account data for integration with other reports
 export const getCreditsDebitsAccountData = async (filters = {}) => {
-    const { fromDate, toDate, period, accountTypes = [] } = filters;
-
-    // Build date filter for payments if provided
-    let dateFilter = {};
-    if (period === "custom" && fromDate && toDate) {
-        dateFilter = buildDateFilter(fromDate, toDate);
-    } else if (period === "today") {
-        const { startOfDay, endOfDay } = getTodayRange();
-        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
-    } else if (period === "week") {
-        const { startOfWeek, endOfWeek } = getWeekRange();
-        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
-    } else if (period === "month") {
-        const { startOfMonth, endOfMonth } = getMonthRange();
-        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
-    } else if (period === "year") {
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
-    }
+    const { accountTypes = [] } = filters;
 
     // Build account filter
     let accountFilter = {};
@@ -3329,120 +3315,134 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
         accountFilter.type = { $in: accountTypes };
     }
 
-    // Fetch accounts and payments
-    const [allAccounts, paymentsInPeriod] = await Promise.all([
-        findQarzaAccountService(accountFilter),
-        findQarzaPaymentService(dateFilter)
+    // Get all transactions from all sources (same logic as qarza credits-debits/report)
+    const transactionFilter = {
+        $or: [
+            { sourceType: 'qarza' },
+            { sourceType: 'sale' },
+            { sourceType: 'orderReturn' },
+            { sourceType: 'purchase' },
+            { sourceType: 'purchaseReturn' }
+        ]
+    };
+
+    // Fetch accounts and transactions
+    const [allAccounts, allTransactions] = await Promise.all([
+        getAllQarzaAccountsService(accountFilter),
+        getTransactions(transactionFilter)
     ]);
 
-    // Process accounts by type
-    const accountsByType = allAccounts.reduce((acc, account) => {
-        const type = account.type || 'general';
-        if (!acc[type]) {
-            acc[type] = {
-                accounts: [],
-                count: 0,
-                totalBalance: 0,
-                totalCashIn: 0,
-                totalCashOut: 0,
-                totalToReceive: 0,
-                totalToGive: 0
-            };
-        }
+    console.log('Credit/Debit Debug - Accounts:', allAccounts.length);
+    console.log('Credit/Debit Debug - Transactions:', allTransactions.length);
 
-        const accountBalance = account.overall || 0;
-        const cashIn = account.cashIn || 0;
-        const cashOut = account.cashOut || 0;
+    // Calculate summary for each account based on actual transactions (same logic as qarza controller)
+    const accountSummaries = allAccounts.map(account => {
+        const accountIdStr = account._id.toString();
         
-        let accountStatus = 'balanced';
-        if (accountBalance > 0) {
-            accountStatus = 'toReceive';
-        } else if (accountBalance < 0) {
-            accountStatus = 'toGive';
+        // Filter transactions for this account
+        const accountTransactions = allTransactions.filter(t => {
+            if (t.sourceType === 'qarza') {
+                const sourceIdStr = typeof t.sourceId === 'object' ? t.sourceId.toString() : t.sourceId;
+                return t.sourceId && sourceIdStr === accountIdStr;
+            } else if (t.creditAccount) {
+                let creditAccountStr;
+                if (typeof t.creditAccount === 'object' && t.creditAccount._id) {
+                    creditAccountStr = typeof t.creditAccount._id === 'object' ? t.creditAccount._id.toString() : t.creditAccount._id;
+                } else if (typeof t.creditAccount === 'object') {
+                    creditAccountStr = t.creditAccount.toString();
+                } else {
+                    creditAccountStr = t.creditAccount;
+                }
+                return creditAccountStr === accountIdStr;
+            }
+            return false;
+        });
+        
+        // Calculate from actual transactions based on source type and credit type
+        let totalPaid = 0;
+        let totalToPay = 0;
+        
+        accountTransactions.forEach(t => {
+            if (t.sourceType === 'qarza') {
+                const amount = t.amount || 0;
+                if (t.creditType === 'cashin') {
+                    totalPaid += amount;
+                } else if (t.creditType === 'cashout') {
+                    totalToPay += amount;
+                }
+            } else if (t.sourceType === 'sale') {
+                const creditAmount = t.creditAmount || 0;
+                if (creditAmount > 0) {
+                    totalToPay += creditAmount;
+                }
+            } else if (t.sourceType === 'orderReturn') {
+                const creditAmount = t.creditAmount || 0;
+                if (creditAmount > 0) {
+                    totalPaid += creditAmount;
+                }
+            } else if (t.sourceType === 'purchase') {
+                const creditAmount = t.creditAmount || 0;
+                if (creditAmount > 0) {
+                    totalPaid += creditAmount;
+                }
+            } else if (t.sourceType === 'purchaseReturn') {
+                const creditAmount = t.creditAmount || 0;
+                if (creditAmount > 0) {
+                    totalToPay += creditAmount;
+                }
+            }
+        });
+        
+        const remainingBalance = totalToPay - totalPaid;
+        
+        const lastTransaction = accountTransactions.length > 0 ? accountTransactions[0].transactionDate : null;
+
+        // Determine status
+        let accountStatus = 'cleared';
+        if (remainingBalance > 0) {
+            accountStatus = 'to_pay';
+        } else if (remainingBalance < 0) {
+            accountStatus = 'to_receive';
         }
 
-        const accountData = {
-            id: account._id,
-            name: account.name,
-            type: account.type,
-            balance: accountBalance,
-            cashIn: cashIn,
-            cashOut: cashOut,
-            status: accountStatus,
-            phoneNo: account.phoneNo,
-            address: account.address,
-            isActive: account.isActive
+        return {
+            account: {
+                _id: account._id,
+                name: account.name,
+                type: account.type,
+                phoneNo: account.phoneNo,
+                address: account.address
+            },
+            totalPaid,
+            totalToPay,
+            remainingBalance,
+            lastTransaction,
+            tag: remainingBalance > 0 ? 'partial' : (remainingBalance < 0 ? 'advance' : 'cleared'),
+            accountStatus,
+            transactionCount: accountTransactions.length
         };
+    });
 
-        acc[type].accounts.push(accountData);
-        acc[type].count += 1;
-        acc[type].totalBalance += accountBalance;
-        acc[type].totalCashIn += cashIn;
-        acc[type].totalCashOut += cashOut;
-        
-        if (accountStatus === 'toReceive') {
-            acc[type].totalToReceive += Math.abs(accountBalance);
-        } else if (accountStatus === 'toGive') {
-            acc[type].totalToGive += Math.abs(accountBalance);
-        }
-
-        return acc;
-    }, {});
-
-    // Process payments by type and source
-    const paymentsByType = paymentsInPeriod.reduce((acc, payment) => {
-        const paymentType = payment.type || 'manual';
-        const source = payment.source || 'manual';
-        
-        if (!acc[paymentType]) {
-            acc[paymentType] = {
-                total: 0,
-                count: 0,
-                bySource: {}
-            };
-        }
-        
-        if (!acc[paymentType].bySource[source]) {
-            acc[paymentType].bySource[source] = { total: 0, count: 0 };
-        }
-
-        const amount = payment.amount || 0;
-        acc[paymentType].total += amount;
-        acc[paymentType].count += 1;
-        acc[paymentType].bySource[source].total += amount;
-        acc[paymentType].bySource[source].count += 1;
-
-        return acc;
-    }, {});
-
-    // Calculate overall totals
-    const totalAccounts = allAccounts.length;
-    const totalBalance = allAccounts.reduce((sum, account) => sum + (account.overall || 0), 0);
-    const totalCashIn = allAccounts.reduce((sum, account) => sum + (account.cashIn || 0), 0);
-    const totalCashOut = allAccounts.reduce((sum, account) => sum + (account.cashOut || 0), 0);
-    const totalToReceive = allAccounts.filter(a => (a.overall || 0) > 0).reduce((sum, account) => sum + (account.overall || 0), 0);
-    const totalToGive = allAccounts.filter(a => (a.overall || 0) < 0).reduce((sum, account) => sum + Math.abs(account.overall || 0), 0);
-    const totalPaymentsInPeriod = paymentsInPeriod.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    // Calculate overall KPI
+    const totalAccounts = accountSummaries.length;
+    const totalDebitOnMe = accountSummaries.reduce((sum, acc) => sum + (acc.totalToPay || 0), 0);
+    const totalDebitOnOthers = accountSummaries.reduce((sum, acc) => sum + (acc.totalPaid || 0), 0);
+    const finalAmount = totalDebitOnOthers - totalDebitOnMe;
 
     return {
-        accountsByType,
-        paymentsByType,
+        kpi: {
+            totalAccounts,
+            totalDebitOnMe,
+            totalDebitOnOthers,
+            finalAmount
+        },
+        accounts: accountSummaries,
         summary: {
             totalAccounts,
-            totalBalance,
-            totalCashIn,
-            totalCashOut,
-            totalToReceive,
-            totalToGive,
-            netBalance: totalCashIn - totalCashOut,
-            totalPaymentsInPeriod,
-            paymentsCountInPeriod: paymentsInPeriod.length,
-            activeAccounts: allAccounts.filter(a => a.isActive).length,
-            accountsWithBalance: allAccounts.filter(a => Math.abs(a.overall || 0) > 0).length
-        },
-        // Raw data for further processing if needed
-        rawAccounts: allAccounts,
-        rawPayments: paymentsInPeriod
+            totalToReceive: totalDebitOnMe,
+            totalToGive: totalDebitOnOthers,
+            totalBalance: finalAmount
+        }
     };
 };
 
@@ -3517,7 +3517,7 @@ export const getCreditDebitReport = async (filters = {}) => {
             }
 
             return { 
-                ...account.toObject(), 
+                ...(account.toObject ? account.toObject() : account), 
                 recentPayments: payments,
                 currentBalance: currentBalance,
                 remainingBalance: remainingBalance,

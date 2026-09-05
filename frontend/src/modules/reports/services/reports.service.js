@@ -94,6 +94,7 @@ export const reportsApi = baseApi.injectEndpoints({
                 url: "/reports/credits-debits-data",
                 params,
             }),
+            transformResponse: (raw) => raw.data,
             providesTags: ["Reports"],
         }),
 
