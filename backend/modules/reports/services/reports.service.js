@@ -2429,10 +2429,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     }
 
     // Fetch current period data using service functions
-    const [orders, purchases, expenses, wastages, purchaseReturns, productReturns, salaryPayments, staffList] = await Promise.all([
+    const [orders, purchases, expenseReport, wastages, purchaseReturns, productReturns, salaryPayments, staffList] = await Promise.all([
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter, { populate: 'supplier' }),
-        findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
+        getExpenseKPIReport(filters),
         findWastageService(dateFilter),
         findPurchaseReturnService(dateFilter),
         findProductReturnService(dateFilter),
@@ -2486,8 +2486,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     // Calculate average purchase value
     const avgPurchaseValue = purchaseCount > 0 ? totalPurchases / purchaseCount : 0;
 
-    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-    const expenseCount = expenses.length;
+    const expenseSummary = expenseReport.summary || {};
+    const expenseTransactions = expenseReport.transactions || [];
+    const totalExpenses = Number(expenseSummary.totalExpenses || 0);
+    const expenseCount = Number(expenseSummary.expenseCount || 0);
 
     // Calculate average expense value
     const avgExpenseValue = expenseCount > 0 ? totalExpenses / expenseCount : 0;
@@ -2596,20 +2598,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
         count: data.count
     }));
 
-    // Calculate expenses by category
-    const expensesByCategoryMap = {};
-    expenses.forEach(expense => {
-        const category = expense.category || 'uncategorized';
-        if (!expensesByCategoryMap[category]) {
-            expensesByCategoryMap[category] = { total: 0, count: 0 };
-        }
-        expensesByCategoryMap[category].total += expense.amount || 0;
-        expensesByCategoryMap[category].count += 1;
-    });
-    const expensesByCategory = Object.entries(expensesByCategoryMap).map(([category, data]) => ({
-        _id: category,
-        total: data.total,
-        count: data.count
+    const expensesByCategory = (expenseReport.breakdowns?.byCategory || []).map(item => ({
+        _id: item.category || 'uncategorized',
+        total: item.total || 0,
+        count: item.count || 0
     }));
 
     // Calculate product returns by reason
@@ -2793,17 +2785,14 @@ const prepareMainBusinessReport = async (filters = {}) => {
             })
     );
 
-    const expensesList = expenses
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 100)
-        .map(expense => ({
-            _id: expense._id,
-            title: expense.title,
-            amount: expense.amount,
-            category: expense.category,
-            description: expense.description,
-            createdAt: expense.createdAt
-        }));
+    const expensesList = expenseTransactions.map(expense => ({
+        _id: expense.id,
+        title: expense.type,
+        amount: expense.amount,
+        category: expense.category,
+        description: expense.notes,
+        createdAt: expense.date
+    }));
 
     const wastagesList = wastages
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
