@@ -21,7 +21,7 @@ const number = (value) => Number(value || 0).toLocaleString();
 
 const card = { background: "var(--surface)", borderColor: "var(--border)" };
 
-function KpiCard({ label, value, sub, icon: Icon, color }) {
+function KpiCard({ label, value, sub, details, icon: Icon, color }) {
     return (
         <div className="rounded-2xl border p-3 sm:p-4 flex-1" style={{ ...card, flex: "1 1 180px" }}>
             <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -29,6 +29,7 @@ function KpiCard({ label, value, sub, icon: Icon, color }) {
                     <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide truncate" style={{ color: "var(--muted)" }}>{label}</p>
                     <p className="text-lg sm:text-xl font-bold tabular-nums mt-1 sm:mt-2 truncate" style={{ color: "var(--ink)" }}>{value}</p>
                     {sub && <p className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: "var(--muted)" }}>{sub}</p>}
+                    {details && <p className="text-[9px] sm:text-[10px] mt-1 leading-tight wrap-break-word" style={{ color: "var(--muted)" }}>{details}</p>}
                 </div>
                 <div className="rounded-xl p-2 sm:p-2.5 shrink-0" style={{ background: `${color}17` }}><Icon className="w-4 h-4 sm:w-4.75 sm:h-4.75" style={{ color }} /></div>
             </div>
@@ -127,12 +128,13 @@ export default function MainBusinessKPIReport() {
             ) : (
                 <>
                     <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-                        <KpiCard label="Net Sales" value={currency(analysis.netSales || sales.netSales || sales.totalSales)} sub={`${number(sales.salesCount)} orders after returns`} icon={ShoppingCart} color={COLORS.sales} />
-                        <KpiCard label="Purchases" value={currency(purchaseSummary.totalPurchases)} sub={`${number(purchaseSummary.totalBills)} bills`} icon={Package} color={COLORS.purchases} />
-                        <KpiCard label="Net Profit" value={currency(analysis.netProfit)} sub={`${analysis.netMarginPercentage || 0}% margin after returns`} icon={BarChart3} color={analysis.netProfit >= 0 ? COLORS.analysis : COLORS.expenses} />
-                        <KpiCard label="Expenses" value={currency(expenseKpi.totalExpenses)} sub={`${number(expenseKpi.expenseCount)} transactions`} icon={DollarSign} color={COLORS.expenses} />
-                        <KpiCard label="Inventory Stock" value={number(inventoryKpi.currentStock)} sub={`${number(inventoryKpi.totalProducts)} products`} icon={Package} color={COLORS.inventory} />
-                        <KpiCard label="Net Operating" value={currency(analysis.netOperatingResult)} sub={`${analysis.expenseToSalesRatio || 0}% expense ratio`} icon={Activity} color={analysis.netOperatingResult >= 0 ? COLORS.analysis : COLORS.expenses} />
+                        <KpiCard label="Net Sales Profit" value={currency(analysis.salesProfit)} sub={`Sales after returns: ${currency(analysis.netSales)}`} icon={ShoppingCart} color={COLORS.sales} />
+                        <KpiCard label="Net Purchases" value={currency(analysis.netPurchases)} sub={`Purchases ${currency(purchaseSummary.totalAmountPurchased)} - returns ${currency(analysis.purchaseReturnAmount)}`} icon={Package} color={COLORS.purchases} />
+                        <KpiCard label="Staff Payments" value={currency(analysis.totalStaffPayments)} sub="Paid salaries and advances" icon={Users} color={COLORS.staff} />
+                        <KpiCard label="Total Expenses" value={currency(analysis.totalExpenses)} sub={analysis.topExpense ? `Top: ${analysis.topExpense.name} (${currency(analysis.topExpense.amount)})` : "No expenses"} icon={DollarSign} color={COLORS.expenses} />
+                        <KpiCard label="Total Wastage" value={currency(analysis.totalWastage)} sub="Cost of wasted stock" icon={AlertCircle} color={COLORS.inventory} />
+                        <KpiCard label="Net Qarza" value={currency(creditDebitKpi.totalBalance)} sub={`To receive: ${currency(creditDebitKpi.totalToReceive)} | To give: ${currency(creditDebitKpi.totalToGive)}`} icon={Wallet} color={COLORS.accounts} />
+                        <KpiCard label="Profit & Loss" value={currency(analysis.netProfit)} sub="Final result after operating costs" details={`Sales profit ${currency(analysis.salesProfit)} - Wastage ${currency(analysis.totalWastage)} - Expenses ${currency(analysis.totalExpenses)} - Staff ${currency(analysis.totalStaffPayments)}`} icon={BarChart3} color={analysis.netProfit >= 0 ? COLORS.analysis : COLORS.expenses} />
                     </div>
 
                     <div className="flex flex-wrap gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -182,6 +184,7 @@ export default function MainBusinessKPIReport() {
                             <KpiCard label="Purchase Returns" value={currency(supplierKpi.totalReturns)} icon={RefreshCw} color={COLORS.expenses} />
                         </MetricSection>
                         <MetricSection title="Expenses" icon={DollarSign} color={COLORS.expenses}>
+                            <KpiCard label="Total Expenses" value={currency(expenseKpi.totalExpenses)} sub={`${number(expenseKpi.expenseCount)} transactions`} icon={DollarSign} color={COLORS.expenses} />
                             <KpiCard label="Expense Average" value={currency(expenseKpi.averageExpense)} icon={DollarSign} color={COLORS.expenses} />
                             <KpiCard label="Highest Expense" value={currency(expenseKpi.highestExpense)} icon={AlertCircle} color={COLORS.expenses} />
                             <KpiCard label="Expense Trend" value={`${number(expenseKpi.expenseCount)} txns`} icon={Activity} color={COLORS.expenses} />

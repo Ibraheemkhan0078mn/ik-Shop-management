@@ -3131,10 +3131,18 @@ const getPreparedMainBusinessReport = async (filters = {}) => {
     return promise;
 };
 
+export const calculateProfitAndLoss = ({ salesProfit = 0, totalWastage = 0, totalExpenses = 0, totalStaffPayments = 0 }) => (
+    Number(salesProfit || 0)
+    - Number(totalWastage || 0)
+    - Number(totalExpenses || 0)
+    - Number(totalStaffPayments || 0)
+);
+
 export const getMainBusinessReport = (filters = {}) => getPreparedMainBusinessReport(filters);
 
 export const getMainBusinessKPIOnlyReport = async (filters = {}) => {
-    const [salesReport, purchases, inventory, customers, staff, suppliers, expenses, creditsDebits] = await Promise.all([
+    const [businessReport, salesReport, purchases, inventory, customers, staff, suppliers, expenses, creditsDebits] = await Promise.all([
+        getPreparedMainBusinessReport(filters),
         generateSalesReportData(filters),
         getPurchaseKPIReport(filters),
         getInventoryKPIReport(filters),
@@ -3153,13 +3161,21 @@ export const getMainBusinessKPIOnlyReport = async (filters = {}) => {
     const supplierSummary = suppliers.summary || {};
     const expenseSummary = expenses.summary || {};
     const creditSummary = creditsDebits.summary || {};
-    const grossProfit = Number(salesSummary.grossProfit || 0);
-    const totalSales = Number(salesSummary.totalRevenue || salesSummary.totalSales || 0);
-    const totalExpenses = Number(expenseSummary.totalExpenses || 0);
-    const totalPurchases = Number(purchaseSummary.totalAmountPurchased || purchaseSummary.totalPurchases || 0);
-    const salesReturnAmount = Number(salesSummary.totalReturnRefunds || salesSummary.totalReturns || 0);
-    const purchaseReturnAmount = Number(purchaseSummary.totalPurchaseReturns || purchaseSummary.totalReturns || 0);
+    const businessSummary = businessReport.summary || {};
+    const businessBreakdowns = businessReport.breakdowns || {};
+    const grossProfit = Number(businessSummary.grossProfit || 0);
+    const totalSales = Number(businessSummary.totalSales || 0);
+    const totalExpenses = Number(businessSummary.totalExpenses || expenseSummary.totalExpenses || 0);
+    const totalPurchases = Number(businessSummary.totalPurchases || purchaseSummary.totalAmountPurchased || purchaseSummary.totalPurchases || 0);
+    const salesReturnAmount = Number(businessSummary.totalProductReturns || salesSummary.totalReturnRefunds || salesSummary.totalReturns || 0);
+    const purchaseReturnAmount = Number(businessSummary.totalPurchaseReturns || purchaseSummary.totalPurchaseReturns || purchaseSummary.totalReturns || 0);
+    const totalWastage = Number(businessSummary.totalWastage || 0);
+    const totalStaffPayments = Number(businessSummary.totalSalaries || staffSummary.totalSalariesPaid || 0);
+    const salesProfit = Number(salesSummary.netProfit || 0);
+    const netProfit = calculateProfitAndLoss({ salesProfit, totalWastage, totalExpenses, totalStaffPayments });
     const totalReturns = salesReturnAmount + purchaseReturnAmount;
+    const topExpense = [...(businessBreakdowns.expensesByCategory || [])]
+        .sort((a, b) => Number(b.total || 0) - Number(a.total || 0))[0] || null;
 
     return {
         period: filters.period || (filters.fromDate || filters.toDate ? 'custom' : 'all'),
@@ -3174,19 +3190,24 @@ export const getMainBusinessKPIOnlyReport = async (filters = {}) => {
             creditsDebits: creditSummary,
             analysis: {
                 grossProfit,
-                netProfit: Number(salesSummary.netProfit || 0),
-                netSales: Number(salesSummary.netSales || totalSales),
+                salesProfit,
+                netProfit,
+                netSales: totalSales - salesReturnAmount,
                 netCOGS: Number(salesSummary.netCOGS || 0),
                 returnedQuantity: Number(salesSummary.totalReturnedQuantity || 0),
                 totalDiscount: Number(salesSummary.totalDiscount || 0),
-                netOperatingResult: Number(salesSummary.netProfit || grossProfit) - totalExpenses,
-                netMarginPercentage: Number(salesSummary.netMarginPercentage || 0),
+                totalWastage,
+                totalStaffPayments,
+                totalExpenses,
+                netPurchases: totalPurchases - purchaseReturnAmount,
+                netMarginPercentage: Number(((netProfit / (totalSales - salesReturnAmount)) * 100 || 0).toFixed(1)),
                 salesToPurchaseRatio: totalPurchases > 0 ? Number((totalSales / totalPurchases).toFixed(2)) : 0,
                 expenseToSalesRatio: totalSales > 0 ? Number(((totalExpenses / totalSales) * 100).toFixed(1)) : 0,
                 returnAmount: totalReturns,
                 salesReturnAmount,
                 purchaseReturnAmount,
-                returnRate: totalSales > 0 ? Number(((salesReturnAmount / totalSales) * 100).toFixed(1)) : 0
+                returnRate: totalSales > 0 ? Number(((salesReturnAmount / totalSales) * 100).toFixed(1)) : 0,
+                topExpense: topExpense ? { name: topExpense.category, amount: Number(topExpense.total || 0) } : null
             }
         }
     };
@@ -3443,6 +3464,36 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
     const totalDebitOnMe = accountSummaries.reduce((sum, acc) => sum + (acc.totalToPay || 0), 0);
     const totalDebitOnOthers = accountSummaries.reduce((sum, acc) => sum + (acc.totalPaid || 0), 0);
     const finalAmount = totalDebitOnOthers - totalDebitOnMe;
+    const accountsByType = accountSummaries.reduce((grouped, accountSummary) => {
+        const type = accountSummary.account?.type || 'general';
+        if (!grouped[type]) {
+            grouped[type] = {
+                count: 0,
+                totalBalance: 0,
+                totalCashIn: 0,
+                totalCashOut: 0,
+                totalToReceive: 0,
+                totalToGive: 0
+            };
+        }
+        grouped[type].count += 1;
+        grouped[type].totalBalance += accountSummary.remainingBalance || 0;
+        grouped[type].totalCashIn += accountSummary.totalPaid || 0;
+        grouped[type].totalCashOut += accountSummary.totalToPay || 0;
+        if (accountSummary.remainingBalance < 0) {
+            grouped[type].totalToReceive += Math.abs(accountSummary.remainingBalance);
+        } else {
+            grouped[type].totalToGive += accountSummary.remainingBalance;
+        }
+        return grouped;
+    }, {});
+    const paymentsByType = allTransactions.reduce((grouped, transaction) => {
+        const type = transaction.sourceType || 'other';
+        if (!grouped[type]) grouped[type] = { total: 0, count: 0 };
+        grouped[type].total += Number(transaction.amount || transaction.creditAmount || 0);
+        grouped[type].count += 1;
+        return grouped;
+    }, {});
 
     return {
         kpi: {
@@ -3456,8 +3507,15 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
             totalAccounts,
             totalToReceive: totalDebitOnMe,
             totalToGive: totalDebitOnOthers,
-            totalBalance: finalAmount
-        }
+            totalBalance: finalAmount,
+            totalPaymentsInPeriod: allTransactions.length,
+            activeAccounts: accountSummaries.filter((account) => account.transactionCount > 0).length,
+            accountsWithBalance: accountSummaries.filter((account) => account.remainingBalance !== 0).length
+        },
+        accountsByType,
+        paymentsByType,
+        rawAccounts: allAccounts,
+        rawPayments: allTransactions
     };
 };
 
