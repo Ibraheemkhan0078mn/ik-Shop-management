@@ -35,7 +35,7 @@ function getInitials(name) {
     if (!name) return "?";
     const parts = name.trim().split(/\s+/);
     const first = parts[0]?.[0] || "";
-    const second = parts.length > 1 ? parts[1][0] : "";
+    const second = parts.length > 1 ? parts[1][0] : parts[0]?.[1] || "";
     return (first + second).toUpperCase();
 }
 
@@ -88,7 +88,6 @@ export default function CustomerReport() {
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("month");
-    const [customerType, setCustomerType] = useState("all");
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -97,9 +96,8 @@ export default function CustomerReport() {
     const filters = useMemo(() => ({
         fromDate: dates.from,
         toDate: dates.to,
-        customerType,
         search
-    }), [dates.from, dates.to, customerType, search]);
+    }), [dates.from, dates.to, search]);
 
     const { data: reportData, isLoading, isFetching, error, refetch } = useGetCustomerReportQuery({
         ...filters,
@@ -116,7 +114,7 @@ export default function CustomerReport() {
 
     const handleRefresh = () => refetch();
 
-    const summary = kpiData?.data?.summary || {};
+    const summary = kpiData?.data?.data?.summary || {};
     const customers = reportData?.data || [];
 
     const showLoader = isLoading || isFetching;
@@ -151,7 +149,7 @@ export default function CustomerReport() {
                     <Filter size={16} style={{ color: 'var(--accent-2)' }} />
                     <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{labels.filters}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.period}</label>
                         <select
@@ -164,19 +162,6 @@ export default function CustomerReport() {
                             <option value="month">{labels.thisMonth}</option>
                             <option value="3month">{labels.last3Months}</option>
                             <option value="year">{labels.thisYear}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.customerType}</label>
-                        <select
-                            value={customerType}
-                            onChange={(e) => setCustomerType(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
-                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
-                        >
-                            <option value="all">{labels.allTypes}</option>
-                            <option value="walkin">{labels.walkIn}</option>
-                            <option value="regular">{labels.registered}</option>
                         </select>
                     </div>
                     <div>
@@ -225,8 +210,6 @@ export default function CustomerReport() {
                                 <thead style={{ background: 'var(--surface-muted)' }}>
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.customer}</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.customerType}</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.phone}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalOrders}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalSpent}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.avgOrderValue}</th>
@@ -238,7 +221,7 @@ export default function CustomerReport() {
                                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                     {customers.length === 0 ? (
                                         <tr>
-                                            <td colSpan="9" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
+                                            <td colSpan="7" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
                                         </tr>
                                     ) : (
                                         customers.map((customer) => (
@@ -251,8 +234,6 @@ export default function CustomerReport() {
                                                         <span>{customer.name || '-'}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3"><TypeBadge type={customer.customerType} /></td>
-                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--ink)' }}>{customer.phone || '-'}</td>
                                                 <td className="px-4 py-3 text-right text-sm tabular-nums" style={{ color: 'var(--ink)' }}>{customer.totalOrders || 0}</td>
                                                 <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(customer.totalSpent || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-right text-sm tabular-nums" style={{ color: 'var(--ink)' }}>Rs {customer.totalOrders > 0 ? ((customer.totalSpent || 0) / customer.totalOrders).toFixed(2) : '0.00'}</td>

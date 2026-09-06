@@ -30,10 +30,6 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
         return new Date(dateStr).toLocaleDateString();
     };
 
-    const getCustomerTypeColor = (type) => {
-        return type === "regular" ? "bg-blue-100 text-blue-800 border-blue-300" : "bg-gray-100 text-gray-800 border-gray-300";
-    };
-
     return (
         <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
             <div className="mb-6">
@@ -89,7 +85,6 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customer}</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customerType}</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalOrders}</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalSpent}</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
@@ -99,7 +94,7 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
                         <tbody className="divide-y divide-[var(--border)]">
                             {customers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="6" className="px-4 py-8 text-center text-[var(--muted)]">
                                         {labels.noDataFound}
                                     </td>
                                 </tr>
@@ -108,11 +103,6 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
                                     <tr key={customer._id} className="hover:bg-[var(--surface-muted)] transition-colors">
                                         <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{customer.rank}</td>
                                         <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{customer.name}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getCustomerTypeColor(customer.customerType)}`}>
-                                                {customer.customerType || "walkin"}
-                                            </span>
-                                        </td>
                                         <td className="px-4 py-3 text-right text-sm text-[var(--ink)]">{customer.totalOrders || 0}</td>
                                         <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(customer.totalSpent || 0).toLocaleString()}</td>
                                         <td className="px-4 py-3 text-right text-red-600 font-medium">Rs {(customer.dueAmount || 0).toLocaleString()}</td>

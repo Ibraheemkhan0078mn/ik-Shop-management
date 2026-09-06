@@ -3965,7 +3965,7 @@ export const getProductWastageReport = async (filters = {}) => {
 
 // Customer Report
 export const getCustomerReport = async (filters = {}) => {
-    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20, customerType } = filters;
+    const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 20, customerType, fromDate, toDate } = filters;
 
     const matchQuery = {};
     if (search) {
@@ -4007,8 +4007,12 @@ export const getCustomerReport = async (filters = {}) => {
         countCustomerService(matchQuery)
     ]);
 
-    // Get all orders to calculate customer statistics
-    const allOrders = await findOrderService({ status: "completed" });
+    // Use the same period for row statistics as the KPI report.
+    let orderQuery = { status: "completed" };
+    if (fromDate && toDate) {
+        orderQuery = { ...orderQuery, ...buildDateFilter(fromDate, toDate) };
+    }
+    const allOrders = await findOrderService(orderQuery);
 
     // Calculate statistics for each customer
     const customersWithStats = data.map(customer => {
@@ -4018,12 +4022,17 @@ export const getCustomerReport = async (filters = {}) => {
         const totalOrders = customerOrders.length;
         const totalSpent = customerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
         const lastOrderDate = customerOrders.length > 0 ? customerOrders[0].createdAt : null;
+        const dueAmount = customerOrders
+            .filter(o => o.paymentMethod === 'credit')
+            .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
         return {
             ...customer,
             totalOrders,
             totalSpent,
-            lastOrderDate
+            dueAmount,
+            lastOrderDate,
+            lastPurchase: lastOrderDate
         };
     });
 
@@ -4043,6 +4052,10 @@ export const getCustomerReport = async (filters = {}) => {
             return (aDate - bDate) * sortDirection;
         }
         return (a[sortField] - b[sortField]) * sortDirection;
+    });
+
+    customersWithStats.forEach((customer, index) => {
+        customer.rank = skip + index + 1;
     });
 
     return {
