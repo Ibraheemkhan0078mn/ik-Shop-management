@@ -914,6 +914,7 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
         direction,
         source,
         status,
+        search,
         sortBy,
         page = 1,
         limit = 20
@@ -1059,6 +1060,9 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
         // Only apply account type filter if a specific type is selected (not 'all' or undefined)
         if (accountType && accountType !== 'all') {
             accountFilter.type = accountType;
+        }
+        if (search) {
+            accountFilter.name = { $regex: search.trim(), $options: 'i' };
         }
         // Filter by account IDs from transactions when date range is provided
         // This ensures we only show accounts that have transactions in the selected period

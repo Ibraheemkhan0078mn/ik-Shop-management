@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { RefreshCw, Users, DollarSign, Filter, AlertCircle, Star } from "lucide-react";
-import { useGetStaffReportQuery, useGetStaffKPIReportQuery } from "../services/reports.service.js";
+import { useGetStaffReportQuery } from "../services/reports.service.js";
 import { useGetStaffListQuery } from "../../staff/api/staff.api.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -91,11 +91,6 @@ export default function StaffReport() {
         page: 1,
         limit: 50,
     });
-    const { data: kpiData } = useGetStaffKPIReportQuery({
-        fromDate: dates.from,
-        toDate: dates.to,
-        staffId,
-    });
     const { data: staffList } = useGetStaffListQuery({ status: 'active' });
 
     if (error) {
@@ -105,8 +100,8 @@ export default function StaffReport() {
     const handleRefresh = () => refetch();
     const showLoader = isLoading;
 
-    const summary = kpiData?.data?.data?.summary || {};
-    const details = kpiData?.data?.data?.details || {};
+    const summary = reportData?.data?.summary || {};
+    const details = reportData?.data?.details || {};
     const staffMetrics = reportData?.data?.staffMetrics || [];
 
     return (
@@ -210,6 +205,7 @@ export default function StaffReport() {
                     <div className="flex flex-wrap gap-3 mb-6">
                         <KpiCard label={labels.totalStaff} value={summary.totalStaff || 0} icon={Users} color="var(--accent-2)" />
                         <KpiCard label={labels.totalExpectedSalary} value={`Rs ${(summary.totalExpectedSalary || 0).toLocaleString()}`} icon={DollarSign} color="#3b82f6" />
+                        <KpiCard label={labels.commissionEarnings} value={`Rs ${(summary.totalCommissionEarnings || 0).toLocaleString()}`} icon={DollarSign} color="#8b5cf6" />
                         <KpiCard label={labels.totalSalariesPaid} value={`Rs ${(summary.totalSalariesPaid || 0).toLocaleString()}`} icon={DollarSign} color="#10b981" />
                         <KpiCard label={labels.remainingSalary} value={`Rs ${(summary.remainingSalary || 0).toLocaleString()}`} icon={AlertCircle} color="#f59e0b" />
                         <KpiCard label={labels.totalAdvances} value={`Rs ${(summary.totalAdvances || 0).toLocaleString()}`} icon={AlertCircle} color="#dc2626" />
@@ -229,13 +225,17 @@ export default function StaffReport() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.staffName}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.ordersHandled}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.sales}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.salaryEarnings}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.commissionRate}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.commissionEarnings}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalExpectedSalary}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalSalariesPaid}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.paymentCount}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.remainingSalary}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalAdvances}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalPresentDays}</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalAbsentDays}</th>
-                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalWorkingHours}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalLateDays}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -251,13 +251,17 @@ export default function StaffReport() {
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>{staff.totalOrders || 0}</td>
                                                     <td className="px-4 py-3 text-sm text-right font-medium tabular-nums" style={{ color: '#10b981' }}>Rs {(staff.totalSales || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {(staff.salaryEarnings || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>{staff.commissionRate || 0}%</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-medium tabular-nums" style={{ color: '#8b5cf6' }}>Rs {(staff.commissionEarnings || 0).toLocaleString()}</td>
                                                     <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {(staff.expectedSalary || 0).toLocaleString()}</td>
                                                     <td className="px-4 py-3 text-sm text-right font-medium tabular-nums" style={{ color: '#8b5cf6' }}>Rs {(staff.salaryPaid || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>{staff.paymentCount || 0}</td>
                                                     <td className="px-4 py-3 text-sm text-right font-medium tabular-nums" style={{ color: staff.remainingSalary >= 0 ? '#f59e0b' : '#dc2626' }}>Rs {(staff.remainingSalary || 0).toLocaleString()}</td>
                                                     <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {(staff.advance || 0).toLocaleString()}</td>
                                                     <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>{staff.totalPresentDays || 0}</td>
                                                     <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: '#dc2626' }}>{staff.totalAbsentDays || 0}</td>
-                                                    <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>{staff.totalWorkingHours?.toFixed(1) || 0} hrs</td>
+                                                    <td className="px-4 py-3 text-sm text-right tabular-nums" style={{ color: '#f59e0b' }}>{staff.totalLateDays || 0}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

@@ -92,14 +92,32 @@ const buildDateFilter = (fromDate, toDate) => {
     return filter;
 };
 
-const getCanonicalStaffCompensation = async (staffId, fromDate, toDate) => {
-    const paymentSummary = await calculatePaymentSummary(staffId, fromDate || null, toDate || null);
-    const [salaryBreakdown, percentageBreakdown] = await Promise.all([
-        getSalaryBreakdown(staffId, paymentSummary.startDate, paymentSummary.endDate),
-        getPercentageBreakdown(staffId, paymentSummary.startDate, paymentSummary.endDate),
-    ]);
+const getStaffAttendanceStats = async (staffId, fromDate, toDate) => {
+    const attendanceFilter = {};
+    if (fromDate || toDate) {
+        attendanceFilter.date = {};
+        if (fromDate) {
+            const startDate = new Date(fromDate);
+            startDate.setHours(0, 0, 0, 0);
+            attendanceFilter.date.$gte = startDate;
+        }
+        if (toDate) {
+            const endDate = new Date(toDate);
+            endDate.setHours(23, 59, 59, 999);
+            attendanceFilter.date.$lte = endDate;
+        }
+    }
 
-    return { paymentSummary, salaryBreakdown, percentageBreakdown };
+    const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
+    return attendanceRecords.reduce((stats, record) => {
+        const attendance = record.attendance?.find((entry) => entry.staff.toString() === staffId.toString());
+        if (!attendance) return stats;
+
+        if (attendance.status === 'present') stats.totalPresentDays += 1;
+        if (attendance.status === 'absent') stats.totalAbsentDays += 1;
+        if (attendance.status === 'late') stats.totalLateDays += 1;
+        return stats;
+    }, { totalPresentDays: 0, totalAbsentDays: 0, totalLateDays: 0 });
 };
 
 // Helper function to get today's date range
@@ -4477,8 +4495,7 @@ export const getStaffReport = async (filters = {}) => {
 
     const staffWithStats = await Promise.all(
         data.map(async (staff) => {
-            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
-            const { paymentSummary } = compensation;
+            const paymentSummary = await calculatePaymentSummary(staff._id, fromDate || null, toDate || null);
 
             // Get orders handled by this staff using service function
             const orderFilter = {
@@ -4499,30 +4516,7 @@ export const getStaffReport = async (filters = {}) => {
                 .filter(o => o.orderType === 'wholesale')
                 .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-            // Get attendance data using service function
-            const attendanceFilter = {
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            
-            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
-            let totalPresentDays = 0;
-            let totalAbsentDays = 0;
-            let totalWorkingHours = 0;
-
-            attendanceRecords.forEach(record => {
-                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
-                if (staffAttendance) {
-                    if (staffAttendance.status === 'present') {
-                        totalPresentDays++;
-                    } else if (staffAttendance.status === 'absent') {
-                        totalAbsentDays++;
-                    }
-                    // Calculate working hours (assuming 8 hours per present day)
-                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
-                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
-                    }
-                }
-            });
+            const attendanceStats = await getStaffAttendanceStats(staff._id, fromDate, toDate);
 
             return {
                 ...staff,
@@ -4530,16 +4524,16 @@ export const getStaffReport = async (filters = {}) => {
                 totalSales,
                 retailSales,
                 wholesaleSales,
-                totalPresentDays,
-                totalAbsentDays,
-                totalWorkingHours,
+                ...attendanceStats,
                 expectedSalary: paymentSummary.totalEarnings,
+                salaryEarnings: paymentSummary.totalSalaryEarnings,
+                commissionEarnings: paymentSummary.totalCommissionEarnings,
+                commissionRate: paymentSummary.percentage,
                 salaryPaid: paymentSummary.totalPaid,
+                paymentCount: paymentSummary.paymentCount,
                 remainingSalary: paymentSummary.totalRemaining,
                 advance: paymentSummary.totalAdvance,
                 salaryType: paymentSummary.salaryType,
-                salaryBreakdown: compensation.salaryBreakdown,
-                percentageBreakdown: compensation.percentageBreakdown,
             };
         })
     );
@@ -4547,8 +4541,7 @@ export const getStaffReport = async (filters = {}) => {
     // Calculate statistics for ALL staff (for KPI summary)
     const allStaffWithStats = await Promise.all(
         allStaff.map(async (staff) => {
-            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
-            const { paymentSummary } = compensation;
+            const paymentSummary = await calculatePaymentSummary(staff._id, fromDate || null, toDate || null);
 
             const orderFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
@@ -4560,38 +4553,20 @@ export const getStaffReport = async (filters = {}) => {
             const totalOrders = orders.length;
             const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-            const attendanceFilter = {
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            
-            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
-            let totalPresentDays = 0;
-            let totalAbsentDays = 0;
-            let totalWorkingHours = 0;
-
-            attendanceRecords.forEach(record => {
-                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
-                if (staffAttendance) {
-                    if (staffAttendance.status === 'present') {
-                        totalPresentDays++;
-                    } else if (staffAttendance.status === 'absent') {
-                        totalAbsentDays++;
-                    }
-                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
-                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
-                    }
-                }
-            });
+            const attendanceStats = await getStaffAttendanceStats(staff._id, fromDate, toDate);
 
             return {
                 totalSales,
                 totalOrders,
                 totalPaid: paymentSummary.totalPaid,
+                salaryEarnings: paymentSummary.totalSalaryEarnings,
+                commissionEarnings: paymentSummary.totalCommissionEarnings,
+                commissionRate: paymentSummary.percentage,
+                paymentCount: paymentSummary.paymentCount,
                 advance: paymentSummary.totalAdvance,
                 totalEarnings: paymentSummary.totalEarnings,
-                totalPresentDays,
-                totalAbsentDays,
-                totalWorkingHours
+                totalRemaining: paymentSummary.totalRemaining,
+                ...attendanceStats
             };
         })
     );
@@ -4601,9 +4576,14 @@ export const getStaffReport = async (filters = {}) => {
     const grandTotalOrders = allStaffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
     const grandTotalSalaryPaid = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPaid, 0);
     const totalAdvances = allStaffWithStats.reduce((sum, staff) => sum + staff.advance, 0);
-    const totalWorkingHours = allStaffWithStats.reduce((sum, staff) => sum + staff.totalWorkingHours, 0);
+    const totalExpectedSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.totalEarnings, 0);
+    const totalSalaryEarnings = allStaffWithStats.reduce((sum, staff) => sum + staff.salaryEarnings, 0);
+    const totalCommissionEarnings = allStaffWithStats.reduce((sum, staff) => sum + staff.commissionEarnings, 0);
+    const totalPaymentCount = allStaffWithStats.reduce((sum, staff) => sum + staff.paymentCount, 0);
+    const remainingSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.totalRemaining, 0);
     const totalPresentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPresentDays, 0);
     const totalAbsentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalAbsentDays, 0);
+    const totalLateDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalLateDays, 0);
     
     // Calculate average salary
     const averageSalary = total > 0 ? grandTotalSalaryPaid / total : 0;
@@ -4611,9 +4591,6 @@ export const getStaffReport = async (filters = {}) => {
     // Calculate average attendance percentage
     const totalDaysPossible = totalPresentDays + totalAbsentDays;
     const avgAttendancePercent = totalDaysPossible > 0 ? (totalPresentDays / totalDaysPossible) * 100 : 0;
-    
-    // Calculate average working hours per staff
-    const avgWorkingHours = total > 0 ? totalWorkingHours / total : 0;
     
     // Find top performer (highest sales) from ALL staff
     const topPerformerIndex = allStaffWithStats.length > 0 
@@ -4648,14 +4625,18 @@ export const getStaffReport = async (filters = {}) => {
             },
             summary: {
                 totalSalariesPaid: grandTotalSalaryPaid,
+                totalExpectedSalary,
+                totalSalaryEarnings,
+                totalCommissionEarnings,
+                remainingSalary,
+                totalPaymentCount,
                 averageSalary,
                 totalAdvances,
-                totalWorkingHours,
                 avgAttendancePercent,
                 totalPresentDays,
                 totalAbsentDays,
+                totalLateDays,
                 topPerformer: topPerformer ? (topPerformer.name || topPerformer.fullName || 'N/A') : 'N/A',
-                avgWorkingHours,
                 highestAttendance
             }
         },
@@ -4705,8 +4686,7 @@ export const getStaffKPIReport = async (filters = {}) => {
     // Calculate statistics for ALL staff
     const allStaffWithStats = await Promise.all(
         allStaff.map(async (staff) => {
-            const compensation = await getCanonicalStaffCompensation(staff._id, fromDate, toDate);
-            const { paymentSummary } = compensation;
+            const paymentSummary = await calculatePaymentSummary(staff._id, fromDate || null, toDate || null);
 
             const orderFilter = {
                 ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
@@ -4718,39 +4698,20 @@ export const getStaffKPIReport = async (filters = {}) => {
             const totalOrders = orders.length;
             const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-            const attendanceFilter = {
-                ...(Object.keys(dateFilter).length > 0 ? dateFilter : {})
-            };
-            
-            const attendanceRecords = await findStaffAttendanceService(attendanceFilter);
-            let totalPresentDays = 0;
-            let totalAbsentDays = 0;
-            let totalWorkingHours = 0;
-
-            attendanceRecords.forEach(record => {
-                const staffAttendance = record.attendance.find(a => a.staff.toString() === staff._id.toString());
-                if (staffAttendance) {
-                    if (staffAttendance.status === 'present') {
-                        totalPresentDays++;
-                    } else if (staffAttendance.status === 'absent') {
-                        totalAbsentDays++;
-                    }
-                    if (staffAttendance.status === 'present' || staffAttendance.status === 'late') {
-                        totalWorkingHours += 8 - (staffAttendance.lateHours || 0);
-                    }
-                }
-            });
+            const attendanceStats = await getStaffAttendanceStats(staff._id, fromDate, toDate);
 
             return {
                 totalSales,
                 totalOrders,
                 totalPaid: paymentSummary.totalPaid,
+                salaryEarnings: paymentSummary.totalSalaryEarnings,
+                commissionEarnings: paymentSummary.totalCommissionEarnings,
+                commissionRate: paymentSummary.percentage,
+                paymentCount: paymentSummary.paymentCount,
                 advance: paymentSummary.totalAdvance,
                 expectedSalary: paymentSummary.totalEarnings,
                 totalRemaining: paymentSummary.totalRemaining,
-                totalPresentDays,
-                totalAbsentDays,
-                totalWorkingHours
+                ...attendanceStats
             };
         })
     );
@@ -4760,11 +4721,14 @@ export const getStaffKPIReport = async (filters = {}) => {
     const grandTotalOrders = allStaffWithStats.reduce((sum, staff) => sum + staff.totalOrders, 0);
     const grandTotalSalaryPaid = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPaid, 0);
     const totalExpectedSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.expectedSalary, 0);
+    const totalSalaryEarnings = allStaffWithStats.reduce((sum, staff) => sum + staff.salaryEarnings, 0);
+    const totalCommissionEarnings = allStaffWithStats.reduce((sum, staff) => sum + staff.commissionEarnings, 0);
+    const totalPaymentCount = allStaffWithStats.reduce((sum, staff) => sum + staff.paymentCount, 0);
     const remainingSalary = allStaffWithStats.reduce((sum, staff) => sum + staff.totalRemaining, 0);
     const totalAdvances = allStaffWithStats.reduce((sum, staff) => sum + staff.advance, 0);
-    const totalWorkingHours = allStaffWithStats.reduce((sum, staff) => sum + staff.totalWorkingHours, 0);
     const totalPresentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalPresentDays, 0);
     const totalAbsentDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalAbsentDays, 0);
+    const totalLateDays = allStaffWithStats.reduce((sum, staff) => sum + staff.totalLateDays, 0);
     
     // Calculate average salary
     const averageSalary = total > 0 ? grandTotalSalaryPaid / total : 0;
@@ -4772,9 +4736,6 @@ export const getStaffKPIReport = async (filters = {}) => {
     // Calculate average attendance percentage
     const totalDaysPossible = totalPresentDays + totalAbsentDays;
     const avgAttendancePercent = totalDaysPossible > 0 ? (totalPresentDays / totalDaysPossible) * 100 : 0;
-    
-    // Calculate average working hours per staff
-    const avgWorkingHours = total > 0 ? totalWorkingHours / total : 0;
     
     // Find top performer (highest sales) from ALL staff
     const topPerformerIndex = allStaffWithStats.length > 0 
@@ -4798,16 +4759,18 @@ export const getStaffKPIReport = async (filters = {}) => {
             summary: {
                 totalStaff: total,
                 totalExpectedSalary,
+                totalSalaryEarnings,
+                totalCommissionEarnings,
                 totalSalariesPaid: grandTotalSalaryPaid,
                 remainingSalary,
+                totalPaymentCount,
                 totalAdvances,
+                totalLateDays,
                 topPerformer: topPerformer ? (topPerformer.name || topPerformer.fullName || 'N/A') : 'N/A',
                 averageSalary,
-                totalWorkingHours,
                 avgAttendancePercent,
                 totalPresentDays,
                 totalAbsentDays,
-                avgWorkingHours,
                 highestAttendance
             }
         }

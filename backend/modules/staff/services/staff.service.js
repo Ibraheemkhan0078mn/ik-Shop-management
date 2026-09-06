@@ -244,6 +244,16 @@ export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
     }, {
         sort: { percentageChangeFromDate: 1 }
     });
+
+    let effectivePercentage = staff.percentage || 0;
+    percentageChanges.forEach((change) => {
+        const changeDate = new Date(change.percentageChangeFromDate);
+        const reportEndDate = endDate ? new Date(endDate) : new Date();
+        reportEndDate.setHours(23, 59, 59, 999);
+        if (changeDate <= reportEndDate) {
+            effectivePercentage = change.percentage;
+        }
+    });
     
     // If no percentage changes and no custom startDate, return empty breakdown
     if (!startDate && (!percentageChanges || percentageChanges.length === 0)) {
@@ -251,6 +261,7 @@ export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
             staffId,
             staffName: staff.fullName,
             basePercentage: staff.percentage || 0,
+            percentage: effectivePercentage,
             startDate,
             endDate,
             breakdown: [],
@@ -275,7 +286,11 @@ export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
     if (effectiveStartDate || endDate) {
         matchQuery.createdAt = {};
         if (effectiveStartDate) matchQuery.createdAt.$gte = new Date(effectiveStartDate);
-        if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+        if (endDate) {
+            const inclusiveEndDate = new Date(endDate);
+            inclusiveEndDate.setHours(23, 59, 59, 999);
+            matchQuery.createdAt.$lte = inclusiveEndDate;
+        }
     }
     
     const orders = await findDocs({
@@ -290,6 +305,7 @@ export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
             staffId,
             staffName: staff.fullName,
             basePercentage: staff.percentage || 0,
+            percentage: effectivePercentage,
             startDate: effectiveStartDate,
             endDate,
             breakdown: []
@@ -375,6 +391,7 @@ export const getPercentageBreakdown = async (staffId, startDate, endDate) => {
         staffId,
         staffName: staff.fullName,
         basePercentage: staff.percentage,
+        percentage: effectivePercentage,
         startDate,
         endDate,
         breakdown
@@ -1308,11 +1325,11 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
         console.log('Percentage breakdown error:', error.message);
     }
     
-    if (percentageBreakdown && percentageBreakdown.breakdown && percentageBreakdown.breakdown.length > 0) {
-        totalCommissionEarnings = percentageBreakdown.breakdown.reduce((sum, month) => sum + (month.totalCommission || 0), 0);
+    if (percentageBreakdown) {
+        totalCommissionEarnings = (percentageBreakdown.breakdown || []).reduce((sum, month) => sum + (month.totalCommission || 0), 0);
         currentPercentage = percentageBreakdown.percentage || 0;
         console.log('Total commission earnings from breakdown:', totalCommissionEarnings);
-        if (salaryType === 'none') {
+        if (salaryType === 'none' && (totalCommissionEarnings > 0 || currentPercentage > 0)) {
             salaryType = 'percentage';
         }
     }
@@ -1337,9 +1354,8 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
     totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     
     totalRemaining = Math.max(0, totalEarnings - totalPaid);
-    totalAdvance = Math.max(0, totalPaid - totalEarnings);
     
-    if (totalPaid >= totalEarnings) {
+    if (totalEarnings > 0 && totalPaid >= totalEarnings) {
         paymentStatus = 'advanced';
     } else if (totalPaid > 0) {
         paymentStatus = 'partial';
@@ -1358,6 +1374,7 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
         endDate: effectiveEndDate,
         totalSalaryEarnings: Math.round(totalSalaryEarnings * 100) / 100,
         totalCommissionEarnings: Math.round(totalCommissionEarnings * 100) / 100,
+        paymentCount: payments.length,
         totalEarnings: Math.round(totalEarnings * 100) / 100,
         totalPaid: Math.round(totalPaid * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
