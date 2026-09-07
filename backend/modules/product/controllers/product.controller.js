@@ -14,6 +14,7 @@ import {
     getSubCategories, getPaginationSubCategories, createSubCategory,
     updateSubCategory, deleteSubCategory, getSubCategoriesById, getSubCategoriesByCatagId,
 } from "../services/subCategory.service.js";
+import { getProductCostingByBatch } from "../services/productCosting.service.js";
 import { getLocalProductModel } from "../../../configs/connect.db.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
@@ -233,4 +234,12 @@ export const getSubCategoriesDataByCatagId = asyncHandler(async (req, res, next)
     } catch {
         next(new ErrorResponse("Subcategory not found", 404));
     }
+});
+
+// ─── Product Costing Controller ───────────────────────────────────────────────────────
+
+export const getProductCostingData = asyncHandler(async (req, res) => {
+    const { productId, batchId } = req.query;
+    const costing = await getProductCostingByBatch(productId, batchId);
+    res.status(200).json({ success: true, message: "Product costing retrieved successfully", data: costing });
 });

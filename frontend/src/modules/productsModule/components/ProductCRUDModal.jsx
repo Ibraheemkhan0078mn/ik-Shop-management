@@ -1,7 +1,7 @@
 // src/components/ProductCRUDModal.jsx
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Scan, Plus, AlertCircle, Check, X, Lock, Unlock, ChevronDown } from "lucide-react";
-import { useCreateProduct, useUpdateProduct, useProduct, useLazyCheckProductCodeQuery, useLazyGenerateProductCodeQuery } from "../services/product.service";
+import { Scan, Plus, AlertCircle, Check, X, ChevronDown } from "lucide-react";
+import { useCreateProduct, useUpdateProduct, useProduct } from "../services/product.service";
 import Scanner from "../../../shared/components/Scanner.jsx";
 import CategoryCRUDModal from "./CategoryCRUDModal.jsx";
 import SubCategoryCRUDModal from "./SubCategoryCRUDModal.jsx";
@@ -241,8 +241,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const isCreate = mode === "create";
   const [createProduct, { isLoading: isCreating }] = useCreateProduct();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProduct();
-  const [checkProductCode] = useLazyCheckProductCodeQuery();
-  const [generateProductCode] = useLazyGenerateProductCodeQuery();
   const isSaving = isCreating || isUpdating;
 
   const UNITS = useMemo(() => [
@@ -260,7 +258,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [imagePreview, setImagePreview] = useState(null);
   const [showMore, setShowMore] = useState(false);
   const [showTax, setShowTax] = useState(false);
-  const [isProductCodeLocked, setIsProductCodeLocked] = useState(true);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
@@ -277,7 +274,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         subCategoryName: productData.subCategoryName || "",
       });
       setShowTax(productData.taxPercent > 0);
-      setIsProductCodeLocked(true);
       setImagePreview(productData.image ? `${IMAGE_BASE}/${productData.image}` : null);
     }
   }, [isCreate, productData]);
@@ -290,19 +286,8 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       setBanner(null);
       setShowMore(false);
       setShowTax(false); // Reset tax toggle when creating new product
-      setIsProductCodeLocked(true);
-      
-      // Generate product code when opening create form
-      generateProductCode()
-        .unwrap()
-        .then((code) => {
-          setForm((prev) => ({ ...prev, productCode: code }));
-        })
-        .catch((error) => {
-          console.error("Failed to generate product code:", error);
-        });
     }
-  }, [isCreate, open, generateProductCode]);
+  }, [isCreate, open]);
 
   useEffect(() => {
     return () => {
@@ -315,26 +300,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       setBanner(`⚠️ ${productError?.data?.message || productError?.message || "Failed to load data"}`);
     }
   }, [productError]);
-
-  useEffect(() => {
-    const productCode = form.productCode?.trim();
-    if (!productCode) return;
-
-    const timer = setTimeout(async () => {
-      try {
-        const result = await checkProductCode({ productCode, excludeId: productData?._id }).unwrap();
-        if (!result.available) {
-          setErrors((prev) => ({ ...prev, productCode: "Product code already exists" }));
-        } else {
-          setErrors((prev) => prev.productCode ? { ...prev, productCode: undefined } : prev);
-        }
-      } catch {
-        setErrors((prev) => ({ ...prev, productCode: "Unable to verify product code" }));
-      }
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, [form.productCode, productData?._id, checkProductCode]);
 
   const updateField = useCallback((name, value) => {
     setForm((prev) => {
@@ -623,12 +588,6 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                 onChange={updateField}
                 error={errors.productCode}
                 placeholder="e.g., 1"
-                disabled={isProductCodeLocked}
-                action={{
-                  label: isProductCodeLocked ? "Unlock" : "Lock",
-                  icon: isProductCodeLocked ? Unlock : Lock,
-                  onClick: () => setIsProductCodeLocked((locked) => !locked),
-                }}
               />
 
               {/* Category */}

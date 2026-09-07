@@ -26,6 +26,7 @@ import {
 } from "../api/purchaseReturnApi.js";
 import { usePurchases, usePurchase } from "../../productPurchases/services/purchases.service.js";
 import { productApi } from "../../productsModule/services/product.service.js";
+import { ProductService } from "../../productsModule/api/productsApi.js";
 
 const getLocalizedReasons = (labels) => [
     { label: labels.damaged, value: "damaged" },
@@ -192,12 +193,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [filteredPurchases, setFilteredPurchases] = useState([]);
-    const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
     const [purchaseReturnNumber, setPurchaseReturnNumber] = useState("");
     const [isPurchaseReturnNumberLocked, setIsPurchaseReturnNumberLocked] = useState(true);
     const [expandedCalculation, setExpandedCalculation] = useState({});
     const [batchStocks, setBatchStocks] = useState({});
     const [returnSummary, setReturnSummary] = useState(null);
+    const [batchCosting, setBatchCosting] = useState({});
 
     const { data: purchasesData } = usePurchases({ page: 1, limit: 100 });
     const allPurchases = purchasesData?.data ?? [];
@@ -235,6 +236,30 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             }
         };
         fetchBatchStocks();
+    }, [purchaseData]);
+
+    // Fetch batch costing when purchase data is loaded
+    useEffect(() => {
+        const fetchBatchCosting = async () => {
+            if (purchaseData?.items) {
+                const costing = {};
+                for (const item of purchaseData.items) {
+                    const batchId = item.batch?._id || item.batch;
+                    const productId = item.product?._id || item.product;
+                    if (batchId && productId && !costing[batchId]) {
+                        try {
+                            const costingData = await ProductService.getCosting(productId, batchId);
+                            costing[batchId] = costingData;
+                        } catch (error) {
+                            console.error("Error fetching batch costing:", error);
+                            costing[batchId] = null; // Fallback to null if API fails
+                        }
+                    }
+                }
+                setBatchCosting(costing);
+            }
+        };
+        fetchBatchCosting();
     }, [purchaseData]);
 
     // Fetch return summary when purchase data is loaded
@@ -458,9 +483,22 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     };
 
     const calculateUnitCostAfterTaxAndDiscount = (item) => {
+        const batchId = item.batch?._id || item.batch;
+        const costingData = batchCosting[batchId];
+
+        // Use costing service data if available
+        if (costingData && costingData.found) {
+            return {
+                unitCosting: costingData.effectiveCostPrice,
+                discountAmount: costingData.discountAmount,
+                taxAmount: costingData.taxAmount
+            };
+        }
+
+        // Fallback to manual calculation if costing data not available
         const costPrice = Number(item.costPrice || item.price) || 0;
         const quantity = 1; // Per unit
-        
+
         // Calculate discount amount per unit
         let discountAmount = 0;
         if (purchaseData?.discountType && purchaseData?.discount) {
@@ -473,7 +511,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 discountAmount = discountPerItem * quantity;
             }
         }
-        
+
         // Calculate tax amount per unit (on after-discount price)
         const afterDiscount = costPrice - discountAmount;
         let taxAmount = 0;
@@ -485,7 +523,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 taxAmount = tax;
             }
         }
-        
+
         // Return cost after tax and discount along with breakdown
         return {
             unitCosting: costPrice - discountAmount + taxAmount,
@@ -515,7 +553,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             if (!details) return sum;
             return sum + calculateRefund(item, details);
         }, 0);
-    }, [purchaseData, selectedItems]);
+    }, [purchaseData, selectedItems, batchCosting]);
 
     const handleSubmit = async () => {
         console.log("the submit is running.")
@@ -543,7 +581,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         }
 
         // Validate all selected items
-        for (const [batchId, details] of Object.entries(selectedItems)) {
+        for (const details of Object.values(selectedItems)) {
             if (!details.returnReason) return showError(labels.specifyReturnReason);
             if (!details.returnQuantity || Number(details.returnQuantity) <= 0) return showError(labels.specifyValidQuantity);
         }
@@ -924,18 +962,18 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                                             <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.costPrice || item.price).toFixed(2)}</span>
                                                                         </div>
                                                                         <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Less Discount ({purchaseData?.discountType === 'fixed' ? 'fixed' : 'percentage'}):</span>
+                                                                            <span style={{ color: "var(--ink)" }}>Less Discount ({batchCosting[batchId]?.discountType || 'percentage'}):</span>
                                                                             <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calculateUnitCostAfterTaxAndDiscount(item).discountAmount.toFixed(2)}</span>
                                                                         </div>
                                                                         <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
-                                                                            <span>Original: {purchaseData?.discountType === 'fixed' ? `Rs ${Number(purchaseData?.discount || 0).toFixed(2)}` : `${Number(purchaseData?.discount || 0).toFixed(2)}%`}</span>
+                                                                            <span>Original: {batchCosting[batchId]?.discountType === 'fixed' ? `Rs ${Number(batchCosting[batchId]?.discountValue || 0).toFixed(2)}` : `${Number(batchCosting[batchId]?.discountValue || 0).toFixed(2)}%`}</span>
                                                                         </div>
                                                                         <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Plus Tax ({purchaseData?.gstType === 'fixed' ? 'fixed' : 'percentage'}):</span>
+                                                                            <span style={{ color: "var(--ink)" }}>Plus Tax ({batchCosting[batchId]?.taxType || 'percentage'}):</span>
                                                                             <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calculateUnitCostAfterTaxAndDiscount(item).taxAmount.toFixed(2)}</span>
                                                                         </div>
                                                                         <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
-                                                                            <span>Original: {purchaseData?.gstType === 'fixed' ? `Rs ${Number(purchaseData?.gst || 0).toFixed(2)}` : `${Number(purchaseData?.gst || 0).toFixed(2)}%`}</span>
+                                                                            <span>Original: {batchCosting[batchId]?.taxType === 'fixed' ? `Rs ${Number(batchCosting[batchId]?.taxValue || 0).toFixed(2)}` : `${Number(batchCosting[batchId]?.taxValue || 0).toFixed(2)}%`}</span>
                                                                         </div>
                                                                         <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
                                                                             <span style={{ color: "var(--accent-2)" }}>Per-Unit Costing:</span>

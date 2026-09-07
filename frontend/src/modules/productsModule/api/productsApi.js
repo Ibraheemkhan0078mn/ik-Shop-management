@@ -58,4 +58,15 @@ export const ProductService = {
             throw error;
         }
     },
+    getCosting: async (productId, batchId) => {
+        try {
+            const { data } = await api.get("/products/costing", {
+                params: { productId, batchId }
+            });
+            return data.data;
+        } catch (error) {
+            showError(error?.response?.data?.message || error?.message || "Failed to fetch product costing");
+            throw error;
+        }
+    },
 };

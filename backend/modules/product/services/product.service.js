@@ -265,10 +265,10 @@ const createProduct = async (productData) => {
     const { hotKeySku } = cleaned;
     const productCode = cleaned.productCode || await createNextProductCode();
 
-    // SKU is the primary uniqueness key; productCode is secondary when present.
-    const conflict = await findConflictingUnique(null, { hotKeySku, productCode });
+    // Only SKU is unique; productCode can be duplicated
+    const conflict = await findConflictingUnique(null, { hotKeySku });
     if (conflict) {
-        throw new Error("Product with this SKU or Product Code already exists");
+        throw new Error("Product with this SKU already exists");
     }
 
     return await createProductService({ ...cleaned, productCode });
@@ -284,11 +284,11 @@ const updateProduct = async (id, updateData) => {
         throw new Error("Product not found");
     }
 
-    // Uniqueness check only over the fields actually being changed.
-    const { hotKeySku, productCode, barcode } = updateData;
-    const conflict = await findConflictingUnique(id, { hotKeySku, productCode, barcode });
+    // Uniqueness check only over SKU; productCode and barcode can be duplicated
+    const { hotKeySku } = updateData;
+    const conflict = await findConflictingUnique(id, { hotKeySku });
     if (conflict) {
-        throw new Error("SKU, Product Code, or Barcode is already in use by another product");
+        throw new Error("SKU is already in use by another product");
     }
 
     // If a new image was uploaded, persist it and clean up the old file.

@@ -21,6 +21,7 @@ import {
     checkProductCode,
     generateProductCodeData,
     getStockHistoryData,
+    getProductCostingData,
 } from "../controllers/product.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 import { upload } from "../../../common/middlewares/multer.middleware.js";
@@ -34,6 +35,7 @@ router.get("/pagination", getPaginationProductData);
 router.get("/search", searchProductsData);
 router.get("/check-code/:productCode", checkProductCode);
 router.get("/generate-code", generateProductCodeData);
+router.get("/costing", getProductCostingData);
 router.get("/:id", getProductDataById);
 router.post("/", authorize("admin"), upload.single("image"), createProductData);
 router.put("/:id", authorize("admin"), upload.single("image"), updateProductData);
