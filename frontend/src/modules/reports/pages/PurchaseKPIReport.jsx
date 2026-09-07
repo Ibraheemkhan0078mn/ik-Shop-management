@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { RefreshCw, ChevronDown, DollarSign, Package, Wallet, Calendar, TrendingUp, Truck, AlertCircle } from "lucide-react";
+import { RefreshCw, ChevronDown, DollarSign, Package, Calendar, TrendingUp, AlertCircle } from "lucide-react";
 import { useGetPurchaseReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -7,31 +7,12 @@ import PurchaseKPIReportPdfTemplate from "../components/PurchaseKPIReportPdfTemp
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
-// ---------- Breakdown row ----------
-function BreakdownItem({ label, value, count, percentage, color }) {
-    return (
-        <div className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex-1 min-w-0 flex items-center gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
-                <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{label}</p>
-                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{count} transactions</p>
-                </div>
-            </div>
-            <div className="text-right shrink-0 pl-3">
-                <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {value?.toLocaleString() || 0}</p>
-                <p className="text-xs" style={{ color }}>{percentage}%</p>
-            </div>
-        </div>
-    );
-}
-
 // ---------- Transaction table renderer ----------
 function renderPurchaseTransactionRow(transaction, formatDate, onExpandPurchase) {
     return (
         <>
             <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>
-                <button 
+                <button
                     onClick={() => onExpandPurchase && onExpandPurchase(transaction)}
                     className="text-left hover:underline flex items-center gap-1"
                 >
@@ -50,7 +31,7 @@ function renderPurchaseTransactionRow(transaction, formatDate, onExpandPurchase)
     );
 }
 
-function PurchaseTransactionTable({ purchases = [], labels }) {
+function PurchaseTransactionTable({ purchases = [] }) {
     const [expandedPurchaseId, setExpandedPurchaseId] = useState(null);
 
     if (!purchases || purchases.length === 0) {
@@ -119,6 +100,7 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Product</th>
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Qty</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Returned</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost/Unit</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Discount</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Tax</th>
@@ -126,52 +108,62 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                                                            {purchase.items.map((item, itemIdx) => (
+                                                            {purchase.items.map((item, itemIdx) => {
+                                                                const batchId = item.batch?._id || item.batch;
+                                                                const returnedQty = purchase.purchaseReturns?.reduce((sum, ret) => {
+                                                                    const retItem = ret.items?.find(i =>
+                                                                        (i.batch?._id || i.batch) === batchId ||
+                                                                        i.batchNumber === item.batch?.batchNumber
+                                                                    );
+                                                                    return sum + (retItem?.quantity || 0);
+                                                                }, 0) || 0;
+
+                                                                return (
                                                                 <tr key={itemIdx}>
                                                                     <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
                                                                         <div>{item.product?.name || item.productName || 'N/A'}</div>
                                                                     </td>
                                                                     <td className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>{item.batch?.batchNumber || item.batchNumber || 'N/A'}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: returnedQty > 0 ? '#dc2626' : 'var(--muted)' }}>{returnedQty}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {item.costPrice?.toLocaleString() || 0}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#10b981' }}>{item.discountType === 'fixed' ? `Rs ${(item.discountAmount || item.discount || 0).toLocaleString()}` : `${(item.discount || 0).toLocaleString()}%`}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#f59e0b' }}>{item.taxType === 'fixed' ? `Rs ${(item.taxAmount || item.tax || 0).toLocaleString()}` : `${(item.tax || 0).toLocaleString()}%`}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>Rs {((item.costPrice || 0) * (item.quantity || 0) - (item.discount || 0) + (item.tax || 0)).toLocaleString() || 0}</td>
                                                                 </tr>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </tbody>
                                                     </table>
-                                                                                                {/* Purchase Returns Section */}
-                                                                                                {purchase.purchaseReturns && purchase.purchaseReturns.length > 0 && (
-                                                                                                    <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                                                                                                        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Purchase Returns ({purchase.purchaseReturns.length})</p>
-                                                                                                        <div className="space-y-2">
-                                                                                                            {purchase.purchaseReturns.map((ret, retIdx) => (
-                                                                                                                <div key={retIdx} className="text-xs p-2 rounded" style={{ background: 'var(--app-bg)', borderColor: 'var(--border)', border: '1px solid' }}>
-                                                                                                                    <div className="flex items-center justify-between mb-1">
-                                                                                                                        <span style={{ color: 'var(--ink)' }}><strong>{ret.purchaseReturnNumber}</strong></span>
-                                                                                                                        <span style={{ color: 'var(--muted)' }}>{new Date(ret.createdAt).toLocaleDateString()}</span>
-                                                                                                                    </div>
-                                                                                                                    <div className="flex justify-between gap-4">
-                                                                                                                        <span style={{ color: 'var(--muted)' }}>Items: <strong style={{ color: 'var(--ink)' }}>{ret.items?.length || 0}</strong></span>
-                                                                                                                        <span style={{ color: 'var(--muted)' }}>Refund: <strong style={{ color: 'var(--accent-2)' }}>Rs {ret.totalRefundAmount?.toLocaleString() || 0}</strong></span>
-                                                                                                                        <span style={{ color: 'var(--muted)' }}>Status: <strong style={{ color: 'var(--ink)' }}>{ret.status}</strong></span>
-                                                                                                                    </div>
-                                                                                                                    {/* Return Items */}
-                                                                                                                    {ret.items && ret.items.length > 0 && (
-                                                                                                                        <div className="mt-2 pl-2 border-l-2" style={{ borderColor: 'var(--accent-2)' }}>
-                                                                                                                            {ret.items.map((retItem, retItemIdx) => (
-                                                                                                                                <div key={retItemIdx} className="text-xs py-1" style={{ color: 'var(--muted)' }}>
-                                                                                                                                    {retItem.product?.name || retItem.productName || 'Unknown'} - Qty: {retItem.quantity}
-                                                                                                                                </div>
-                                                                                                                            ))}
-                                                                                                                        </div>
-                                                                                                                    )}
-                                                                                                                </div>
-                                                                                                            ))}
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                )}
+                                                    {purchase.purchaseReturns && purchase.purchaseReturns.length > 0 && (
+                                                        <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                                                            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Purchase Returns ({purchase.purchaseReturns.length})</p>
+                                                            <div className="space-y-2">
+                                                                {purchase.purchaseReturns.map((ret, retIdx) => (
+                                                                    <div key={retIdx} className="text-xs p-2 rounded" style={{ background: 'var(--app-bg)', borderColor: 'var(--border)', border: '1px solid' }}>
+                                                                        <div className="flex items-center justify-between mb-1">
+                                                                            <span style={{ color: 'var(--ink)' }}><strong>{ret.purchaseReturnNumber}</strong></span>
+                                                                            <span style={{ color: 'var(--muted)' }}>{new Date(ret.createdAt).toLocaleDateString()}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span style={{ color: 'var(--muted)' }}>Items: <strong style={{ color: 'var(--ink)' }}>{ret.items?.length || 0}</strong></span>
+                                                                            <span style={{ color: 'var(--muted)' }}>Refund: <strong style={{ color: 'var(--accent-2)' }}>Rs {ret.totalRefundAmount?.toLocaleString() || 0}</strong></span>
+                                                                            <span style={{ color: 'var(--muted)' }}>Status: <strong style={{ color: 'var(--ink)' }}>{ret.status}</strong></span>
+                                                                        </div>
+                                                                        {ret.items && ret.items.length > 0 && (
+                                                                            <div className="mt-2 pl-2 border-l-2" style={{ borderColor: 'var(--accent-2)' }}>
+                                                                                {ret.items.map((retItem, retItemIdx) => (
+                                                                                    <div key={retItemIdx} className="text-xs py-1" style={{ color: 'var(--muted)' }}>
+                                                                                        {retItem.product?.name || retItem.productName || 'Unknown'} - Qty: {retItem.quantity}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -187,6 +179,25 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                     Showing first {50} of {purchases.length} purchases
                 </div>
             )}
+        </div>
+    );
+}
+
+// ---------- Breakdown row ----------
+function BreakdownItem({ label, value, count, percentage, color }) {
+    return (
+        <div className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex-1 min-w-0 flex items-center gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{label}</p>
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{count} transactions</p>
+                </div>
+            </div>
+            <div className="text-right shrink-0 pl-3">
+                <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {value?.toLocaleString() || 0}</p>
+                <p className="text-xs" style={{ color }}>{percentage}%</p>
+            </div>
         </div>
     );
 }
@@ -242,6 +253,22 @@ export default function PurchaseKPIReport() {
     const purchases = data?.data || [];
     const summary = data?.summary || {};
     const breakdowns = data?.supplierBreakdown || [];
+    const purchaseReturns = purchases.flatMap((purchase) => purchase.purchaseReturns || []);
+    const totalPurchaseReturns = purchaseReturns.reduce(
+        (total, purchaseReturn) => total + Number(purchaseReturn.totalRefundAmount ?? purchaseReturn.totalAmount ?? 0),
+        0
+    );
+    const grossPurchased = Number(summary.totalPurchases ?? 0);
+    const netPurchased = Math.max(0, grossPurchased - totalPurchaseReturns);
+    const adjustedOutstanding = Math.max(0, Number(summary.totalDue ?? 0) - totalPurchaseReturns);
+    const reportSummary = {
+        ...summary,
+        totalPurchases: grossPurchased,
+        netPurchased,
+        totalPurchaseReturns,
+        totalPurchaseReturnCount: purchaseReturns.length,
+        totalDue: adjustedOutstanding,
+    };
     const showLoader = isLoading || isFetching;
 
     return (
@@ -326,7 +353,7 @@ export default function PurchaseKPIReport() {
             ) : (
                 <div>
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                    <div className="flex flex-wrap flex-1 gap-4 mb-6">
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                             <div className="flex items-center gap-2">
                                 <div className="rounded-lg p-2" style={{ background: `${COLORS.purchases}17` }}>
@@ -335,10 +362,49 @@ export default function PurchaseKPIReport() {
                                 <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Total Purchased</p>
                             </div>
                             <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.totalPurchases ?? 0).toLocaleString()}
+                                Rs {reportSummary.totalPurchases.toLocaleString()}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Total cost</p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{summary.totalBills || 0} orders</p>
                         </div>
+
+                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg p-2" style={{ background: `${COLORS.returnsPurchase}17` }}>
+                                    <RefreshCw size={18} style={{ color: COLORS.returnsPurchase }} />
+                                </div>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Returns</p>
+                            </div>
+                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: COLORS.returnsPurchase }}>
+                                Rs {reportSummary.totalPurchaseReturns.toLocaleString()}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{reportSummary.totalPurchaseReturnCount} returns</p>
+                        </div>
+
+                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg p-2" style={{ background: `${COLORS.profit}17` }}>
+                                    <TrendingUp size={18} style={{ color: COLORS.profit }} />
+                                </div>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Net Amount Spent</p>
+                            </div>
+                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
+                                Rs {reportSummary.netPurchased.toLocaleString()}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>After returns</p>
+                        </div>
+
+                        {/* <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg p-2" style={{ background: `${COLORS.unpaid}17` }}>
+                                    <AlertCircle size={18} style={{ color: COLORS.unpaid }} />
+                                </div>
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Outstanding</p>
+                            </div>
+                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
+                                Rs {reportSummary.totalDue.toLocaleString()}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: COLORS.unpaid }}>Amount due</p>
+                        </div> */}
 
                         <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                             <div className="flex items-center gap-2">
@@ -351,58 +417,6 @@ export default function PurchaseKPIReport() {
                                 {summary.totalBills || 0}
                             </p>
                             <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Total bills</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-lg p-2" style={{ background: `${COLORS.delivered}17` }}>
-                                    <Truck size={18} style={{ color: COLORS.delivered }} />
-                                </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Delivered</p>
-                            </div>
-                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                {summary.totalDeliveredCount || 0}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Orders</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-lg p-2" style={{ background: `${COLORS.unpaid}17` }}>
-                                    <AlertCircle size={18} style={{ color: COLORS.unpaid }} />
-                                </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Outstanding</p>
-                            </div>
-                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.totalDue ?? 0).toLocaleString()}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: COLORS.unpaid }}>Amount due</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-lg p-2" style={{ background: `${COLORS.suppliers}17` }}>
-                                    <Wallet size={18} style={{ color: COLORS.suppliers }} />
-                                </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Total Paid</p>
-                            </div>
-                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: 'var(--ink)' }}>
-                                Rs {(summary.totalPaid ?? 0).toLocaleString()}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Amount paid</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-lg p-2" style={{ background: `${COLORS.returnsPurchase}17` }}>
-                                    <RefreshCw size={18} style={{ color: COLORS.returnsPurchase }} />
-                                </div>
-                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Rejected</p>
-                            </div>
-                            <p className="text-2xl font-bold tabular-nums mt-2" style={{ color: '#dc2626' }}>
-                                {summary.totalRejectedCount || 0}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Purchase count</p>
                         </div>
                     </div>
 
@@ -423,13 +437,13 @@ export default function PurchaseKPIReport() {
                             {breakdowns && breakdowns.length > 0 ? (
                                 <div className="space-y-0">
                                     {breakdowns.map((item, idx) => (
-                                        <BreakdownItem 
-                                            key={idx} 
-                                            label={item.supplierName} 
-                                            value={item.totalAmount} 
-                                            count={item.billsCount} 
+                                        <BreakdownItem
+                                            key={idx}
+                                            label={item.supplierName}
+                                            value={item.totalAmount}
+                                            count={item.billsCount}
                                             percentage={(summary.totalPurchases && summary.totalPurchases > 0) ? ((item.totalAmount / summary.totalPurchases) * 100).toFixed(1) : 0}
-                                            color={COLORS.suppliers} 
+                                            color={COLORS.suppliers}
                                         />
                                     ))}
                                 </div>
@@ -442,7 +456,7 @@ export default function PurchaseKPIReport() {
                     {/* Purchase Transactions */}
                     <div>
                         <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>Purchase Transactions</h2>
-                        <PurchaseTransactionTable purchases={purchases} labels={labels} />
+                        <PurchaseTransactionTable purchases={purchases} />
                     </div>
                 </div>
             )}
@@ -456,8 +470,8 @@ export default function PurchaseKPIReport() {
                     labels={labels}
                 >
                     <PurchaseKPIReportPdfTemplate
-                        summary={summary}
-                        breakdowns={breakdowns}
+                        summary={reportSummary}
+                        breakdowns={{ bySupplier: breakdowns }}
                         labels={labels}
                         selectedPeriodLabel={period === "custom" ? `${fromDate} to ${toDate}` : period}
                     />

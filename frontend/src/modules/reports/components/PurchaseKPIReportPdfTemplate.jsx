@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, TrendingUp, Package, RefreshCw, Truck, AlertCircle } from "lucide-react";
+import { DollarSign, Package, RefreshCw, AlertCircle } from "lucide-react";
 
 function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
     return (
@@ -19,7 +19,7 @@ function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
     );
 }
 
-export default function PurchaseKPIReportPdfTemplate({ summary = {}, breakdowns = {}, labels = {}, selectedPeriodLabel = '' }) {
+export default function PurchaseKPIReportPdfTemplate({ summary = {}, breakdowns = {}, selectedPeriodLabel = '' }) {
     return (
         <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
             <div className="mb-6">
@@ -31,41 +31,34 @@ export default function PurchaseKPIReportPdfTemplate({ summary = {}, breakdowns 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <KpiCard
                     label="Total Purchased"
-                    value={summary.totalAmountPurchased}
+                    value={summary.totalPurchases}
                     icon={DollarSign}
                     color="#3b82f6"
                 />
                 <KpiCard
                     label="Purchase Orders"
-                    value={summary.totalPurchaseOrders}
+                    value={summary.totalBills}
                     icon={Package}
                     color="#3b82f6"
                     isCurrency={false}
                 />
-                <KpiCard
-                    label="Items Received"
-                    value={summary.totalItemsReceived}
-                    icon={Truck}
-                    color="#10b981"
-                    isCurrency={false}
-                />
-                <KpiCard
+                {/* <KpiCard
                     label="Outstanding"
-                    value={summary.totalUnpaid}
+                    value={summary.totalDue}
                     icon={AlertCircle}
                     color="#ef4444"
-                />
-                <KpiCard
-                    label="Avg Order Value"
-                    value={summary.averageOrderValue}
-                    icon={DollarSign}
-                    color="#8b5cf6"
-                />
+                /> */}
                 <KpiCard
                     label="Total Returns"
                     value={summary.totalPurchaseReturns}
                     icon={RefreshCw}
                     color="#06b6d4"
+                />
+                <KpiCard
+                    label="Net Amount Spent"
+                    value={summary.netPurchased}
+                    icon={DollarSign}
+                    color="#10b981"
                 />
             </div>
 
