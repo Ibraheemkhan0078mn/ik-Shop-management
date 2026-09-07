@@ -457,10 +457,12 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
         });
     };
 
-    const calculateDiscountAmount = (item, quantity) => {
-        const costPrice = item.costPrice || item.price;
-        let discountAmount = 0;
+    const calculateUnitCostAfterTaxAndDiscount = (item) => {
+        const costPrice = Number(item.costPrice || item.price) || 0;
+        const quantity = 1; // Per unit
         
+        // Calculate discount amount per unit
+        let discountAmount = 0;
         if (purchaseData?.discountType && purchaseData?.discount) {
             const discount = Number(purchaseData.discount) || 0;
             if (purchaseData.discountType === 'percentage') {
@@ -472,48 +474,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             }
         }
         
-        return discountAmount;
-    };
-
-    const calculateTaxAmount = (item, quantity) => {
-        const costPrice = item.costPrice || item.price;
-        let taxAmount = 0;
-        
-        if (purchaseData?.gstType && purchaseData?.gst) {
-            const tax = Number(purchaseData.gst) || 0;
-            if (purchaseData.gstType === 'percentage') {
-                taxAmount = (costPrice * quantity * tax) / 100;
-            } else if (purchaseData.gstType === 'fixed') {
-                taxAmount = tax * quantity;
-            }
-        }
-        
-        return taxAmount;
-    };
-
-    const calculateRefund = (item, details) => {
-        const returnQty = Number(details.returnQuantity) || 0;
-        const costPrice = Number(item.costPrice || item.price) || 0;
-        const cut = Number(details.cut) || 0;
-
-        // Calculate original total
-        const originalTotal = costPrice * returnQty;
-        
-        // Calculate discount amount
-        let discountAmount = 0;
-        if (purchaseData?.discountType && purchaseData?.discount) {
-            const discount = Number(purchaseData.discount) || 0;
-            if (purchaseData.discountType === 'percentage') {
-                discountAmount = (costPrice * returnQty * discount) / 100;
-            } else if (purchaseData.discountType === 'fixed') {
-                const totalQuantity = purchaseData.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                const discountPerItem = discount / totalQuantity;
-                discountAmount = discountPerItem * returnQty;
-            }
-        }
-        
-        // Calculate tax amount (on after-discount price)
-        const afterDiscount = originalTotal - discountAmount;
+        // Calculate tax amount per unit (on after-discount price)
+        const afterDiscount = costPrice - discountAmount;
         let taxAmount = 0;
         if (purchaseData?.gstType && purchaseData?.gst) {
             const tax = Number(purchaseData.gst) || 0;
@@ -523,9 +485,27 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                 taxAmount = tax;
             }
         }
+        
+        // Return cost after tax and discount along with breakdown
+        return {
+            unitCosting: costPrice - discountAmount + taxAmount,
+            discountAmount,
+            taxAmount
+        };
+    };
 
-        // Calculate refund: original - discount + tax - cut
-        return originalTotal - discountAmount + taxAmount - cut;
+    const calculateRefund = (item, details) => {
+        const returnQty = Number(details.returnQuantity) || 0;
+        const cut = Number(details.cut) || 0;
+
+        // Calculate per-unit costing (cost after tax and discount)
+        const costingBreakdown = calculateUnitCostAfterTaxAndDiscount(item);
+        
+        // Total = per-unit costing * return quantity
+        const total = costingBreakdown.unitCosting * returnQty;
+        
+        // Refund = total - cut
+        return total - cut;
     };
 
     const totalRefund = useMemo(() => {
@@ -867,7 +847,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         {labels.items}: {item.quantity}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
-                                                        {labels.costPrice || "Cost Price"}: Rs. {Number(item.costPrice || item.price || 0).toFixed(2)}
+                                                        Costing: Rs. {calculateUnitCostAfterTaxAndDiscount(item).unitCosting.toFixed(2)}
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
                                                         {labels.batch}: {item.batch?.batchNumber || "—"}
@@ -877,7 +857,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                     </div>
                                                     {isSelected && (
                                                         <div className="text-right font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                            Rs {((details.returnQuantity * (item.costPrice || item.price)) - calculateDiscountAmount(item, details.returnQuantity) + calculateTaxAmount(item, details.returnQuantity)).toFixed(2)}
+                                                            Rs {(calculateUnitCostAfterTaxAndDiscount(item).unitCosting * details.returnQuantity).toFixed(2)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -935,67 +915,46 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         </div>
                                                         {expandedCalculation[batchId] && (
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                                                                {/* Container 1: Original Price */}
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Original Price</p>
+                                                                {/* Container 1: Costing & Total */}
+                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Costing & Total</p>
                                                                     <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Return Quantity:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{details.returnQuantity}</span>
-                                                                        </div>
                                                                         <div className="flex justify-between">
                                                                             <span style={{ color: "var(--ink)" }}>Cost Price:</span>
                                                                             <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.costPrice || item.price).toFixed(2)}</span>
                                                                         </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Less Discount ({purchaseData?.discountType === 'fixed' ? 'fixed' : 'percentage'}):</span>
+                                                                            <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calculateUnitCostAfterTaxAndDiscount(item).discountAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
+                                                                            <span>Original: {purchaseData?.discountType === 'fixed' ? `Rs ${Number(purchaseData?.discount || 0).toFixed(2)}` : `${Number(purchaseData?.discount || 0).toFixed(2)}%`}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span style={{ color: "var(--ink)" }}>Plus Tax ({purchaseData?.gstType === 'fixed' ? 'fixed' : 'percentage'}):</span>
+                                                                            <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calculateUnitCostAfterTaxAndDiscount(item).taxAmount.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
+                                                                            <span>Original: {purchaseData?.gstType === 'fixed' ? `Rs ${Number(purchaseData?.gst || 0).toFixed(2)}` : `${Number(purchaseData?.gst || 0).toFixed(2)}%`}</span>
+                                                                        </div>
                                                                         <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Original Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(details.returnQuantity * (item.costPrice || item.price)).toFixed(2)}</span>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Per-Unit Costing:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calculateUnitCostAfterTaxAndDiscount(item).unitCosting.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--accent-2)" }}>Total (Costing × Quantity):</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(calculateUnitCostAfterTaxAndDiscount(item).unitCosting * details.returnQuantity).toFixed(2)}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Container 2: Discount & Tax */}
-                                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount & Tax</p>
-                                                                    <div className="text-xs space-y-1">
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(purchaseData?.discount || 0).toFixed(2)} {purchaseData?.discountType || ""}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
-                                                                            <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calculateDiscountAmount(item, details.returnQuantity).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Tax:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(purchaseData?.gst || 0).toFixed(2)} {purchaseData?.gstType || ""}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
-                                                                            <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calculateTaxAmount(item, details.returnQuantity).toFixed(2)}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Container 3: Subtotal & Refund */}
+                                                                {/* Container 2: Refund Calculation */}
                                                                 <div className="p-3 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Subtotal & Refund</p>
+                                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Refund Calculation</p>
                                                                     <div className="text-xs space-y-1">
                                                                         <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Original Total:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(details.returnQuantity * (item.costPrice || item.price)).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Less Discount:</span>
-                                                                            <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calculateDiscountAmount(item, details.returnQuantity).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Plus Tax:</span>
-                                                                            <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calculateTaxAmount(item, details.returnQuantity).toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--accent-2)" }}>Subtotal:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {((details.returnQuantity * (item.costPrice || item.price)) - calculateDiscountAmount(item, details.returnQuantity) + calculateTaxAmount(item, details.returnQuantity)).toFixed(2)}</span>
+                                                                            <span style={{ color: "var(--ink)" }}>Total:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(calculateUnitCostAfterTaxAndDiscount(item).unitCosting * details.returnQuantity).toFixed(2)}</span>
                                                                         </div>
                                                                         <div className="flex justify-between">
                                                                             <span style={{ color: "var(--ink)" }}>Less Cut:</span>
