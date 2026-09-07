@@ -72,6 +72,7 @@ import {
     countProductReturnService,
 } from '../../productReturn/services/productReturn.crud.js';
 import { getLocalPurchaseReturnModel } from '../../../configs/connect.db.js';
+import { getProductCostingByBatch } from '../../product/services/productCosting.service.js';
 
 // Helper function to build date filter
 const buildDateFilter = (fromDate, toDate) => {
@@ -259,6 +260,16 @@ export const generateSalesReportData = async (filters = {}) => {
     // Fetch orders
     const orders = await findOrderService({ ...dateFilter, ...orderFilter });
 
+    const costingCache = new Map();
+    const getItemCosting = async (item) => {
+        const productId = item.productId || item.product;
+        const cacheKey = `${String(productId || '')}:${String(item.batchId || '')}`;
+        if (!costingCache.has(cacheKey)) {
+            costingCache.set(cacheKey, getProductCostingByBatch(productId, item.batchId));
+        }
+        return costingCache.get(cacheKey);
+    };
+
     // Returns are reported against the order date so a filtered sale remains auditable
     // even when its approved return was processed later.
     const orderIds = orders.map(order => order._id);
@@ -331,33 +342,8 @@ export const generateSalesReportData = async (filters = {}) => {
     for (const order of orders) {
         if (order.items) {
             for (const item of order.items) {
-                let effectiveCostPrice = 0;
-                
-                if (item.batchId) {
-                    const batch = await findByIdBatchService(item.batchId);
-                    if (batch && batch.purchasePrice) {
-                        // Start with base purchase price
-                        let baseCostPrice = batch.purchasePrice;
-                        
-                        // Apply batch-level discount if exists
-                        if (batch.discount && batch.discount.amount > 0) {
-                            if (batch.discount.type === 'percentage') {
-                                baseCostPrice = baseCostPrice * (1 - (batch.discount.amount / 100));
-                            } else {
-                                baseCostPrice = baseCostPrice - (batch.discount.amount || 0);
-                            }
-                        }
-                        
-                        // Apply batch-level tax if exists
-                        if (batch.gst && batch.gst > 0) {
-                            baseCostPrice = baseCostPrice * (1 + (batch.gst / 100));
-                        }
-                        
-                        effectiveCostPrice = baseCostPrice;
-                    }
-                }
-                
-                totalCostOfGoodsSold += effectiveCostPrice * (item.quantity || 0);
+                const costing = await getItemCosting(item);
+                totalCostOfGoodsSold += costing.effectiveCostPrice * (item.quantity || 0);
             }
         }
     }
@@ -373,18 +359,13 @@ export const generateSalesReportData = async (filters = {}) => {
             const soldItem = order?.items?.find(item => String(item.batchId) === String(returnedItem.batchId) && String(item.product) === String(returnedItem.productId));
             let costPrice = 0;
             if (returnedItem.batchId) {
-                const batch = await findByIdBatchService(returnedItem.batchId);
-                if (batch) {
-                    costPrice = Number(batch.purchasePrice) || 0;
-                    if (batch.discount?.amount > 0) {
-                        costPrice = batch.discount.type === 'percentage'
-                            ? costPrice * (1 - batch.discount.amount / 100)
-                            : costPrice - batch.discount.amount;
-                    }
-                    if (batch.gst > 0) costPrice *= 1 + batch.gst / 100;
-                }
+                const costing = await getItemCosting({
+                    productId: returnedItem.productId,
+                    batchId: returnedItem.batchId,
+                });
+                costPrice = costing.effectiveCostPrice;
             } else if (soldItem) {
-                costPrice = Number(soldItem.purchasePrice) || 0;
+                costPrice = (await getItemCosting(soldItem)).effectiveCostPrice;
             }
             returnedCOGS += costPrice * (returnedItem.quantity || 0);
         }
@@ -424,65 +405,12 @@ export const generateSalesReportData = async (filters = {}) => {
                 // Fetch batch details for each item in the order
                 const itemsWithBatchDetails = await Promise.all(
                     (order.items || []).map(async (item) => {
-                        let costPrice = 0;
-                        let batchSalePrice = 0;
-                        let batchNumber = item.batchNumber || 'N/A';
-                        let batchDiscount = 0;
-                        let batchDiscountType = 'percentage';
-                        
-                        // Fetch batch details to get cost price
-                        if (item.batchId) {
-                            try {
-                                const batch = await findByIdBatchService(item.batchId);
-                                if (batch) {
-                                    // Start with base purchase price
-                                    let baseCostPrice = Number(batch.purchasePrice) || 0;
-                                    
-                                    // Calculate effective cost price including purchase tax and discount
-                                    let effectiveCostPrice = baseCostPrice;
-                                    let purchaseDiscount = 0;
-                                    let purchaseTax = 0;
-                                    
-                                    // Apply batch-level discount if exists
-                                    if (batch.discount && batch.discount.amount > 0) {
-                                        if (batch.discount.type === 'percentage') {
-                                            purchaseDiscount = baseCostPrice * (batch.discount.amount / 100);
-                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
-                                        } else {
-                                            purchaseDiscount = batch.discount.amount || 0;
-                                            effectiveCostPrice = baseCostPrice - purchaseDiscount;
-                                        }
-                                    }
-                                    
-                                    // Apply batch-level tax if exists
-                                    if (batch.gst && batch.gst > 0) {
-                                        purchaseTax = effectiveCostPrice * (batch.gst / 100);
-                                        effectiveCostPrice = effectiveCostPrice + purchaseTax;
-                                    }
-                                    
-                                    // Use effective cost price for calculations
-                                    costPrice = effectiveCostPrice;
-                                    batchSalePrice = Number(batch.sellingPrice) || 0;
-                                    batchNumber = batch.batchNumber || batchNumber;
-                                    batchDiscount = purchaseDiscount;
-                                    batchDiscountType = batch.discount?.type || 'percentage';
-                                    
-                                    // Store additional purchase cost breakdown
-                                    item.basePurchasePrice = baseCostPrice;
-                                    item.purchaseDiscount = purchaseDiscount;
-                                    item.purchaseTax = purchaseTax;
-                                    item.effectiveCostPrice = effectiveCostPrice;
-                                    
-                                } else {
-                                    console.warn(`Batch not found for batchId: ${item.batchId}, product: ${item.name}`);
-                                }
-                            } catch (error) {
-                                console.error(`Error fetching batch ${item.batchId} for product ${item.name}:`, error.message);
-                                // Continue with costPrice = 0 if batch lookup fails - don't fail the entire request
-                            }
-                        } else {
-                            console.warn(`No batchId for item: ${item.name} in order, cannot fetch cost price`);
-                        }
+                        const costing = await getItemCosting(item);
+                        const costPrice = costing.effectiveCostPrice;
+                        const batchSalePrice = costing.sellingPrice;
+                        const batchNumber = costing.batchNumber || item.batchNumber || 'N/A';
+                        const batchDiscount = costing.discountAmount;
+                        const batchDiscountType = costing.discountType;
                         
                         // Calculate totals for this item
                         const itemCostTotal = costPrice * (item.quantity || 0);
@@ -492,13 +420,15 @@ export const generateSalesReportData = async (filters = {}) => {
                         
                         return {
                             productName: item.name,
+                            productId: item.productId || item.product,
                             quantity: item.quantity || 0,
                             // Prices
                             costPrice: costPrice,
-                            basePurchasePrice: item.basePurchasePrice || costPrice,
-                            purchaseDiscount: item.purchaseDiscount || 0,
-                            purchaseTax: item.purchaseTax || 0,
-                            effectiveCostPrice: item.effectiveCostPrice || costPrice,
+                            basePurchasePrice: costing.basePurchasePrice,
+                            purchaseDiscount: costing.discountAmount,
+                            purchaseTax: costing.taxAmount,
+                            effectiveCostPrice: costing.effectiveCostPrice,
+                            costing,
                             batchSalePrice: batchSalePrice,
                             unitPrice: item.unitPrice || 0,
                             originalPrice: item.originalPrice || 0,

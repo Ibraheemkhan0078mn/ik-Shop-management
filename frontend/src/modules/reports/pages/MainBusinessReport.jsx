@@ -236,14 +236,14 @@ function TransactionTable({ transactions, type, labels }) {
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>
                                                                         <div className="space-y-0.5">
-                                                                            <div>Rs {item.costPrice?.toLocaleString() || 0}</div>
+                                                                            <div>Rs {(item.effectiveCostPrice ?? item.costPrice ?? 0).toLocaleString()}</div>
                                                                             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-                                                                                Base: {item.basePurchasePrice?.toLocaleString() || 0}
-                                                                                {item.purchaseDiscount > 0 && (
-                                                                                    <div style={{ color: '#f59e0b' }}>-Disc: {item.purchaseDiscount?.toLocaleString()}</div>
+                                                                                Original: {item.basePurchasePrice?.toLocaleString() || 0}
+                                                                                {item.costing?.discountAmount > 0 && (
+                                                                                    <div style={{ color: '#f59e0b' }}>-Disc: {item.costing.discountAmount.toLocaleString()} ({item.costing.discountValue}{item.costing.discountType === 'percentage' ? '%' : ''})</div>
                                                                                 )}
-                                                                                {item.purchaseTax > 0 && (
-                                                                                    <div style={{ color: '#8b5cf6' }}>+Tax: {item.purchaseTax?.toLocaleString()}</div>
+                                                                                {item.costing?.taxAmount > 0 && (
+                                                                                    <div style={{ color: '#8b5cf6' }}>+Tax: {item.costing.taxAmount.toLocaleString()} ({item.costing.taxValue}%)</div>
                                                                                 )}
                                                                             </div>
                                                                         </div>
