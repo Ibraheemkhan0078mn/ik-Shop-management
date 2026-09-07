@@ -753,9 +753,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setItemForm(p => ({
             ...p, batchMode: "existing", batchSelection: val,
             batchNumber: b.batchNumber ?? p.batchNumber,
-            perItemPrice: b.purchasePrice != null ? String(b.purchasePrice) : p.perItemPrice,
+            costPrice: b.purchasePrice != null ? String(b.purchasePrice) : p.costPrice,
+            perItemPrice: b.sellingPrice != null ? String(b.sellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(b.mfgDate),
             expiryDate: toInputDate(b.expiryDate),
+            discount: String(b.discount?.amount ?? 0),
+            discountType: b.discount?.type || "percentage",
+            tax: String(b.gst ?? 0),
+            taxType: b.gstType || "percentage",
         }));
     };
 

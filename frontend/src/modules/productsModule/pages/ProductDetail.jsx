@@ -438,6 +438,8 @@ export default function ProductDetail() {
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Stock</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Purchase Price</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Discount</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Tax</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Selling Price</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">MFG Date</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Expiry Date</th>
@@ -448,12 +450,24 @@ export default function ProductDetail() {
                                 <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
                                     {batches.map((batch) => {
                                         const status = getBatchStatus(batch);
+                                        const formatDiscount = () => {
+                                            if (!batch.discount || !batch.discount.amount) return "—";
+                                            return batch.discount.type === 'percentage'
+                                                ? `${batch.discount.amount}% (percentage)`
+                                                : `Rs ${batch.discount.amount.toLocaleString()} (fixed)`;
+                                        };
+                                        const formatTax = () => {
+                                            if (!batch.gst) return "—";
+                                            return `Rs ${batch.gst.toLocaleString()} (fixed)`;
+                                        };
                                         return (
                                             <tr key={batch._id} className="hover:bg-[var(--surface-muted)]">
                                                 <td className="px-4 py-3 text-sm font-medium text-[var(--ink)]">{batch.batchNumber}</td>
                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">{batch.supplier?.name || "—"}</td>
                                                 <td className="px-4 py-3 text-sm font-semibold text-right text-[var(--accent-2)]">{batch.quantity || 0}</td>
                                                 <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">Rs {batch.purchasePrice || 0}</td>
+                                                <td className="px-4 py-3 text-sm text-right text-[var(--muted)]">{formatDiscount()}</td>
+                                                <td className="px-4 py-3 text-sm text-right text-[var(--muted)]">{formatTax()}</td>
                                                 <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">Rs {batch.sellingPrice || 0}</td>
                                                 <td className="px-4 py-3 text-sm text-[var(--muted)]">{batch.mfgDate ? new Date(batch.mfgDate).toLocaleDateString() : "—"}</td>
                                                 <td className={`px-4 py-3 text-sm ${status === 'expired' ? 'text-red-500' : 'text-[var(--ink)]'}`}>

@@ -19,7 +19,7 @@ const getProductCostingByBatch = async (productId, batchId) => {
 
     if (!productId || !batchId) return emptyCosting;
 
-    const batch = await findOneBatchService({ _id: batchId, product: productId });
+    const batch = await findOneBatchService({ _id: batchId, product: productId }, { populate: "product" });
     if (!batch) return emptyCosting;
 
     const basePurchasePrice = Number(batch.purchasePrice) || 0;
