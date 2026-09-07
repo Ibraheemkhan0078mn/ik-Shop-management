@@ -4373,14 +4373,16 @@ export const getSupplierReport = async (filters = {}) => {
         const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
         const totalPaid = supplierPurchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
         const totalDue = totalPurchases - totalPaid;
-        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+        const totalReturns = supplierReturns.reduce((sum, r) => sum + (r.totalRefundAmount || 0), 0);
         const totalOrders = supplierPurchases.length;
         const totalReturnsCount = supplierReturns.length;
         const returnRate = totalOrders > 0 ? ((totalReturnsCount / totalOrders) * 100).toFixed(2) : 0;
         
-        const totalCreditAmount = qarzaPayments.reduce((sum, qp) => sum + (qp.creditAmount || 0), 0);
-        const totalDebitAmount = qarzaPayments.reduce((sum, qp) => sum + (qp.debitAmount || 0), 0);
-        const netBalance = totalCreditAmount - totalDebitAmount;
+        const creditPayments = qarzaPayments.filter(qp => qp.type === 'credit' || qp.type === 'cashin');
+        const debitPayments = qarzaPayments.filter(qp => qp.type === 'debit' || qp.type === 'cashout');
+        const totalCreditAmount = creditPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
+        const totalDebitAmount = debitPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
+        const netBalance = totalDebitAmount - totalCreditAmount;
 
         return {
             totalPurchases,
