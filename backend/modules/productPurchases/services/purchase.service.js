@@ -173,6 +173,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 gst: Number(item.tax) || 0,
+                gstType: item.taxType || "percentage",
             };
             
             // Add discount object with amount
@@ -204,6 +205,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 expiryDate: item.expiryDate,
                 supplier: purchaseData.supplier,
                 gst: Number(item.tax) || 0,
+                gstType: item.taxType || "percentage",
             };
             
             // Add discount object with amount
@@ -310,6 +312,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 mfgDate: item.mfgDate, 
                 expiryDate: item.expiryDate,
                 gst: Number(item.tax) || 0,
+                gstType: item.taxType || "percentage",
             };
             
             // Add discount object with amount
@@ -340,6 +343,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 expiryDate: item.expiryDate,
                 supplier: data.supplier,
                 gst: Number(item.tax) || 0,
+                gstType: item.taxType || "percentage",
             };
             
             // Add discount object with amount

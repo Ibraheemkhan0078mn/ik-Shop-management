@@ -30,7 +30,10 @@ const getProductCostingByBatch = async (productId, batchId) => {
         : discountValue;
     const priceAfterDiscount = Math.max(0, basePurchasePrice - discountAmount);
     const taxValue = Number(batch.gst) || 0;
-    const taxAmount = (priceAfterDiscount * taxValue) / 100;
+    const taxType = batch.gstType || "percentage";
+    const taxAmount = taxType === "percentage"
+        ? (priceAfterDiscount * taxValue) / 100
+        : taxValue;
 
     return {
         productId,
@@ -42,7 +45,7 @@ const getProductCostingByBatch = async (productId, batchId) => {
         discountType,
         discountAmount,
         taxValue,
-        taxType: "percentage",
+        taxType,
         taxAmount,
         effectiveCostPrice: priceAfterDiscount + taxAmount,
         found: true,

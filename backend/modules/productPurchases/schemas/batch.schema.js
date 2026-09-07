@@ -25,6 +25,7 @@ export const createBatchSchema = yup.object({
         type: yup.string().oneOf(["percentage", "fixed"]),
     }),
     gst: yup.number().min(0),
+    gstType: yup.string().oneOf(["percentage", "fixed"]),
     gstDiscount: yup.number().min(0),
 });
 
@@ -43,5 +44,6 @@ export const updateBatchSchema = yup.object({
         type: yup.string().oneOf(["percentage", "fixed"]),
     }),
     gst: yup.number().min(0),
+    gstType: yup.string().oneOf(["percentage", "fixed"]),
     gstDiscount: yup.number().min(0),
 });

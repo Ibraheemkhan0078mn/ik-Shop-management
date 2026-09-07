@@ -55,6 +55,11 @@ const batchSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        gstType: {
+            type: String,
+            enum: ["percentage", "fixed"],
+            default: "percentage",
+        },
         gstDiscount: {
             type: Number,
             default: 0,
