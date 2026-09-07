@@ -55,8 +55,8 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                 <p className="text-sm text-(--muted)">{labels.staffAnalysis} · {selectedPeriodLabel}</p>
             </div>
 
-            {/* KPI Grid Row 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {/* KPI Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <KpiCard 
                     label={labels.totalStaff} 
                     value={details.totalStaff || 0} 
@@ -67,66 +67,52 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                 />
                 <KpiCard 
                     label={labels.totalSalariesPaid} 
-                    value={summary.totalSalariesPaid} 
+                    value={summary.totalSalaryPaid || 0} 
                     icon={DollarSign} 
                     color="#10b981" 
                     description={labels.salaryExpenses}
                 />
                 <KpiCard 
                     label={labels.commissionEarnings}
-                    value={summary.totalCommissionEarnings}
+                    value={summary.totalCommissionEarnings || 0}
                     icon={DollarSign}
                     color="#8b5cf6"
                     description={labels.commissionRate}
                 />
                 <KpiCard
                     label={labels.averageSalary} 
-                    value={summary.averageSalary} 
+                    value={summary.averageSalaryPaid || 0} 
                     icon={DollarSign} 
                     color="#2563eb" 
                     description={labels.perEmployee}
                 />
                 <KpiCard 
-                    label={labels.totalAdvances} 
-                    value={summary.totalAdvances} 
+                    label={labels.totalExpectedSalary} 
+                    value={summary.totalExpectedSalary || 0} 
+                    icon={DollarSign} 
+                    color="#3b82f6" 
+                    description={labels.totalEarnings}
+                />
+                <KpiCard 
+                    label={labels.remainingSalary} 
+                    value={summary.totalRemaining || 0} 
                     icon={DollarSign} 
                     color="#f59e0b" 
-                    description={labels.salaryAdvancesGiven}
+                    description={labels.unpaidSalaries}
                 />
-            </div>
-
-            {/* KPI Grid Row 2 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <KpiCard
-                    label={labels.totalLateDays}
-                    value={summary.totalLateDays || 0}
-                    icon={Calendar}
-                    color="#f59e0b"
-                    description={labels.totalLateDays}
-                    isCurrency={false}
+                    label={labels.totalSales}
+                    value={summary.totalSales || 0}
+                    icon={TrendingUp}
+                    color="#10b981"
+                    description={labels.totalRevenue}
                 />
                 <KpiCard 
-                    label={labels.averageAttendance} 
-                    value={summary.avgAttendancePercent || 0} 
-                    icon={Calendar} 
-                    color="#16a34a" 
-                    description={labels.presentDaysPercentage} 
-                    isCurrency={false}
-                />
-                <KpiCard 
-                    label={labels.totalPresentDays} 
-                    value={summary.totalPresentDays || 0} 
+                    label={labels.totalOrders} 
+                    value={summary.totalOrders || 0} 
                     icon={Users} 
-                    color="#059669" 
-                    description={labels.sumOfPresentDays} 
-                    isCurrency={false}
-                />
-                <KpiCard 
-                    label={labels.totalAbsentDays} 
-                    value={summary.totalAbsentDays || 0} 
-                    icon={Users} 
-                    color="#dc2626" 
-                    description={labels.sumOfAbsentDays} 
+                    color="#8b5cf6" 
+                    description={labels.ordersHandled} 
                     isCurrency={false}
                 />
             </div>
@@ -140,7 +126,7 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                             <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>{labels.payrollSummary}</span>
                         </div>
                         <p className="text-3xl font-bold" style={{ color: '#8b5cf6' }}>
-                            Rs {(summary.totalSalariesPaid || 0).toLocaleString()}
+                            Rs {(summary.totalSalaryPaid || 0).toLocaleString()}
                         </p>
                         <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
                             {labels.totalSalaryExpenses}
@@ -150,7 +136,7 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                         <p className="text-sm" style={{ color: 'var(--muted)' }}>{labels.staffCount}</p>
                         <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{details.totalStaff || 0}</p>
                         <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{labels.avgSalary}</p>
-                        <p className="text-lg font-bold" style={{ color: 'var(--ink)' }}>Rs {(summary.averageSalary || 0).toLocaleString()}</p>
+                        <p className="text-lg font-bold" style={{ color: 'var(--ink)' }}>Rs {(summary.averageSalaryPaid || 0).toLocaleString()}</p>
                     </div>
                 </div>
             </div>
@@ -168,31 +154,29 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.staffName}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.orders}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.sales}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.salaryEarnings}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.commissionRate}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.commissionEarnings}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.totalExpectedSalary}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.presentDays}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.absentDays}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.totalLateDays}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.totalSalariesPaid}</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>{labels.paymentCount}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Rate</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Commission</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Salary</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Total</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Paid</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Remaining</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Advances</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>Payments</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                     {staffMetrics.slice(0, 50).map((staff, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--ink)' }}>{staff.staffName || staff.name || '-'}</td>
+                                            <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--ink)' }}>{staff.fullName || staff.name || '-'}</td>
                                             <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>{staff.totalOrders || 0}</td>
                                             <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: '#10b981' }}>Rs {(staff.totalSales || 0).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>Rs {(staff.salaryEarnings || 0).toLocaleString()}</td>
                                             <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>{staff.commissionRate || 0}%</td>
-                                            <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: '#8b5cf6' }}>Rs {(staff.commissionEarnings || 0).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>Rs {(staff.expectedSalary || 0).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>{staff.totalPresentDays || 0}</td>
-                                            <td className="px-4 py-3 text-sm text-right" style={{ color: '#dc2626' }}>{staff.totalAbsentDays || 0}</td>
-                                            <td className="px-4 py-3 text-sm text-right" style={{ color: '#f59e0b' }}>{staff.totalLateDays || 0}</td>
-                                            <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: '#8b5cf6' }}>Rs {(staff.salaryPaid || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right" style={{ color: '#8b5cf6' }}>Rs {(staff.totalCommissionEarnings || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>Rs {(staff.totalSalaryEarnings || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: '#3b82f6' }}>Rs {(staff.totalEarnings || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: '#10b981' }}>Rs {(staff.totalPaid || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right" style={{ color: staff.totalRemaining > 0 ? '#f59e0b' : '#10b981' }}>Rs {(staff.totalRemaining || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-right" style={{ color: '#dc2626' }}>Rs {(staff.totalAdvance || 0).toLocaleString()}</td>
                                             <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--ink)' }}>{staff.paymentCount || 0}</td>
                                         </tr>
                                     ))}
@@ -210,14 +194,6 @@ export default function StaffReportPdfTemplate({ summary = {}, details = {}, sta
                     label={labels.topPerformer}
                     value={summary.topPerformer || 'N/A'}
                     description={labels.highestSalesStaff}
-                    isCurrency={false}
-                    color="var(--ink)"
-                />
-                <SummaryCard 
-                    icon={Calendar}
-                    label={labels.highestAttendance}
-                    value={summary.highestAttendance || 0}
-                    description={labels.percentage}
                     isCurrency={false}
                     color="var(--ink)"
                 />
