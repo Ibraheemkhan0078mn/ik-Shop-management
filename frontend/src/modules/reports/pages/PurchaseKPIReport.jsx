@@ -108,6 +108,8 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                                                     <div className="flex gap-4 text-xs" style={{ color: 'var(--muted)' }}>
                                                         <span>Supplier: <strong style={{ color: 'var(--ink)' }}>{purchase.supplierName}</strong></span>
                                                         <span>Status: <strong style={{ color: 'var(--ink)' }}>{purchase.status}</strong></span>
+                                                        <span>Bill Discount: <strong style={{ color: 'var(--ink)' }}>{purchase.discountType === 'fixed' ? `Rs ${(purchase.discount || 0).toLocaleString()}` : `${(purchase.discount || 0).toLocaleString()}%`}</strong></span>
+                                                        <span>Bill Tax: <strong style={{ color: 'var(--ink)' }}>{purchase.gstType === 'fixed' ? `Rs ${(purchase.gst || 0).toLocaleString()}` : `${(purchase.gst || 0).toLocaleString()}%`}</strong></span>
                                                     </div>
                                                 </div>
                                                 <div className="rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -118,6 +120,8 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Qty</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost/Unit</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Discount</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Tax</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Total</th>
                                                             </tr>
                                                         </thead>
@@ -130,7 +134,9 @@ function PurchaseTransactionTable({ purchases = [], labels }) {
                                                                     <td className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>{item.batch?.batchNumber || item.batchNumber || 'N/A'}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {item.costPrice?.toLocaleString() || 0}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString() || 0}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#10b981' }}>{item.discountType === 'fixed' ? `Rs ${(item.discountAmount || item.discount || 0).toLocaleString()}` : `${(item.discount || 0).toLocaleString()}%`}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#f59e0b' }}>{item.taxType === 'fixed' ? `Rs ${(item.taxAmount || item.tax || 0).toLocaleString()}` : `${(item.tax || 0).toLocaleString()}%`}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>Rs {((item.costPrice || 0) * (item.quantity || 0) - (item.discount || 0) + (item.tax || 0)).toLocaleString() || 0}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
