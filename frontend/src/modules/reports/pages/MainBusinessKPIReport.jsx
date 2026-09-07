@@ -7,7 +7,7 @@ import {
     useGetSupplierKPIReportQuery,
     useGetCustomerKPIReportQuery,
     useGetExpenseKPIReportQuery,
-    useGetStaffKPIReportQuery,
+    useGetStaffReportQuery,
     useGetCreditsDebitsAccountDataQuery,
 } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
@@ -20,6 +20,36 @@ const currency = (value) => `Rs ${Number(value || 0).toLocaleString(undefined, {
 const number = (value) => Number(value || 0).toLocaleString();
 
 const card = { background: "var(--surface)", borderColor: "var(--border)" };
+
+const getStaffReportDates = (period, fromDate, toDate) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const format = (date) => date.toISOString().split("T")[0];
+
+    switch (period) {
+        case "today":
+            return { fromDate: format(today), toDate: format(today) };
+        case "month":
+            return {
+                fromDate: format(new Date(now.getFullYear(), now.getMonth(), 1)),
+                toDate: format(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+            };
+        case "3month":
+            return {
+                fromDate: format(new Date(now.getFullYear(), now.getMonth() - 3, 1)),
+                toDate: format(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+            };
+        case "year":
+            return {
+                fromDate: format(new Date(now.getFullYear(), 0, 1)),
+                toDate: format(new Date(now.getFullYear(), 11, 31)),
+            };
+        case "custom":
+            return { fromDate, toDate };
+        default:
+            return {};
+    }
+};
 
 function KpiCard({ label, value, sub, details, icon: Icon, color }) {
     return (
@@ -56,13 +86,14 @@ export default function MainBusinessKPIReport() {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const filters = useMemo(() => ({ period, ...(period === "custom" && fromDate && toDate ? { fromDate, toDate } : {}) }), [period, fromDate, toDate]);
+    const staffDates = useMemo(() => getStaffReportDates(period, fromDate, toDate), [period, fromDate, toDate]);
     const { data, isLoading, isFetching, error, refetch } = useGetMainBusinessKPIOnlyReportQuery(filters);
     const { data: purchaseReport } = useGetPurchaseReportQuery(filters);
     const { data: inventoryReport } = useGetInventoryKPIReportQuery(filters);
     const { data: supplierReport } = useGetSupplierKPIReportQuery(filters);
     const { data: customerReport } = useGetCustomerKPIReportQuery(filters);
     const { data: expenseReport } = useGetExpenseKPIReportQuery(filters);
-    const { data: staffReport } = useGetStaffKPIReportQuery(filters);
+    const { data: staffReport } = useGetStaffReportQuery({ ...staffDates, page: 1, limit: 50 });
     const { data: creditDebitReport } = useGetCreditsDebitsAccountDataQuery({ accountTypes: ['customer', 'supplier', 'general'] });
 
     if (error) showError(error?.data?.message || "Failed to load main business KPI report");
@@ -79,7 +110,7 @@ export default function MainBusinessKPIReport() {
     const supplierKpi = supplierReport?.data?.summary || {};
     const customerKpi = customerReport?.data?.data?.summary || {};
     const expenseKpi = expenseReport?.data?.summary || {};
-    const staffKpi = staffReport?.data?.data?.summary || {};
+    const staffKpi = staffReport?.data?.summary || {};
     const creditDebitKpi = creditDebitReport?.summary || {};
     const periodOptions = [["all", "All time"], ["today", labels.today], ["month", labels.thisMonth], ["3month", labels.last3Months], ["year", labels.thisYear], ["custom", labels.customRange]];
     const loading = isLoading || isFetching;
@@ -190,10 +221,11 @@ export default function MainBusinessKPIReport() {
                             <KpiCard label="Expense Trend" value={`${number(expenseKpi.expenseCount)} txns`} icon={Activity} color={COLORS.expenses} />
                         </MetricSection>
                         <MetricSection title="Staff" icon={Users} color={COLORS.staff}>
-                            <KpiCard label="Staff" value={number(staffKpi.totalStaff)} icon={Users} color={COLORS.staff} />
+                            <KpiCard label="Staff" value={number(staffKpi.totalStaff || staffReport?.data?.details?.totalStaff)} icon={Users} color={COLORS.staff} />
                             <KpiCard label="Expected Salary" value={currency(staffKpi.totalExpectedSalary)} icon={DollarSign} color={COLORS.staff} />
-                            <KpiCard label="Salary Paid" value={currency(staffKpi.totalSalariesPaid)} icon={Wallet} color={COLORS.staff} />
-                            <KpiCard label="Remaining Salary" value={currency(staffKpi.remainingSalary)} icon={AlertCircle} color={COLORS.expenses} />
+                            <KpiCard label="Commission Earnings" value={currency(staffKpi.totalCommissionEarnings)} icon={DollarSign} color="#8b5cf6" />
+                            <KpiCard label="Amount Paid" value={currency(staffKpi.totalSalaryPaid)} icon={Wallet} color={COLORS.staff} />
+                            <KpiCard label="Remainings" value={currency(staffKpi.totalRemaining)} icon={AlertCircle} color={COLORS.expenses} />
                             <KpiCard label="Advances" value={currency(staffKpi.totalAdvances)} icon={Wallet} color={COLORS.expenses} />
                         </MetricSection>
                         <MetricSection title="Credits and Debits" icon={Wallet} color={COLORS.accounts}>
