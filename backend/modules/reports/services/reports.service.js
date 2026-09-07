@@ -75,26 +75,45 @@ import { getLocalPurchaseReturnModel } from '../../../configs/connect.db.js';
 import { getProductCostingByBatch } from '../../product/services/productCosting.service.js';
 
 // Helper function to build date filter
+const parseLocalDate = (value) => {
+    if (value instanceof Date) return new Date(value);
+    const [year, month, day] = String(value).split('-').map(Number);
+    return Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)
+        ? new Date(value)
+        : new Date(year, month - 1, day);
+};
+
+const formatLocalDate = (value) => {
+    const date = new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const buildDateFilter = (fromDate, toDate) => {
     const filter = {};
     if (fromDate) {
-        const startDate = new Date(fromDate);
+        const startDate = parseLocalDate(fromDate);
         startDate.setHours(0, 0, 0, 0);
         filter.createdAt = { ...filter.createdAt, $gte: startDate };
     }
     if (toDate) {
-        const endDate = new Date(toDate);
+        const endDate = parseLocalDate(toDate);
         endDate.setHours(23, 59, 59, 999);
         filter.createdAt = { ...filter.createdAt, $lte: endDate };
     }
     return filter;
 };
 
-// Helper function to get today's date range
+// Helper function to get today's date range (uses local timezone)
 const getTodayRange = () => {
     const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const day = today.getDate();
+    const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
     return { startOfDay, endOfDay };
 };
 
@@ -857,8 +876,8 @@ export const getSalesKPIReport = async (filters = {}) => {
             previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
         dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious && daysDiff > 0) {
@@ -938,8 +957,8 @@ export const getSalesKPIReport = async (filters = {}) => {
     // Calculate daily average
     let daysCount = 1;
     if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         daysCount = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
     } else if (period === "today") {
         daysCount = 1;
@@ -1106,7 +1125,7 @@ export const getSalesKPIReport = async (filters = {}) => {
     // Calculate sales by date
     const salesByDateMap = {};
     orders.forEach(order => {
-        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(order.createdAt);
         if (!salesByDateMap[dateStr]) {
             salesByDateMap[dateStr] = { total: 0, count: 0 };
         }
@@ -1122,7 +1141,7 @@ export const getSalesKPIReport = async (filters = {}) => {
     // Calculate previous sales by date
     const previousSalesByDateMap = {};
     previousOrders.forEach(order => {
-        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(order.createdAt);
         if (!previousSalesByDateMap[dateStr]) {
             previousSalesByDateMap[dateStr] = { total: 0, count: 0 };
         }
@@ -1303,8 +1322,8 @@ export const getPurchaseKPIReport = async (filters = {}) => {
             previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious) {
             const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -1389,7 +1408,7 @@ export const getPurchaseKPIReport = async (filters = {}) => {
     // Calculate purchases by date
     const purchasesByDateMap = {};
     purchases.forEach(purchase => {
-        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(purchase.createdAt);
         if (!purchasesByDateMap[dateStr]) {
             purchasesByDateMap[dateStr] = { total: 0, count: 0 };
         }
@@ -1405,7 +1424,7 @@ export const getPurchaseKPIReport = async (filters = {}) => {
     // Calculate previous purchases by date
     const previousPurchasesByDateMap = {};
     previousPurchases.forEach(purchase => {
-        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(purchase.createdAt);
         if (!previousPurchasesByDateMap[dateStr]) {
             previousPurchasesByDateMap[dateStr] = { total: 0, count: 0 };
         }
@@ -1574,8 +1593,8 @@ export const getSupplierKPIReport = async (filters = {}) => {
             previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious) {
             const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -1828,8 +1847,8 @@ export const getCustomerKPIReport = async (filters = {}) => {
             previousDateFilter = { createdAt: { $gte: prev.start, $lte: prev.end } };
         }
     } else if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         dateFilter = { createdAt: { $gte: start, $lte: end } };
         if (compareWithPrevious) {
             const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -2015,7 +2034,7 @@ export const getExpenseKPIReport = async (filters = {}) => {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         dateFilter = { transactionDate: { $gte: startOfMonth, $lte: endOfMonth } };
     } else if (fromDate && toDate) {
-        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+        dateFilter = { transactionDate: { $gte: parseLocalDate(fromDate), $lte: parseLocalDate(toDate) } };
     }
 
     // Fetch all data using transaction service
@@ -2082,8 +2101,8 @@ export const getExpenseKPIReport = async (filters = {}) => {
     // Calculate daily average
     let daysCount = 1;
     if (fromDate && toDate) {
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         daysCount = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
     } else if (period === "today") {
         daysCount = 1;
@@ -2157,7 +2176,7 @@ export const getExpenseCategoryBreakdown = async (filters = {}) => {
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         dateFilter = { transactionDate: { $gte: startOfYear, $lte: endOfYear } };
     } else if (fromDate && toDate) {
-        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+        dateFilter = { transactionDate: { $gte: parseLocalDate(fromDate), $lte: parseLocalDate(toDate) } };
     }
 
     // Fetch all expense transactions
@@ -2243,7 +2262,7 @@ export const getExpenseTransactions = async (filters = {}) => {
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         dateFilter = { transactionDate: { $gte: startOfYear, $lte: endOfYear } };
     } else if (fromDate && toDate) {
-        dateFilter = { transactionDate: { $gte: new Date(fromDate), $lte: new Date(toDate) } };
+        dateFilter = { transactionDate: { $gte: parseLocalDate(fromDate), $lte: parseLocalDate(toDate) } };
     }
 
     const matchQuery = { ...dateFilter, sourceType: 'expense', isDeleted: false };
@@ -2348,8 +2367,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
         previousDateFilter = { createdAt: { $gte: startOfLastYear, $lte: endOfLastYear } };
     } else if (period === "custom" && fromDate && toDate) {
         // For custom range, calculate same duration period before
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const start = parseLocalDate(fromDate);
+        const end = parseLocalDate(toDate);
         const duration = end.getTime() - start.getTime();
         const previousStart = new Date(start.getTime() - duration);
         const previousEnd = new Date(end.getTime() - duration);
@@ -3163,7 +3182,7 @@ export const getFinancialReport = async (filters = {}) => {
     // Group sales by date
     const salesByDateMap = {};
     orders.forEach(order => {
-        const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(order.createdAt);
         if (!salesByDateMap[dateStr]) {
             salesByDateMap[dateStr] = { totalSales: 0, totalDiscount: 0, count: 0 };
         }
@@ -3181,7 +3200,7 @@ export const getFinancialReport = async (filters = {}) => {
     // Group purchases by date
     const purchasesByDateMap = {};
     purchaseData.forEach(purchase => {
-        const dateStr = new Date(purchase.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(purchase.createdAt);
         if (!purchasesByDateMap[dateStr]) {
             purchasesByDateMap[dateStr] = { totalPurchases: 0, count: 0 };
         }
@@ -3197,7 +3216,7 @@ export const getFinancialReport = async (filters = {}) => {
     // Group expenses by date
     const expensesByDateMap = {};
     expenseData.forEach(expense => {
-        const dateStr = new Date(expense.createdAt).toISOString().split('T')[0];
+        const dateStr = formatLocalDate(expense.createdAt);
         if (!expensesByDateMap[dateStr]) {
             expensesByDateMap[dateStr] = { totalExpenses: 0, count: 0 };
         }
@@ -4039,9 +4058,9 @@ export const getCustomerReportKPI = async (filters = {}) => {
     // Build date filter for orders and new customers
     let dateFilter = {};
     if (fromDate && toDate) {
-        const startDate = new Date(fromDate);
+        const startDate = parseLocalDate(fromDate);
         startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(toDate);
+        const endDate = parseLocalDate(toDate);
         endDate.setHours(23, 59, 59, 999);
         dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
     }
@@ -4122,7 +4141,7 @@ export const getCustomerReportKPI = async (filters = {}) => {
 
 // Supplier Report
 export const getSupplierReport = async (filters = {}) => {
-    const { search, page = 1, limit = 20, fromDate, toDate, supplierName, paymentStatus } = filters;
+    const { search, page = 1, limit = 20, fromDate, toDate, supplierName, paymentStatus, period } = filters;
 
     const matchQuery = {};
     
@@ -4138,11 +4157,36 @@ export const getSupplierReport = async (filters = {}) => {
     const skip = (page - 1) * limit;
 
     // Build date filter for purchases
-    const purchaseFilter = {};
-    if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
-        purchaseFilter.createdAt = dateFilter.createdAt;
+    let dateFilter = {};
+    if (period === "today") {
+        const { startOfDay, endOfDay } = getTodayRange();
+        dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+    } else if (period === "week") {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+        dateFilter = { createdAt: { $gte: startOfWeek, $lte: endOfWeek } };
+    } else if (period === "month") {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    } else if (period === "quarter") {
+        const now = new Date();
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        const endOfQuarter = new Date(now.getFullYear(), currentQuarter * 3 + 2, 31);
+        dateFilter = { createdAt: { $gte: startOfQuarter, $lte: endOfQuarter } };
+    } else if (period === "year") {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
+    } else if (fromDate && toDate) {
+        dateFilter = buildDateFilter(fromDate, toDate);
     }
+
+    const purchaseFilter = Object.keys(dateFilter).length > 0 ? dateFilter : {};
 
     // Apply payment status filter
     if (paymentStatus && paymentStatus !== "all") {
@@ -4386,9 +4430,9 @@ export const getStaffReport = async (filters = {}) => {
     let paymentEndDate = null;
     
     if (fromDate && toDate) {
-        const startDate = new Date(fromDate);
+        const startDate = parseLocalDate(fromDate);
         startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(toDate);
+        const endDate = parseLocalDate(toDate);
         endDate.setHours(23, 59, 59, 999);
         dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
         
@@ -4590,9 +4634,9 @@ export const getStaffKPIReport = async (filters = {}) => {
     let paymentEndDate = null;
     
     if (fromDate && toDate) {
-        const startDate = new Date(fromDate);
+        const startDate = parseLocalDate(fromDate);
         startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(toDate);
+        const endDate = parseLocalDate(toDate);
         endDate.setHours(23, 59, 59, 999);
         dateFilter = { createdAt: { $gte: startDate, $lte: endDate } };
         

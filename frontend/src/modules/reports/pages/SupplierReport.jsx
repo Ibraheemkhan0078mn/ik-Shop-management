@@ -71,28 +71,37 @@ export default function SupplierReport() {
 
     const getDatesFromPeriod = (periodValue) => {
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const formatDateLocal = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
 
         switch (periodValue) {
-            case "today":
-                return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+            case "today": {
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return { from: formatDateLocal(today), to: formatDateLocal(today) };
+            }
             case "month": {
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                 const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return { from: monthStart.toISOString().split('T')[0], to: monthEnd.toISOString().split('T')[0] };
+                return { from: formatDateLocal(monthStart), to: formatDateLocal(monthEnd) };
             }
             case "3month": {
                 const threeMonthStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
                 const threeMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return { from: threeMonthStart.toISOString().split('T')[0], to: threeMonthEnd.toISOString().split('T')[0] };
+                return { from: formatDateLocal(threeMonthStart), to: formatDateLocal(threeMonthEnd) };
             }
             case "year": {
                 const yearStart = new Date(now.getFullYear(), 0, 1);
                 const yearEnd = new Date(now.getFullYear(), 11, 31);
-                return { from: yearStart.toISOString().split('T')[0], to: yearEnd.toISOString().split('T')[0] };
+                return { from: formatDateLocal(yearStart), to: formatDateLocal(yearEnd) };
             }
-            default:
-                return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+            default: {
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return { from: formatDateLocal(today), to: formatDateLocal(today) };
+            }
         }
     };
 
