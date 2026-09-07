@@ -87,10 +87,18 @@ function ProfitCalculation({ transaction }) {
                 <div>
                     <p className="font-semibold" style={{ color: 'var(--ink)' }}>1. Cost of sold items</p>
                     {transaction.items?.map((item, index) => (
-                        <p key={index} className="mt-1" style={{ color: 'var(--muted)' }}>
-                            {item.productName || 'Product'}: {formatMoney(item.costPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemCostTotal)}</strong>
-                        </p>
+                        <div key={index} className="mt-1">
+                            <p style={{ color: 'var(--muted)' }}>
+                                {item.productName || 'Product'}: {formatMoney(item.costPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemCostTotal)}</strong>
+                            </p>
+                            <p className="ml-2" style={{ color: '#8b5cf6' }}>
+                                Cost breakdown: Base {formatMoney(item.basePurchasePrice)} - Discount {formatMoney(item.purchaseDiscount)} + Tax {formatMoney(item.purchaseTax)} = {formatMoney(item.effectiveCostPrice)}/unit
+                            </p>
+                        </div>
                     ))}
+                    <p className="mt-1 pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
+                        <strong style={{ color: 'var(--ink)' }}>Total COGS: {formatMoney(transaction.totalCostPrice)}</strong>
+                    </p>
                 </div>
                 <div>
                     <p className="font-semibold" style={{ color: 'var(--ink)' }}>2. Gross sales</p>
@@ -112,6 +120,20 @@ function ProfitCalculation({ transaction }) {
                         {formatMoney(transaction.grossSales)} - {formatMoney(returnRefunds)} refund = <strong style={{ color: 'var(--ink)' }}>{formatMoney(netSales)} net sales</strong>
                     </p>
                     <p className="mt-1" style={{ color: '#dc2626' }}>Returned quantity: {returnedQuantity}</p>
+                    {transaction.returns && transaction.returns.length > 0 && (
+                        <div className="mt-1">
+                            {transaction.returns.map((ret, idx) => (
+                                <div key={idx} className="ml-2" style={{ color: '#8b5cf6' }}>
+                                    <p>Return #{ret.returnNumber}: {formatMoney(ret.totalRefundAmount)}</p>
+                                    {ret.items && ret.items.map((retItem, i) => (
+                                        <p key={i} className="ml-2">
+                                            {retItem.productName}: {retItem.quantity} units = {formatMoney(retItem.refundAmount)}
+                                        </p>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div>
                     <p className="font-semibold" style={{ color: 'var(--ink)' }}>4. Remove returned stock cost</p>
