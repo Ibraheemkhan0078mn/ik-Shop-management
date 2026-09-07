@@ -778,6 +778,15 @@ export const getPurchaseReport = async (filters = {}) => {
     }, 0);
     const totalDeliveredCount = data.filter(p => p.status === "delivered").length;
     const totalRejectedCount = data.filter(p => p.status === "rejected").length;
+
+    // Calculate total purchase returns from enriched data
+    const totalPurchaseReturns = enrichedData.reduce((sum, purchase) => {
+        const purchaseReturns = purchase.purchaseReturns || [];
+        return sum + purchaseReturns.reduce((retSum, ret) => retSum + (ret.totalRefundAmount || 0), 0);
+    }, 0);
+
+    // Calculate net purchases (total purchases - returns)
+    const netPurchases = Math.max(0, totalPurchases - totalPurchaseReturns);
     
     // Get unique suppliers
     const uniqueSuppliers = [...new Set(data.map(p => p.supplier?.toString()).filter(Boolean))];
@@ -821,7 +830,9 @@ export const getPurchaseReport = async (filters = {}) => {
             totalDeliveredCount,
             totalRejectedCount,
             totalSuppliers,
-            totalBills: total
+            totalBills: total,
+            totalPurchaseReturns,
+            netPurchases
         },
         supplierBreakdown
     };
