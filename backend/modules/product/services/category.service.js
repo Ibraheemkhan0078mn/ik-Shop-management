@@ -48,14 +48,17 @@ export const getCategoryById = async (id) => {
 };
 
 export const createCategory = async (data) => {
-    const { name } = data;
-    const categoryExists = await findOneCategoryService({ name });
+    const name = data.name?.trim();
+    const categoryExists = await findOneCategoryService({
+        name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        isDeleted: { $ne: true },
+    });
     
     if (categoryExists) {
         throw new Error("Category with this name already exists");
     }
     
-    return createCategoryService(data);
+    return createCategoryService({ ...data, name });
 };
 
 export const updateCategory = async (id, data) => {
@@ -65,14 +68,19 @@ export const updateCategory = async (id, data) => {
         throw new Error("Category not found");
     }
     
-    if (data.name && data.name !== category.name) {
-        const nameExists = await findOneCategoryService({ name: data.name });
+    const normalizedName = data.name?.trim();
+    if (normalizedName && normalizedName.toLowerCase() !== category.name?.toLowerCase()) {
+        const nameExists = await findOneCategoryService({
+            name: new RegExp(`^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+            isDeleted: { $ne: true },
+            _id: { $ne: id },
+        });
         if (nameExists) {
             throw new Error("Category with this name already exists");
         }
     }
     
-    return updateCategoryService(id, data);
+    return updateCategoryService(id, normalizedName ? { ...data, name: normalizedName } : data);
 };
 
 export const deleteCategory = async (id) => {

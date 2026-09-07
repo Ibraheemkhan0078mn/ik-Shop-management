@@ -9,6 +9,7 @@ import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PercentageShare from "../components/PercentageShare.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
+import { toImageUrl } from "../../../shared/utilities/image.utility.js";
 
 export default function StaffDetail() {
     const navigate = useNavigate();
@@ -373,7 +374,7 @@ export default function StaffDetail() {
                             <div className="flex items-center gap-6">
                                 <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-[var(--border)] bg-[var(--surface-muted)]">
                                     <img 
-                                        src={`http://localhost:5001/uploads/${staff.photo}`}
+                                        src={toImageUrl(staff.photo)}
                                         alt={staff.fullName}
                                         className="w-full h-full object-cover"
                                         onError={(e) => {

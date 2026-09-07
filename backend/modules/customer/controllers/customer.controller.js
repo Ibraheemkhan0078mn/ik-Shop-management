@@ -22,6 +22,10 @@ const coerceCustomerBody = (body = {}) => {
     const coerced = { ...body };
     for (const [key, value] of Object.entries(coerced)) {
         if (typeof value !== "string") continue;
+        if (key === "phoneNo" || key === "cnic") {
+            coerced[key] = value.trim();
+            continue;
+        }
         if (value === "true" || value === "false") {
             coerced[key] = value === "true";
             continue;
@@ -83,10 +87,12 @@ export const createCustomer = asyncHandler(async (req, res, next) => {
     const validatedData = buildCustomerPayload(req.body || {}, req.file?.filename);
 
     const { phoneNo, cnic, name, address } = validatedData;
-    const duplicate = await findCustomerByPhoneOrCnicService({ $or: [{ phoneNo }, { cnic }] });
+    const duplicate = phoneNo && cnic
+        ? await findCustomerByPhoneOrCnicService({ phoneNo, cnic })
+        : null;
 
     if (duplicate) {
-        return next(new ErrorResponse("Customer with this phone or CNIC already exists", 400));
+        return next(new ErrorResponse("A customer with this phone number and CNIC already exists", 400));
     }
 
     const customer = await customerCreateService(validatedData);
@@ -132,16 +138,18 @@ export const updateCustomer = asyncHandler(async (req, res, next) => {
         delete validatedData.image;
     }
 
-    if (validatedData.phoneNo || validatedData.cnic) {
+    const nextPhoneNo = validatedData.phoneNo ?? customer.phoneNo;
+    const nextCnic = validatedData.cnic ?? customer.cnic;
+    if (nextPhoneNo && nextCnic) {
         const duplicate = await findCustomerByPhoneOrCnicService({
             $and: [
                 { _id: { $ne: id } },
-                { $or: [{ phoneNo: validatedData.phoneNo }, { cnic: validatedData.cnic }] },
+                { phoneNo: nextPhoneNo, cnic: nextCnic },
             ],
         });
 
         if (duplicate) {
-            return next(new ErrorResponse("Customer with this phone or CNIC already exists", 400));
+            return next(new ErrorResponse("A customer with this phone number and CNIC already exists", 400));
         }
     }
 

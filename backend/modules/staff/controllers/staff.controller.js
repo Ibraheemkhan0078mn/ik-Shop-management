@@ -23,6 +23,20 @@ import {
 } from "../services/staff.service.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 
+const getUploadedPhotoData = (photoFile) => {
+    if (!photoFile) return null;
+
+    const remoteUrl = photoFile.path || photoFile.secure_url;
+    if (remoteUrl?.startsWith("http")) {
+        return {
+            photo: remoteUrl,
+            cloudinaryPublicId: photoFile.public_id || photoFile.filename,
+        };
+    }
+
+    return { photo: photoFile.filename };
+};
+
 // Create Staff
 export const createStaffData = asyncHandler(async (req, res, next) => {
     try {
@@ -31,8 +45,9 @@ export const createStaffData = asyncHandler(async (req, res, next) => {
         
         // Handle photo from multer.any() - find photo in req.files array
         const photoFile = req.files?.find(f => f.fieldname === 'photo');
-        if (photoFile?.filename) {
-            staffData.photo = photoFile.filename;
+        const uploadedPhoto = getUploadedPhotoData(photoFile);
+        if (uploadedPhoto) {
+            Object.assign(staffData, uploadedPhoto);
         }
         
         const staff = await createStaff(staffData);
@@ -88,8 +103,9 @@ export const updateStaffData = asyncHandler(async (req, res, next) => {
         
         // Handle photo from multer.any() - find photo in req.files array
         const photoFile = req.files?.find(f => f.fieldname === 'photo');
-        if (photoFile?.filename) {
-            updateData.photo = photoFile.filename;
+        const uploadedPhoto = getUploadedPhotoData(photoFile);
+        if (uploadedPhoto) {
+            Object.assign(updateData, uploadedPhoto);
         }
         
         const staff = await updateStaff(id, updateData);

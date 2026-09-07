@@ -55,11 +55,15 @@ const getBrandById = async (id) => {
 
 const createBrand = async (brandData) => {
     // Check for duplicate brand name
-    const existing = await findOneBrandService({ name: brandData.name });
+    const name = brandData.name?.trim();
+    const existing = await findOneBrandService({
+        name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        isDeleted: { $ne: true },
+    });
     if (existing) {
         throw new Error("Brand with this name already exists");
     }
-    return await createBrandService(brandData);
+    return await createBrandService({ ...brandData, name });
 };
 
 const updateBrand = async (id, updateData) => {
@@ -69,14 +73,19 @@ const updateBrand = async (id, updateData) => {
     }
 
     // Check for duplicate name if name is being changed
-    if (updateData.name && updateData.name !== existing.name) {
-        const duplicate = await findOneBrandService({ name: updateData.name });
+    const normalizedName = updateData.name?.trim();
+    if (normalizedName && normalizedName.toLowerCase() !== existing.name?.toLowerCase()) {
+        const duplicate = await findOneBrandService({
+            name: new RegExp(`^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+            isDeleted: { $ne: true },
+            _id: { $ne: id },
+        });
         if (duplicate) {
             throw new Error("Brand with this name already exists");
         }
     }
 
-    return await updateBrandService(id, { ...updateData, updated: Date.now() });
+    return await updateBrandService(id, { ...updateData, ...(normalizedName ? { name: normalizedName } : {}), updated: Date.now() });
 };
 
 const deleteBrand = async (id) => {
