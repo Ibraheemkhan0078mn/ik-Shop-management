@@ -64,6 +64,8 @@ export default function SupplierReport() {
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
     const [period, setPeriod] = useState("today");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
     const [supplierName, setSupplierName] = useState("");
     const [paymentStatus, setPaymentStatus] = useState("all");
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -105,12 +107,13 @@ export default function SupplierReport() {
         }
     };
 
-    const dates = useMemo(() => getDatesFromPeriod(period), [period]);
+    const dates = useMemo(() => period === "custom" ? { from: fromDate, to: toDate } : getDatesFromPeriod(period), [period, fromDate, toDate]);
     const filters = useMemo(() => ({
+        period,
         fromDate: dates.from,
         toDate: dates.to,
         supplierName, paymentStatus
-    }), [dates.from, dates.to, supplierName, paymentStatus]);
+    }), [period, dates.from, dates.to, supplierName, paymentStatus]);
 
     const { data, isLoading, isFetching, error, refetch } = useGetSupplierReportQuery(filters);
 
@@ -170,8 +173,33 @@ export default function SupplierReport() {
                             <option value="month">{labels.thisMonth}</option>
                             <option value="3month">{labels.last3Months}</option>
                             <option value="year">{labels.thisYear}</option>
+                            <option value="custom">{labels.customRange}</option>
                         </select>
                     </div>
+                    {period === "custom" && (
+                        <div className="md:col-span-2 flex gap-2">
+                            <div className="flex-1">
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.fromDate}</label>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.toDate}</label>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
+                                />
+                            </div>
+                        </div>
+                    )}
                     <div>
                         <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.supplier}</label>
                         <input
@@ -235,6 +263,9 @@ export default function SupplierReport() {
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalPurchases}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalBills}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.dueAmount}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Cash In</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Cash Out</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Overall</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.lastPurchase}</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.actions}</th>
                                     </tr>
@@ -242,7 +273,7 @@ export default function SupplierReport() {
                                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                     {suppliers.length === 0 ? (
                                         <tr>
-                                            <td colSpan="7" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
+                                            <td colSpan="10" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
                                         </tr>
                                     ) : (
                                         suppliers.map((supplier) => (
@@ -259,6 +290,9 @@ export default function SupplierReport() {
                                                 <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(supplier.totalPurchases || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#3b82f6' }}>{supplier.totalOrders || 0}</td>
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#dc2626' }}>Rs {(supplier.totalDue || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#10b981' }}>Rs {(supplier.totalCashIn || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#f59e0b' }}>Rs {(supplier.totalCashOut || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: (supplier.overallBalance || 0) >= 0 ? '#10b981' : '#dc2626' }}>Rs {(supplier.overallBalance || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-sm" style={{ color: 'var(--muted)' }}>{formatDate(supplier.lastPurchase)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <button
@@ -319,18 +353,30 @@ export default function SupplierReport() {
                             {/* Stats */}
                             <div className="mb-6">
                                 <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Statistics</h3>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>Total Purchases</p>
                                         <p className="font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(selectedSupplier.totalPurchases || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>Total Bills</p>
-                                        <p className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>{selectedSupplier.totalBills || 0}</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>{selectedSupplier.totalOrders || 0}</p>
                                     </div>
                                     <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>Outstanding Due</p>
                                         <p className="font-semibold tabular-nums" style={{ color: '#dc2626' }}>Rs {(selectedSupplier.totalDue || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Cash In</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: '#10b981' }}>Rs {(selectedSupplier.totalCashIn || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Cash Out</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: '#f59e0b' }}>Rs {(selectedSupplier.totalCashOut || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Overall Balance</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: (selectedSupplier.overallBalance || 0) >= 0 ? '#10b981' : '#dc2626' }}>Rs {(selectedSupplier.overallBalance || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>

@@ -214,6 +214,9 @@ export default function CustomerReport() {
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalSpent}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.avgOrderValue}</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.totalDue}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Cash In</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Cash Out</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Overall</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.lastPurchase}</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.actions}</th>
                                     </tr>
@@ -221,7 +224,7 @@ export default function CustomerReport() {
                                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                     {customers.length === 0 ? (
                                         <tr>
-                                            <td colSpan="7" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
+                                            <td colSpan="10" className="px-4 py-8 text-center" style={{ color: 'var(--muted)' }}>{labels.noDataFound}</td>
                                         </tr>
                                     ) : (
                                         customers.map((customer) => (
@@ -238,6 +241,9 @@ export default function CustomerReport() {
                                                 <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(customer.totalSpent || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-right text-sm tabular-nums" style={{ color: 'var(--ink)' }}>Rs {customer.totalOrders > 0 ? ((customer.totalSpent || 0) / customer.totalOrders).toFixed(2) : '0.00'}</td>
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#dc2626' }}>Rs {(customer.dueAmount || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#10b981' }}>Rs {(customer.totalCashIn || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#f59e0b' }}>Rs {(customer.totalCashOut || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: (customer.overallBalance || 0) >= 0 ? '#10b981' : '#dc2626' }}>Rs {(customer.overallBalance || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-sm" style={{ color: 'var(--muted)' }}>{formatDate(customer.lastOrderDate)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <button
@@ -303,7 +309,7 @@ export default function CustomerReport() {
                             {/* Stats */}
                             <div className="mb-6">
                                 <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Statistics</h3>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>Total Spent</p>
                                         <p className="font-semibold tabular-nums" style={{ color: 'var(--accent-2)' }}>Rs {(selectedCustomer.totalSpent || 0).toLocaleString()}</p>
@@ -315,6 +321,18 @@ export default function CustomerReport() {
                                     <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>Due Amount</p>
                                         <p className="font-semibold tabular-nums" style={{ color: '#dc2626' }}>Rs {(selectedCustomer.dueAmount || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Cash In</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: '#10b981' }}>Rs {(selectedCustomer.totalCashIn || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Cash Out</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: '#f59e0b' }}>Rs {(selectedCustomer.totalCashOut || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: 'var(--surface-muted)' }}>
+                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>Overall Balance</p>
+                                        <p className="font-semibold tabular-nums" style={{ color: (selectedCustomer.overallBalance || 0) >= 0 ? '#10b981' : '#dc2626' }}>Rs {(selectedCustomer.overallBalance || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>

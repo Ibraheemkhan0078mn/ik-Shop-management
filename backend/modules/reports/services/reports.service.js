@@ -3954,6 +3954,27 @@ export const getCustomerReport = async (filters = {}) => {
         countCustomerService(matchQuery)
     ]);
 
+    // Fetch ALL customers for KPI calculations (without pagination)
+    const allCustomers = await findCustomerService(matchQuery);
+
+    // Get credits/debits data for customers
+    const creditsDebitsData = await getCreditsDebitsAccountData({ accountTypes: ['customer'] });
+
+    // Extract customer account data for easy lookup
+    const customerAccountMap = {};
+    if (creditsDebitsData.accounts && creditsDebitsData.accounts.length > 0) {
+        creditsDebitsData.accounts.forEach(accountSummary => {
+            const accountId = accountSummary.account?._id?.toString();
+            if (accountId) {
+                customerAccountMap[accountId] = {
+                    totalCashIn: accountSummary.totalPaid || 0,
+                    totalCashOut: accountSummary.totalToPay || 0,
+                    overall: (accountSummary.totalPaid || 0) - (accountSummary.totalToPay || 0)
+                };
+            }
+        });
+    }
+
     // Use the same period for row statistics as the KPI report.
     let orderQuery = { status: "completed" };
     if (fromDate && toDate) {
@@ -3965,6 +3986,14 @@ export const getCustomerReport = async (filters = {}) => {
     const customersWithStats = data.map(customer => {
         const customerId = customer._id.toString();
         const customerOrders = allOrders.filter(o => o.customerId?.toString() === customerId);
+
+        // Get credits/debits data for this customer
+        const qarzaAccountId = customer.qarzaAccountId?.toString();
+        const accountData = qarzaAccountId ? customerAccountMap[qarzaAccountId] : {
+            totalCashIn: 0,
+            totalCashOut: 0,
+            overall: 0
+        };
 
         const totalOrders = customerOrders.length;
         const totalSpent = customerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -3979,7 +4008,10 @@ export const getCustomerReport = async (filters = {}) => {
             totalSpent,
             dueAmount,
             lastOrderDate,
-            lastPurchase: lastOrderDate
+            lastPurchase: lastOrderDate,
+            totalCashIn: accountData.totalCashIn,
+            totalCashOut: accountData.totalCashOut,
+            overallBalance: accountData.overall
         };
     });
 
@@ -4211,13 +4243,27 @@ export const getSupplierReport = async (filters = {}) => {
     // Fetch ALL suppliers for KPI calculations (without pagination)
     const allSuppliers = await findSupplierService(matchQuery);
 
-    // Get all purchases, returns, and qarza data to calculate supplier statistics
-    const [allPurchases, allPurchaseReturns, allQarzaAccounts, allQarzaPayments] = await Promise.all([
+    // Get all purchases, returns, and credits/debits data to calculate supplier statistics
+    const [allPurchases, allPurchaseReturns, creditsDebitsData] = await Promise.all([
         findPurchaseService(purchaseFilter),
         findPurchaseReturnService(purchaseFilter),
-        findQarzaAccountService({ type: 'supplier' }),
-        findQarzaPaymentService({})
+        getCreditsDebitsAccountData({ accountTypes: ['supplier'] })
     ]);
+
+    // Extract supplier account data for easy lookup
+    const supplierAccountMap = {};
+    if (creditsDebitsData.accounts && creditsDebitsData.accounts.length > 0) {
+        creditsDebitsData.accounts.forEach(accountSummary => {
+            const accountId = accountSummary.account?._id?.toString();
+            if (accountId) {
+                supplierAccountMap[accountId] = {
+                    totalCashIn: accountSummary.totalPaid || 0,
+                    totalCashOut: accountSummary.totalToPay || 0,
+                    overall: (accountSummary.totalPaid || 0) - (accountSummary.totalToPay || 0)
+                };
+            }
+        });
+    }
 
     // Calculate statistics for each supplier (paginated data for table)
     const suppliersWithStats = data.map(supplier => {
@@ -4225,11 +4271,13 @@ export const getSupplierReport = async (filters = {}) => {
         const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
         const supplierReturns = allPurchaseReturns.filter(r => r.supplier?.toString() === supplierId);
         
-        // Find associated qarza account
-        const qarzaAccount = allQarzaAccounts.find(qa => qa._id.toString() === supplier.qarzaAccountId?.toString());
-        const qarzaPayments = qarzaAccount 
-            ? allQarzaPayments.filter(qp => qp.qarzaAccountId?.toString() === qarzaAccount._id.toString())
-            : [];
+        // Get credits/debits data for this supplier
+        const qarzaAccountId = supplier.qarzaAccountId?.toString();
+        const accountData = qarzaAccountId ? supplierAccountMap[qarzaAccountId] : {
+            totalCashIn: 0,
+            totalCashOut: 0,
+            overall: 0
+        };
 
         // Financial KPIs
         const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
@@ -4257,15 +4305,10 @@ export const getSupplierReport = async (filters = {}) => {
             full: supplierPurchases.filter(p => p.paymentStatus === 'full').length
         };
 
-        // Credit/Debit KPIs
-        const creditPayments = qarzaPayments.filter(qp => qp.type === 'credit' || qp.type === 'cashin');
-        const debitPayments = qarzaPayments.filter(qp => qp.type === 'debit' || qp.type === 'cashout');
-        
-        const totalCreditAmount = creditPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
-        const totalDebitAmount = debitPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
-        const netBalance = totalDebitAmount - totalCreditAmount;
-        const totalCreditTransactions = creditPayments.length;
-        const totalDebitTransactions = debitPayments.length;
+        // Credit/Debit KPIs from the comprehensive service
+        const totalCashIn = accountData.totalCashIn;
+        const totalCashOut = accountData.totalCashOut;
+        const overallBalance = accountData.overall;
 
         return {
             ...supplier,
@@ -4283,13 +4326,10 @@ export const getSupplierReport = async (filters = {}) => {
             returnRate,
             orderStatusDistribution,
             paymentStatusDistribution,
-            // Credit/Debit KPIs
-            totalCreditAmount,
-            totalDebitAmount,
-            netBalance,
-            totalCreditTransactions,
-            totalDebitTransactions,
-            hasQarzaAccount: !!qarzaAccount,
+            // Credit/Debit KPIs from comprehensive service
+            totalCashIn,
+            totalCashOut,
+            overallBalance,
             // Purchase history for detail modal
             purchases: supplierPurchases.map(p => ({
                 _id: p._id,
@@ -4339,10 +4379,13 @@ export const getSupplierReport = async (filters = {}) => {
         const supplierPurchases = allPurchases.filter(p => p.supplier?.toString() === supplierId);
         const supplierReturns = allPurchaseReturns.filter(r => r.supplier?.toString() === supplierId);
         
-        const qarzaAccount = allQarzaAccounts.find(qa => qa._id.toString() === supplier.qarzaAccountId?.toString());
-        const qarzaPayments = qarzaAccount 
-            ? allQarzaPayments.filter(qp => qp.qarzaAccountId?.toString() === qarzaAccount._id.toString())
-            : [];
+        // Get credits/debits data for this supplier
+        const qarzaAccountId = supplier.qarzaAccountId?.toString();
+        const accountData = qarzaAccountId ? supplierAccountMap[qarzaAccountId] : {
+            totalCashIn: 0,
+            totalCashOut: 0,
+            overall: 0
+        };
 
         const totalPurchases = supplierPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
         const totalPaid = supplierPurchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
@@ -4352,11 +4395,9 @@ export const getSupplierReport = async (filters = {}) => {
         const totalReturnsCount = supplierReturns.length;
         const returnRate = totalOrders > 0 ? ((totalReturnsCount / totalOrders) * 100).toFixed(2) : 0;
         
-        const creditPayments = qarzaPayments.filter(qp => qp.type === 'credit' || qp.type === 'cashin');
-        const debitPayments = qarzaPayments.filter(qp => qp.type === 'debit' || qp.type === 'cashout');
-        const totalCreditAmount = creditPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
-        const totalDebitAmount = debitPayments.reduce((sum, qp) => sum + (qp.amount || 0), 0);
-        const netBalance = totalDebitAmount - totalCreditAmount;
+        const totalCashIn = accountData.totalCashIn;
+        const totalCashOut = accountData.totalCashOut;
+        const netBalance = accountData.overall;
 
         return {
             totalPurchases,
@@ -4366,10 +4407,10 @@ export const getSupplierReport = async (filters = {}) => {
             totalOrders,
             totalReturnsCount,
             returnRate,
-            totalCreditAmount,
-            totalDebitAmount,
+            totalCashIn,
+            totalCashOut,
             netBalance,
-            hasQarzaAccount: !!qarzaAccount
+            hasQarzaAccount: !!qarzaAccountId
         };
     });
 
@@ -4387,8 +4428,8 @@ export const getSupplierReport = async (filters = {}) => {
         totalOrders: allSuppliersWithStats.reduce((sum, s) => sum + s.totalOrders, 0),
         totalReturnsCount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalReturnsCount, 0),
         averageReturnRate: total > 0 ? (allSuppliersWithStats.reduce((sum, s) => sum + parseFloat(s.returnRate || 0), 0) / total).toFixed(2) : 0,
-        totalCreditAmount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalCreditAmount, 0),
-        totalDebitAmount: allSuppliersWithStats.reduce((sum, s) => sum + s.totalDebitAmount, 0),
+        totalCashIn: allSuppliersWithStats.reduce((sum, s) => sum + s.totalCashIn, 0),
+        totalCashOut: allSuppliersWithStats.reduce((sum, s) => sum + s.totalCashOut, 0),
         netBalance: allSuppliersWithStats.reduce((sum, s) => sum + s.netBalance, 0),
         suppliersWithQarzaAccount: allSuppliersWithStats.filter(s => s.hasQarzaAccount).length,
         topSupplier: topSupplierIndex >= 0 ? { name: allSuppliers[topSupplierIndex]?.name || 'N/A', amount: allSuppliersWithStats[topSupplierIndex].totalPurchases } : null
