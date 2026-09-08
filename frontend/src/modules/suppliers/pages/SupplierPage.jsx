@@ -79,6 +79,7 @@ export default function SupplierPage() {
                                     <th className="px-4 py-3 font-semibold">{labels.type}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.phone}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.email}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Balance</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
@@ -173,6 +174,22 @@ function SupplierRow({ supplier, onEdit, onDelete, onView }) {
             </td>
             <td className="px-4 py-3 text-xs" style={{ color: "var(--muted)" }}>
                 {supplier?.email ?? "—"}
+            </td>
+            <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                {(() => {
+                    const balance = supplier?.overallBalance || 0;
+                    const isPositive = balance >= 0;
+                    return (
+                        <div className="flex flex-col items-end">
+                            <span style={{ color: isPositive ? '#10b981' : '#dc2626' }}>
+                                Rs {Math.abs(balance).toLocaleString()}
+                            </span>
+                            <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                                {isPositive ? 'To Receive' : 'To Give'}
+                            </span>
+                        </div>
+                    );
+                })()}
             </td>
             <td className="px-4 py-3 text-center">
                 <span className="px-2 py-0.5 rounded-lg text-xs font-semibold"

@@ -80,11 +80,12 @@ export default function CustomerPage() {
                         {/* Desktop header */}
                         <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider"
                             style={{ background: "var(--surface-muted)", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                            <div className="col-span-4">{labels.name}</div>
+                            <div className="col-span-3">{labels.name}</div>
                             <div className="col-span-2">{labels.phone}</div>
                             <div className="col-span-2">{labels.cnic}</div>
                             <div className="col-span-2">{labels.address}</div>
-                            <div className="col-span-2">{labels.actions}</div>
+                            <div className="col-span-2 text-right">Balance</div>
+                            <div className="col-span-1">{labels.actions}</div>
                         </div>
 
                         {/* Desktop rows */}
@@ -190,7 +191,7 @@ function CustomerRow({ customer, onEdit, onDelete, onView, index, imageLoadState
             className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 items-center transition-all duration-150 hover:bg-(--surface-muted) group"
             style={{ background: index % 2 === 0 ? "var(--surface)" : "rgba(255,250,243,0.6)", borderBottom: "1px solid var(--border)" }}
         >
-            <div className="col-span-4 flex items-center gap-3 min-w-0">
+            <div className="col-span-3 flex items-center gap-3 min-w-0">
                 <div className="relative shrink-0">
                     {customer.image && imageLoadStates[customer._id] === true ? (
                         <div className="relative">
@@ -225,7 +226,23 @@ function CustomerRow({ customer, onEdit, onDelete, onView, index, imageLoadState
             <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{customer.phoneNo ?? "—"}</div>
             <div className="col-span-2 text-sm text-(--muted) font-mono truncate">{customer.cnic ?? "—"}</div>
             <div className="col-span-2 text-sm text-(--muted) truncate">{customer.address ?? "—"}</div>
-            <div onClick={e => e.stopPropagation()} className="col-span-2 flex items-center gap-1.5 flex-wrap">
+            <div className="col-span-2 text-right font-semibold tabular-nums">
+                {(() => {
+                    const balance = customer?.overallBalance || 0;
+                    const isPositive = balance >= 0;
+                    return (
+                        <div className="flex flex-col items-end">
+                            <span style={{ color: isPositive ? '#10b981' : '#dc2626' }}>
+                                Rs {Math.abs(balance).toLocaleString()}
+                            </span>
+                            <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                                {isPositive ? 'To Receive' : 'To Give'}
+                            </span>
+                        </div>
+                    );
+                })()}
+            </div>
+            <div onClick={e => e.stopPropagation()} className="col-span-1 flex items-center gap-1.5 flex-wrap">
                 <button
                     onClick={onView}
                     className="p-2 rounded-lg bg-(--surface-muted) border border-(--border) transition-all duration-150 hover:scale-105 hover:border-(--accent-2) hover:text-(--accent-2)"

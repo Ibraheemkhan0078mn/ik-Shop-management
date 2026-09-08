@@ -1,10 +1,11 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
+import { deleteProductImage } from "../../product/services/productImage.service.js";
+import { getCreditsDebitsAccountData } from '../../reports/services/reports.service.js';
 import { getLocalSupplierModel } from "../../../configs/connect.db.js";
 import { findDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import {
     supplierCreate as supplierCreateService,
-    getAllSuppliers as getAllSuppliersService,
     getSupplierById as getSupplierByIdService,
     findSupplierByName as findSupplierByNameService,
     supplierUpdate as supplierUpdateService,
@@ -16,8 +17,8 @@ import { countPurchaseService } from "../../productPurchases/services/purchase.c
 import { countBatchService } from "../../productPurchases/services/batch.crud.js";
 import { imageChangeTrackDocsCreation } from "../../../common/services/onlineSync/imageChangeTrackModelCreation.js";
 import { qarzaAccountCreate as qarzaAccountCreateService, qarzaAccountDelete as qarzaAccountDeleteService } from "../../qarza/services/qarza.service.js";
-import { calculateSupplierPurchaseKPIs } from "../services/supplierPurchaseKPI.service.js";
-import { calculateSupplierPurchaseReturnKPIs } from "../services/supplierPurchaseReturnKPI.service.js";
+import { calculateSupplierPurchaseKPIs as calculateSupplierPurchaseKPIsService } from "../services/supplierPurchaseKPI.service.js";
+import { calculateSupplierPurchaseReturnKPIs as calculateSupplierPurchaseReturnKPIsService } from "../services/supplierPurchaseReturnKPI.service.js";
 import { syncSupplierToQarzaAccount } from "../services/syncSupplierQarza.service.js";
 
 export const getSuppliers = asyncHandler(async (req, res, next) => {
@@ -70,10 +71,44 @@ export const getPaginatedSuppliers = asyncHandler(async (req, res) => {
         })
     ]);
 
+    // Get credits/debits data for suppliers
+    const creditsDebitsData = await getCreditsDebitsAccountData({ accountTypes: ['supplier'] });
+
+    // Create account map for lookup
+    const supplierAccountMap = {};
+    if (creditsDebitsData.accounts && creditsDebitsData.accounts.length > 0) {
+        creditsDebitsData.accounts.forEach(accountSummary => {
+            const accountId = accountSummary.account?._id?.toString();
+            if (accountId) {
+                supplierAccountMap[accountId] = {
+                    totalCashIn: accountSummary.totalPaid || 0,
+                    totalCashOut: accountSummary.totalToPay || 0,
+                    overall: (accountSummary.totalPaid || 0) - (accountSummary.totalToPay || 0)
+                };
+            }
+        });
+    }
+
+    // Add cashin/cashout/overall to each supplier
+    const enrichedData = data.map(supplier => {
+        const qarzaAccountId = supplier.qarzaAccountId?.toString();
+        const accountData = qarzaAccountId ? supplierAccountMap[qarzaAccountId] : {
+            totalCashIn: 0,
+            totalCashOut: 0,
+            overall: 0
+        };
+        return {
+            ...supplier.toObject ? supplier.toObject() : supplier,
+            totalCashIn: accountData.totalCashIn,
+            totalCashOut: accountData.totalCashOut,
+            overallBalance: accountData.overall
+        };
+    });
+
     return res.status(200).json({
         success:    true,
         message:    "Suppliers retrieved successfully",
-        data:       data,
+        data:       enrichedData,
         total:      total,
         page:       pageNum,
         limit:      limitNum,

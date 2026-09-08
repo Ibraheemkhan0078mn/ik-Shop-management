@@ -7,6 +7,7 @@ import {
     deleteOneCustomerService,
     countCustomerService,
 } from "./customer.crud.js";
+import { getCreditsDebitsAccountData } from '../../reports/services/reports.service.js';
 
 const customerCreate = async (data) => await createCustomerService(data);
 
@@ -25,17 +26,51 @@ const countCustomers = async (query = {}) => await countCustomerService(query);
 const getPaginatedCustomers = async (filters = {}) => {
     const { page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
-    
+
     const customers = await findCustomerService({}, {
         sort: { createdAt: -1 },
         skip,
         limit: parseInt(limit)
     });
-    
+
     const total = await countCustomerService({});
-    
+
+    // Get credits/debits data for customers
+    const creditsDebitsData = await getCreditsDebitsAccountData({ accountTypes: ['customer'] });
+
+    // Create account map for lookup
+    const customerAccountMap = {};
+    if (creditsDebitsData.accounts && creditsDebitsData.accounts.length > 0) {
+        creditsDebitsData.accounts.forEach(accountSummary => {
+            const accountId = accountSummary.account?._id?.toString();
+            if (accountId) {
+                customerAccountMap[accountId] = {
+                    totalCashIn: accountSummary.totalPaid || 0,
+                    totalCashOut: accountSummary.totalToPay || 0,
+                    overall: (accountSummary.totalPaid || 0) - (accountSummary.totalToPay || 0)
+                };
+            }
+        });
+    }
+
+    // Add cashin/cashout/overall to each customer
+    const enrichedData = customers.map(customer => {
+        const qarzaAccountId = customer.qarzaAccountId?.toString();
+        const accountData = qarzaAccountId ? customerAccountMap[qarzaAccountId] : {
+            totalCashIn: 0,
+            totalCashOut: 0,
+            overall: 0
+        };
+        return {
+            ...customer.toObject ? customer.toObject() : customer,
+            totalCashIn: accountData.totalCashIn,
+            totalCashOut: accountData.totalCashOut,
+            overallBalance: accountData.overall
+        };
+    });
+
     return {
-        data: customers,
+        data: enrichedData,
         total,
         page: parseInt(page),
         limit: parseInt(limit),

@@ -292,7 +292,22 @@ export default function SupplierReport() {
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#dc2626' }}>Rs {(supplier.totalDue || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#10b981' }}>Rs {(supplier.totalCashIn || 0).toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-right font-medium tabular-nums" style={{ color: '#f59e0b' }}>Rs {(supplier.totalCashOut || 0).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right font-semibold tabular-nums" style={{ color: (supplier.overallBalance || 0) >= 0 ? '#10b981' : '#dc2626' }}>Rs {(supplier.overallBalance || 0).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                                                    {(() => {
+                                                        const balance = supplier.overallBalance || 0;
+                                                        const isPositive = balance >= 0;
+                                                        return (
+                                                            <div className="flex flex-col items-end">
+                                                                <span style={{ color: isPositive ? '#10b981' : '#dc2626' }}>
+                                                                    Rs {Math.abs(balance).toLocaleString()}
+                                                                </span>
+                                                                <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                                                                    {isPositive ? 'To Receive' : 'To Give'}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td className="px-4 py-3 text-sm" style={{ color: 'var(--muted)' }}>{formatDate(supplier.lastPurchase)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <button
