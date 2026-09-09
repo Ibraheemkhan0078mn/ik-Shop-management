@@ -67,7 +67,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
     return (
         <div className="space-y-6">
             <div>
-                <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.permissionPassword}</label>
+                <label className="block text-sm font-medium text-[var(--ink)] mb-2">{labels.permissionPasswordField}</label>
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <input
@@ -95,7 +95,7 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                                 handleFetchPermissionPassword();
                             }}
                             className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-all"
-                            title={labels.edit}
+                            title={labels.permissionEdit}
                         >
                             <Edit size={18} />
                         </button>
@@ -105,14 +105,14 @@ export default function PermissionPasswordSettings({ settingsData, userId, label
                                 onClick={handleSave}
                                 disabled={loading}
                                 className="p-2 rounded-lg bg-[var(--accent-2)] text-white hover:bg-[var(--accent-2)]/80 transition-all disabled:opacity-50"
-                                title={labels.save}
+                                title={labels.permissionSave}
                             >
                                 <Save size={18} />
                             </button>
                             <button
                                 onClick={handleCancel}
                                 className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                                title={labels.cancel}
+                                title={labels.permissionCancel}
                             >
                                 <X size={18} />
                             </button>

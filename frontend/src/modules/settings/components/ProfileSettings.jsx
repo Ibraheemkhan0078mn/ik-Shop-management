@@ -28,7 +28,7 @@ export default function ProfileSettings({ labels }) {
             <div>
                 <label className="block text-sm font-medium text-[var(--ink)] mb-2 flex items-center gap-2">
                     <User size={16} />
-                    {labels.name}
+                    {labels.profileName}
                 </label>
                 <input
                     type="text"

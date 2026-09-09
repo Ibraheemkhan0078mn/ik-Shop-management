@@ -11,6 +11,7 @@ import {
     updatePermissionPasswordSettingsData,
     updateBackupSettingsData,
     updateZoomSettingsData,
+    recalculateAllDataController,
 } from "../controllers/settings.controller.js";
 
 const router = express.Router();
@@ -32,5 +33,6 @@ router.put("/modules", updateModuleSettingsData);
 router.put("/permission-password", updatePermissionPasswordSettingsData);
 router.put("/backup", updateBackupSettingsData);
 router.put("/zoom", updateZoomSettingsData);
+router.post("/recalculate-all", recalculateAllDataController);
 
 export default router;

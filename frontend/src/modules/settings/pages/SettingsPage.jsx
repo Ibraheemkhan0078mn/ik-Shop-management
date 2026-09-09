@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Cloud, FileSpreadsheet, Download, Monitor } from "lucide-react";
+import { X, Printer, Camera, Globe, Store, Lock, User, CreditCard, Palette, Cloud, FileSpreadsheet, Download, Monitor, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../hooks/useSettings.js";
@@ -17,6 +17,7 @@ import ZoomSettings from "../components/ZoomSettings.jsx";
 import BackupSettings from "../components/BackupSettings.jsx";
 import FileBackup from "../components/FileBackup.jsx";
 import AppUpdateSettings from "../components/AppUpdateSettings.jsx";
+import RecalculationSettings from "../components/RecalculationSettings.jsx";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
@@ -52,6 +53,7 @@ export default function SettingsPage() {
         { id: "backup", icon: Cloud, label: labels.backup },
         { id: "fileBackup", icon: FileSpreadsheet, label: "File Backup" },
         { id: "appUpdate", icon: Download, label: "App Update" },
+        { id: "recalculation", icon: RefreshCw, label: "Recalculation" },
     ];
 
     // Only add permission password tab for admin users
@@ -96,6 +98,7 @@ export default function SettingsPage() {
                 {activeTab === "backup" && <BackupSettings settingsData={settingsData} userId={userId} labels={labels} />}
                 {activeTab === "fileBackup" && <FileBackup labels={labels} />}
                 {activeTab === "appUpdate" && <AppUpdateSettings labels={labels} />}
+                {activeTab === "recalculation" && <RecalculationSettings labels={labels} />}
                 {/* {activeTab === "permissionPassword" && <PermissionPasswordSettings settingsData={settingsData} userId={userId} labels={labels} />} */}
             </div>
         </div>

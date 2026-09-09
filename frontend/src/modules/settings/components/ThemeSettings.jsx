@@ -475,7 +475,7 @@ export default function ThemeSettings({ labels }) {
             setMessage(labels.customThemeUnlocked);
             return;
         }
-        setPasswordError(labels.incorrectPassword);
+        setPasswordError(labels.themeIncorrectPassword);
     };
 
     const handleSave = async () => {
@@ -593,13 +593,13 @@ export default function ThemeSettings({ labels }) {
                         <div className="grid gap-4 md:grid-cols-2 items-end">
                             <div>
                                 <label className="block text-sm font-medium text-(--ink) mb-2">
-                                    {labels.unlockPassword}
+                                    {labels.themeUnlockPassword}
                                 </label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
-                                    placeholder={labels.enterPassword}
+                                    placeholder={labels.themeEnterPassword}
                                     className="w-full rounded-xl border border-(--border) bg-white px-4 py-3 text-sm text-(--ink) outline-none focus:ring-2 focus:ring-(--accent-2)"
                                 />
                             </div>
@@ -698,7 +698,7 @@ export default function ThemeSettings({ labels }) {
                         disabled={saving}
                         className="flex items-center gap-2 rounded-xl bg-(--accent-2) px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70 hover:bg-(--accent-2)/90 transition-colors"
                     >
-                        <Save size={16} /> {saving ? labels.saving : labels.saveTheme}
+                        <Save size={16} /> {saving ? labels.themeSaving : labels.saveTheme}
                     </button>
                 </div>
             </div>

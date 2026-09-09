@@ -73,6 +73,14 @@ export const settingsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["Settings"],
         }),
+        // Recalculate All Data
+        recalculateAllData: builder.mutation({
+            query: () => ({
+                url: "/settings/recalculate-all",
+                method: "POST",
+            }),
+            invalidatesTags: ["Settings", "Product", "Batch", "Orders", "OrderReturn", "Qarza", "Customer", "Supplier", "Reports"],
+        }),
     }),
 });
 
@@ -85,4 +93,5 @@ export const {
     useUpdateLanguageSettingsMutation,
     useUpdateModuleSettingsMutation,
     useUpdateBackupSettingsMutation,
+    useRecalculateAllDataMutation,
 } = settingsApi;

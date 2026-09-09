@@ -48,7 +48,7 @@ function PaymentMethodTable({ onEdit, onDelete, labels }) {
             <table className="w-full text-sm text-left">
                 <thead>
                     <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                        <th className="px-4 py-3 font-semibold">{labels.name || "Name"}</th>
+                        <th className="px-4 py-3 font-semibold">{labels.paymentMethodNameHeader || "Name"}</th>
                         <th className="px-4 py-3 font-semibold text-center">{labels.status || "Status"}</th>
                         <th className="px-4 py-3 font-semibold text-center">{labels.actions || "Actions"}</th>
                     </tr>
@@ -89,7 +89,7 @@ function PaymentMethodRow({ paymentMethod, onEdit, onDelete, labels }) {
                 <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <PermissionGuard execute={() => onEdit?.()} permission="settings.paymentMethods" isConfirmation={true}>
                         <button onClick={(e) => e?.stopPropagation()} className="px-3 py-1 text-xs rounded-lg font-medium transition" style={{ background: "rgba(15,118,110,0.08)", color: "var(--accent-2)", border: "1px solid rgba(15,118,110,0.2)" }}>
-                            {labels.edit || "Edit"}
+                            {labels.paymentMethodEdit || "Edit"}
                         </button>
                     </PermissionGuard>
                     <PermissionGuard execute={() => onDelete?.()} permission="settings.paymentMethods" isConfirmation={true}>

@@ -22,7 +22,7 @@ export default function ModuleSettings({ settingsData, userId, labels }) {
             setModulePassword("");
             toast.success(labels.moduleSettingsUnlocked);
         } else {
-            toast.error(labels.incorrectPassword);
+            toast.error(labels.moduleIncorrectPassword);
         }
     };
 
@@ -48,13 +48,13 @@ export default function ModuleSettings({ settingsData, userId, labels }) {
             {!showModuleSettings ? (
                 <div className="text-center py-8">
                     <Lock size={48} className="text-[var(--muted)] mx-auto mb-4" />
-                    <p className="text-[var(--muted)] mb-4">{labels.moduleVisibility} {labels.enterPassword}</p>
+                    <p className="text-[var(--muted)] mb-4">{labels.moduleVisibility} {labels.moduleEnterPassword}</p>
                     <div className="flex items-center gap-2 justify-center">
                         <input
                             type={showPassword ? "text" : "password"}
                             value={modulePassword}
                             onChange={(e) => setModulePassword(e.target.value)}
-                            placeholder={labels.enterPassword}
+                            placeholder={labels.moduleEnterPassword}
                             className="px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--ink)]"
                         />
                         <button

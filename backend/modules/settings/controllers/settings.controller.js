@@ -11,6 +11,7 @@ import {
     updatePermissionPasswordSettings,
     updateBackupSettings,
     updateZoomSettings,
+    recalculateAllData,
 } from "../services/settings.service.js";
 
 // Get Settings
@@ -201,5 +202,16 @@ export const updateZoomSettingsData = asyncHandler(async (req, res, next) => {
         success: true,
         message: "Zoom settings updated successfully",
         data: settings,
+    });
+});
+
+// Recalculate All Data
+export const recalculateAllDataController = asyncHandler(async (req, res, next) => {
+    const results = await recalculateAllData();
+
+    res.status(200).json({
+        success: true,
+        message: "All data recalculated successfully",
+        data: results,
     });
 });
