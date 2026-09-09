@@ -31,4 +31,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   setZoom: (zoomLevel: number) => ipcRenderer.invoke('set-zoom', zoomLevel),
   getZoom: () => ipcRenderer.invoke('get-zoom'),
+  printCurrentPage: () => ipcRenderer.invoke('print-current-page'),
 })

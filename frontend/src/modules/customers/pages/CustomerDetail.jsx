@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Eye, Trash2, RotateCcw, Copy, RefreshCw, FileText } from "lucide-react";
 import { useCustomer, useCustomerOrderKPIs, useCustomerOrderReturnKPIs } from "../services/customers.service.js";
 import { useOrdersByCustomer, useDeleteOrder } from "../../orders/services/orders.service.js";
 import { useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
@@ -8,7 +8,7 @@ import { useUpdateCustomer } from "../services/customers.service.js";
 import { useRecalculateCustomerBalance } from "../../qarza/services/qarza.service.js";
 import { getCustomerLabels } from "../labels/customerLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
-import { useCustomerPaymentsSummary, useCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
+import { useCustomerPaymentsSummary, useCustomerPayments, useLazyCustomerPayments, useDeleteQarzaPayment } from "../../qarza/services/qarza.service.js";
 import { useGetPaginatedOrderReturnsQuery, useDeleteOrderReturnMutation } from "../../orderReturn/api/orderReturn.api.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import OrderReturnModal from "../../orderReturn/components/OrderReturnModal.jsx";
@@ -17,6 +17,8 @@ import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.j
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import SupplierTransactionsPdfTemplate from "../../suppliers/components/SupplierTransactionsPdfTemplate.jsx";
 
 const IMAGE_BASE_URL = "http://localhost:5001";
 
@@ -82,9 +84,27 @@ export default function CustomerDetail() {
     const [recalculateCustomerBalance] = useRecalculateCustomerBalance();
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [transactionSource, setTransactionSource] = useState("all");
+    const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
+    const [pdfTransactions, setPdfTransactions] = useState([]);
     const [updateCustomer] = useUpdateCustomer();
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [deleteOrderReturn] = useDeleteOrderReturnMutation();
+    const [loadCustomerPayments, { isFetching: isLoadingPdfTransactions }] = useLazyCustomerPayments();
+
+    const handleExportTransactions = async () => {
+        try {
+            const request = { qarzaAccountId, source: transactionSource, page: 1 };
+            const countResult = await loadCustomerPayments({ ...request, limit: 1 }).unwrap();
+            const totalTransactions = Number(countResult?.total) || 0;
+            const result = totalTransactions > 0
+                ? await loadCustomerPayments({ ...request, limit: totalTransactions }).unwrap()
+                : countResult;
+            setPdfTransactions(result?.data || result || []);
+            setShowTransactionsPdf(true);
+        } catch (error) {
+            showError(error?.data?.msg || "Failed to load customer transactions for PDF");
+        }
+    };
 
     const refresh = useCallback(() => {}, []);
 
@@ -346,6 +366,13 @@ export default function CustomerDetail() {
                                     <option value="manual">Manual</option>
                                 </select>
                                 <button
+                                    onClick={handleExportTransactions}
+                                    disabled={isLoadingPdfTransactions}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <FileText size={16} /> {isLoadingPdfTransactions ? "Preparing PDF..." : "Export Transactions"}
+                                </button>
+                                <button
                                     onClick={handleRecalculateBalance}
                                     disabled={isRecalculating}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -458,6 +485,21 @@ export default function CustomerDetail() {
                     </div>
                 </div>
             )}
+
+            <PdfModal
+                isOpen={showTransactionsPdf}
+                onClose={() => setShowTransactionsPdf(false)}
+                fileName={`${(customer?.name || "customer").replace(/[^a-z0-9]+/gi, "-")}-transactions.pdf`}
+                labels={{ previewReport: "Customer Transactions", viewAndExportReport: "Filtered credits and debits" }}
+            >
+                <SupplierTransactionsPdfTemplate
+                    supplier={customer}
+                    transactions={pdfTransactions}
+                    summary={summary || {}}
+                    source={transactionSource}
+                    entityLabel="Customer"
+                />
+            </PdfModal>
 
             {/* Orders Tab */}
             {activeTab === "orders" && (

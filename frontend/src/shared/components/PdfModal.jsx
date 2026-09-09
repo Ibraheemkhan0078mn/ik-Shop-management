@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
-import { X, ZoomIn, ZoomOut, Download, Loader2 } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Download, Loader2, Printer } from "lucide-react";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
+import { showError } from "../utilities/toastHelpers.js";
 
 /**
  * ============================================================================
@@ -47,12 +48,20 @@ async function withCleanCapture(el, callback) {
         height: el.style.height,
         maxHeight: el.style.maxHeight,
         transform: el.style.transform,
+        width: el.style.width,
+        minWidth: el.style.minWidth,
+        maxWidth: el.style.maxWidth,
+        boxSizing: el.style.boxSizing,
     };
 
     el.style.overflow = "visible";
     el.style.maxHeight = "none";
     el.style.height = "auto";
     el.style.transform = "none";
+    el.style.width = "794px";
+    el.style.minWidth = "794px";
+    el.style.maxWidth = "794px";
+    el.style.boxSizing = "border-box";
 
     // Resolve CSS variables for cross-platform compatibility
     const computedStyle = getComputedStyle(document.documentElement);
@@ -91,13 +100,13 @@ async function withCleanCapture(el, callback) {
         colorReplacements.push({ element, originalStyles });
 
         // Apply computed colors as inline styles
-        if (computed.color && computed.color.includes('var(')) {
+        if (computed.color && computed.color !== 'rgba(0, 0, 0, 0)') {
             element.style.color = computed.color;
         }
-        if (computed.backgroundColor && computed.backgroundColor.includes('var(')) {
+        if (computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)') {
             element.style.backgroundColor = computed.backgroundColor;
         }
-        if (computed.borderColor && computed.borderColor.includes('var(')) {
+        if (computed.borderColor && computed.borderColor !== 'rgba(0, 0, 0, 0)') {
             element.style.borderColor = computed.borderColor;
         }
     });
@@ -109,6 +118,10 @@ async function withCleanCapture(el, callback) {
         el.style.height = original.height;
         el.style.maxHeight = original.maxHeight;
         el.style.transform = original.transform;
+        el.style.width = original.width;
+        el.style.minWidth = original.minWidth;
+        el.style.maxWidth = original.maxWidth;
+        el.style.boxSizing = original.boxSizing;
         
         // Remove inline CSS variable overrides from root
         el.style.removeProperty('--ink');
@@ -186,7 +199,7 @@ async function waitForCaptureAssets(element) {
 async function generatePdfFromElement(target, options = {}) {
     const {
         fileName = "document.pdf",
-        scale = 3,
+        scale = 1.5,
         backgroundColor = "#ffffff",
         multiPage = true,
         download = true,
@@ -195,33 +208,42 @@ async function generatePdfFromElement(target, options = {}) {
     const element = resolveElement(target);
     await waitForCaptureAssets(element);
 
+    if (!element.scrollWidth || !element.scrollHeight) {
+        throw new Error("PDF preview has no printable content.");
+    }
+
     // 1. Take a high-resolution screenshot of the element exactly as rendered.
-    const canvas = await withCleanCapture(element, () =>
-        html2canvas(element, {
-            scale,
-            useCORS: true,
-            backgroundColor,
-            logging: false,
-            windowWidth: 794,
-            windowHeight: element.scrollHeight,
-            allowTaint: true,
-            imageTimeout: 5000,
-            removeContainer: true,
-            foreignObjectRendering: false, // Disable for better cross-platform compatibility
-            onclone: (clonedDoc) => {
-                // Force font families in cloned document for cross-platform consistency
-                const clonedElement = clonedDoc.querySelector(`[data-html2canvas-internal-clone-id]`) || clonedDoc.body;
-                if (clonedElement) {
-                    clonedElement.style.fontFamily = 'Arial, sans-serif';
-                }
-            }
-        })
-    );
+    let captureScale = Math.min(Math.max(Number(scale) || 1.5, 1), 2);
+    const capture = (requestedScale) => withCleanCapture(element, () => html2canvas(element, {
+        scale: requestedScale,
+        useCORS: true,
+        backgroundColor,
+        logging: false,
+        windowWidth: 794,
+        windowHeight: element.scrollHeight,
+        allowTaint: true,
+        imageTimeout: 5000,
+        removeContainer: true,
+        foreignObjectRendering: false,
+        onclone: (clonedDoc) => {
+            const clonedElement = clonedDoc.querySelector(`[data-html2canvas-internal-clone-id]`) || clonedDoc.body;
+            if (clonedElement) clonedElement.style.fontFamily = "Arial, sans-serif";
+        }
+    }));
+
+    let canvas;
+    try {
+        canvas = await capture(captureScale);
+    } catch (firstError) {
+        if (captureScale <= 1) throw firstError;
+        captureScale = 1;
+        canvas = await capture(captureScale);
+    }
 
     const canvasWidthPx = canvas.width;
     const canvasHeightPx = canvas.height;
 
-    const pxToMm = (px) => (px / scale) * (25.4 / 96);
+    const pxToMm = (px) => (px / captureScale) * (25.4 / 96);
 
     const pdfWidthMm = pxToMm(canvasWidthPx);
     const pdfHeightMm = pxToMm(canvasHeightPx);
@@ -321,7 +343,7 @@ export default function PdfModal({
 
             await generatePdfFromElement(previewRef.current, {
                 fileName,
-                scale: 2,
+                scale: 1.5,
                 pdfScale: 0.94,
                 backgroundColor: '#ffffff',
                 multiPage: true,
@@ -334,8 +356,24 @@ export default function PdfModal({
             setZoom(originalZoom);
         } catch (error) {
             console.error("PDF export failed:", error);
-            alert('Failed to export PDF. Please try again.');
+            showError("Failed to export PDF. Please try again.");
         } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handlePrint = async () => {
+        if (!previewRef.current || isExporting) return;
+        setIsExporting(true);
+        try {
+            document.body.classList.add("pdf-printing");
+            previewRef.current.classList.add("pdf-print-target");
+            await globalThis.electronAPI?.printCurrentPage?.();
+        } catch (error) {
+            console.error("PDF print failed:", error);
+        } finally {
+            previewRef.current.classList.remove("pdf-print-target");
+            document.body.classList.remove("pdf-printing");
             setIsExporting(false);
         }
     };
@@ -349,6 +387,16 @@ export default function PdfModal({
                         <p className="text-sm text-slate-500">{labels.viewAndExportReport || 'Use zoom controls to preview before exporting'}</p>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handlePrint}
+                            disabled={isExporting}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Print PDF"
+                        >
+                            <Printer size={16} />
+                            Print
+                        </button>
                         <button
                             type="button"
                             onClick={decreaseZoom}

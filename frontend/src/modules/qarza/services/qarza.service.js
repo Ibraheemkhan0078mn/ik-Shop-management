@@ -197,6 +197,7 @@ export const {
     useLazyGetSupplierPaymentsQuery: useLazySupplierPayments,
     useGetSupplierPaymentsSummaryQuery: useSupplierPaymentsSummary,
     useGetCustomerPaymentsQuery: useCustomerPayments,
+    useLazyGetCustomerPaymentsQuery: useLazyCustomerPayments,
     useGetCustomerPaymentsSummaryQuery: useCustomerPaymentsSummary,
     useCreateQarzaPaymentMutation: useCreateQarzaPayment,
     useUpdateQarzaPaymentMutation: useUpdateQarzaPayment,

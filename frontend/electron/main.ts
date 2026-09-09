@@ -304,6 +304,16 @@ ipcMain.handle('get-zoom', async () => {
   return { success: false, error: 'No window available' }
 })
 
+ipcMain.handle('print-current-page', async () => {
+  const currentWindow = win
+  if (!currentWindow) return { success: false }
+  return new Promise((resolve) => {
+    currentWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
+      resolve({ success, failureReason })
+    })
+  })
+})
+
 
 
 

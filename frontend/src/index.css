@@ -1,3 +1,31 @@
+@media print {
+    body.pdf-printing > *:not(#root) {
+        visibility: hidden !important;
+    }
+
+    body.pdf-printing #root > * {
+        visibility: hidden !important;
+    }
+
+    body.pdf-printing .pdf-print-target,
+    body.pdf-printing .pdf-print-target * {
+        visibility: visible !important;
+    }
+
+    body.pdf-printing .pdf-print-target {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+}
 @import "tailwindcss";
 @import "tw-animate-css";
 
