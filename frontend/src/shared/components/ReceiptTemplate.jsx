@@ -60,49 +60,49 @@ export default function ReceiptTemplate({
                 Print Receipt
             </button>
             
-            <div ref={receiptRef} className="bg-white p-8 max-w-2xl mx-auto shadow-lg">
+            <div ref={receiptRef} className="bg-white p-8 max-w-2xl mx-auto shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
                 {/* Header */}
-                <div className="text-center mb-8 border-b-2 border-gray-300 pb-4">
-                    <h1 className="text-2xl font-bold text-gray-800">{getTypeLabel()}</h1>
-                    <p className="text-gray-600 mt-1">Invoice #: {invoiceNumber}</p>
-                    <p className="text-gray-600">Date: {date}</p>
+                <div className="text-center mb-8 pb-4" style={{ borderBottom: '2px solid #d1d5db' }}>
+                    <h1 className="text-2xl font-bold" style={{ color: '#1f2937' }}>{getTypeLabel()}</h1>
+                    <p className="mt-1" style={{ color: '#4b5563' }}>Invoice #: {invoiceNumber}</p>
+                    <p style={{ color: '#4b5563' }}>Date: {date}</p>
                 </div>
 
                 {/* Customer/Supplier Info */}
                 {customerName && (
                     <div className="mb-6">
-                        <p className="text-sm text-gray-500 uppercase font-semibold">
+                        <p className="text-sm uppercase font-semibold" style={{ color: '#6b7280' }}>
                             {type.includes('purchase') ? 'Supplier' : 'Customer'}
                         </p>
-                        <p className="text-lg font-medium text-gray-800">{customerName}</p>
+                        <p className="text-lg font-medium" style={{ color: '#1f2937' }}>{customerName}</p>
                     </div>
                 )}
 
                 {/* Items Table */}
                 <div className="mb-6">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-3">Items</h2>
-                    <table className="w-full border-collapse">
+                    <h2 className="text-lg font-semibold mb-3" style={{ color: '#1f2937' }}>Items</h2>
+                    <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr className="bg-gray-100">
-                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Item</th>
-                                <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Qty</th>
-                                <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700">Price</th>
-                                <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700">Total</th>
+                            <tr style={{ backgroundColor: '#f3f4f6' }}>
+                                <th className="px-4 py-2 text-left text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Item</th>
+                                <th className="px-4 py-2 text-center text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Qty</th>
+                                <th className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Price</th>
+                                <th className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             {items?.map((item, index) => (
                                 <tr key={index}>
-                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                                    <td className="px-4 py-2 text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
                                         {item.productName || item.name || item.product?.name}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                                    <td className="px-4 py-2 text-center text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
                                         {item.quantity}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm text-gray-600">
+                                    <td className="px-4 py-2 text-right text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
                                         Rs {(item.price || item.costPrice || item.unitPrice || item.originalPrice)?.toLocaleString()}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-800">
+                                    <td className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#1f2937' }}>
                                         Rs {((item.price || item.costPrice || item.unitPrice || item.originalPrice) * item.quantity)?.toLocaleString()}
                                     </td>
                                 </tr>
@@ -114,35 +114,35 @@ export default function ReceiptTemplate({
                 {/* Summary */}
                 {summary && (
                     <div className="mb-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-3">Summary</h2>
+                        <h2 className="text-lg font-semibold mb-3" style={{ color: '#1f2937' }}>Summary</h2>
                         <div className="space-y-2">
                             {summary.subtotal !== undefined && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Subtotal:</span>
-                                    <span className="text-gray-800">Rs {summary.subtotal?.toLocaleString()}</span>
+                                    <span style={{ color: '#4b5563' }}>Subtotal:</span>
+                                    <span style={{ color: '#1f2937' }}>Rs {summary.subtotal?.toLocaleString()}</span>
                                 </div>
                             )}
                             {summary.discount !== undefined && summary.discount > 0 && (
-                                <div className="flex justify-between text-sm text-red-600">
+                                <div className="flex justify-between text-sm" style={{ color: '#dc2626' }}>
                                     <span>Discount:</span>
                                     <span>- Rs {summary.discount?.toLocaleString()}</span>
                                 </div>
                             )}
                             {summary.gst !== undefined && summary.gst > 0 && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">GST:</span>
-                                    <span className="text-gray-800">+ Rs {summary.gst?.toLocaleString()}</span>
+                                    <span style={{ color: '#4b5563' }}>GST:</span>
+                                    <span style={{ color: '#1f2937' }}>+ Rs {summary.gst?.toLocaleString()}</span>
                                 </div>
                             )}
                             {summary.shippingCost !== undefined && summary.shippingCost > 0 && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Shipping:</span>
-                                    <span className="text-gray-800">+ Rs {summary.shippingCost?.toLocaleString()}</span>
+                                    <span style={{ color: '#4b5563' }}>Shipping:</span>
+                                    <span style={{ color: '#1f2937' }}>+ Rs {summary.shippingCost?.toLocaleString()}</span>
                                 </div>
                             )}
-                            <div className="flex justify-between text-lg font-bold border-t-2 border-gray-300 pt-2 mt-2">
-                                <span className="text-gray-800">{getAmountLabel()}:</span>
-                                <span className="text-gray-800">Rs {summary.totalAmount?.toLocaleString()}</span>
+                            <div className="flex justify-between text-lg font-bold pt-2 mt-2" style={{ borderTop: '2px solid #d1d5db' }}>
+                                <span style={{ color: '#1f2937' }}>{getAmountLabel()}:</span>
+                                <span style={{ color: '#1f2937' }}>Rs {summary.totalAmount?.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
@@ -151,27 +151,27 @@ export default function ReceiptTemplate({
                 {/* Payments */}
                 {payments && payments.length > 0 && (
                     <div className="mb-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                        <h2 className="text-lg font-semibold mb-3" style={{ color: '#1f2937' }}>
                             {type.includes('return') ? 'Refunds' : 'Payments'}
                         </h2>
-                        <table className="w-full border-collapse">
+                        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Date</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Method</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700">Amount</th>
+                                <tr style={{ backgroundColor: '#f3f4f6' }}>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Date</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Method</th>
+                                    <th className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#374151' }}>Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {payments.map((payment, index) => (
                                     <tr key={index}>
-                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                                        <td className="px-4 py-2 text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
                                             {new Date(payment.paymentDate || payment.refundDate).toLocaleDateString()}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-600 capitalize">
+                                        <td className="px-4 py-2 text-sm capitalize" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
                                             {payment.paymentMethod || payment.refundMethod}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-800">
+                                        <td className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#1f2937' }}>
                                             Rs {payment.amount?.toLocaleString()}
                                         </td>
                                     </tr>
@@ -182,7 +182,7 @@ export default function ReceiptTemplate({
                 )}
 
                 {/* Footer */}
-                <div className="mt-8 pt-4 border-t-2 border-gray-300 text-center text-sm text-gray-500">
+                <div className="mt-8 pt-4 text-center text-sm" style={{ borderTop: '2px solid #d1d5db', color: '#6b7280' }}>
                     <p>Thank you for your business!</p>
                     <p className="mt-1">Generated on {new Date().toLocaleString()}</p>
                 </div>

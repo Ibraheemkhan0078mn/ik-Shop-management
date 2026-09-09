@@ -74,7 +74,8 @@ function resolveLibs() {
 /**
  * Temporarily strips scroll clipping / transforms that can cause
  * html2canvas to crop or misalign the captured image, then restores them.
- * Also resolves CSS variables to ensure cross-platform compatibility.
+ * Also resolves CSS variables to ensure cross-platform compatibility by
+ * replacing them with actual color values in all descendant elements.
  */
 async function withCleanCapture(el, callback) {
     const original = {
@@ -94,15 +95,15 @@ async function withCleanCapture(el, callback) {
     const computedStyle = getComputedStyle(document.documentElement);
     const cssVars = {
         '--ink': computedStyle.getPropertyValue('--ink').trim() || '#1f1a17',
-        '--surface': computedStyle.getPropertyValue('--surface').trim() || '#fffaf3',
+        '--surface': computedStyle.getPropertyValue('--surface').trim() || '#ffffff',
         '--surface-muted': computedStyle.getPropertyValue('--surface-muted').trim() || '#f7efe3',
         '--muted': computedStyle.getPropertyValue('--muted').trim() || '#6d5d52',
         '--accent': computedStyle.getPropertyValue('--accent').trim() || '#b45309',
         '--accent-2': computedStyle.getPropertyValue('--accent-2').trim() || '#0f766e',
-        '--border': computedStyle.getPropertyValue('--border').trim() || '#eadfce',
+        '--border': computedStyle.getPropertyValue('--border').trim() || '#e5e7eb',
     };
 
-    // Apply resolved values as inline styles to the element for capture
+    // Apply resolved values as inline styles to the root element
     el.style.setProperty('--ink', cssVars['--ink'], 'important');
     el.style.setProperty('--surface', cssVars['--surface'], 'important');
     el.style.setProperty('--surface-muted', cssVars['--surface-muted'], 'important');
@@ -111,6 +112,33 @@ async function withCleanCapture(el, callback) {
     el.style.setProperty('--accent-2', cssVars['--accent-2'], 'important');
     el.style.setProperty('--border', cssVars['--border'], 'important');
 
+    // Replace CSS variables with actual colors in all descendant elements
+    const elementsWithCssVars = el.querySelectorAll('*');
+    const colorReplacements = [];
+
+    elementsWithCssVars.forEach((element) => {
+        const computed = getComputedStyle(element);
+        const originalStyles = {
+            color: element.style.color,
+            backgroundColor: element.style.backgroundColor,
+            borderColor: element.style.borderColor,
+        };
+
+        // Store for restoration
+        colorReplacements.push({ element, originalStyles });
+
+        // Apply computed colors as inline styles
+        if (computed.color && computed.color.includes('var(')) {
+            element.style.color = computed.color;
+        }
+        if (computed.backgroundColor && computed.backgroundColor.includes('var(')) {
+            element.style.backgroundColor = computed.backgroundColor;
+        }
+        if (computed.borderColor && computed.borderColor.includes('var(')) {
+            element.style.borderColor = computed.borderColor;
+        }
+    });
+
     try {
         return await callback();
     } finally {
@@ -118,7 +146,8 @@ async function withCleanCapture(el, callback) {
         el.style.height = original.height;
         el.style.maxHeight = original.maxHeight;
         el.style.transform = original.transform;
-        // Remove inline CSS variable overrides
+        
+        // Remove inline CSS variable overrides from root
         el.style.removeProperty('--ink');
         el.style.removeProperty('--surface');
         el.style.removeProperty('--surface-muted');
@@ -126,24 +155,35 @@ async function withCleanCapture(el, callback) {
         el.style.removeProperty('--accent');
         el.style.removeProperty('--accent-2');
         el.style.removeProperty('--border');
+
+        // Restore original inline styles
+        colorReplacements.forEach(({ element, originalStyles }) => {
+            element.style.color = originalStyles.color;
+            element.style.backgroundColor = originalStyles.backgroundColor;
+            element.style.borderColor = originalStyles.borderColor;
+        });
     }
 }
 
 async function waitForCaptureAssets(element) {
-    // Wait for fonts with longer timeout for cross-platform compatibility
+    // Wait for fonts with extended timeout for cross-platform compatibility
     if (document.fonts?.ready) {
         try {
+            // Force font loading check
+            await document.fonts.load('12px Arial');
+            await document.fonts.load('12px sans-serif');
+            
             await Promise.race([
                 document.fonts.ready,
-                new Promise(resolve => setTimeout(resolve, 2000)) // 2s timeout
+                new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
             ]);
         } catch (e) {
             console.warn('Font loading timeout, proceeding anyway');
         }
     }
 
-    // Additional delay for font rendering
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Extended delay for font rendering across different systems
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     const images = Array.from(element.querySelectorAll("img"));
     await Promise.all(images.map(async (image) => {
@@ -151,7 +191,7 @@ async function waitForCaptureAssets(element) {
             await new Promise((resolve) => {
                 image.addEventListener("load", resolve, { once: true });
                 image.addEventListener("error", resolve, { once: true });
-                setTimeout(resolve, 2000); // 2s timeout for images
+                setTimeout(resolve, 3000); // 3s timeout for images
             });
         }
 
@@ -164,8 +204,16 @@ async function waitForCaptureAssets(element) {
         }
     }));
 
-    // Multiple RAF calls for stable rendering across browsers
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // Multiple RAF calls for stable rendering across browsers and systems
+    await new Promise((resolve) => 
+        requestAnimationFrame(() => 
+            requestAnimationFrame(() => 
+                requestAnimationFrame(() => 
+                    requestAnimationFrame(resolve)
+                )
+            )
+        )
+    );
 }
 
 /**
@@ -215,12 +263,19 @@ export async function generatePdfFromElement(target, options = {}) {
             useCORS: true,              // allow cross-origin images (logos, etc.)
             backgroundColor,            // avoid black bg on transparent elements
             logging: false,
-            windowWidth: captureWidth || element.scrollWidth,
+            windowWidth: captureWidth || element.scrollWidth || 794,
             windowHeight: element.scrollHeight,
             allowTaint: true,
             imageTimeout: 5000,
             removeContainer: true,
-            foreignObjectRendering: false, // Disable for better compatibility
+            foreignObjectRendering: false, // Disable for better cross-platform compatibility
+            onclone: (clonedDoc) => {
+                // Force font families in cloned document for cross-platform consistency
+                const clonedElement = clonedDoc.querySelector(`[data-html2canvas-internal-clone-id]`) || clonedDoc.body;
+                if (clonedElement) {
+                    clonedElement.style.fontFamily = 'Arial, sans-serif';
+                }
+            }
         })
     );
 

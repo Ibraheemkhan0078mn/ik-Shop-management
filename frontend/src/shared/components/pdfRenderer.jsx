@@ -122,17 +122,18 @@ const PdfRenderer = ({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
-                    <div ref={contentRef} className="bg-white">
+                    <div ref={contentRef} className="bg-white" style={{ fontFamily: 'Arial, sans-serif' }}>
                         {data.length === 0 ? (
-                            <p className="text-gray-500 text-center py-8">No data to display</p>
+                            <p className="text-center py-8" style={{ color: '#6b7280' }}>No data to display</p>
                         ) : (
-                            <table className="w-full border-collapse">
+                            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr className="bg-gray-100">
+                                    <tr style={{ backgroundColor: '#f3f4f6' }}>
                                         {Object.keys(config).map((fieldName) => (
                                             <th 
                                                 key={fieldName} 
-                                                className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                                                className="px-4 py-2 text-left text-sm font-semibold"
+                                                style={{ border: '1px solid #d1d5db', color: '#374151' }}
                                             >
                                                 {formatHeading(fieldName)}
                                             </th>
@@ -147,7 +148,8 @@ const PdfRenderer = ({
                                                 return (
                                                     <td 
                                                         key={`${index}-${fieldName}`} 
-                                                        className="border border-gray-300 px-4 py-2 text-sm text-gray-600"
+                                                        className="px-4 py-2 text-sm"
+                                                        style={{ border: '1px solid #d1d5db', color: '#4b5563' }}
                                                     >
                                                         {value}
                                                     </td>

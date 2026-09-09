@@ -27,7 +27,7 @@
     "html-to-image": "^1.11.13",
     "html2canvas-pro": "^2.3.3",
     "html5-qrcode": "^2.3.8",
-    "jspdf": "^4.2.1",
+    "jspdf": "^2.5.2",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.554.0",
     "qrcode.react": "^4.2.0",
