@@ -35,15 +35,12 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                     {order?.customerData?.phoneNo && <p className="text-xs" style={{ color: "#4b5563" }}>Phone: {order.customerData.phoneNo}</p>}
                     {order?.customerData?.address && <p className="text-xs" style={{ color: "#4b5563" }}>Address: {order.customerData.address}</p>}
                     {order?.staffData && <p className="text-xs" style={{ color: "#4b5563" }}>Staff: {order.staffData.fullName}</p>}
+                    {order?.status && <p className="text-xs font-semibold mt-2" style={{ color: "#6b7280" }}>Status: <span className="font-normal capitalize" style={{ color: "#111827" }}>{order.status}</span></p>}
                 </div>
                 <div className="flex flex-col gap-2 min-w-[240px]">
                     <div className="border px-3 py-2 flex justify-between text-sm" style={{ borderColor: "#d1d5db" }}>
                         <span className="font-semibold">Order #: {order?.orderNumber || "—"}</span>
                         <span className="font-semibold">Date: {date}</span>
-                    </div>
-                    <div className="border px-3 py-2 flex justify-between text-sm" style={{ borderColor: "#d1d5db" }}>
-                        <span className="font-semibold">Status:</span>
-                        <span className="font-semibold capitalize">{order?.status || "—"}</span>
                     </div>
                 </div>
             </div>
@@ -183,12 +180,12 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                             <p className="text-lg font-bold" style={{ color: "#16a34a" }}>Rs {(qarzaSummary.totalPaid || 0).toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Remaining Balance</p>
-                            <p className="text-lg font-bold" style={{ color: "#0f766e" }}>Rs {(qarzaSummary.remainingBalance || 0).toLocaleString()}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Total Remaining</p>
+                            <p className="text-lg font-bold" style={{ color: "#f59e0b" }}>Rs {(qarzaSummary.totalRemaining || 0).toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Account Status</p>
-                            <p className="text-lg font-bold capitalize" style={{ color: "#111827" }}>{qarzaSummary.accountStatus || "—"}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Credit Account</p>
+                            <p className="text-lg font-bold" style={{ color: "#8b5cf6" }}>{qarzaSummary.creditAccountName || "—"}</p>
                         </div>
                     </div>
                 </div>
@@ -199,18 +196,16 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                 <div className="flex text-sm">
                     <div className="w-1/2 text-center py-3 border-r" style={{ borderColor: "#d1d5db" }}>
                         <p>Prepared By</p>
-                        <p className="font-semibold mt-1">SyedSoft</p>
                     </div>
                     <div className="w-1/2 text-center py-3">
                         <p>Approved By</p>
-                        <p className="font-semibold mt-1">Afrasiab Mobile Accesories</p>
                     </div>
                 </div>
             </div>
 
             {/* Footer */}
             <div className="flex justify-between items-start text-xs" style={{ color: "#6b7280" }}>
-                <p className="italic max-w-[70%]">{labels.footerNote || "This is a computer generated document, does not required any signature"}</p>
+                <p className="italic" style={{ maxWidth: "70%" }}>{labels.footerNote || "This is a computer generated document, does not required any signature"}</p>
                 <p>Print Time: {new Date().toLocaleString()}</p>
             </div>
         </div>
