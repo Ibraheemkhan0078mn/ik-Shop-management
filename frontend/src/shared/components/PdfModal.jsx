@@ -39,6 +39,7 @@ function resolveElement(target) {
 /**
  * Temporarily strips scroll clipping / transforms that can cause
  * html2canvas to crop or misalign the captured image, then restores them.
+ * Also resolves CSS variables to ensure cross-platform compatibility.
  */
 async function withCleanCapture(el, callback) {
     const original = {
@@ -53,6 +54,27 @@ async function withCleanCapture(el, callback) {
     el.style.height = "auto";
     el.style.transform = "none";
 
+    // Resolve CSS variables for cross-platform compatibility
+    const computedStyle = getComputedStyle(document.documentElement);
+    const cssVars = {
+        '--ink': computedStyle.getPropertyValue('--ink').trim() || '#1f1a17',
+        '--surface': computedStyle.getPropertyValue('--surface').trim() || '#fffaf3',
+        '--surface-muted': computedStyle.getPropertyValue('--surface-muted').trim() || '#f7efe3',
+        '--muted': computedStyle.getPropertyValue('--muted').trim() || '#6d5d52',
+        '--accent': computedStyle.getPropertyValue('--accent').trim() || '#b45309',
+        '--accent-2': computedStyle.getPropertyValue('--accent-2').trim() || '#0f766e',
+        '--border': computedStyle.getPropertyValue('--border').trim() || '#eadfce',
+    };
+
+    // Apply resolved values as inline styles to the element for capture
+    el.style.setProperty('--ink', cssVars['--ink'], 'important');
+    el.style.setProperty('--surface', cssVars['--surface'], 'important');
+    el.style.setProperty('--surface-muted', cssVars['--surface-muted'], 'important');
+    el.style.setProperty('--muted', cssVars['--muted'], 'important');
+    el.style.setProperty('--accent', cssVars['--accent'], 'important');
+    el.style.setProperty('--accent-2', cssVars['--accent-2'], 'important');
+    el.style.setProperty('--border', cssVars['--border'], 'important');
+
     try {
         return await callback();
     } finally {
@@ -60,13 +82,32 @@ async function withCleanCapture(el, callback) {
         el.style.height = original.height;
         el.style.maxHeight = original.maxHeight;
         el.style.transform = original.transform;
+        // Remove inline CSS variable overrides
+        el.style.removeProperty('--ink');
+        el.style.removeProperty('--surface');
+        el.style.removeProperty('--surface-muted');
+        el.style.removeProperty('--muted');
+        el.style.removeProperty('--accent');
+        el.style.removeProperty('--accent-2');
+        el.style.removeProperty('--border');
     }
 }
 
 async function waitForCaptureAssets(element) {
+    // Wait for fonts with longer timeout for cross-platform compatibility
     if (document.fonts?.ready) {
-        await document.fonts.ready;
+        try {
+            await Promise.race([
+                document.fonts.ready,
+                new Promise(resolve => setTimeout(resolve, 2000)) // 2s timeout
+            ]);
+        } catch (e) {
+            console.warn('Font loading timeout, proceeding anyway');
+        }
     }
+
+    // Additional delay for font rendering
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     const images = Array.from(element.querySelectorAll("img"));
     await Promise.all(images.map(async (image) => {
@@ -74,6 +115,7 @@ async function waitForCaptureAssets(element) {
             await new Promise((resolve) => {
                 image.addEventListener("load", resolve, { once: true });
                 image.addEventListener("error", resolve, { once: true });
+                setTimeout(resolve, 2000); // 2s timeout for images
             });
         }
 
@@ -86,7 +128,8 @@ async function waitForCaptureAssets(element) {
         }
     }));
 
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // Multiple RAF calls for stable rendering across browsers
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 /**
@@ -114,6 +157,10 @@ async function generatePdfFromElement(target, options = {}) {
             logging: false,
             windowWidth: 794,
             windowHeight: element.scrollHeight,
+            allowTaint: true,
+            imageTimeout: 5000,
+            removeContainer: true,
+            foreignObjectRendering: false, // Disable for better compatibility
         })
     );
 
