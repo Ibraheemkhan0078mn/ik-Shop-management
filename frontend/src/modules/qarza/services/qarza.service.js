@@ -194,6 +194,7 @@ export const {
     useGetManualPaymentsQuery: useManualPayments,
     useGetManualPaymentsSummaryQuery: useManualPaymentsSummary,
     useGetSupplierPaymentsQuery: useSupplierPayments,
+    useLazyGetSupplierPaymentsQuery: useLazySupplierPayments,
     useGetSupplierPaymentsSummaryQuery: useSupplierPaymentsSummary,
     useGetCustomerPaymentsQuery: useCustomerPayments,
     useGetCustomerPaymentsSummaryQuery: useCustomerPaymentsSummary,

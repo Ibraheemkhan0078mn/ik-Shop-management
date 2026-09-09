@@ -1,17 +1,21 @@
 import React, { useState } from "react";
-import { Edit, Trash2, RefreshCw, Plus } from "lucide-react";
-import { useSupplierPaymentsSummary, useSupplierPayments, useDeleteQarzaPayment, useRecalculateSupplierBalance, useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
+import { Edit, Trash2, RefreshCw, Plus, FileText } from "lucide-react";
+import { useSupplierPaymentsSummary, useSupplierPayments, useLazySupplierPayments, useDeleteQarzaPayment, useRecalculateSupplierBalance, useCreateQarzaAccount } from "../../qarza/services/qarza.service.js";
 import { useUpdateSupplier } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
 import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
+import PdfModal from "../../../shared/components/PdfModal.jsx";
+import SupplierTransactionsPdfTemplate from "./SupplierTransactionsPdfTemplate.jsx";
 
 export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUpdate }) {
     const [modal, setModal] = useState(null);
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [transactionSource, setTransactionSource] = useState("all");
+    const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
+    const [pdfTransactions, setPdfTransactions] = useState([]);
 
     const { data: summary } = useSupplierPaymentsSummary(qarzaAccountId);
     const accountExists = summary?.accountExists !== false;
@@ -19,6 +23,22 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
     const [createQarzaAccount] = useCreateQarzaAccount();
     const [updateSupplier] = useUpdateSupplier();
     const [recalculateSupplierBalance] = useRecalculateSupplierBalance();
+    const [loadSupplierPayments, { isFetching: isLoadingPdfTransactions }] = useLazySupplierPayments();
+
+    const handleExportTransactions = async () => {
+        try {
+            const request = { qarzaAccountId, source: transactionSource, page: 1 };
+            const countResult = await loadSupplierPayments({ ...request, limit: 1 }).unwrap();
+            const totalTransactions = Number(countResult?.total) || 0;
+            const result = totalTransactions > 0
+                ? await loadSupplierPayments({ ...request, limit: totalTransactions }).unwrap()
+                : countResult;
+            setPdfTransactions(result?.data || result || []);
+            setShowTransactionsPdf(true);
+        } catch (error) {
+            showError(error?.data?.msg || "Failed to load supplier transactions for PDF");
+        }
+    };
 
     const handleDelete = async (paymentId) => {
         try {
@@ -135,6 +155,13 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                 <option value="manual">Manual</option>
                             </select>
                             <button
+                                onClick={handleExportTransactions}
+                                disabled={isLoadingPdfTransactions}
+                                className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FileText size={16} /> {isLoadingPdfTransactions ? "Preparing PDF..." : "Export Transactions"}
+                            </button>
+                            <button
                                 onClick={handleRecalculateBalance}
                                 disabled={isRecalculating}
                                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -236,6 +263,20 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                     onSuccess={() => setModal(null)}
                 />
             )}
+
+            <PdfModal
+                isOpen={showTransactionsPdf}
+                onClose={() => setShowTransactionsPdf(false)}
+                fileName={`${(supplier?.name || "supplier").replace(/[^a-z0-9]+/gi, "-")}-transactions.pdf`}
+                labels={{ previewReport: "Supplier Transactions", viewAndExportReport: "Filtered credits and debits" }}
+            >
+                <SupplierTransactionsPdfTemplate
+                    supplier={supplier}
+                    transactions={pdfTransactions}
+                    summary={summary || {}}
+                    source={transactionSource}
+                />
+            </PdfModal>
         </>
     );
 }
