@@ -1,5 +1,7 @@
 import { createDoc, findDocs, findOneDoc, updateDocs, deleteDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { getLocalTransactionModel } from "../../../configs/connect.db.js";
+import { findByIdQarzaAccountService } from "../../qarza/services/qarzaAccount.crud.js";
+import { findByIdPaymentMethodService } from "../../settings/services/paymentMethod.crud.js";
 
 const createTransactionService = (data) => {
     const TransactionModel = getLocalTransactionModel();
@@ -83,12 +85,43 @@ const getTransactions = async (filter = {}) => {
     }
     
     const result = await findTransactionService(query, {
-        populate: ['creditAccount', 'paymentMethod', 'createdBy'],
         sort: { transactionDate: -1 }
     });
     
-    // Return array directly, unwrapping if result has data property
-    return Array.isArray(result) ? result : (result?.data || []);
+    // Manually fetch related data (creditAccount, paymentMethod) since populate is not allowed
+    const transactionsWithData = await Promise.all(
+        (Array.isArray(result) ? result : (result?.data || [])).map(async (transaction) => {
+            const transactionObj = transaction.toObject ? transaction.toObject() : transaction;
+
+            // Fetch credit account data if exists
+            if (transactionObj.creditAccount) {
+                try {
+                    const creditAccount = await findByIdQarzaAccountService(transactionObj.creditAccount);
+                    if (creditAccount) {
+                        transactionObj.creditAccountData = creditAccount.toObject ? creditAccount.toObject() : creditAccount;
+                    }
+                } catch (error) {
+                    console.error('Error fetching credit account:', error.message);
+                }
+            }
+
+            // Fetch payment method data if exists
+            if (transactionObj.paymentMethod) {
+                try {
+                    const paymentMethod = await findByIdPaymentMethodService(transactionObj.paymentMethod);
+                    if (paymentMethod) {
+                        transactionObj.paymentMethodData = paymentMethod.toObject ? paymentMethod.toObject() : paymentMethod;
+                    }
+                } catch (error) {
+                    console.error('Error fetching payment method:', error.message);
+                }
+            }
+
+            return transactionObj;
+        })
+    );
+    
+    return transactionsWithData;
 };
 
 const getTransactionById = async (id) => {

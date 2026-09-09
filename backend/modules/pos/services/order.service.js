@@ -1,6 +1,8 @@
 import { createOrderService, findOrderService, findOneOrderService, findByIdOrderService, deleteOneOrderService, countOrderService } from "./order.crud.js";
 import { calculateOrderPaymentStatus } from "./orderPayment.service.js";
 import { getTransactions } from "../../transactions/services/transaction.service.js";
+import { findByIdCustomerService } from "../../customer/services/customer.crud.js";
+import { findByIdStaffService } from "../../staff/services/staff.crud.js";
 
 const orderCreate = async (data) => {
     return await createOrderService(data);
@@ -9,12 +11,38 @@ const orderCreate = async (data) => {
 const getAllOrders = async (query = {}) => {
     const orders = await findOrderService(query, { sort: { createdAt: -1 } });
     
-    // Calculate payment status for each order
+    // Calculate payment status and fetch customer/staff data for each order
     const ordersWithPaymentStatus = await Promise.all(
         orders.map(async (order) => {
+            const orderObj = order.toObject ? order.toObject() : order;
             const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+
+            // Manually fetch customer data if customerId exists
+            if (orderObj.customerId) {
+                try {
+                    const customer = await findByIdCustomerService(orderObj.customerId);
+                    if (customer) {
+                        orderObj.customerData = customer.toObject ? customer.toObject() : customer;
+                    }
+                } catch (error) {
+                    console.error('Error fetching customer:', error.message);
+                }
+            }
+
+            // Manually fetch staff data if staffId exists
+            if (orderObj.staffId) {
+                try {
+                    const staff = await findByIdStaffService(orderObj.staffId);
+                    if (staff) {
+                        orderObj.staffData = staff.toObject ? staff.toObject() : staff;
+                    }
+                } catch (error) {
+                    console.error('Error fetching staff:', error.message);
+                }
+            }
+
             return {
-                ...order.toObject ? order.toObject() : order,
+                ...orderObj,
                 paidAmount: paymentStatus.totalPaid,
                 remainingAmount: paymentStatus.remainingAmount
             };
@@ -25,11 +53,77 @@ const getAllOrders = async (query = {}) => {
 };
 
 const getOrderById = async (id) => {
-    return await findByIdOrderService(id);
+    const order = await findByIdOrderService(id);
+    
+    if (!order) {
+        return null;
+    }
+
+    // Convert to plain object if it's a Mongoose document
+    const orderObj = order.toObject ? order.toObject() : order;
+
+    // Manually fetch customer data if customerId exists
+    if (orderObj.customerId) {
+        try {
+            const customer = await findByIdCustomerService(orderObj.customerId);
+            if (customer) {
+                orderObj.customerData = customer.toObject ? customer.toObject() : customer;
+            }
+        } catch (error) {
+            console.error('Error fetching customer:', error.message);
+        }
+    }
+
+    // Manually fetch staff data if staffId exists
+    if (orderObj.staffId) {
+        try {
+            const staff = await findByIdStaffService(orderObj.staffId);
+            if (staff) {
+                orderObj.staffData = staff.toObject ? staff.toObject() : staff;
+            }
+        } catch (error) {
+            console.error('Error fetching staff:', error.message);
+        }
+    }
+
+    return orderObj;
 };
 
 const findOrderByNumber = async (orderNumber) => {
-    return await findOneOrderService({ orderNumber });
+    const order = await findOneOrderService({ orderNumber });
+    
+    if (!order) {
+        return null;
+    }
+
+    // Convert to plain object if it's a Mongoose document
+    const orderObj = order.toObject ? order.toObject() : order;
+
+    // Manually fetch customer data if customerId exists
+    if (orderObj.customerId) {
+        try {
+            const customer = await findByIdCustomerService(orderObj.customerId);
+            if (customer) {
+                orderObj.customerData = customer.toObject ? customer.toObject() : customer;
+            }
+        } catch (error) {
+            console.error('Error fetching customer:', error.message);
+        }
+    }
+
+    // Manually fetch staff data if staffId exists
+    if (orderObj.staffId) {
+        try {
+            const staff = await findByIdStaffService(orderObj.staffId);
+            if (staff) {
+                orderObj.staffData = staff.toObject ? staff.toObject() : staff;
+            }
+        } catch (error) {
+            console.error('Error fetching staff:', error.message);
+        }
+    }
+
+    return orderObj;
 };
 
 const orderDelete = async (id) => {
@@ -60,12 +154,38 @@ const getPaginatedOrders = async (filters = {}) => {
         skip
     });
     
-    // Calculate payment status for each order
+    // Calculate payment status and fetch customer/staff data for each order
     const ordersWithPaymentStatus = await Promise.all(
         orders.map(async (order) => {
+            const orderObj = order.toObject ? order.toObject() : order;
             const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+
+            // Manually fetch customer data if customerId exists
+            if (orderObj.customerId) {
+                try {
+                    const customer = await findByIdCustomerService(orderObj.customerId);
+                    if (customer) {
+                        orderObj.customerData = customer.toObject ? customer.toObject() : customer;
+                    }
+                } catch (error) {
+                    console.error('Error fetching customer:', error.message);
+                }
+            }
+
+            // Manually fetch staff data if staffId exists
+            if (orderObj.staffId) {
+                try {
+                    const staff = await findByIdStaffService(orderObj.staffId);
+                    if (staff) {
+                        orderObj.staffData = staff.toObject ? staff.toObject() : staff;
+                    }
+                } catch (error) {
+                    console.error('Error fetching staff:', error.message);
+                }
+            }
+
             return {
-                ...order.toObject ? order.toObject() : order,
+                ...orderObj,
                 paidAmount: paymentStatus.totalPaid,
                 remainingAmount: paymentStatus.remainingAmount
             };
@@ -101,12 +221,38 @@ const getOrdersByCustomer = async (filters = {}) => {
 
     const orders = await findOrderService(filter, { sort: { createdAt: -1 } });
     
-    // Calculate payment status for each order
+    // Calculate payment status and fetch customer/staff data for each order
     const ordersWithPaymentStatus = await Promise.all(
         orders.map(async (order) => {
+            const orderObj = order.toObject ? order.toObject() : order;
             const paymentStatus = await calculateOrderPaymentStatus(order._id, order.totalAmount);
+
+            // Manually fetch customer data if customerId exists
+            if (orderObj.customerId) {
+                try {
+                    const customer = await findByIdCustomerService(orderObj.customerId);
+                    if (customer) {
+                        orderObj.customerData = customer.toObject ? customer.toObject() : customer;
+                    }
+                } catch (error) {
+                    console.error('Error fetching customer:', error.message);
+                }
+            }
+
+            // Manually fetch staff data if staffId exists
+            if (orderObj.staffId) {
+                try {
+                    const staff = await findByIdStaffService(orderObj.staffId);
+                    if (staff) {
+                        orderObj.staffData = staff.toObject ? staff.toObject() : staff;
+                    }
+                } catch (error) {
+                    console.error('Error fetching staff:', error.message);
+                }
+            }
+
             return {
-                ...order.toObject ? order.toObject() : order,
+                ...orderObj,
                 paidAmount: paymentStatus.totalPaid,
                 remainingAmount: paymentStatus.remainingAmount
             };

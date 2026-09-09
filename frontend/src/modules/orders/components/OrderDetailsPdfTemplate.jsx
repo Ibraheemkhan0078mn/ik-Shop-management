@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function OrderDetailsPdfTemplate({ order = {}, payments = [], labels = {} }) {
+export default function OrderDetailsPdfTemplate({ order = {}, payments = [], labels = {}, showCustomerKPI = false, qarzaSummary = null }) {
     const totalPaid = order?.paid ?? 0;
     const remainingAmount = order?.remainingAmount ?? 0;
     const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—";
@@ -32,6 +32,9 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                     <p className="text-sm font-bold text-gray-900 uppercase">{order?.customerName || "Walk-in Customer"}</p>
                     {order?.customerType && <p className="text-xs text-gray-600 capitalize">Type: {order.customerType}</p>}
                     {order?.customerId && <p className="text-xs text-gray-600">Customer ID: {order.customerId}</p>}
+                    {order?.customerData?.phoneNo && <p className="text-xs text-gray-600">Phone: {order.customerData.phoneNo}</p>}
+                    {order?.customerData?.address && <p className="text-xs text-gray-600">Address: {order.customerData.address}</p>}
+                    {order?.staffData && <p className="text-xs text-gray-600">Staff: {order.staffData.fullName}</p>}
                 </div>
                 <div className="flex flex-col gap-2 min-w-[240px]">
                     <div className="border border-gray-300 px-3 py-2 flex justify-between text-sm">
@@ -134,6 +137,72 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                     </div>
                 </div>
             </div>
+
+            {/* Payment Transactions Section */}
+            {payments && payments.length > 0 && (
+                <div className="mb-6">
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Payment Transactions</h3>
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="bg-gray-900 text-white">
+                                <th className="px-3 py-2 text-left font-semibold">#</th>
+                                <th className="px-3 py-2 text-left font-semibold">Date</th>
+                                <th className="px-3 py-2 text-left font-semibold">Payment Method</th>
+                                <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                                <th className="px-3 py-2 text-left font-semibold">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {payments.map((payment, index) => (
+                                <tr key={payment._id || index} className="border-b border-gray-200">
+                                    <td className="px-3 py-2">{index + 1}</td>
+                                    <td className="px-3 py-2">
+                                        {payment.createdAt ? new Date(payment.createdAt).toLocaleString() : "—"}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <span className="font-semibold">
+                                            {payment.paymentMethodData?.name || payment.paymentMethodName || payment.creditAccountData?.name || "Unknown"}
+                                        </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-bold text-green-600">
+                                        Rs {(payment.amount || 0).toLocaleString()}
+                                    </td>
+                                    <td className="px-3 py-2 text-gray-600 text-xs italic">
+                                        {payment.note || "—"}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Customer Qarza Section - Only show when toggle is on */}
+            {showCustomerKPI && qarzaSummary && (
+                <div className="mb-6">
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Customer Qarza Overview</h3>
+                    <div className="grid grid-cols-4 gap-3">
+                        <div className="border border-gray-300 p-3 rounded bg-gray-50">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Cash In</p>
+                            <p className="text-lg font-bold text-green-600">Rs {(qarzaSummary.cashIn || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="border border-gray-300 p-3 rounded bg-gray-50">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Cash Out</p>
+                            <p className="text-lg font-bold text-red-600">Rs {(qarzaSummary.cashOut || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="border border-gray-300 p-3 rounded bg-gray-50">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Total Transactions</p>
+                            <p className="text-lg font-bold text-gray-900">{qarzaSummary.totalTransactions || 0}</p>
+                        </div>
+                        <div className="border border-gray-300 p-3 rounded bg-gray-50">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Overall Balance</p>
+                            <p className={`text-lg font-bold ${qarzaSummary.overall >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                Rs {(qarzaSummary.overall || 0).toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Sign-off Bar */}
             <div className="border border-gray-300 mb-4">

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrder, useGetOrderPayments, useGetOrderPaymentStatus, useRecalculateOrderPaidAmount } from "../services/orders.service.js";
-import { Receipt, Download, RefreshCw, ArrowLeft, Calendar, User, FileText, DollarSign, CreditCard } from "lucide-react";
+import { useCustomerPaymentsSummary } from "../../qarza/services/qarza.service.js";
+import { Receipt, Download, RefreshCw, ArrowLeft, Calendar, User, FileText, DollarSign, CreditCard, ToggleLeft, ToggleRight } from "lucide-react";
 import OrderDetailsPdfTemplate from "../components/OrderDetailsPdfTemplate.jsx";
 import OrderPaymentPdfTemplate from "../components/OrderPaymentPdfTemplate.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -11,14 +12,23 @@ import { usePermissionGuard } from "../../../shared/hooks/usePermissionGuard.js"
 export default function OrderDetailsPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { data: order, isLoading, error, refetch: refetchOrder } = useOrder(id, { skip: !id });
-    const { data: paymentsData, refetch: refetchPayments } = useGetOrderPayments(id, { skip: !id });
-    const { data: paymentStatusData, refetch: refetchPaymentStatus } = useGetOrderPaymentStatus(id, { skip: !id });
+    const { data: order, isLoading, error } = useOrder(id, { skip: !id });
+    const { data: paymentsData } = useGetOrderPayments(id, { skip: !id });
+    const { data: paymentStatusData } = useGetOrderPaymentStatus(id, { skip: !id });
     const [recalculateOrderPaidAmount] = useRecalculateOrderPaidAmount();
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [showPaymentPdfModal, setShowPaymentPdfModal] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
+    const [showCustomerKPI, setShowCustomerKPI] = useState(false);
     const { hasPermission } = usePermissionGuard();
+
+    // Fetch customer qarza payment summary when toggle is on and customer has qarza account
+    const { data: qarzaSummary, isLoading: qarzaLoading } = useCustomerPaymentsSummary(
+        order?.customerData?.qarzaAccountId,
+        {
+            skip: !showCustomerKPI || !order?.customerData?.qarzaAccountId || order?.customerType !== 'regular'
+        }
+    );
 
     const payments = paymentsData?.data || paymentsData || [];
     const paymentStatus = paymentStatusData?.data || paymentStatusData || {};
@@ -101,6 +111,16 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {order?.customerType === 'regular' && (
+                                <button
+                                    onClick={() => setShowCustomerKPI(!showCustomerKPI)}
+                                    className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
+                                    title="Toggle Customer Qarza KPI"
+                                >
+                                    {showCustomerKPI ? <ToggleRight size={15} className="text-green-600" /> : <ToggleLeft size={15} />}
+                                    {showCustomerKPI ? 'Hide Qarza' : 'Show Qarza'}
+                                </button>
+                            )}
                             {hasPermission('orders.update') && (
                                 <button
                                     onClick={handleRecalculate}
@@ -145,16 +165,34 @@ export default function OrderDetailsPage() {
                                     <p className="text-xs font-bold text-(--muted) uppercase tracking-wide">Bill To</p>
                                 </div>
                                 <p className="text-lg font-bold text-(--ink)">{order?.customerName || "Walk-in Customer"}</p>
-                                <div className="mt-2 space-y-1 text-sm text-(--muted)">
-                                    <p className="capitalize">Type: {order?.customerType || "walkin"}</p>
+                                <div className="mt-3 space-y-2">
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
+                                        <span className="text-(--muted)">Type:</span>
+                                        <span className="font-semibold capitalize">{order?.customerType || "walkin"}</span>
+                                    </div>
                                     {order?.customerId && (
-                                        <p>Customer ID: {typeof order.customerId === 'object' ? order.customerId._id : order.customerId}</p>
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
+                                            <span className="text-(--muted)">Customer ID:</span>
+                                            <span className="font-semibold">{typeof order.customerId === 'object' ? order.customerId._id : order.customerId}</span>
+                                        </div>
                                     )}
-                                    {order?.customerId?.phoneNo && <p>Phone: {order.customerId.phoneNo}</p>}
-                                    {order?.customerId?.address && <p>Address: {order.customerId.address}</p>}
-                                    {order?.waiter && <p>Served by: {order.waiter}</p>}
-                                    {order?.staffId && (
-                                        <p>Staff: {typeof order.staffId === 'object' ? order.staffId.fullName : order.staffId}</p>
+                                    {order?.customerData?.phoneNo && (
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
+                                            <span className="text-(--muted)">Phone:</span>
+                                            <span className="font-semibold">{order.customerData.phoneNo}</span>
+                                        </div>
+                                    )}
+                                    {order?.customerData?.address && (
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
+                                            <span className="text-(--muted)">Address:</span>
+                                            <span className="font-semibold">{order.customerData.address}</span>
+                                        </div>
+                                    )}
+                                    {order?.staffData && (
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
+                                            <span className="text-(--muted)">Staff:</span>
+                                            <span className="font-semibold">{order.staffData.fullName}</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -166,21 +204,21 @@ export default function OrderDetailsPage() {
                                     <p className="text-xs font-bold text-(--muted) uppercase tracking-wide">Invoice Details</p>
                                 </div>
                                 <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Invoice #:</span>
                                         <span className="font-bold text-(--ink)">{order?.orderNumber || "—"}</span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Date:</span>
                                         <span className="font-semibold text-(--ink)">{date}</span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Order Type:</span>
                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
                                             order?.orderType === "wholesale" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
                                         }`}>{order?.orderType || "retail"}</span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Status:</span>
                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
                                             order?.status === "completed" ? "bg-green-100 text-green-700" :
@@ -188,21 +226,21 @@ export default function OrderDetailsPage() {
                                         }`}>{order?.status || "—"}</span>
                                     </div>
                                     {order?.discountAmount > 0 && (
-                                        <div className="flex justify-between">
-                                            <span className="text-(--muted)">Order Discount:</span>
-                                            <span className="font-semibold text-red-600">
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-red-600">
+                                            <span>Order Discount:</span>
+                                            <span className="font-semibold">
                                                 {order?.discountType === "percentage" ? `RS: ${order?.discountAmount}` : `Rs ${order?.discountAmount?.toLocaleString()}`}
                                             </span>
                                         </div>
                                     )}
                                     {order?.totalTaxAmount > 0 && (
-                                        <div className="flex justify-between">
-                                            <span className="text-(--muted)">Total Tax:</span>
-                                            <span className="font-semibold text-green-700">Rs {order?.totalTaxAmount?.toLocaleString()}</span>
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-green-700">
+                                            <span>Total Tax:</span>
+                                            <span className="font-semibold">Rs {order?.totalTaxAmount?.toLocaleString()}</span>
                                         </div>
                                     )}
                                     {order?.isPosOrder && (
-                                        <div className="flex justify-between">
+                                        <div className="border border-(--border) px-3 py-2 flex justify-between">
                                             <span className="text-(--muted)">Source:</span>
                                             <span className="text-xs font-semibold text-(--accent-2)">POS Terminal</span>
                                         </div>
@@ -443,11 +481,15 @@ export default function OrderDetailsPage() {
                                             </td>
                                             <td className="px-3 py-3">
                                                 <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                                    payment.paymentMethod?.name === "Cash" ? "bg-green-100 text-green-700" :
-                                                    payment.paymentMethod?.name === "Card" ? "bg-blue-100 text-blue-700" :
-                                                    payment.paymentMethod?.name === "Bank Transfer" ? "bg-purple-100 text-purple-700" :
+                                                    payment.paymentMethodData?.name === "Cash" ? "bg-green-100 text-green-700" :
+                                                    payment.paymentMethodData?.name === "Card" ? "bg-blue-100 text-blue-700" :
+                                                    payment.paymentMethodData?.name === "Bank Transfer" ? "bg-purple-100 text-purple-700" :
+                                                    payment.paymentMethodData?.name === "easypaisa" ? "bg-orange-100 text-orange-700" :
+                                                    payment.creditAccountData ? "bg-yellow-100 text-yellow-700" :
                                                     "bg-gray-100 text-gray-700"
-                                                }`}>{payment.paymentMethod?.name || payment.paymentMethodName || "Unknown"}</span>
+                                                }`}>
+                                                    {payment.paymentMethodData?.name || payment.paymentMethodName || payment.creditAccountData?.name || "Unknown"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-right font-bold text-green-600">
                                                 Rs {(payment.amount || 0).toLocaleString()}
@@ -472,6 +514,40 @@ export default function OrderDetailsPage() {
                             </table>
                         </div>
                     )}
+
+                    {/* Customer Qarza KPI Section */}
+                    {showCustomerKPI && qarzaSummary && (
+                        <div className="bg-(--surface) border border-(--border) rounded-2xl shadow-lg px-8 py-6 mt-10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <DollarSign size={18} className="text-(--accent-2)" />
+                                <h3 className="text-lg font-bold text-(--ink)">Customer Qarza Overview</h3>
+                            </div>
+                            {qarzaLoading ? (
+                                <p className="text-(--muted)">Loading Qarza data...</p>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
+                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Cash In</p>
+                                        <p className="text-2xl font-bold text-green-600">Rs {(qarzaSummary.cashIn || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
+                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Cash Out</p>
+                                        <p className="text-2xl font-bold text-red-600">Rs {(qarzaSummary.cashOut || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
+                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Total Transactions</p>
+                                        <p className="text-2xl font-bold text-(--ink)">{qarzaSummary.totalTransactions || 0}</p>
+                                    </div>
+                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
+                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Overall Balance</p>
+                                        <p className={`text-2xl font-bold ${qarzaSummary.overall >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            Rs {(qarzaSummary.overall || 0).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
             {showPdfModal && (
@@ -481,7 +557,7 @@ export default function OrderDetailsPage() {
                     fileName={`Order-${order?.orderNumber || 'details'}.pdf`}
                     labels={{}}
                 >
-                    <OrderDetailsPdfTemplate order={order} payments={payments} labels={{}} />
+                    <OrderDetailsPdfTemplate order={order} payments={payments} labels={{}} showCustomerKPI={showCustomerKPI} qarzaSummary={qarzaSummary} />
                 </PdfModal>
             )}
             {showPaymentPdfModal && selectedPayment && (
