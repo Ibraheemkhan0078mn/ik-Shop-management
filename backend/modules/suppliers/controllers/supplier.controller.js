@@ -286,7 +286,7 @@ export const getSupplierPurchaseKPIs = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Supplier not found", 404));
     }
 
-    const kpis = await calculateSupplierPurchaseKPIs(supplierId, startDate, endDate);
+    const kpis = await calculateSupplierPurchaseKPIsService(supplierId, startDate, endDate);
 
     res.status(200).json(kpis);
 });
@@ -301,7 +301,7 @@ export const getSupplierPurchaseReturnKPIs = asyncHandler(async (req, res, next)
         return next(new ErrorResponse("Supplier not found", 404));
     }
 
-    const kpis = await calculateSupplierPurchaseReturnKPIs(supplierId, startDate, endDate);
+    const kpis = await calculateSupplierPurchaseReturnKPIsService(supplierId, startDate, endDate);
 
     res.status(200).json(kpis);
 });

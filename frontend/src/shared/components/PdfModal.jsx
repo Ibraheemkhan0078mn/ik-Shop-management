@@ -40,7 +40,7 @@ function resolveElement(target) {
  * Temporarily strips scroll clipping / transforms that can cause
  * html2canvas to crop or misalign the captured image, then restores them.
  */
-function withCleanCapture(el, callback) {
+async function withCleanCapture(el, callback) {
     const original = {
         overflow: el.style.overflow,
         height: el.style.height,
@@ -54,13 +54,39 @@ function withCleanCapture(el, callback) {
     el.style.transform = "none";
 
     try {
-        return callback();
+        return await callback();
     } finally {
         el.style.overflow = original.overflow;
         el.style.height = original.height;
         el.style.maxHeight = original.maxHeight;
         el.style.transform = original.transform;
     }
+}
+
+async function waitForCaptureAssets(element) {
+    if (document.fonts?.ready) {
+        await document.fonts.ready;
+    }
+
+    const images = Array.from(element.querySelectorAll("img"));
+    await Promise.all(images.map(async (image) => {
+        if (!image.complete) {
+            await new Promise((resolve) => {
+                image.addEventListener("load", resolve, { once: true });
+                image.addEventListener("error", resolve, { once: true });
+            });
+        }
+
+        if (image.decode) {
+            try {
+                await image.decode();
+            } catch {
+                // A failed image should not block PDF generation.
+            }
+        }
+    }));
+
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
 /**
@@ -77,6 +103,7 @@ async function generatePdfFromElement(target, options = {}) {
     } = options;
 
     const element = resolveElement(target);
+    await waitForCaptureAssets(element);
 
     // 1. Take a high-resolution screenshot of the element exactly as rendered.
     const canvas = await withCleanCapture(element, () =>
@@ -85,7 +112,7 @@ async function generatePdfFromElement(target, options = {}) {
             useCORS: true,
             backgroundColor,
             logging: false,
-            windowWidth: element.scrollWidth,
+            windowWidth: 794,
             windowHeight: element.scrollHeight,
         })
     );
@@ -189,7 +216,7 @@ export default function PdfModal({
             const originalZoom = zoom;
             setZoom(1);
 
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
             await generatePdfFromElement(previewRef.current, {
                 fileName,
@@ -282,8 +309,9 @@ export default function PdfModal({
                         style={{
                             transform: `scale(${zoom})`,
                             transformOrigin: 'top center',
-                            width: `${100 / zoom}%`,
-                            maxWidth: '1400px',
+                            width: '794px',
+                            minWidth: '794px',
+                            maxWidth: '794px',
                         }}
                     >
                         {children}
