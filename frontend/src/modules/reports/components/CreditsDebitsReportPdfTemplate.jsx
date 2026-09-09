@@ -1,16 +1,29 @@
 import React from "react";
-import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
 
-function KpiCard({ label, value, icon: Icon, color, isCurrency = true, valueColor }) {
+function KpiCard({ label, value, color, isCurrency = true, valueColor }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
+        <div style={{ 
+            padding: '1rem',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                    width: '2.5rem', 
+                    height: '2.5rem', 
+                    borderRadius: '0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: `${color}20`
+                }}>
+                    <span style={{ fontSize: '1.25rem', color }}>{isCurrency ? 'Rs' : '#'}</span>
                 </div>
                 <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className={`font-semibold ${valueColor || 'text-[var(--ink)]'}`}>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{label}</p>
+                    <p style={{ fontWeight: '600', color: valueColor || '#1f2937', margin: '0.25rem 0 0 0' }}>
                         {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || value || 0)}
                     </p>
                 </div>
@@ -25,11 +38,11 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
         const status = accountData.accountStatus;
 
         if (remaining === 0 || status === 'cleared') {
-            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-green-100 text-green-800 border-green-300">Balanced</span>;
+            return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.25rem 0.5rem', fontSize: '0.75rem', fontWeight: '500', borderRadius: '9999px', border: '1px solid #86efac', backgroundColor: '#dcfce7', color: '#166534' }}>Balanced</span>;
         } else if (remaining > 0) {
-            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-red-100 text-red-800 border-red-300">To Give ({remaining.toLocaleString()})</span>;
+            return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.25rem 0.5rem', fontSize: '0.75rem', fontWeight: '500', borderRadius: '9999px', border: '1px solid #fca5a5', backgroundColor: '#fee2e2', color: '#991b1b' }}>To Give ({remaining.toLocaleString()})</span>;
         } else {
-            return <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border bg-green-100 text-green-800 border-green-300">To Receive ({Math.abs(remaining).toLocaleString()})</span>;
+            return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.25rem 0.5rem', fontSize: '0.75rem', fontWeight: '500', borderRadius: '9999px', border: '1px solid #86efac', backgroundColor: '#dcfce7', color: '#166534' }}>To Receive ({Math.abs(remaining).toLocaleString()})</span>;
         }
     };
 
@@ -37,76 +50,77 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
     const accounts = reportData?.accounts || [];
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">{labels.creditsDebitsReport}</h1>
-                <p className="text-sm text-[var(--muted)]">{labels.creditsDebitsAnalysis} · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#1f2937', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{labels.creditsDebitsReport}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{labels.creditsDebitsAnalysis} · {selectedPeriodLabel}</p>
             </div>
 
             {/* KPI Cards */}
             {reportData && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                     <KpiCard
                         label={labels.totalAccounts}
                         value={kpi.totalAccounts}
-                        icon={Wallet}
                         color="#3b82f6"
                         isCurrency={false}
                     />
                     <KpiCard
                         label={labels.iOwe}
                         value={kpi.totalDebitOnOthers}
-                        icon={TrendingUp}
                         color="#ef4444"
-                        valueColor="text-red-600"
+                        valueColor="#dc2626"
                     />
                     <KpiCard
                         label={labels.owedToMe}
                         value={kpi.totalDebitOnMe}
-                        icon={TrendingDown}
                         color="#22c55e"
-                        valueColor="text-green-600"
+                        valueColor="#16a34a"
                     />
                     <KpiCard
                         label={labels.netBalance}
                         value={kpi.finalAmount}
-                        icon={Wallet}
                         color="#eab308"
-                        valueColor={(kpi.finalAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'}
+                        valueColor={(kpi.finalAmount || 0) >= 0 ? '#16a34a' : '#dc2626'}
                     />
                 </div>
             )}
 
             {/* Accounts Table */}
             {reportData && accounts && accounts.length > 0 ? (
-                <div className="card">
-                    <div className="p-4 border-b border-[var(--border)]">
-                        <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.creditAccounts}</h2>
+                <div style={{ 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.5rem',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                }}>
+                    <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                        <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>{labels.creditAccounts}</h2>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-[var(--surface-muted)]">
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%' }}>
+                            <thead style={{ backgroundColor: '#f3f4f6' }}>
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.account}</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.type}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalToPay}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalPaid}</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.statusAndBalance}</th>
+                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.account}</th>
+                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.type}</th>
+                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.totalToPay}</th>
+                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.totalPaid}</th>
+                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.statusAndBalance}</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[var(--border)]">
+                            <tbody>
                                 {accounts.slice(0, 50).map((accountData, index) => (
-                                    <tr key={index} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3">
+                                    <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.75rem 1rem' }}>
                                             <div>
-                                                <p className="font-medium text-[var(--ink)]">{accountData.account.name}</p>
-                                                <p className="text-xs text-[var(--muted)]">{accountData.account.phoneNo || "—"}</p>
+                                                <p style={{ fontWeight: '500', color: '#1f2937', margin: 0 }}>{accountData.account.name}</p>
+                                                <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{accountData.account.phoneNo || "—"}</p>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-sm capitalize text-[var(--ink)]">{accountData.account.type}</td>
-                                        <td className="px-4 py-3 text-right font-medium text-red-600">Rs {(accountData.totalToPay || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-right font-medium text-green-600">Rs {(accountData.totalPaid || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textTransform: 'capitalize', color: '#1f2937' }}>{accountData.account.type}</td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '500', color: '#dc2626' }}>Rs {(accountData.totalToPay || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '500', color: '#16a34a' }}>Rs {(accountData.totalPaid || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
                                             {getBalanceDisplay(accountData)}
                                         </td>
                                     </tr>
@@ -115,16 +129,16 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
                         </table>
                     </div>
                     {accounts.length > 50 && (
-                        <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
+                        <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
                             Showing first 50 of {accounts.length} accounts
                         </div>
                     )}
                 </div>
             ) : (
-                <div className="card p-12 text-center">
-                    <Wallet size={48} className="mx-auto mb-4 text-[var(--muted)]" />
-                    <h3 className="text-lg font-medium text-[var(--ink)] mb-2">{labels.noAccountsFound}</h3>
-                    <p className="text-[var(--muted)]">{labels.tryAdjustingFilters}</p>
+                <div style={{ padding: '3rem', textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#ffffff' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#6b7280' }}>💰</div>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '500', color: '#1f2937', marginBottom: '0.5rem', margin: 0 }}>{labels.noAccountsFound}</h3>
+                    <p style={{ color: '#6b7280', margin: 0 }}>{labels.tryAdjustingFilters}</p>
                 </div>
             )}
         </div>

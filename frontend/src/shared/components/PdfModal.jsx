@@ -1,318 +1,19 @@
 import React, { useRef, useState } from "react";
 import { X, ZoomIn, ZoomOut, Download, Loader2, Printer } from "lucide-react";
-import html2canvas from "html2canvas-pro";
-import { jsPDF } from "jspdf";
+import { generatePdfFromElement } from "../services/pdfEngine.service.js";
 import { showError } from "../utilities/toastHelpers.js";
 
 /**
- * ============================================================================
- *  PDF engine (inlined) — converts a DOM element into a pixel-perfect PDF.
- *  Uses html2canvas-pro (drop-in fork of html2canvas with oklch/oklab/
- *  color-mix/lab/lch support), so no CSS/color patching is needed anymore.
- * ============================================================================
+ * PdfModal - A modal component that displays content for PDF preview and export
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Whether the modal is open
+ * @param {Function} props.onClose - Callback when modal is closed
+ * @param {string} props.fileName - Name of the PDF file to download
+ * @param {Object} props.labels - Localization labels
+ * @param {React.ReactNode} props.children - The content to display and export
+ * @param {Object} props.pdfOptions - Additional options for PDF generation
  */
-
-/**
- * Resolves the target DOM node from an id string, a ref object, or a
- * direct HTMLElement.
- */
-function resolveElement(target) {
-    if (target instanceof HTMLElement) return target;
-
-    if (target && typeof target === "object" && "current" in target) {
-        if (!target.current) {
-            throw new Error("[pdfEngine] The ref you passed has no `current` element (is it mounted yet?).");
-        }
-        return target.current;
-    }
-
-    if (typeof target === "string") {
-        const el = document.getElementById(target);
-        if (!el) {
-            throw new Error(`[pdfEngine] No element found with id "${target}".`);
-        }
-        return el;
-    }
-
-    throw new Error("[pdfEngine] Invalid target. Pass an element id, a ref, or an HTMLElement.");
-}
-
-/**
- * Temporarily strips scroll clipping / transforms that can cause
- * html2canvas to crop or misalign the captured image, then restores them.
- * Also resolves CSS variables to ensure cross-platform compatibility.
- */
-async function withCleanCapture(el, callback) {
-    const original = {
-        overflow: el.style.overflow,
-        height: el.style.height,
-        maxHeight: el.style.maxHeight,
-        transform: el.style.transform,
-        width: el.style.width,
-        minWidth: el.style.minWidth,
-        maxWidth: el.style.maxWidth,
-        boxSizing: el.style.boxSizing,
-    };
-
-    el.style.overflow = "visible";
-    el.style.maxHeight = "none";
-    el.style.height = "auto";
-    el.style.transform = "none";
-    el.style.width = "794px";
-    el.style.minWidth = "794px";
-    el.style.maxWidth = "794px";
-    el.style.boxSizing = "border-box";
-
-    // Resolve CSS variables for cross-platform compatibility
-    const computedStyle = getComputedStyle(document.documentElement);
-    const cssVars = {
-        '--ink': computedStyle.getPropertyValue('--ink').trim() || '#1f1a17',
-        '--surface': computedStyle.getPropertyValue('--surface').trim() || '#ffffff',
-        '--surface-muted': computedStyle.getPropertyValue('--surface-muted').trim() || '#f7efe3',
-        '--muted': computedStyle.getPropertyValue('--muted').trim() || '#6d5d52',
-        '--accent': computedStyle.getPropertyValue('--accent').trim() || '#b45309',
-        '--accent-2': computedStyle.getPropertyValue('--accent-2').trim() || '#0f766e',
-        '--border': computedStyle.getPropertyValue('--border').trim() || '#e5e7eb',
-    };
-
-    // Apply resolved values as inline styles to the root element
-    el.style.setProperty('--ink', cssVars['--ink'], 'important');
-    el.style.setProperty('--surface', cssVars['--surface'], 'important');
-    el.style.setProperty('--surface-muted', cssVars['--surface-muted'], 'important');
-    el.style.setProperty('--muted', cssVars['--muted'], 'important');
-    el.style.setProperty('--accent', cssVars['--accent'], 'important');
-    el.style.setProperty('--accent-2', cssVars['--accent-2'], 'important');
-    el.style.setProperty('--border', cssVars['--border'], 'important');
-
-    // Replace CSS variables with actual colors in all descendant elements
-    const elementsWithCssVars = el.querySelectorAll('*');
-    const colorReplacements = [];
-
-    elementsWithCssVars.forEach((element) => {
-        const computed = getComputedStyle(element);
-        const originalStyles = {
-            color: element.style.color,
-            backgroundColor: element.style.backgroundColor,
-            borderColor: element.style.borderColor,
-        };
-
-        // Store for restoration
-        colorReplacements.push({ element, originalStyles });
-
-        // Apply computed colors as inline styles
-        if (computed.color && computed.color !== 'rgba(0, 0, 0, 0)') {
-            element.style.color = computed.color;
-        }
-        if (computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-            element.style.backgroundColor = computed.backgroundColor;
-        }
-        if (computed.borderColor && computed.borderColor !== 'rgba(0, 0, 0, 0)') {
-            element.style.borderColor = computed.borderColor;
-        }
-    });
-
-    try {
-        return await callback();
-    } finally {
-        el.style.overflow = original.overflow;
-        el.style.height = original.height;
-        el.style.maxHeight = original.maxHeight;
-        el.style.transform = original.transform;
-        el.style.width = original.width;
-        el.style.minWidth = original.minWidth;
-        el.style.maxWidth = original.maxWidth;
-        el.style.boxSizing = original.boxSizing;
-        
-        // Remove inline CSS variable overrides from root
-        el.style.removeProperty('--ink');
-        el.style.removeProperty('--surface');
-        el.style.removeProperty('--surface-muted');
-        el.style.removeProperty('--muted');
-        el.style.removeProperty('--accent');
-        el.style.removeProperty('--accent-2');
-        el.style.removeProperty('--border');
-
-        // Restore original inline styles
-        colorReplacements.forEach(({ element, originalStyles }) => {
-            element.style.color = originalStyles.color;
-            element.style.backgroundColor = originalStyles.backgroundColor;
-            element.style.borderColor = originalStyles.borderColor;
-        });
-    }
-}
-
-async function waitForCaptureAssets(element) {
-    // Wait for fonts with extended timeout for cross-platform compatibility
-    if (document.fonts?.ready) {
-        try {
-            // Force font loading check
-            await document.fonts.load('12px Arial');
-            await document.fonts.load('12px sans-serif');
-            
-            await Promise.race([
-                document.fonts.ready,
-                new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
-            ]);
-        } catch (e) {
-            console.warn('Font loading timeout, proceeding anyway');
-        }
-    }
-
-    // Extended delay for font rendering across different systems
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const images = Array.from(element.querySelectorAll("img"));
-    await Promise.all(images.map(async (image) => {
-        if (!image.complete) {
-            await new Promise((resolve) => {
-                image.addEventListener("load", resolve, { once: true });
-                image.addEventListener("error", resolve, { once: true });
-                setTimeout(resolve, 3000); // 3s timeout for images
-            });
-        }
-
-        if (image.decode) {
-            try {
-                await image.decode();
-            } catch {
-                // A failed image should not block PDF generation.
-            }
-        }
-    }));
-
-    // Multiple RAF calls for stable rendering across browsers and systems
-    await new Promise((resolve) => 
-        requestAnimationFrame(() => 
-            requestAnimationFrame(() => 
-                requestAnimationFrame(() => 
-                    requestAnimationFrame(resolve)
-                )
-            )
-        )
-    );
-}
-
-/**
- * Converts a DOM element into a pixel-perfect, zero-margin PDF and
- * triggers a download (or returns the PDF instance).
- */
-async function generatePdfFromElement(target, options = {}) {
-    const {
-        fileName = "document.pdf",
-        scale = 1.5,
-        backgroundColor = "#ffffff",
-        multiPage = true,
-        download = true,
-    } = options;
-
-    const element = resolveElement(target);
-    await waitForCaptureAssets(element);
-
-    if (!element.scrollWidth || !element.scrollHeight) {
-        throw new Error("PDF preview has no printable content.");
-    }
-
-    // 1. Take a high-resolution screenshot of the element exactly as rendered.
-    let captureScale = Math.min(Math.max(Number(scale) || 1.5, 1), 2);
-    const capture = (requestedScale) => withCleanCapture(element, () => html2canvas(element, {
-        scale: requestedScale,
-        useCORS: true,
-        backgroundColor,
-        logging: false,
-        windowWidth: 794,
-        windowHeight: element.scrollHeight,
-        allowTaint: true,
-        imageTimeout: 5000,
-        removeContainer: true,
-        foreignObjectRendering: false,
-        onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector(`[data-html2canvas-internal-clone-id]`) || clonedDoc.body;
-            if (clonedElement) clonedElement.style.fontFamily = "Arial, sans-serif";
-        }
-    }));
-
-    let canvas;
-    try {
-        canvas = await capture(captureScale);
-    } catch (firstError) {
-        if (captureScale <= 1) throw firstError;
-        captureScale = 1;
-        canvas = await capture(captureScale);
-    }
-
-    const canvasWidthPx = canvas.width;
-    const canvasHeightPx = canvas.height;
-
-    const pxToMm = (px) => (px / captureScale) * (25.4 / 96);
-
-    const pdfWidthMm = pxToMm(canvasWidthPx);
-    const pdfHeightMm = pxToMm(canvasHeightPx);
-
-    const imgData = canvas.toDataURL("image/png", 1.0);
-
-    let pdf;
-
-    if (!multiPage) {
-        pdf = new jsPDF({
-            orientation: pdfWidthMm > pdfHeightMm ? "landscape" : "portrait",
-            unit: "mm",
-            format: [pdfWidthMm, pdfHeightMm],
-        });
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
-    } else {
-        const A4_WIDTH_MM = 210;
-        const A4_HEIGHT_MM = 297;
-
-        const scaledHeightMm = (canvasHeightPx * A4_WIDTH_MM) / canvasWidthPx;
-
-        pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4",
-        });
-
-        if (scaledHeightMm <= A4_HEIGHT_MM) {
-            pdf.addImage(imgData, "PNG", 0, 0, A4_WIDTH_MM, scaledHeightMm, undefined, "FAST");
-        } else {
-            const pageHeightPx = (A4_HEIGHT_MM * canvasWidthPx) / A4_WIDTH_MM;
-            let renderedHeightPx = 0;
-            let pageIndex = 0;
-
-            const sliceCanvas = document.createElement("canvas");
-            const sliceCtx = sliceCanvas.getContext("2d");
-            sliceCanvas.width = canvasWidthPx;
-
-            while (renderedHeightPx < canvasHeightPx) {
-                const remaining = canvasHeightPx - renderedHeightPx;
-                const thisSliceHeightPx = Math.min(pageHeightPx, remaining);
-
-                sliceCanvas.height = thisSliceHeightPx;
-                sliceCtx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-                sliceCtx.drawImage(
-                    canvas,
-                    0, renderedHeightPx, canvasWidthPx, thisSliceHeightPx,
-                    0, 0, canvasWidthPx, thisSliceHeightPx
-                );
-
-                const sliceImgData = sliceCanvas.toDataURL("image/png", 1.0);
-                const sliceHeightMm = (thisSliceHeightPx * A4_WIDTH_MM) / canvasWidthPx;
-
-                if (pageIndex > 0) pdf.addPage();
-                pdf.addImage(sliceImgData, "PNG", 0, 0, A4_WIDTH_MM, sliceHeightMm, undefined, "FAST");
-
-                renderedHeightPx += thisSliceHeightPx;
-                pageIndex += 1;
-            }
-        }
-    }
-
-    if (download) {
-        pdf.save(fileName);
-    }
-
-    return pdf;
-}
-
 export default function PdfModal({
     isOpen,
     onClose,
@@ -336,14 +37,12 @@ export default function PdfModal({
 
         setIsExporting(true);
         try {
-            const originalZoom = zoom;
-            setZoom(1);
-
             await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
             await generatePdfFromElement(previewRef.current, {
                 fileName,
                 scale: 1.5,
+                layoutWidth: 794 / zoom,
                 pdfScale: 0.94,
                 backgroundColor: '#ffffff',
                 multiPage: true,
@@ -352,8 +51,6 @@ export default function PdfModal({
                 logging: false,
                 ...pdfOptions,
             });
-
-            setZoom(originalZoom);
         } catch (error) {
             console.error("PDF export failed:", error);
             showError("Failed to export PDF. Please try again.");
@@ -366,14 +63,22 @@ export default function PdfModal({
         if (!previewRef.current || isExporting) return;
         setIsExporting(true);
         try {
-            document.body.classList.add("pdf-printing");
-            previewRef.current.classList.add("pdf-print-target");
-            await globalThis.electronAPI?.printCurrentPage?.();
+            const pdf = await generatePdfFromElement(previewRef.current, {
+                fileName,
+                scale: 1.5,
+                layoutWidth: 794 / zoom,
+                backgroundColor: '#ffffff',
+                multiPage: true,
+                download: false,
+                ...pdfOptions,
+            });
+
+            pdf.autoPrint();
+            window.open(pdf.output('bloburl'), '_blank');
         } catch (error) {
             console.error("PDF print failed:", error);
+            showError("Failed to print PDF. Please try again.");
         } finally {
-            previewRef.current.classList.remove("pdf-print-target");
-            document.body.classList.remove("pdf-printing");
             setIsExporting(false);
         }
     };
@@ -409,7 +114,6 @@ export default function PdfModal({
                             type="button"
                             onClick={resetZoom}
                             className="inline-flex h-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 px-3"
-                            style={{ minWidth: 72 }}
                             title="Reset zoom"
                         >
                             {Math.round(zoom * 100)}%
@@ -456,11 +160,10 @@ export default function PdfModal({
                         ref={previewRef}
                         className="mx-auto bg-white shadow-xl"
                         style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top center',
-                            width: '794px',
-                            minWidth: '794px',
-                            maxWidth: '794px',
+                            zoom,
+                            width: `${794 / zoom}px`,
+                            minWidth: `${794 / zoom}px`,
+                            maxWidth: `${794 / zoom}px`,
                         }}
                     >
                         {children}

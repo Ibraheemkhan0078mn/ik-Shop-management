@@ -1,19 +1,18 @@
 import React from "react";
-import { Receipt, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
 
 function BreakdownItem({ label, value, count, percentage, color }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '0.75rem', height: '0.75rem', borderRadius: '50%', backgroundColor: color }} />
                 <div>
-                    <p className="text-sm font-medium text-[var(--ink)]">{label}</p>
-                    <p className="text-xs text-[var(--muted)]">{count} transactions</p>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937', margin: 0 }}>{label}</p>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{count} transactions</p>
                 </div>
             </div>
-            <div className="text-right">
-                <p className="text-sm font-bold" style={{ color }}>Rs {value?.toLocaleString() || 0}</p>
-                <p className="text-xs text-[var(--muted)]">{percentage}%</p>
+            <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '0.875rem', fontWeight: 'bold', color, margin: 0 }}>Rs {value?.toLocaleString() || 0}</p>
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{percentage}%</p>
             </div>
         </div>
     );
@@ -21,15 +20,15 @@ function BreakdownItem({ label, value, count, percentage, color }) {
 
 function ExpenseTransactionRow({ expense, index }) {
     return (
-        <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{index + 1}</td>
-            <td className="py-3 px-4 text-sm font-medium text-[var(--ink)]">
+        <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#1f2937' }}>{index + 1}</td>
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
                 Rs {expense.amount?.toLocaleString() || 0}
             </td>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.type || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--ink)]">{expense.category || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--muted)]">{expense.notes || '—'}</td>
-            <td className="py-3 px-4 text-sm text-[var(--muted)]">
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#1f2937' }}>{expense.type || '—'}</td>
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#1f2937' }}>{expense.category || '—'}</td>
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#6b7280' }}>{expense.notes || '—'}</td>
+            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#6b7280' }}>
                 {new Date(expense.date).toLocaleDateString()}
             </td>
         </tr>
@@ -38,25 +37,25 @@ function ExpenseTransactionRow({ expense, index }) {
 
 function TransactionTable({ transactions }) {
     if (!transactions || transactions.length === 0) {
-        return <p className="text-sm py-4 text-center text-[var(--muted)]">No transactions in this period.</p>;
+        return <p style={{ fontSize: '0.875rem', padding: '1rem 0', textAlign: 'center', color: '#6b7280' }}>No transactions in this period.</p>;
     }
     return (
-        <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead style={{ background: 'var(--surface-muted)' }}>
+        <div style={{ borderRadius: '0.5rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%' }}>
+                    <thead style={{ backgroundColor: '#f3f4f6' }}>
                         <tr>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Amount</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Type</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Category</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Notes</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">Date</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>#</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Amount</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Type</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Category</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Notes</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Date</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                    <tbody>
                         {transactions.slice(0, 50).map((expense, idx) => (
-                            <tr key={idx} className="hover:bg-[var(--surface-muted)]">
+                            <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                 <ExpenseTransactionRow expense={expense} index={idx} />
                             </tr>
                         ))}
@@ -64,7 +63,7 @@ function TransactionTable({ transactions }) {
                 </table>
             </div>
             {transactions.length > 50 && (
-                <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
+                <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
                     Showing first 50 of {transactions.length} transactions
                 </div>
             )}
@@ -76,56 +75,61 @@ function TransactionTable({ transactions }) {
 export default function ExpenseReportPdfTemplate({ summary = {}, details = {}, breakdowns = {}, transactions = {}, labels = {}, selectedPeriodLabel = '' }) {
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">{labels.expenseReport}</h1>
-                <p className="text-sm text-[var(--muted)]">{labels.expenseAnalysis} · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#1f2937', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{labels.expenseReport}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{labels.expenseAnalysis} · {selectedPeriodLabel}</p>
             </div>
 
             {/* Single Card with Inline KPIs */}
-            <div className="card">
+            <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
                 {/* KPI Cards - Inline */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-b border-[var(--border)]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[var(--accent-2)]/10 flex items-center justify-center">
-                            <DollarSign size={20} className="text-[var(--accent-2)]" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', backgroundColor: 'rgba(15,118,110,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '1.25rem', color: '#0f766e' }}>Rs</span>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.totalExpenses}</p>
-                            <p className="font-semibold text-[var(--ink)]">
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{labels.totalExpenses}</p>
+                            <p style={{ fontWeight: '600', color: '#1f2937', margin: '0.25rem 0 0 0' }}>
                                 Rs {(summary.totalExpenses || 0).toLocaleString()}
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                            <TrendingUp size={20} className="text-red-600" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '1.25rem', color: '#dc2626' }}>Rs</span>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.averageExpense}</p>
-                            <p className="font-semibold text-red-600">
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{labels.averageExpense}</p>
+                            <p style={{ fontWeight: '600', color: '#dc2626', margin: '0.25rem 0 0 0' }}>
                                 Rs {(summary.averageExpense || 0).toLocaleString()}
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                            <Receipt size={20} className="text-green-600" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '1.25rem', color: '#16a34a' }}>📋</span>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.categories}</p>
-                            <p className="font-semibold text-green-600">
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{labels.categories}</p>
+                            <p style={{ fontWeight: '600', color: '#16a34a', margin: '0.25rem 0 0 0' }}>
                                 {details.categoryCount || 0}
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <BarChart3 size={20} className="text-blue-600" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '1.25rem', color: '#2563eb' }}>📊</span>
                         </div>
                         <div>
-                            <p className="text-xs text-[var(--muted)] uppercase font-bold">{labels.transactions}</p>
-                            <p className="font-semibold text-blue-600">
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{labels.transactions}</p>
+                            <p style={{ fontWeight: '600', color: '#2563eb', margin: '0.25rem 0 0 0' }}>
                                 {details.expenseCount || 0}
                             </p>
                         </div>
@@ -133,12 +137,12 @@ export default function ExpenseReportPdfTemplate({ summary = {}, details = {}, b
                 </div>
 
                 {/* Detailed Sections - Flat Preview */}
-                <div className="p-4 space-y-6">
+                <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Categories Breakdown */}
                     <div>
-                        <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByCategory}</h3>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem', margin: 0 }}>{labels.expensesByCategory}</h3>
                         {breakdowns.expensesByCategory && breakdowns.expensesByCategory.length > 0 ? (
-                            <div className="space-y-2">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {breakdowns.expensesByCategory.map((item, idx) => (
                                     <BreakdownItem
                                         key={idx}
@@ -151,33 +155,14 @@ export default function ExpenseReportPdfTemplate({ summary = {}, details = {}, b
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-[var(--muted)]">No category data available</p>
+                            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>No category data available</p>
                         )}
                     </div>
 
-                    {/* Types Breakdown */}
-                    {breakdowns.expensesByType && breakdowns.expensesByType.length > 0 && (
-                        <div>
-                            <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.expensesByType}</h3>
-                            <div className="space-y-2">
-                                {breakdowns.expensesByType.map((item, idx) => (
-                                    <BreakdownItem
-                                        key={idx}
-                                        label={item.type}
-                                        value={item.total}
-                                        count={item.count}
-                                        percentage={item.percentage}
-                                        color="#3b82f6"
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Transactions Table */}
+                    {/* Transaction Table */}
                     <div>
-                        <h3 className="text-md font-semibold text-[var(--ink)] mb-4">{labels.transactions}</h3>
-                        <TransactionTable transactions={transactions.expenses || transactions} />
+                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem', margin: 0 }}>{labels.recentTransactions}</h3>
+                        <TransactionTable transactions={transactions.recent || []} />
                     </div>
                 </div>
             </div>

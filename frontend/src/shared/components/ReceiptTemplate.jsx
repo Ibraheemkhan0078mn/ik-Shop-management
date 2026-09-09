@@ -55,12 +55,13 @@ export default function ReceiptTemplate({
         <div className="space-y-4">
             <button
                 onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
             >
                 Print Receipt
             </button>
             
-            <div ref={receiptRef} className="bg-white p-8 max-w-2xl mx-auto shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <div ref={receiptRef} className="bg-white p-8 max-w-2xl mx-auto shadow-lg" style={{ fontFamily: 'Arial, sans-serif', backgroundColor: "#ffffff", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
                 {/* Header */}
                 <div className="text-center mb-8 pb-4" style={{ borderBottom: '2px solid #d1d5db' }}>
                     <h1 className="text-2xl font-bold" style={{ color: '#1f2937' }}>{getTypeLabel()}</h1>
@@ -166,13 +167,13 @@ export default function ReceiptTemplate({
                                 {payments.map((payment, index) => (
                                     <tr key={index}>
                                         <td className="px-4 py-2 text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
-                                            {new Date(payment.paymentDate || payment.refundDate).toLocaleDateString()}
+                                            {new Date(payment.date || payment.paymentDate || payment.transactionDate).toLocaleDateString()}
                                         </td>
-                                        <td className="px-4 py-2 text-sm capitalize" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
-                                            {payment.paymentMethod || payment.refundMethod}
+                                        <td className="px-4 py-2 text-sm" style={{ border: '1px solid #d1d5db', color: '#4b5563' }}>
+                                            {payment.method || payment.paymentMethod || '—'}
                                         </td>
                                         <td className="px-4 py-2 text-right text-sm font-semibold" style={{ border: '1px solid #d1d5db', color: '#1f2937' }}>
-                                            Rs {payment.amount?.toLocaleString()}
+                                            Rs {(payment.amount || 0).toLocaleString()}
                                         </td>
                                     </tr>
                                 ))}
@@ -182,9 +183,8 @@ export default function ReceiptTemplate({
                 )}
 
                 {/* Footer */}
-                <div className="mt-8 pt-4 text-center text-sm" style={{ borderTop: '2px solid #d1d5db', color: '#6b7280' }}>
-                    <p>Thank you for your business!</p>
-                    <p className="mt-1">Generated on {new Date().toLocaleString()}</p>
+                <div className="text-center text-xs" style={{ color: '#6b7280', marginTop: '2rem' }}>
+                    <p>Generated on {new Date().toLocaleString()}</p>
                 </div>
             </div>
         </div>

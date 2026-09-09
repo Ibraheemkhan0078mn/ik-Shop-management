@@ -1,20 +1,33 @@
 import React from "react";
-import { Users, DollarSign, Star, AlertCircle } from "lucide-react";
 
-function KpiCard({ label, value, icon: Icon, color, isCurrency = true, subValue }) {
+function KpiCard({ label, value, color, isCurrency = true, subValue }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
+        <div style={{ 
+            padding: '1rem',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                    width: '2.5rem', 
+                    height: '2.5rem', 
+                    borderRadius: '0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: `${color}20`
+                }}>
+                    <span style={{ fontSize: '1.25rem', color }}>{isCurrency ? 'Rs' : '#'}</span>
                 </div>
                 <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className="font-semibold text-[var(--ink)]">
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{label}</p>
+                    <p style={{ fontWeight: '600', color: '#1f2937', margin: '0.25rem 0 0 0' }}>
                         {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || value || 0)}
                     </p>
                     {subValue && (
-                        <p className="text-xs text-[var(--muted)]">
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
                             Rs {subValue?.toLocaleString() || 0}
                         </p>
                     )}
@@ -31,43 +44,38 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
     };
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">{labels.customerReport}</h1>
-                <p className="text-sm text-[var(--muted)]">{labels.customerAnalytics} · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#1f2937', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{labels.customerReport}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{labels.customerAnalytics} · {selectedPeriodLabel}</p>
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                 <KpiCard
                     label={labels.totalCustomers}
                     value={summary.totalCustomers}
-                    icon={Users}
                     color="#3b82f6"
                     isCurrency={false}
                 />
                 <KpiCard
                     label={labels.walkIn}
                     value={summary.totalSalesWalkIn}
-                    icon={DollarSign}
                     color="#6b7280"
                 />
                 <KpiCard
                     label={labels.registered}
                     value={summary.totalSalesRegistered}
-                    icon={DollarSign}
                     color="#3b82f6"
                 />
                 <KpiCard
                     label={labels.totalDue}
                     value={summary.totalDue}
-                    icon={AlertCircle}
                     color="#ef4444"
                 />
                 <KpiCard
                     label={labels.topCustomer}
                     value={summary.topCustomer?.name}
-                    icon={Star}
                     color="#f59e0b"
                     isCurrency={false}
                     subValue={summary.topCustomer?.amount}
@@ -75,38 +83,43 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
             </div>
 
             {/* Customer Table */}
-            <div className="card">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.customerReport}</h2>
+            <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>{labels.customerReport}</h2>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[var(--surface-muted)]">
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%' }}>
+                        <thead style={{ backgroundColor: '#f3f4f6' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">#</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.customer}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalOrders}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalSpent}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.lastPurchase}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>#</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.customer}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.totalOrders}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.totalSpent}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.dueAmount}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.lastPurchase}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
+                        <tbody>
                             {customers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="6" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>
                                         {labels.noDataFound}
                                     </td>
                                 </tr>
                             ) : (
                                 customers.slice(0, 50).map((customer) => (
-                                    <tr key={customer._id} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3 font-bold text-[var(--accent-2)]">#{customer.rank}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{customer.name}</td>
-                                        <td className="px-4 py-3 text-right text-sm text-[var(--ink)]">{customer.totalOrders || 0}</td>
-                                        <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">Rs {(customer.totalSpent || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-right text-red-600 font-medium">Rs {(customer.dueAmount || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--muted)]">{formatDate(customer.lastPurchase)}</td>
+                                    <tr key={customer._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold', color: '#0f766e' }}>#{customer.rank}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>{customer.name}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{customer.totalOrders || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600', color: '#0f766e' }}>Rs {(customer.totalSpent || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '500', color: '#dc2626' }}>Rs {(customer.dueAmount || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#6b7280' }}>{formatDate(customer.lastPurchase)}</td>
                                     </tr>
                                 ))
                             )}
@@ -114,7 +127,7 @@ export default function CustomerReportPdfTemplate({ summary = {}, customers = []
                     </table>
                 </div>
                 {customers.length > 50 && (
-                    <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
+                    <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
                         Showing first 50 of {customers.length} customers
                     </div>
                 )}

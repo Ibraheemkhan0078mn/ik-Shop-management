@@ -1,16 +1,29 @@
 import React from "react";
-import { Package, DollarSign, Truck, CheckCircle, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 
-function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
+function KpiCard({ label, value, color, isCurrency = true }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
+        <div style={{ 
+            borderRadius: '0.75rem',
+            border: '1px solid #e5e7eb',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+            padding: '1rem'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                    width: '2.5rem', 
+                    height: '2.5rem', 
+                    borderRadius: '0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: `${color}20`
+                }}>
+                    <span style={{ fontSize: '1.25rem', color }}>{isCurrency ? 'Rs' : '#'}</span>
                 </div>
                 <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className="font-semibold text-[var(--ink)]">
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{label}</p>
+                    <p style={{ fontWeight: '600', color: '#111827', margin: '0.25rem 0 0 0' }}>
                         {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || value || 0)}
                     </p>
                 </div>
@@ -27,58 +40,52 @@ export default function PurchaseReportPdfTemplate({ summary = {}, supplierBreakd
 
     const getDeliveryStatusColor = (status) => {
         switch (status) {
-            case 'delivered': return 'bg-green-100 text-green-800 border-green-300';
-            case 'ordered': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
+            case 'delivered': return { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#86efac' };
+            case 'ordered': return { backgroundColor: '#fef9c3', color: '#854d0e', borderColor: '#fde047' };
+            case 'rejected': return { backgroundColor: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' };
+            default: return { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' };
         }
     };
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">{labels.purchaseReport}</h1>
-                <p className="text-sm text-[var(--muted)]">{labels.purchaseDataFor} · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#111827', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{labels.purchaseReport}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{labels.purchaseDataFor} · {selectedPeriodLabel}</p>
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                 <KpiCard
                     label={labels.totalPurchases}
                     value={summary.totalPurchases}
-                    icon={Package}
                     color="#3b82f6"
                 />
                 <KpiCard
                     label={labels.totalPaid}
                     value={summary.totalPaid}
-                    icon={CheckCircle}
                     color="#10b981"
                 />
                 <KpiCard
                     label={labels.totalDue}
                     value={summary.totalDue}
-                    icon={AlertCircle}
                     color="#ef4444"
                 />
                 <KpiCard
                     label={labels.delivered}
                     value={summary.totalDeliveredCount}
-                    icon={CheckCircle2}
                     color="#10b981"
                     isCurrency={false}
                 />
                 <KpiCard
                     label={labels.rejected}
                     value={summary.totalRejectedCount}
-                    icon={XCircle}
                     color="#ef4444"
                     isCurrency={false}
                 />
                 <KpiCard
                     label={labels.totalSuppliers}
                     value={summary.totalSuppliers}
-                    icon={Truck}
                     color="#8b5cf6"
                     isCurrency={false}
                 />
@@ -86,27 +93,34 @@ export default function PurchaseReportPdfTemplate({ summary = {}, supplierBreakd
 
             {/* Supplier-wise Breakdown */}
             {supplierBreakdown.length > 0 && (
-                <div className="card p-4 mb-6">
-                    <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">{labels.topSupplier}</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-[var(--surface-muted)]">
+                <div style={{ 
+                    borderRadius: '0.75rem',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                    padding: '1rem',
+                    marginBottom: '1.5rem'
+                }}>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827', marginBottom: '0.75rem', margin: 0 }}>{labels.topSupplier}</h3>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%' }}>
+                            <thead style={{ backgroundColor: '#f3f4f6' }}>
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.total}</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.totalBills}</th>
+                                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.supplier}</th>
+                                    <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.total}</th>
+                                    <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.paidAmount}</th>
+                                    <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.dueAmount}</th>
+                                    <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.totalBills}</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[var(--border)]">
+                            <tbody>
                                 {supplierBreakdown.map((supplier) => (
-                                    <tr key={supplier._id} className="hover:bg-[var(--surface-muted)]">
-                                        <td className="px-4 py-2 text-sm text-[var(--ink)]">{supplier._id}</td>
-                                        <td className="px-4 py-2 text-right font-semibold text-[var(--accent-2)]">Rs {supplier.totalAmount.toLocaleString()}</td>
-                                        <td className="px-4 py-2 text-right text-green-600">Rs {supplier.paidAmount.toLocaleString()}</td>
-                                        <td className="px-4 py-2 text-right text-red-600">Rs {supplier.dueAmount.toLocaleString()}</td>
-                                        <td className="px-4 py-2 text-right text-sm text-[var(--muted)]">{supplier.billsCount}</td>
+                                    <tr key={supplier._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', color: '#111827' }}>{supplier._id}</td>
+                                        <td style={{ padding: '0.5rem 1rem', textAlign: 'right', fontWeight: '600', color: '#0d9488' }}>Rs {supplier.totalAmount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.5rem 1rem', textAlign: 'right', color: '#16a34a' }}>Rs {supplier.paidAmount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.5rem 1rem', textAlign: 'right', color: '#dc2626' }}>Rs {supplier.dueAmount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.875rem', color: '#6b7280' }}>{supplier.billsCount}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -116,27 +130,32 @@ export default function PurchaseReportPdfTemplate({ summary = {}, supplierBreakd
             )}
 
             {/* Purchases Table */}
-            <div className="card">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--ink)]">{labels.purchaseDetails}</h2>
+            <div style={{ 
+                borderRadius: '0.75rem',
+                border: '1px solid #e5e7eb',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>{labels.purchaseDetails}</h2>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[var(--surface-muted)]">
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%' }}>
+                        <thead style={{ backgroundColor: '#f3f4f6' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.invoiceNo}</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.date}</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">{labels.supplier}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.amount}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.paidAmount}</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">{labels.dueAmount}</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-[var(--muted)]">{labels.deliveryStatus}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.invoiceNo}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.date}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.supplier}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.amount}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.paidAmount}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.dueAmount}</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>{labels.deliveryStatus}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
+                        <tbody>
                             {purchases.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="7" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>
                                         {labels.noDataFound}
                                     </td>
                                 </tr>
@@ -146,28 +165,26 @@ export default function PurchaseReportPdfTemplate({ summary = {}, supplierBreakd
                                     const dueAmount = purchase.totalAmount - paidAmount;
                                     
                                     return (
-                                        <tr key={purchase._id} className="hover:bg-[var(--surface-muted)]">
-                                            <td className="px-4 py-3 font-mono text-xs text-[var(--muted)]">
+                                        <tr key={purchase._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#6b7280' }}>
                                                 {purchase.invoiceNumber || "—"}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-[var(--muted)]">
+                                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#6b7280' }}>
                                                 {formatDate(purchase.date || purchase.createdAt)}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-[var(--ink)]">
-                                                {purchase.supplierName || purchase.supplier?.name || "—"}
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-semibold text-[var(--accent-2)]">
-                                                Rs {(purchase.totalAmount || 0).toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-green-600 font-medium">
-                                                Rs {paidAmount.toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-red-600 font-medium">
-                                                Rs {dueAmount.toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getDeliveryStatusColor(purchase.status)}`}>
-                                                    {purchase.status === 'delivered' ? 'Received' : purchase.status === 'ordered' ? 'Pending' : purchase.status || "—"}
+                                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#111827' }}>{purchase.supplierName || "—"}</td>
+                                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600', color: '#111827' }}>Rs {(purchase.totalAmount || 0).toLocaleString()}</td>
+                                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#16a34a' }}>Rs {paidAmount.toLocaleString()}</td>
+                                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#dc2626' }}>Rs {dueAmount.toLocaleString()}</td>
+                                            <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                <span style={{
+                                                    padding: '0.25rem 0.5rem',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: '500',
+                                                    borderRadius: '9999px',
+                                                    ...getDeliveryStatusColor(purchase.deliveryStatus)
+                                                }}>
+                                                    {purchase.deliveryStatus || "—"}
                                                 </span>
                                             </td>
                                         </tr>
@@ -178,7 +195,7 @@ export default function PurchaseReportPdfTemplate({ summary = {}, supplierBreakd
                     </table>
                 </div>
                 {purchases.length > 50 && (
-                    <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
+                    <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
                         Showing first 50 of {purchases.length} purchases
                     </div>
                 )}

@@ -3,47 +3,19 @@ import { jsPDF } from "jspdf";
 
 /**
  * ============================================================================
- *  pdfEngine.js
- * ----------------------------------------------------------------------------
- *  A single, reusable engine to convert ANY DOM element (by id or ref) into
- *  a pixel-perfect PDF — same layout, same colors, same spacing, no extra
- *  margins, no gaps, no scaling distortion.
- *
- *  Dependencies (load these once in your app, via CDN or npm):
- *    - html2canvas   (DOM -> canvas screenshot, respects real computed styles)
- *    - jsPDF          (canvas -> PDF)
- *
- *  CDN (add in index.html, before your bundle):
- *    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
- *    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
- *
- *  OR via npm:
- *    npm install html2canvas jspdf
- *    import html2canvas from "html2canvas";
- *    import { jsPDF } from "jspdf";
- *
+ *  PDF engine — converts a DOM element into a pixel-perfect PDF.
+ *  Uses html2canvas-pro (drop-in fork of html2canvas with oklch/oklab/
+ *  color-mix/lab/lch support), so no CSS/color patching is needed anymore.
  * ============================================================================
  */
 
-/* If using npm/ES modules, uncomment these two lines and remove the
-   "window.html2canvas" / "window.jspdf" fallback lookup below.
--------------------------------------------------------------------
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
-------------------------------------------------------------------- */
-
 /**
  * Resolves the target DOM node from an id string, a ref object, or a
- * direct HTMLElement — so the function is flexible no matter how you call it.
- *
- * @param {string|HTMLElement|{current: HTMLElement}} target
- * @returns {HTMLElement}
+ * direct HTMLElement.
  */
 function resolveElement(target) {
-    // Case 1: already a DOM element
     if (target instanceof HTMLElement) return target;
 
-    // Case 2: React-style ref object { current: HTMLElement }
     if (target && typeof target === "object" && "current" in target) {
         if (!target.current) {
             throw new Error("[pdfEngine] The ref you passed has no `current` element (is it mounted yet?).");
@@ -51,7 +23,6 @@ function resolveElement(target) {
         return target.current;
     }
 
-    // Case 3: an element id string
     if (typeof target === "string") {
         const el = document.getElementById(target);
         if (!el) {
@@ -64,39 +35,11 @@ function resolveElement(target) {
 }
 
 /**
- * Locates the html2canvas and jsPDF constructors.
- * Using ES module imports for offline/local usage.
- */
-function resolveLibs() {
-    return { html2canvasFn: html2canvas, jsPDFCtor: jsPDF };
-}
-
-function inlineComputedStyles(sourceRoot, clonedRoot) {
-    const sourceElements = [sourceRoot, ...sourceRoot.querySelectorAll("*")];
-    const clonedElements = [clonedRoot, ...clonedRoot.querySelectorAll("*")];
-
-    sourceElements.forEach((sourceElement, index) => {
-        const clonedElement = clonedElements[index];
-        if (!clonedElement) return;
-
-        const computedStyle = getComputedStyle(sourceElement);
-        for (const property of computedStyle) {
-            clonedElement.style.setProperty(
-                property,
-                computedStyle.getPropertyValue(property),
-                computedStyle.getPropertyPriority(property)
-            );
-        }
-    });
-}
-
-/**
  * Temporarily strips scroll clipping / transforms that can cause
  * html2canvas to crop or misalign the captured image, then restores them.
- * Also resolves CSS variables to ensure cross-platform compatibility by
- * replacing them with actual color values in all descendant elements.
+ * Also resolves CSS variables to ensure cross-platform compatibility.
  */
-async function withCleanCapture(el, callback, { layoutWidth = null } = {}) {
+async function withCleanCapture(el, callback) {
     const original = {
         overflow: el.style.overflow,
         height: el.style.height,
@@ -105,21 +48,17 @@ async function withCleanCapture(el, callback, { layoutWidth = null } = {}) {
         width: el.style.width,
         minWidth: el.style.minWidth,
         maxWidth: el.style.maxWidth,
-        zoom: el.style.zoom,
+        boxSizing: el.style.boxSizing,
     };
 
-    // Force full natural size so nothing is clipped by internal scrollbars.
     el.style.overflow = "visible";
     el.style.maxHeight = "none";
     el.style.height = "auto";
     el.style.transform = "none";
-
-    if (layoutWidth) {
-        el.style.zoom = "1";
-        el.style.width = `${layoutWidth}px`;
-        el.style.minWidth = `${layoutWidth}px`;
-        el.style.maxWidth = `${layoutWidth}px`;
-    }
+    el.style.width = "794px";
+    el.style.minWidth = "794px";
+    el.style.maxWidth = "794px";
+    el.style.boxSizing = "border-box";
 
     // Resolve CSS variables for cross-platform compatibility
     const computedStyle = getComputedStyle(document.documentElement);
@@ -158,13 +97,13 @@ async function withCleanCapture(el, callback, { layoutWidth = null } = {}) {
         colorReplacements.push({ element, originalStyles });
 
         // Apply computed colors as inline styles
-        if (computed.color && computed.color.includes('var(')) {
+        if (computed.color && computed.color !== 'rgba(0, 0, 0, 0)') {
             element.style.color = computed.color;
         }
-        if (computed.backgroundColor && computed.backgroundColor.includes('var(')) {
+        if (computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)') {
             element.style.backgroundColor = computed.backgroundColor;
         }
-        if (computed.borderColor && computed.borderColor.includes('var(')) {
+        if (computed.borderColor && computed.borderColor !== 'rgba(0, 0, 0, 0)') {
             element.style.borderColor = computed.borderColor;
         }
     });
@@ -179,7 +118,7 @@ async function withCleanCapture(el, callback, { layoutWidth = null } = {}) {
         el.style.width = original.width;
         el.style.minWidth = original.minWidth;
         el.style.maxWidth = original.maxWidth;
-        el.style.zoom = original.zoom;
+        el.style.boxSizing = original.boxSizing;
         
         // Remove inline CSS variable overrides from root
         el.style.removeProperty('--ink');
@@ -251,143 +190,83 @@ async function waitForCaptureAssets(element) {
 }
 
 /**
- * =====================  MAIN ENGINE FUNCTION  =============================
  * Converts a DOM element into a pixel-perfect, zero-margin PDF and
- * triggers a download (or returns the PDF instance).
+ * triggers a download. Supports multi-page output for long content.
  *
- * @param {string|HTMLElement|{current:HTMLElement}} target
- *        The element id, ref, or HTMLElement to capture.
- *
- * @param {Object}   [options]
- * @param {string}   [options.fileName="document.pdf"]  Output file name.
- * @param {number}   [options.scale=3]                  Render resolution multiplier
- *                                                       (higher = sharper text/images,
- *                                                       3-4 is print-quality).
- * @param {string}   [options.backgroundColor="#ffffff"] Fallback bg color
- *                                                        (use null to keep transparent).
- * @param {boolean}  [options.multiPage=true]           If the content is taller
- *                                                       than one page, split across
- *                                                       multiple PDF pages instead
- *                                                       of squashing it.
- * @param {boolean}  [options.download=true]            Auto-trigger the file download.
- *                                                       Set false if you want the
- *                                                       jsPDF instance back instead
- *                                                       (e.g. to upload it).
- *
- * @returns {Promise<import("jspdf").jsPDF>} the generated jsPDF instance
+ * @param {HTMLElement|string|React.RefObject} target - Element to capture
+ * @param {Object} options
+ * @param {string} options.fileName - Name of the downloaded PDF file
+ * @param {number} options.scale - Resolution multiplier (e.g., 2 for retina)
+ * @param {string} options.backgroundColor - Background color for the PDF
+ * @param {boolean} options.multiPage - Whether to split content across multiple pages
+ * @param {boolean} options.download - Whether to auto-download the PDF
+ * @param {number} options.pdfScale - Scale factor for PDF dimensions (default: 1)
+ * @param {boolean} options.useCORS - Whether to use CORS for images
+ * @param {boolean} options.logging - Whether to enable html2canvas logging
+ * @returns {Promise<{pdf: jsPDF; canvas: HTMLCanvasElement}>}
  */
 export async function generatePdfFromElement(target, options = {}) {
     const {
         fileName = "document.pdf",
-        scale = 3,
+        scale = 2,
         backgroundColor = "#ffffff",
-        multiPage = true,
+        multiPage = false,
         download = true,
-        captureWidth = null,
-        layoutWidth = null,
+        pdfScale = 1,
+        useCORS = true,
+        logging = false,
     } = options;
 
-    const { html2canvasFn, jsPDFCtor } = resolveLibs();
     const element = resolveElement(target);
+
     await waitForCaptureAssets(element);
 
-    let captureElement = element;
-    let captureHost = null;
+    let canvas, pdf;
 
-    if (layoutWidth) {
-        captureHost = document.createElement("div");
-        captureHost.style.position = "absolute";
-        captureHost.style.left = "-100000px";
-        captureHost.style.top = "0";
-        captureHost.style.width = `${layoutWidth}px`;
-        captureHost.style.minWidth = `${layoutWidth}px`;
-        captureHost.style.maxWidth = `${layoutWidth}px`;
-        captureHost.style.overflow = "visible";
+    await withCleanCapture(element, async () => {
+        canvas = await html2canvas(element, {
+            scale,
+            backgroundColor,
+            useCORS,
+            logging,
+            allowTaint: true,
+            imageTimeout: 15000,
+            removeContainer: true,
+        });
+    });
 
-        captureElement = element.cloneNode(true);
-        captureElement.style.zoom = "1";
-        captureElement.style.width = `${layoutWidth}px`;
-        captureElement.style.minWidth = `${layoutWidth}px`;
-        captureElement.style.maxWidth = `${layoutWidth}px`;
-        captureHost.appendChild(captureElement);
-        document.body.appendChild(captureHost);
-        await waitForCaptureAssets(captureElement);
-    }
-
-    // 1. Take a high-resolution screenshot of the element exactly as rendered.
-    let canvas;
-    try {
-        canvas = await withCleanCapture(captureElement, () =>
-            html2canvasFn(captureElement, {
-                scale,
-                useCORS: true,
-                backgroundColor,
-                logging: false,
-                windowWidth: captureWidth || layoutWidth || captureElement.scrollWidth || 794,
-                windowHeight: captureElement.scrollHeight,
-                allowTaint: true,
-                imageTimeout: 5000,
-                removeContainer: true,
-                foreignObjectRendering: false,
-                onclone: (clonedDoc) => {
-                    const clonedElement = clonedDoc.querySelector(`[data-html2canvas-internal-clone-id]`) || clonedDoc.body;
-                    if (clonedElement) {
-                        inlineComputedStyles(captureElement, clonedElement);
-                        clonedElement.style.fontFamily = 'Arial, sans-serif';
-                    }
-                }
-            }),
-            { layoutWidth: null }
-        );
-    } finally {
-        captureHost?.remove();
-    }
-
+    const imgData = canvas.toDataURL("image/png", 1.0);
     const canvasWidthPx = canvas.width;
     const canvasHeightPx = canvas.height;
 
-    // 2. Convert canvas pixel size -> mm (jsPDF works in mm by default).
-    //    96 CSS px = 1 inch = 25.4 mm  → but our canvas is scaled by `scale`,
-    //    so we divide by scale first to get back to real CSS pixels.
-    const pxToMm = (px) => (px / scale) * (25.4 / 96);
-
-    const pdfWidthMm = pxToMm(canvasWidthPx);
-    const pdfHeightMm = pxToMm(canvasHeightPx);
-
-    const imgData = canvas.toDataURL("image/png", 1.0);
-
-    // 3. Build the PDF.
-    let pdf;
+    // Calculate PDF dimensions based on options
+    const effectivePdfScale = pdfScale || 1;
+    const pxToMm = 0.264583; // 96 DPI
+    const pdfWidthMm = (canvasWidthPx * pxToMm) * effectivePdfScale;
+    const pdfHeightMm = (canvasHeightPx * pxToMm) * effectivePdfScale;
 
     if (!multiPage) {
-        // -------- Single page, page size == content size (zero margin) --------
-        pdf = new jsPDFCtor({
+        pdf = new jsPDF({
             orientation: pdfWidthMm > pdfHeightMm ? "landscape" : "portrait",
             unit: "mm",
             format: [pdfWidthMm, pdfHeightMm],
         });
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
     } else {
-        // -------- Multi page: standard A4 width, sliced height, no gaps --------
         const A4_WIDTH_MM = 210;
         const A4_HEIGHT_MM = 297;
 
-        // Scale the captured image to fit A4 width exactly, keep aspect ratio.
         const scaledHeightMm = (canvasHeightPx * A4_WIDTH_MM) / canvasWidthPx;
 
-        pdf = new jsPDFCtor({
+        pdf = new jsPDF({
             orientation: "portrait",
             unit: "mm",
             format: "a4",
         });
 
         if (scaledHeightMm <= A4_HEIGHT_MM) {
-            // Fits on a single A4 page.
             pdf.addImage(imgData, "PNG", 0, 0, A4_WIDTH_MM, scaledHeightMm, undefined, "FAST");
         } else {
-            // Slice the tall canvas into A4-height chunks, page by page,
-            // using the *source canvas* (pixel-accurate slicing) instead of
-            // just moving a negative Y offset — this avoids blurry/misaligned pages.
             const pageHeightPx = (A4_HEIGHT_MM * canvasWidthPx) / A4_WIDTH_MM;
             let renderedHeightPx = 0;
             let pageIndex = 0;
@@ -404,8 +283,8 @@ export async function generatePdfFromElement(target, options = {}) {
                 sliceCtx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
                 sliceCtx.drawImage(
                     canvas,
-                    0, renderedHeightPx, canvasWidthPx, thisSliceHeightPx, // source rect
-                    0, 0, canvasWidthPx, thisSliceHeightPx                  // dest rect
+                    0, renderedHeightPx, canvasWidthPx, thisSliceHeightPx,
+                    0, 0, canvasWidthPx, thisSliceHeightPx
                 );
 
                 const sliceImgData = sliceCanvas.toDataURL("image/png", 1.0);
@@ -420,17 +299,9 @@ export async function generatePdfFromElement(target, options = {}) {
         }
     }
 
-    // 4. Output.
     if (download) {
         pdf.save(fileName);
     }
 
-    return pdf;
-}
-
-/* ----------------------------------------------------------------------
-   Optional: expose on window for plain <script> usage (non-module HTML)
----------------------------------------------------------------------- */
-if (typeof window !== "undefined") {
-    window.generatePdfFromElement = generatePdfFromElement;
+    return { pdf, canvas };
 }

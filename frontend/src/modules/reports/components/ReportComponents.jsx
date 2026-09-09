@@ -7,16 +7,16 @@ import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
  */
 export function KpiCard({ label, value, icon: Icon, color, description, isCurrency = true }) {
     return (
-        <div className="rounded-xl border shadow-sm p-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
             <div className="flex items-center gap-2 mb-3">
                 <Icon size={20} style={{ color }} />
-                <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>{label}</span>
+                <span className="text-sm font-medium" style={{ color: '#6b7280' }}>{label}</span>
             </div>
-            <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>
+            <p className="text-2xl font-bold" style={{ color: '#1f2937' }}>
                 {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || 0)}
             </p>
             {description && (
-                <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{description}</p>
+                <p className="text-xs mt-1" style={{ color: '#6b7280' }}>{description}</p>
             )}
         </div>
     );
@@ -27,14 +27,14 @@ export function KpiCard({ label, value, icon: Icon, color, description, isCurren
  */
 export function BreakdownItem({ label, value, count, percentage, color }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
             <div className="flex-1">
-                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{label}</p>
-                <p className="text-xs" style={{ color: 'var(--muted)' }}>{count} transactions</p>
+                <p className="text-sm font-medium" style={{ color: '#1f2937' }}>{label}</p>
+                <p className="text-xs" style={{ color: '#6b7280' }}>{count} transactions</p>
             </div>
             <div className="text-right">
                 <p className="text-sm font-bold" style={{ color }}>Rs {value?.toLocaleString() || 0}</p>
-                <p className="text-xs" style={{ color: 'var(--muted)' }}>{percentage}%</p>
+                <p className="text-xs" style={{ color: '#6b7280' }}>{percentage}%</p>
             </div>
         </div>
     );
@@ -45,23 +45,23 @@ export function BreakdownItem({ label, value, count, percentage, color }) {
  */
 export function TransactionTable({ transactions, type }) {
     if (!transactions || transactions.length === 0) {
-        return <p className="text-sm py-4 text-center" style={{ color: 'var(--muted)' }}>No transactions in this period.</p>;
+        return <p className="text-sm py-4 text-center" style={{ color: '#6b7280' }}>No transactions in this period.</p>;
     }
 
     return (
-        <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        <div className="rounded-lg border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead style={{ background: 'var(--surface-muted)' }}>
+                    <thead style={{ background: '#f3f4f6' }}>
                         <tr>
                             {getTableHeaders(type).map((header, idx) => (
-                                <th key={idx} className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: 'var(--muted)' }}>
+                                <th key={idx} className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: '#6b7280' }}>
                                     {header}
                                 </th>
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                    <tbody className="divide-y divide-gray-200">
                         {transactions.slice(0, 50).map((transaction, idx) => (
                             <tr key={idx} className="hover:bg-gray-50">
                                 {renderTransactionRow(transaction, type)}
@@ -71,7 +71,7 @@ export function TransactionTable({ transactions, type }) {
                 </table>
             </div>
             {transactions.length > 50 && (
-                <div className="px-4 py-2 text-xs text-center" style={{ color: 'var(--muted)' }}>
+                <div className="px-4 py-2 text-xs text-center" style={{ color: '#6b7280' }}>
                     Showing first 50 of {transactions.length} transactions
                 </div>
             )}
@@ -98,7 +98,7 @@ export function SourceSection({
     extraBreakdown 
 }) {
     return (
-        <div className="rounded-xl border shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <button
                 onClick={onToggle}
                 className="w-full flex items-center justify-between p-5 text-left"
@@ -106,21 +106,21 @@ export function SourceSection({
                 <div className="flex items-center gap-3">
                     <Icon size={22} style={{ color }} />
                     <div>
-                        <h3 className="text-md font-semibold" style={{ color: 'var(--ink)' }}>{title}</h3>
-                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{kpiDescription} • {count} transactions</p>
+                        <h3 className="text-md font-semibold" style={{ color: '#1f2937' }}>{title}</h3>
+                            <p className="text-xs" style={{ color: '#6b7280' }}>{kpiDescription} • {count} transactions</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <p className="text-xl font-bold" style={{ color }}>Rs {kpiValue?.toLocaleString() || 0}</p>
-                    {isExpanded ? <ChevronUp size={20} style={{ color: 'var(--muted)' }} /> : <ChevronDown size={20} style={{ color: 'var(--muted)' }} />}
+                    {isExpanded ? <ChevronUp size={20} style={{ color: '#6b7280' }} /> : <ChevronDown size={20} style={{ color: '#6b7280' }} />}
                 </div>
             </button>
 
             {isExpanded && (
-                <div className="px-5 pb-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                <div className="px-5 pb-5 border-t border-gray-200 pt-4">
                     {breakdown && breakdown.length > 0 && (
                         <div className="mb-4">
-                            <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>Breakdown</p>
+                            <p className="text-sm font-semibold mb-2" style={{ color: '#1f2937' }}>Breakdown</p>
                             <div className="space-y-1">
                                 {breakdown.map((item, idx) => (
                                     <BreakdownItem
@@ -138,7 +138,7 @@ export function SourceSection({
                     {extraBreakdown}
                     {transactions && transactions.length > 0 && (
                         <div>
-                            <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>Transactions</p>
+                            <p className="text-sm font-semibold mb-2" style={{ color: '#1f2937' }}>Transactions</p>
                             <TransactionTable transactions={transactions} type={transactionType} />
                         </div>
                     )}
@@ -156,66 +156,66 @@ export function renderTransactionRow(transaction, type) {
         case 'sales':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.orderNumber}</td>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.customerName || 'N/A'}</td>
-                    <td className="px-4 py-2 text-sm capitalize" style={{ color: 'var(--ink)' }}>{transaction.paymentMethod}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.orderNumber}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.customerName || 'N/A'}</td>
+                    <td className="px-4 py-2 text-sm capitalize" style={{ color: '#1f2937' }}>{transaction.paymentMethod}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#10b981' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'purchases':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.invoiceNumber}</td>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.supplierName || 'N/A'}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.invoiceNumber}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.supplierName || 'N/A'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#3b82f6' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'expenses':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.title}</td>
-                    <td className="px-4 py-2 text-sm capitalize" style={{ color: 'var(--ink)' }}>{transaction.category}</td>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--muted)' }}>{transaction.description || '-'}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.title}</td>
+                    <td className="px-4 py-2 text-sm capitalize" style={{ color: '#1f2937' }}>{transaction.category}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#6b7280' }}>{transaction.description || '-'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#ef4444' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'wastages':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.productName}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--ink)' }}>{transaction.quantity}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--ink)' }}>Rs {transaction.costPrice?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.productName}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#1f2937' }}>{transaction.quantity}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#1f2937' }}>Rs {transaction.costPrice?.toLocaleString() || 0}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#dc2626' }}>Rs {transaction.totalLoss?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'purchaseReturns':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.returnNumber}</td>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.supplierName || 'N/A'}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.returnNumber}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.supplierName || 'N/A'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#06b6d4' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'productReturns':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.returnNumber}</td>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.customerName || 'N/A'}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.returnNumber}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.customerName || 'N/A'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#f59e0b' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         case 'salaryPayments':
             return (
                 <>
-                    <td className="px-4 py-2 text-sm" style={{ color: 'var(--ink)' }}>{transaction.staffName}</td>
+                    <td className="px-4 py-2 text-sm" style={{ color: '#1f2937' }}>{transaction.staffName}</td>
                     <td className="px-4 py-2 text-sm font-medium text-right" style={{ color: '#8b5cf6' }}>Rs {transaction.amount?.toLocaleString() || 0}</td>
-                    <td className="px-4 py-2 text-sm text-right" style={{ color: 'var(--muted)' }}>{new Date(transaction.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-sm text-right" style={{ color: '#6b7280' }}>{new Date(transaction.date).toLocaleDateString()}</td>
                 </>
             );
         default:

@@ -5,109 +5,109 @@ export default function PaymentPdfTemplate({ payment = {}, purchase = {}, labels
     const purchaseDate = new Date(purchase?.purchaseDate ?? purchase?.date ?? purchase?.createdAt).toLocaleDateString();
 
     return (
-        <div className="p-10 bg-white min-h-screen text-gray-800" style={{ fontFamily: "Arial, sans-serif" }}>
+        <div style={{ padding: '2.5rem', backgroundColor: '#ffffff', minHeight: '100vh', color: '#1f2937', fontFamily: 'Arial, sans-serif' }}>
             {/* Company Header */}
-            <div className="text-center mb-6">
-                <div className="inline-flex flex-col items-center leading-none mb-2">
-                    <span className="text-3xl font-extrabold tracking-wide text-gray-900" style={{ letterSpacing: "2px" }}>LOGIN</span>
-                    <span className="text-xs font-semibold tracking-[0.3em] text-gray-500 mt-1">LARAIB</span>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1, marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '1.875rem', fontWeight: '800', letterSpacing: '2px', color: '#111827' }}>LOGIN</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.3em', color: '#6b7280', marginTop: '0.25rem' }}>LARAIB</span>
                 </div>
             </div>
 
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', color: '#111827', marginBottom: '1.5rem' }}>
                 Afrasiab Mobile Accesories
             </h2>
-            <p className="text-center text-sm font-semibold text-gray-500 -mt-4 mb-6 uppercase tracking-wide">
+            <p style={{ textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#6b7280', marginTop: '-1rem', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {labels.paymentReceipt || "Payment Receipt"}
             </p>
 
             {/* Supplier / Payment Meta Row */}
-            <div className="flex justify-between items-start mb-6 gap-6">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1.5rem' }}>
                 <div>
-                    <p className="text-xs font-semibold text-gray-500 mb-1">Paid To:</p>
-                    <p className="text-sm font-bold text-gray-900 uppercase">{purchase?.supplier?.name || "—"}</p>
-                    <p className="text-xs text-gray-600">Purchase Date: {purchaseDate}</p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', marginBottom: '0.25rem' }}>Paid To:</p>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>{purchase?.supplier?.name || "—"}</p>
+                    <p style={{ fontSize: '0.75rem', color: '#4b5563' }}>Purchase Date: {purchaseDate}</p>
                 </div>
-                <div className="flex flex-col gap-2 min-w-[240px]">
-                    <div className="border border-gray-300 px-3 py-2 flex justify-between text-sm">
-                        <span className="font-semibold">Invoice #: {purchase?.invoiceNumber || purchase?.purchaseNumber || "—"}</span>
-                        <span className="font-semibold">Date: {transactionDate}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '15rem' }}>
+                    <div style={{ border: '1px solid #d1d5db', padding: '0.5rem 0.75rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                        <span style={{ fontWeight: '600' }}>Invoice #: {purchase?.invoiceNumber || purchase?.purchaseNumber || "—"}</span>
+                        <span style={{ fontWeight: '600' }}>Date: {transactionDate}</span>
                     </div>
-                    <div className="border border-gray-300 px-3 py-2 flex justify-between text-sm">
-                        <span className="font-semibold">Payment ID:</span>
-                        <span className="font-semibold">{payment._id || "—"}</span>
+                    <div style={{ border: '1px solid #d1d5db', padding: '0.5rem 0.75rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                        <span style={{ fontWeight: '600' }}>Payment ID:</span>
+                        <span style={{ fontWeight: '600' }}>{payment._id || "—"}</span>
                     </div>
                 </div>
             </div>
 
             {/* Payment Details Table */}
-            <table className="w-full border-collapse mb-4 text-sm">
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem', fontSize: '0.875rem' }}>
                 <thead>
-                    <tr className="bg-gray-900 text-white">
-                        <th className="px-3 py-2 text-left font-semibold">Method</th>
-                        <th className="px-3 py-2 text-left font-semibold">Reference</th>
-                        <th className="px-3 py-2 text-left font-semibold">Notes</th>
-                        <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                    <tr style={{ backgroundColor: '#111827', color: '#ffffff' }}>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Method</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Reference</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Notes</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Amount</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr className="border-b border-gray-200">
-                        <td className="px-3 py-2 capitalize">{payment.method || "—"}</td>
-                        <td className="px-3 py-2">
+                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td style={{ padding: '0.5rem 0.75rem', textTransform: 'capitalize' }}>{payment.method || "—"}</td>
+                        <td style={{ padding: '0.5rem 0.75rem' }}>
                             {payment.creditAccount?.name || payment.paymentMethodName || "—"}
                         </td>
-                        <td className="px-3 py-2">{payment.notes || "—"}</td>
-                        <td className="px-3 py-2 text-right font-semibold">{(payment.amount || 0).toLocaleString()}</td>
+                        <td style={{ padding: '0.5rem 0.75rem' }}>{payment.notes || "—"}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>{(payment.amount || 0).toLocaleString()}</td>
                     </tr>
-                    <tr className="bg-gray-100 font-bold">
-                        <td className="px-3 py-2" colSpan={3}>Total Paid</td>
-                        <td className="px-3 py-2 text-right">{(payment.amount || 0).toLocaleString()}</td>
+                    <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                        <td style={{ padding: '0.5rem 0.75rem' }} colSpan={3}>Total Paid</td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{(payment.amount || 0).toLocaleString()}</td>
                     </tr>
                 </tbody>
             </table>
 
             {/* Invoice Summary */}
-            <div className="flex justify-between gap-6 mb-6">
-                <div className="border border-gray-300 p-3 text-sm min-w-[260px]">
-                    <p className="font-semibold mb-2">Invoice Summary:</p>
-                    <div className="flex justify-between py-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ border: '1px solid #d1d5db', padding: '0.75rem', fontSize: '0.875rem', minWidth: '16.25rem' }}>
+                    <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Invoice Summary:</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
                         <span>Purchase Total</span>
                         <span>{(purchase?.totalAmount ?? 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between py-1">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
                         <span>This Payment</span>
                         <span>{(payment.amount || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between py-1 font-bold border-t border-gray-300 mt-1 pt-1">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontWeight: 'bold', borderTop: '1px solid #d1d5db', marginTop: '0.25rem', paddingTop: '0.25rem' }}>
                         <span>Balance After Payment</span>
                         <span>{((purchase?.totalAmount ?? 0) - (payment.amount || 0)).toLocaleString()}</span>
                     </div>
                 </div>
 
-                <div className="border border-gray-300 min-w-[260px] flex flex-col justify-center items-center p-4" style={{ background: "rgba(15,118,110,0.06)" }}>
-                    <p className="text-xs font-bold uppercase" style={{ color: "#0f766e" }}>Amount Received</p>
-                    <p className="text-2xl font-bold mt-1" style={{ color: "#0f766e" }}>Rs {(payment.amount || 0).toLocaleString()}</p>
+                <div style={{ border: '1px solid #d1d5db', minWidth: '16.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '1rem', backgroundColor: 'rgba(15,118,110,0.06)' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f766e' }}>Amount Received</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.25rem', color: '#0f766e' }}>Rs {(payment.amount || 0).toLocaleString()}</p>
                 </div>
             </div>
 
             {/* Sign-off Bar */}
-            <div className="border border-gray-300 mb-4">
-                <div className="flex text-sm">
-                    <div className="w-1/2 text-center py-3 border-r border-gray-300">
+            <div style={{ border: '1px solid #d1d5db', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', fontSize: '0.875rem' }}>
+                    <div style={{ width: '50%', textAlign: 'center', padding: '0.75rem', borderRight: '1px solid #d1d5db' }}>
                         <p>Prepared By</p>
-                        <p className="font-semibold mt-1">SyedSoft</p>
+                        <p style={{ fontWeight: '600', marginTop: '0.25rem' }}>SyedSoft</p>
                     </div>
-                    <div className="w-1/2 text-center py-3">
+                    <div style={{ width: '50%', textAlign: 'center', padding: '0.75rem' }}>
                         <p>Approved By</p>
-                        <p className="font-semibold mt-1">Afrasiab Mobile Accesories</p>
+                        <p style={{ fontWeight: '600', marginTop: '0.25rem' }}>Afrasiab Mobile Accesories</p>
                     </div>
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-start text-xs text-gray-500">
-                <p className="italic max-w-[70%]">{labels.footerNote || "This is a computer generated document, does not required any signature"}</p>
-                <p>Print Time: {new Date().toLocaleString()}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.75rem', color: '#6b7280' }}>
+                <p style={{ fontStyle: 'italic', maxWidth: '70%', margin: 0 }}>{labels.footerNote || "This is a computer generated document, does not required any signature"}</p>
+                <p style={{ margin: 0 }}>Print Time: {new Date().toLocaleString()}</p>
             </div>
         </div>
     );

@@ -1,16 +1,29 @@
 import React from "react";
-import { Package, AlertTriangle, TrendingUp, Clock, Box, RotateCcw, Zap } from "lucide-react";
 
-function KpiCard({ label, value, icon: Icon, color }) {
+function KpiCard({ label, value, color }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
+        <div style={{ 
+            padding: '1rem',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                    width: '2.5rem', 
+                    height: '2.5rem', 
+                    borderRadius: '0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: `${color}20`
+                }}>
+                    <span style={{ fontSize: '1.25rem', color }}>📦</span>
                 </div>
                 <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className="font-semibold text-[var(--ink)]">{value || 0}</p>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{label}</p>
+                    <p style={{ fontWeight: '600', color: '#1f2937', margin: '0.25rem 0 0 0' }}>{value || 0}</p>
                 </div>
             </div>
         </div>
@@ -24,133 +37,141 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
     };
 
     const TAG_LABELS = {
-        dead_stock: { label: labels.deadStock, emoji: '🔴', color: 'bg-red-100 text-red-800 border-red-300' },
-        low_stock: { label: labels.lowStock, emoji: '🟡', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-        fast_selling: { label: labels.fastSelling, emoji: '🟢', color: 'bg-green-100 text-green-800 border-green-300' },
-        overstock: { label: labels.overstock, emoji: '🔵', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-        expired: { label: labels.expired, emoji: '⚫', color: 'bg-gray-100 text-gray-800 border-gray-300' },
-        near_expiry: { label: labels.nearExpiry, emoji: '🟠', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-        high_return: { label: labels.highReturn, emoji: '🔴', color: 'bg-red-100 text-red-800 border-red-300' },
+        dead_stock: { label: labels.deadStock, emoji: '🔴', color: '#fee2e2', textColor: '#991b1b', borderColor: '#fca5a5' },
+        low_stock: { label: labels.lowStock, emoji: '🟡', color: '#fef9c3', textColor: '#854d0e', borderColor: '#fde047' },
+        fast_selling: { label: labels.fastSelling, emoji: '🟢', color: '#dcfce7', textColor: '#166534', borderColor: '#86efac' },
+        overstock: { label: labels.overstock, emoji: '🔵', color: '#dbeafe', textColor: '#1e40af', borderColor: '#93c5fd' },
+        expired: { label: labels.expired, emoji: '⚫', color: '#f3f4f6', textColor: '#374151', borderColor: '#d1d5db' },
+        near_expiry: { label: labels.nearExpiry, emoji: '🟠', color: '#fed7aa', textColor: '#9a3412', borderColor: '#fdba74' },
+        high_return: { label: labels.highReturn, emoji: '🔴', color: '#fee2e2', textColor: '#991b1b', borderColor: '#fca5a5' },
     };
 
     const summary = reportData?.summary || {};
     const products = reportData?.data || [];
 
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">{labels.inventoryReport}</h1>
-                <p className="text-sm text-[var(--muted)]">{labels.inventoryAnalysis} · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#1f2937', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{labels.inventoryReport}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{labels.inventoryAnalysis} · {selectedPeriodLabel}</p>
             </div>
 
             {/* Summary Cards */}
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                     <KpiCard
                         label="Total"
                         value={summary.totalProducts}
-                        icon={Package}
                         color="#3b82f6"
                     />
                     <KpiCard
                         label="Dead Stock"
                         value={summary.deadStockCount}
-                        icon={AlertTriangle}
                         color="#ef4444"
                     />
                     <KpiCard
                         label="Expired"
                         value={summary.expiredCount}
-                        icon={Clock}
                         color="#6b7280"
                     />
                     <KpiCard
                         label="Low Stock"
                         value={summary.lowStockCount}
-                        icon={AlertTriangle}
                         color="#eab308"
                     />
                     <KpiCard
                         label="Fast Selling"
                         value={summary.fastSellingCount}
-                        icon={TrendingUp}
                         color="#22c55e"
                     />
                     <KpiCard
                         label="Overstock"
                         value={summary.overstockCount}
-                        icon={Box}
                         color="#3b82f6"
                     />
                     <KpiCard
                         label="High Return"
                         value={summary.highReturnCount}
-                        icon={RotateCcw}
                         color="#ef4444"
                     />
                     <KpiCard
                         label="Near Expiry"
                         value={summary.nearExpiryCount}
-                        icon={Zap}
                         color="#f97316"
                     />
                 </div>
             )}
 
             {/* Report Table */}
-            <div className="card">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--ink)]">Inventory Details</h2>
+            <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>Inventory Details</h2>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[var(--surface-muted)]">
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%' }}>
+                        <thead style={{ backgroundColor: '#f3f4f6' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Tag</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Product Name</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Code</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Category</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Stock</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Min</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Max</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Purchased</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Sold</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Returned</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Wasted</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Expiry</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Sales Rank</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Return Rank</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Tag</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Product Name</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Code</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Category</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Stock</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Min</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Max</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Purchased</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Sold</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Returned</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Wasted</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Expiry</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Sales Rank</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Return Rank</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
+                        <tbody>
                             {products.length === 0 ? (
                                 <tr>
-                                    <td colSpan="14" className="px-4 py-8 text-center text-[var(--muted)]">No inventory data found</td>
+                                    <td colSpan="14" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>No inventory data found</td>
                                 </tr>
                             ) : (
                                 products.slice(0, 50).map((product) => (
-                                    <tr key={product._id} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3 whitespace-nowrap">
+                                    <tr key={product._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
                                             {product.tag && TAG_LABELS[product.tag] && (
-                                                <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${TAG_LABELS[product.tag].color}`}>
+                                                <span style={{ 
+                                                    display: 'inline-flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '0.25rem', 
+                                                    padding: '0.25rem 0.5rem', 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: '500', 
+                                                    borderRadius: '9999px', 
+                                                    border: `1px solid ${TAG_LABELS[product.tag].borderColor}`,
+                                                    backgroundColor: TAG_LABELS[product.tag].color,
+                                                    color: TAG_LABELS[product.tag].textColor
+                                                }}>
                                                     <span>{TAG_LABELS[product.tag].emoji}</span>
                                                     {TAG_LABELS[product.tag].label}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[var(--ink)]">{product.name}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--muted)]">{product.code || '—'}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--muted)]">{product.category?.name || '—'}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--ink)]">{product.currentStock}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--muted)]">{product.minStockLevel || '—'}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--muted)]">{product.maxStockLevel || '—'}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--ink)]">{product.totalPurchased}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--ink)]">{product.totalSold}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--ink)]">{product.totalReturned}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--ink)]">{product.totalWasted}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--muted)]">{formatDate(product.expiryDate)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--accent-2)] font-bold">#{product.salesRank}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[var(--accent-2)] font-bold">#{product.returnRank}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>{product.name}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', color: '#6b7280' }}>{product.code || '—'}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', color: '#6b7280' }}>{product.category?.name || '—'}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{product.currentStock}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.minStock || '—'}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.maxStock || '—'}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.totalPurchased || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.totalSold || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.totalReturned || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.totalWasted || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', color: '#6b7280' }}>{formatDate(product.expiryDate)}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.salesRank || '—'}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.returnRank || '—'}</td>
                                     </tr>
                                 ))
                             )}
@@ -158,7 +179,7 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
                     </table>
                 </div>
                 {products.length > 50 && (
-                    <div className="px-4 py-2 text-xs text-center text-[var(--muted)]">
+                    <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
                         Showing first 50 of {products.length} products
                     </div>
                 )}

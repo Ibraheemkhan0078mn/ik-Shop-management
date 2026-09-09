@@ -1,16 +1,29 @@
 import React from "react";
-import { DollarSign, Package, RefreshCw, AlertCircle } from "lucide-react";
 
-function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
+function KpiCard({ label, value, color, isCurrency = true }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
+        <div style={{ 
+            padding: '1rem',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                    width: '2.5rem', 
+                    height: '2.5rem', 
+                    borderRadius: '0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: `${color}20`
+                }}>
+                    <span style={{ fontSize: '1.25rem', color }}>{isCurrency ? 'Rs' : '#'}</span>
                 </div>
                 <div>
-                    <p className="text-xs text-[var(--muted)] uppercase font-bold">{label}</p>
-                    <p className="font-semibold text-[var(--ink)]">
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', margin: 0 }}>{label}</p>
+                    <p style={{ fontWeight: '600', color: '#1f2937', margin: '0.25rem 0 0 0' }}>
                         {isCurrency ? `Rs ${value?.toLocaleString() || 0}` : (value?.toLocaleString() || value || 0)}
                     </p>
                 </div>
@@ -21,79 +34,75 @@ function KpiCard({ label, value, icon: Icon, color, isCurrency = true }) {
 
 export default function PurchaseKPIReportPdfTemplate({ summary = {}, breakdowns = {}, selectedPeriodLabel = '' }) {
     return (
-        <div className="p-6 bg-[var(--app-bg)] text-[var(--ink)] min-h-screen">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold font-display">Purchase Report (KPI)</h1>
-                <p className="text-sm text-[var(--muted)]">Purchase performance overview · {selectedPeriodLabel}</p>
+        <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', color: '#1f2937', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Purchase Report (KPI)</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>Purchase performance overview · {selectedPeriodLabel}</p>
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                 <KpiCard
                     label="Total Purchased"
                     value={summary.totalPurchases}
-                    icon={DollarSign}
                     color="#3b82f6"
                 />
                 <KpiCard
                     label="Purchase Orders"
                     value={summary.totalBills}
-                    icon={Package}
                     color="#3b82f6"
                     isCurrency={false}
                 />
-                {/* <KpiCard
-                    label="Outstanding"
-                    value={summary.totalDue}
-                    icon={AlertCircle}
-                    color="#ef4444"
-                /> */}
                 <KpiCard
                     label="Total Returns"
                     value={summary.totalPurchaseReturns}
-                    icon={RefreshCw}
                     color="#06b6d4"
                 />
                 <KpiCard
                     label="Net Amount Spent"
                     value={summary.netPurchased}
-                    icon={DollarSign}
                     color="#10b981"
                 />
             </div>
 
             {/* Purchases by Supplier */}
-            <div className="card mb-6">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--ink)]">Purchases by Supplier</h2>
+            <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                marginBottom: '1.5rem'
+            }}>
+                <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>Purchases by Supplier</h2>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[var(--surface-muted)]">
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%' }}>
+                        <thead style={{ backgroundColor: '#f3f4f6' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Amount</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Order Count</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Items</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Outstanding</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">%</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Supplier</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Total Amount</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Order Count</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Total Items</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Outstanding</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>%</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
+                        <tbody>
                             {breakdowns.bySupplier && breakdowns.bySupplier.length > 0 ? (
                                 breakdowns.bySupplier.map((supplier, idx) => (
-                                    <tr key={idx} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{supplier.supplierName || "—"}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--accent-2)]">Rs {(supplier.totalAmount || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">{supplier.orderCount || 0}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">{supplier.totalItems || 0}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-medium text-red-600">Rs {(supplier.outstandingPayable || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--muted)]">{supplier.percentage}%</td>
+                                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>{supplier.supplierName || "—"}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600', color: '#0f766e' }}>Rs {(supplier.totalAmount || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{supplier.orderCount || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{supplier.totalItems || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '500', color: '#dc2626' }}>Rs {(supplier.outstandingPayable || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{supplier.percentage}%</td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="6" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>
                                         No supplier data available
                                     </td>
                                 </tr>
@@ -104,33 +113,38 @@ export default function PurchaseKPIReportPdfTemplate({ summary = {}, breakdowns 
             </div>
 
             {/* Purchase Returns by Supplier */}
-            <div className="card">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--ink)]">Purchase Returns by Supplier</h2>
+            <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>Purchase Returns by Supplier</h2>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[var(--surface-muted)]">
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%' }}>
+                        <thead style={{ backgroundColor: '#f3f4f6' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--muted)]">Supplier</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Total Refund</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">Return Count</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--muted)]">%</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Supplier</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Total Refund</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Return Count</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>%</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
+                        <tbody>
                             {breakdowns.purchaseReturnsBySupplier && breakdowns.purchaseReturnsBySupplier.length > 0 ? (
                                 breakdowns.purchaseReturnsBySupplier.map((supplier, idx) => (
-                                    <tr key={idx} className="hover:bg-[var(--surface-muted)] transition-colors">
-                                        <td className="px-4 py-3 text-sm text-[var(--ink)] font-medium">{supplier.supplierName || "—"}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--accent-2)]">Rs {(supplier.total || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--ink)]">{supplier.count || 0}</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--muted)]">{supplier.percentage}%</td>
+                                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>{supplier.supplierName || "—"}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600', color: '#0f766e' }}>Rs {(supplier.total || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{supplier.count || 0}</td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{supplier.percentage}%</td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="px-4 py-8 text-center text-[var(--muted)]">
+                                    <td colSpan="4" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>
                                         No return data available
                                     </td>
                                 </tr>
