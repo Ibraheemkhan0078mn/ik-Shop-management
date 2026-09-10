@@ -4,6 +4,12 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
     const totalPaid = order?.paid ?? 0;
     const remainingAmount = order?.remainingAmount ?? 0;
     const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—";
+    const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
+    const cashIn = Number(qarzaSummary?.cashIn ?? 0);
+    const cashOut = Number(qarzaSummary?.cashOut ?? 0);
+    const overall = Number(qarzaSummary?.overall ?? cashIn - cashOut);
+    const toGive = Math.max(overall, 0);
+    const toReceive = Math.max(-overall, 0);
 
     const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
     const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
@@ -29,13 +35,9 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
             <div className="flex justify-between items-start mb-6 gap-6">
                 <div>
                     <p className="text-xs font-semibold mb-1" style={{ color: "#6b7280" }}>Customer:</p>
-                    <p className="text-sm font-bold uppercase" style={{ color: "#111827" }}>{order?.customerName || "Walk-in Customer"}</p>
-                    {order?.customerType && <p className="text-xs capitalize" style={{ color: "#4b5563" }}>Type: {order.customerType}</p>}
-                    {order?.customerId && <p className="text-xs" style={{ color: "#4b5563" }}>Customer ID: {order.customerId}</p>}
+                    <p className="text-sm font-bold uppercase" style={{ color: "#111827" }}>{customerName}</p>
                     {order?.customerData?.phoneNo && <p className="text-xs" style={{ color: "#4b5563" }}>Phone: {order.customerData.phoneNo}</p>}
                     {order?.customerData?.address && <p className="text-xs" style={{ color: "#4b5563" }}>Address: {order.customerData.address}</p>}
-                    {order?.staffData && <p className="text-xs" style={{ color: "#4b5563" }}>Staff: {order.staffData.fullName}</p>}
-                    {order?.status && <p className="text-xs font-semibold mt-2" style={{ color: "#6b7280" }}>Status: <span className="font-normal capitalize" style={{ color: "#111827" }}>{order.status}</span></p>}
                 </div>
                 <div className="flex flex-col gap-2 min-w-[240px]">
                     <div className="border px-3 py-2 flex justify-between text-sm" style={{ borderColor: "#d1d5db" }}>
@@ -170,23 +172,27 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
             {showCustomerKPI && qarzaSummary && (
                 <div className="border p-4 mb-6" style={{ borderColor: "#d1d5db", backgroundColor: "#f9fafb" }}>
                     <h3 className="text-lg font-semibold mb-3" style={{ color: "#111827" }}>Customer Account Summary</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Total To Pay</p>
-                            <p className="text-lg font-bold" style={{ color: "#dc2626" }}>Rs {(qarzaSummary.totalToPay || 0).toLocaleString()}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Cash In</p>
+                            <p className="text-lg font-bold" style={{ color: "#16a34a" }}>Rs {cashIn.toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Total Paid</p>
-                            <p className="text-lg font-bold" style={{ color: "#16a34a" }}>Rs {(qarzaSummary.totalPaid || 0).toLocaleString()}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Cash Out</p>
+                            <p className="text-lg font-bold" style={{ color: "#dc2626" }}>Rs {cashOut.toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Total Remaining</p>
-                            <p className="text-lg font-bold" style={{ color: "#f59e0b" }}>Rs {(qarzaSummary.totalRemaining || 0).toLocaleString()}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>To Give</p>
+                            <p className="text-lg font-bold" style={{ color: "#f59e0b" }}>Rs {toGive.toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Credit Account</p>
-                            <p className="text-lg font-bold" style={{ color: "#8b5cf6" }}>{qarzaSummary.creditAccountName || "—"}</p>
+                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>To Receive</p>
+                            <p className="text-lg font-bold" style={{ color: "#8b5cf6" }}>Rs {toReceive.toLocaleString()}</p>
                         </div>
+                    </div>
+                    <div className="border-t mt-4 pt-3 flex justify-between text-sm font-bold" style={{ borderColor: "#d1d5db" }}>
+                        <span>Overall Balance</span>
+                        <span style={{ color: overall >= 0 ? "#f59e0b" : "#8b5cf6" }}>Rs {Math.abs(overall).toLocaleString()}</span>
                     </div>
                 </div>
             )}

@@ -35,7 +35,10 @@ export default function OrderDetailsPage() {
 
     const totalPaid = paymentStatus?.totalPaid ?? order?.paid ?? 0;
     const remainingAmount = paymentStatus?.remainingAmount ?? order?.remainingAmount ?? 0;
-    const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—";
+    const orderDate = order?.createdAt ? new Date(order.createdAt) : null;
+    const date = orderDate ? orderDate.toLocaleDateString() : "—";
+    const time = orderDate ? orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+    const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
     const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
     const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
     const totalItemTax = (order?.items || []).reduce((sum, it) => sum + ((it.taxAmount || 0) * (it.quantity || 0)), 0);
@@ -142,7 +145,7 @@ export default function OrderDetailsPage() {
                     </div>
 
                     {/* Paper sheet - Invoice-style layout with ALL details */}
-                    <div className="bg-(--surface) border border-(--border) rounded-2xl shadow-lg px-8 py-8 mb-6">
+                    <div className="bg-(--surface) border border-(--border) rounded-2xl shadow-lg px-6 py-6 mb-6">
 
                         {/* Company Header */}
                         <div className="text-center mb-6 pb-4 border-b-2 border-(--border)">
@@ -164,18 +167,11 @@ export default function OrderDetailsPage() {
                                     <User size={16} className="text-(--accent-2)" />
                                     <p className="text-xs font-bold text-(--muted) uppercase tracking-wide">Bill To</p>
                                 </div>
-                                <p className="text-lg font-bold text-(--ink)">{order?.customerName || "Walk-in Customer"}</p>
                                 <div className="mt-3 space-y-2">
                                     <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
-                                        <span className="text-(--muted)">Type:</span>
-                                        <span className="font-semibold capitalize">{order?.customerType || "walkin"}</span>
+                                        <span className="text-(--muted)">Name:</span>
+                                        <span className="font-semibold">{customerName}</span>
                                     </div>
-                                    {order?.customerId && (
-                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
-                                            <span className="text-(--muted)">Customer ID:</span>
-                                            <span className="font-semibold">{typeof order.customerId === 'object' ? order.customerId._id : order.customerId}</span>
-                                        </div>
-                                    )}
                                     {order?.customerData?.phoneNo && (
                                         <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
                                             <span className="text-(--muted)">Phone:</span>
@@ -186,12 +182,6 @@ export default function OrderDetailsPage() {
                                         <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
                                             <span className="text-(--muted)">Address:</span>
                                             <span className="font-semibold">{order.customerData.address}</span>
-                                        </div>
-                                    )}
-                                    {order?.staffData && (
-                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-sm">
-                                            <span className="text-(--muted)">Staff:</span>
-                                            <span className="font-semibold">{order.staffData.fullName}</span>
                                         </div>
                                     )}
                                 </div>
@@ -213,17 +203,14 @@ export default function OrderDetailsPage() {
                                         <span className="font-semibold text-(--ink)">{date}</span>
                                     </div>
                                     <div className="border border-(--border) px-3 py-2 flex justify-between">
+                                        <span className="text-(--muted)">Time Placed:</span>
+                                        <span className="font-semibold text-(--ink)">{time}</span>
+                                    </div>
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Order Type:</span>
                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
                                             order?.orderType === "wholesale" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
                                         }`}>{order?.orderType || "retail"}</span>
-                                    </div>
-                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
-                                        <span className="text-(--muted)">Status:</span>
-                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
-                                            order?.status === "completed" ? "bg-green-100 text-green-700" :
-                                            order?.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
-                                        }`}>{order?.status || "—"}</span>
                                     </div>
                                     {order?.discountAmount > 0 && (
                                         <div className="border border-(--border) px-3 py-2 flex justify-between text-red-600">
@@ -237,12 +224,6 @@ export default function OrderDetailsPage() {
                                         <div className="border border-(--border) px-3 py-2 flex justify-between text-green-700">
                                             <span>Total Tax:</span>
                                             <span className="font-semibold">Rs {order?.totalTaxAmount?.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    {order?.isPosOrder && (
-                                        <div className="border border-(--border) px-3 py-2 flex justify-between">
-                                            <span className="text-(--muted)">Source:</span>
-                                            <span className="text-xs font-semibold text-(--accent-2)">POS Terminal</span>
                                         </div>
                                     )}
                                 </div>
@@ -426,33 +407,9 @@ export default function OrderDetailsPage() {
                             </div>
                         )}
 
-                        {/* Sign-off Bar */}
-                        <div className="border border-(--border) mb-4">
-                            <div className="flex text-sm">
-                                <div className="w-1/2 text-center py-3 border-r border-(--border)">
-                                    <p className="text-(--muted)">Prepared By</p>
-                                    <p className="font-semibold mt-1 text-(--ink)">SyedSoft</p>
-                                </div>
-                                <div className="w-1/2 text-center py-3">
-                                    <p className="text-(--muted)">Approved By</p>
-                                    <p className="font-semibold mt-1 text-(--ink)">Afrasiab Mobile Accesories</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex justify-between items-center text-xs text-(--muted) pt-4 border-t border-(--border)">
-                            <p className="italic">This is a computer generated document, no signature required</p>
-                            <div className="flex items-center gap-2">
-                                <Calendar size={12} />
-                                <p>Printed: {new Date().toLocaleString()}</p>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Payment Transactions Section */}
                     {payments && payments.length > 0 && (
-                        <div className="bg-(--surface) border border-(--border) rounded-2xl shadow-lg px-8 py-6">
+                        <div className="mt-6 pt-6 border-t border-(--border)">
                             <div className="flex items-center gap-2 mb-4">
                                 <CreditCard size={18} className="text-(--accent-2)" />
                                 <h3 className="text-lg font-bold text-(--ink)">Payment Transactions</h3>
@@ -517,37 +474,67 @@ export default function OrderDetailsPage() {
 
                     {/* Customer Qarza KPI Section */}
                     {showCustomerKPI && qarzaSummary && (
-                        <div className="bg-(--surface) border border-(--border) rounded-2xl shadow-lg px-8 py-6 mt-10">
-                            <div className="flex items-center gap-2 mb-4">
-                                <DollarSign size={18} className="text-(--accent-2)" />
-                                <h3 className="text-lg font-bold text-(--ink)">Customer Qarza Overview</h3>
-                            </div>
+                        <div className="mt-6 pt-6 border-t border-(--border)">
+                            <div className="border border-(--border) p-4 mb-6" style={{ background: "var(--surface-muted)" }}>
+                                <h3 className="text-lg font-semibold mb-3 text-(--ink)">Customer Account Summary</h3>
                             {qarzaLoading ? (
                                 <p className="text-(--muted)">Loading Qarza data...</p>
                             ) : (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
-                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Cash In</p>
-                                        <p className="text-2xl font-bold text-green-600">Rs {(qarzaSummary.cashIn || 0).toLocaleString()}</p>
+                                    <div>
+                                        <p className="text-xs text-(--muted) uppercase font-bold mb-1">Cash In</p>
+                                        <p className="text-lg font-bold text-green-600">Rs {Number(qarzaSummary.cashIn || 0).toLocaleString()}</p>
                                     </div>
-                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
-                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Cash Out</p>
-                                        <p className="text-2xl font-bold text-red-600">Rs {(qarzaSummary.cashOut || 0).toLocaleString()}</p>
+                                    <div>
+                                        <p className="text-xs text-(--muted) uppercase font-bold mb-1">Cash Out</p>
+                                        <p className="text-lg font-bold text-red-600">Rs {Number(qarzaSummary.cashOut || 0).toLocaleString()}</p>
                                     </div>
-                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
-                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Total Transactions</p>
-                                        <p className="text-2xl font-bold text-(--ink)">{qarzaSummary.totalTransactions || 0}</p>
+                                    <div>
+                                        <p className="text-xs text-(--muted) uppercase font-bold mb-1">To Give</p>
+                                        <p className="text-lg font-bold text-amber-600">Rs {Math.max(Number(qarzaSummary.overall || 0), 0).toLocaleString()}</p>
                                     </div>
-                                    <div className="border border-(--border) p-4 rounded-lg" style={{ background: "var(--surface-muted)" }}>
-                                        <p className="text-xs text-(--muted) uppercase tracking-wide">Overall Balance</p>
-                                        <p className={`text-2xl font-bold ${qarzaSummary.overall >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            Rs {(qarzaSummary.overall || 0).toLocaleString()}
-                                        </p>
+                                    <div>
+                                        <p className="text-xs text-(--muted) uppercase font-bold mb-1">To Receive</p>
+                                        <p className="text-lg font-bold text-purple-600">Rs {Math.max(Number(qarzaSummary.overall || 0) * -1, 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
+                                {!qarzaLoading && (
+                                    <div className="border-t border-(--border) mt-4 pt-3 flex justify-between text-sm font-bold text-(--ink)">
+                                        <span>Overall Balance</span>
+                                        <span className={Number(qarzaSummary.overall || 0) >= 0 ? "text-amber-600" : "text-purple-600"}>
+                                            {Number(qarzaSummary.overall || 0) > 0 ? "To Give: " : Number(qarzaSummary.overall || 0) < 0 ? "To Receive: " : "Balanced: "}
+                                            Rs {Math.abs(Number(qarzaSummary.overall || 0)).toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
+
+                    {/* Sign-off Bar */}
+                    <div className="border border-(--border) mb-4 mt-6">
+                        <div className="flex text-sm">
+                            <div className="w-1/2 text-center py-3 border-r border-(--border)">
+                                <p className="text-(--muted)">Prepared By</p>
+                                <p className="font-semibold mt-1 text-(--ink)">SyedSoft</p>
+                            </div>
+                            <div className="w-1/2 text-center py-3">
+                                <p className="text-(--muted)">Approved By</p>
+                                <p className="font-semibold mt-1 text-(--ink)">Afrasiab Mobile Accesories</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex justify-between items-center text-xs text-(--muted) pt-4 border-t border-(--border)">
+                        <p className="italic">This is a computer generated document, no signature required</p>
+                        <div className="flex items-center gap-2">
+                            <Calendar size={12} />
+                            <p>Printed: {new Date().toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
             {showPdfModal && (

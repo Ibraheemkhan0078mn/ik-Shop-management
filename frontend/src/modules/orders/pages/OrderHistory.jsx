@@ -207,6 +207,8 @@ function DateFilter({ startDate, endDate, onStartDateChange, onEndDateChange, on
 
 // ── Order detail modal ──────────────────────────────────────────────────
 function OrderDetailModal({ order, onClose }) {
+    const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
+
     const handleCopyOrderNumber = () => {
         if (order?.orderNumber) {
             navigator.clipboard.writeText(order.orderNumber);
@@ -251,7 +253,30 @@ function OrderDetailModal({ order, onClose }) {
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto max-h-[calc(90vh-100px)] p-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InfoCard icon={User} label="Customer Name" value={order.customerName || "Walk-in Customer"} />
+                        <div className="flex items-start gap-3 p-4 rounded-xl border" style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
+                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(15,118,110,0.12)" }}>
+                                <User size={18} className="text-(--accent-2)" />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-2">
+                                <p className="text-xs font-semibold text-(--muted) uppercase tracking-wider">Customer</p>
+                                <div className="border border-(--border) px-3 py-2 flex justify-between gap-3 text-sm">
+                                    <span className="text-(--muted)">Name:</span>
+                                    <span className="font-semibold text-right text-(--ink)">{customerName}</span>
+                                </div>
+                                {order?.customerData?.phoneNo && (
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between gap-3 text-sm">
+                                        <span className="text-(--muted)">Phone:</span>
+                                        <span className="font-semibold text-right text-(--ink)">{order.customerData.phoneNo}</span>
+                                    </div>
+                                )}
+                                {order?.customerData?.address && (
+                                    <div className="border border-(--border) px-3 py-2 flex justify-between gap-3 text-sm">
+                                        <span className="text-(--muted)">Address:</span>
+                                        <span className="font-semibold text-right text-(--ink)">{order.customerData.address}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         <InfoCard icon={Clock} label="Order Date & Time" value={new Date(order.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} />
                         <InfoCard icon={User} label="Served By" value={order.waiter || "Not specified"} />
                         <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ background: "var(--surface-muted)", borderColor: "var(--border)" }}>
@@ -614,7 +639,7 @@ function OrderRow({ order, index, isExpanded, onToggleExpand, navigate, setRetur
                     </div>
                 </td>
                 <td className="px-5 py-3.5">
-                    <p className="font-semibold text-(--ink) truncate">{order.customerName || "Walk-in"}</p>
+                    <p className="font-semibold text-(--ink) truncate">{order.customerData?.name || order.customerName || "Walk-in"}</p>
                     {order.waiter && (
                         <p className="text-xs text-(--muted) truncate mt-0.5">Served by {order.waiter}</p>
                     )}
