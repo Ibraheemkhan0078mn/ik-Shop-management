@@ -923,9 +923,7 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
         source,
         status,
         search,
-        sortBy,
-        page = 1,
-        limit = 20
+        sortBy
     } = req.query;
     console.log(req.query, "the query")
 
@@ -1231,11 +1229,6 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
             filteredSummaries = accountSummaries.filter(a => a.accountStatus === status);
         }
 
-        // Pagination
-        const total = filteredSummaries.length;
-        const skip = (page - 1) * limit;
-        const paginatedAccounts = filteredSummaries.slice(skip, skip + parseInt(limit));
-
         // Calculate KPI based on filtered results
         const totalAccounts = filteredSummaries.length;
         const totalDebitOnMe = filteredSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0); // Others owe me (they paid in advance)
@@ -1251,13 +1244,7 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
                     totalDebitOnOthers,
                     finalAmount
                 },
-                accounts: paginatedAccounts,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
+                accounts: filteredSummaries
             }
         });
 });
