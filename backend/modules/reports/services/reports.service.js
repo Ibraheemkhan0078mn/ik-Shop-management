@@ -3279,7 +3279,7 @@ export const getFinancialReport = async (filters = {}) => {
 
 // Shared service to get credit/debit account data for integration with other reports
 export const getCreditsDebitsAccountData = async (filters = {}) => {
-    const { accountTypes = [] } = filters;
+    const { accountTypes = [], fromDate, toDate } = filters;
 
     // Build account filter
     let accountFilter = {};
@@ -3287,8 +3287,8 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
         accountFilter.type = { $in: accountTypes };
     }
 
-    // Get all transactions from all sources (same logic as qarza credits-debits/report)
-    const transactionFilter = {
+    // Get transactions from all sources, optionally constrained to local date boundaries.
+    const sourceFilter = {
         $or: [
             { sourceType: 'qarza' },
             { sourceType: 'sale' },
@@ -3297,6 +3297,20 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
             { sourceType: 'purchaseReturn' }
         ]
     };
+    const dateFilter = {};
+    if (fromDate) {
+        const startDate = parseLocalDate(fromDate);
+        startDate.setHours(0, 0, 0, 0);
+        dateFilter.$gte = startDate;
+    }
+    if (toDate) {
+        const endDate = parseLocalDate(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter.$lte = endDate;
+    }
+    const transactionFilter = Object.keys(dateFilter).length > 0
+        ? { $and: [sourceFilter, { transactionDate: dateFilter }] }
+        : sourceFilter;
 
     // Fetch accounts and transactions
     const [allAccounts, allTransactions] = await Promise.all([
@@ -3395,12 +3409,21 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
         };
     });
 
-    // Calculate overall KPI
-    const totalAccounts = accountSummaries.length;
-    const totalDebitOnMe = accountSummaries.reduce((sum, acc) => sum + (acc.totalToPay || 0), 0);
-    const totalDebitOnOthers = accountSummaries.reduce((sum, acc) => sum + (acc.totalPaid || 0), 0);
+    const scopedAccountSummaries = fromDate || toDate
+        ? accountSummaries.filter((account) => account.transactionCount > 0)
+        : accountSummaries;
+
+    // Match the separate Qarza report: aggregate each account's net balance,
+    // rather than presenting gross paid/to-pay transaction totals as balances.
+    const totalAccounts = scopedAccountSummaries.length;
+    const totalDebitOnOthers = scopedAccountSummaries
+        .filter((account) => account.remainingBalance > 0)
+        .reduce((sum, account) => sum + account.remainingBalance, 0);
+    const totalDebitOnMe = scopedAccountSummaries
+        .filter((account) => account.remainingBalance < 0)
+        .reduce((sum, account) => sum + Math.abs(account.remainingBalance), 0);
     const finalAmount = totalDebitOnOthers - totalDebitOnMe;
-    const accountsByType = accountSummaries.reduce((grouped, accountSummary) => {
+    const accountsByType = scopedAccountSummaries.reduce((grouped, accountSummary) => {
         const type = accountSummary.account?.type || 'general';
         if (!grouped[type]) {
             grouped[type] = {
@@ -3438,15 +3461,15 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
             totalDebitOnOthers,
             finalAmount
         },
-        accounts: accountSummaries,
+        accounts: scopedAccountSummaries,
         summary: {
             totalAccounts,
             totalToReceive: totalDebitOnMe,
             totalToGive: totalDebitOnOthers,
             totalBalance: finalAmount,
             totalPaymentsInPeriod: allTransactions.length,
-            activeAccounts: accountSummaries.filter((account) => account.transactionCount > 0).length,
-            accountsWithBalance: accountSummaries.filter((account) => account.remainingBalance !== 0).length
+            activeAccounts: scopedAccountSummaries.filter((account) => account.transactionCount > 0).length,
+            accountsWithBalance: scopedAccountSummaries.filter((account) => account.remainingBalance !== 0).length
         },
         accountsByType,
         paymentsByType,

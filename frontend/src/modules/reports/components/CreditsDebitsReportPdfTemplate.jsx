@@ -115,6 +115,7 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
                                             <div>
                                                 <p style={{ fontWeight: '500', color: '#1f2937', margin: 0 }}>{accountData.account.name}</p>
                                                 <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{accountData.account.phoneNo || "—"}</p>
+                                                <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>{accountData.transactionCount || 0} payment{accountData.transactionCount === 1 ? "" : "s"} in period</p>
                                             </div>
                                         </td>
                                         <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', textTransform: 'capitalize', color: '#1f2937' }}>{accountData.account.type}</td>

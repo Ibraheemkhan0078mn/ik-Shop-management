@@ -923,6 +923,15 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
 
     const QarzaAccountModel = getLocalQarzaAccountModel();
 
+    const parseLocalDate = (value, endOfDay = false) => {
+        if (!value) return null;
+        const [year, month, day] = String(value).split("-").map(Number);
+        if (!year || !month || !day) return null;
+        return endOfDay
+            ? new Date(year, month - 1, day, 23, 59, 59, 999)
+            : new Date(year, month - 1, day, 0, 0, 0, 0);
+    };
+
     // Build transaction filter based on date range and account type
     let transactionFilter = {};
     
@@ -931,13 +940,11 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
     if (startDate || endDate) {
         dateFilter.transactionDate = {};
         if (startDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
+            const start = parseLocalDate(startDate);
             dateFilter.transactionDate.$gte = start;
         }
         if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
+            const end = parseLocalDate(endDate, true);
             dateFilter.transactionDate.$lte = end;
         }
     }
@@ -1067,7 +1074,7 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
         // Filter by account IDs from transactions when date range is provided
         // This ensures we only show accounts that have transactions in the selected period
         // When no date range is provided (all periods), show all accounts matching the type filter
-        if ((startDate || endDate) && accountIdsFromTransactions.size > 0) {
+        if (startDate || endDate) {
             accountFilter._id = { $in: Array.from(accountIdsFromTransactions) };
         }
 
@@ -1151,6 +1158,21 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
             
             const lastTransaction = accountTransactions.length > 0 ? accountTransactions[0].transactionDate : null;
 
+            const payments = accountTransactions.map(transaction => {
+                const amount = transaction.sourceType === 'qarza'
+                    ? transaction.amount || 0
+                    : transaction.creditAmount || transaction.amount || 0;
+
+                return {
+                    _id: transaction._id,
+                    transactionDate: transaction.transactionDate,
+                    sourceType: transaction.sourceType,
+                    paymentType: transaction.creditType === 'cashin' ? 'Cash In' : 'Cash Out',
+                    amount,
+                    notes: transaction.notes || ''
+                };
+            });
+
             // Determine status based on actual transaction calculation
             let accountStatus = 'cleared';
             if (remainingBalance > 0) {
@@ -1183,7 +1205,8 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
                 lastTransaction: lastTransaction ? new Date(lastTransaction).toISOString() : null,
                 tag,
                 accountStatus,
-                transactionCount: accountTransactions.length
+                transactionCount: accountTransactions.length,
+                payments
             };
         });
 

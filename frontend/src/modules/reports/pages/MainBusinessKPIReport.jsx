@@ -24,7 +24,12 @@ const card = { background: "var(--surface)", borderColor: "var(--border)" };
 const getStaffReportDates = (period, fromDate, toDate) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const format = (date) => date.toISOString().split("T")[0];
+    const format = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
 
     switch (period) {
         case "today":
@@ -87,6 +92,10 @@ export default function MainBusinessKPIReport() {
     const [toDate, setToDate] = useState("");
     const filters = useMemo(() => ({ period, ...(period === "custom" && fromDate && toDate ? { fromDate, toDate } : {}) }), [period, fromDate, toDate]);
     const staffDates = useMemo(() => getStaffReportDates(period, fromDate, toDate), [period, fromDate, toDate]);
+    const creditDebitFilters = useMemo(() => ({
+        accountTypes: ["customer", "supplier", "general"],
+        ...staffDates
+    }), [staffDates]);
     const { data, isLoading, isFetching, error, refetch } = useGetMainBusinessKPIOnlyReportQuery(filters);
     const { data: purchaseReport } = useGetPurchaseReportQuery(filters);
     const { data: inventoryReport } = useGetInventoryKPIReportQuery(filters);
@@ -94,7 +103,7 @@ export default function MainBusinessKPIReport() {
     const { data: customerReport } = useGetCustomerKPIReportQuery(filters);
     const { data: expenseReport } = useGetExpenseKPIReportQuery(filters);
     const { data: staffReport } = useGetStaffReportQuery({ ...staffDates, page: 1, limit: 50 });
-    const { data: creditDebitReport } = useGetCreditsDebitsAccountDataQuery({ accountTypes: ['customer', 'supplier', 'general'] });
+    const { data: creditDebitReport } = useGetCreditsDebitsAccountDataQuery(creditDebitFilters);
 
     if (error) showError(error?.data?.message || "Failed to load main business KPI report");
 

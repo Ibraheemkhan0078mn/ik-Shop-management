@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown } from "lucide-react";
+import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import CreditsDebitsReportPdfTemplate from "../components/CreditsDebitsReportPdfTemplate.jsx";
@@ -51,6 +51,13 @@ function BalanceBadge({ accountData }) {
     return <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border" style={{ background: '#10b98117', color: '#10b981', borderColor: '#10b98140' }}>To Receive ({Math.abs(remaining).toLocaleString()})</span>;
 }
 
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 export default function CreditsDebitsReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
@@ -64,6 +71,7 @@ export default function CreditsDebitsReport() {
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState(null);
+    const [expandedAccountId, setExpandedAccountId] = useState(null);
 
     // Expand-in-place state: which account row is open, its ledger data, and its own loading flag
 
@@ -76,19 +84,25 @@ export default function CreditsDebitsReport() {
                 return { from: null, to: null };
             }
             case "today": {
-                return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+                const localToday = formatLocalDate(today);
+                return { from: localToday, to: localToday };
+            }
+            case "threeDays": {
+                const threeDaysStart = new Date(today);
+                threeDaysStart.setDate(today.getDate() - 2);
+                return { from: formatLocalDate(threeDaysStart), to: formatLocalDate(today) };
             }
             case "week": {
                 const weekStart = new Date(now);
                 weekStart.setDate(now.getDate() - now.getDay());
                 const weekEnd = new Date(weekStart);
                 weekEnd.setDate(weekStart.getDate() + 6);
-                return { from: weekStart.toISOString().split('T')[0], to: weekEnd.toISOString().split('T')[0] };
+                return { from: formatLocalDate(weekStart), to: formatLocalDate(weekEnd) };
             }
             case "month": {
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                 const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                return { from: monthStart.toISOString().split('T')[0], to: monthEnd.toISOString().split('T')[0] };
+                return { from: formatLocalDate(monthStart), to: formatLocalDate(monthEnd) };
             }
             case "custom":
             default:
@@ -162,7 +176,47 @@ export default function CreditsDebitsReport() {
                     <Filter size={16} style={{ color: 'var(--accent-2)' }} />
                     <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{labels.filters}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>Time Period</label>
+                        <select
+                            value={transactionPeriod}
+                            onChange={(e) => setTransactionPeriod(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
+                        >
+                            <option value="all">All</option>
+                            <option value="today">Today</option>
+                            <option value="threeDays">3 Days</option>
+                            <option value="week">Week</option>
+                            <option value="month">Month</option>
+                            <option value="custom">Custom Dates</option>
+                        </select>
+                    </div>
+                    {transactionPeriod === "custom" && (
+                        <>
+                            <div>
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>From</label>
+                                <input
+                                    type="date"
+                                    value={customFromDate}
+                                    onChange={(e) => setCustomFromDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>To</label>
+                                <input
+                                    type="date"
+                                    value={customToDate}
+                                    onChange={(e) => setCustomToDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}
+                                />
+                            </div>
+                        </>
+                    )}
                     <div>
                         <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{labels.accountType}</label>
                         <select
@@ -226,31 +280,83 @@ export default function CreditsDebitsReport() {
                         </div>
                     )}
 
-                    {/* Accounts — showing KPI and payment info without expandable details */}
+                    {/* Accounts and period-filtered payment details */}
                     {reportData && reportData.accounts && reportData.accounts.length > 0 ? (
-                        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                            {reportData.accounts.map((accountData, index) => (
-                                <div key={accountData.account._id || index} className="flex items-center justify-between gap-4 p-4">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <Avatar name={accountData.account.name} />
-                                        <div className="min-w-0">
-                                            <p className="font-medium text-sm truncate" style={{ color: 'var(--ink)' }}>{accountData.account.name}</p>
-                                            <p className="text-xs capitalize" style={{ color: 'var(--muted)' }}>{accountData.account.type} · {accountData.account.phoneNo || "—"}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-5 shrink-0">
-                                        <div className="text-right hidden md:block">
-                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{labels.totalToPay}</p>
-                                            <p className="text-sm font-semibold tabular-nums" style={{ color: '#dc2626' }}>Rs {(accountData.totalToPay || 0).toLocaleString()}</p>
-                                        </div>
-                                        <div className="text-right hidden md:block">
-                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{labels.totalPaid}</p>
-                                            <p className="text-sm font-semibold tabular-nums" style={{ color: '#10b981' }}>Rs {(accountData.totalPaid || 0).toLocaleString()}</p>
-                                        </div>
-                                        <BalanceBadge accountData={accountData} />
-                                    </div>
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[760px] divide-y" style={{ borderColor: 'var(--border)' }}>
+                                <div className="grid grid-cols-[minmax(240px,1fr)_110px_110px_150px_36px] gap-4 px-4 py-2 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--muted)', background: 'var(--surface-muted)' }}>
+                                    <span>Account</span>
+                                    <span className="text-right">{labels.totalToPay}</span>
+                                    <span className="text-right">{labels.totalPaid}</span>
+                                    <span className="text-right">{labels.statusAndBalance}</span>
+                                    <span />
                                 </div>
-                            ))}
+                                {reportData.accounts.map((accountData, index) => {
+                                    const accountId = accountData.account._id || index;
+                                    const isExpanded = expandedAccountId === accountId;
+                                    const payments = accountData.payments || [];
+
+                                    return (
+                                        <React.Fragment key={accountId}>
+                                            <div className="grid grid-cols-[minmax(240px,1fr)_110px_110px_150px_36px] gap-4 items-center px-4 py-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <Avatar name={accountData.account.name} />
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-sm truncate" style={{ color: 'var(--ink)' }}>{accountData.account.name}</p>
+                                                        <p className="text-xs capitalize truncate" style={{ color: 'var(--muted)' }}>{accountData.account.type} · {accountData.account.phoneNo || "—"}</p>
+                                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{accountData.transactionCount || 0} payment{accountData.transactionCount === 1 ? "" : "s"} in period</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-right text-sm font-semibold tabular-nums" style={{ color: '#dc2626' }}>Rs {(accountData.totalToPay || 0).toLocaleString()}</p>
+                                                <p className="text-right text-sm font-semibold tabular-nums" style={{ color: '#10b981' }}>Rs {(accountData.totalPaid || 0).toLocaleString()}</p>
+                                                <div className="flex justify-end"><BalanceBadge accountData={accountData} /></div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpandedAccountId(isExpanded ? null : accountId)}
+                                                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg border transition-colors hover:border-(--accent-2) hover:text-(--accent-2)"
+                                                    style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                                                    title={isExpanded ? "Hide payments" : "Show payments"}
+                                                    aria-label={isExpanded ? "Hide payments" : "Show payments"}
+                                                >
+                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </button>
+                                            </div>
+                                            {isExpanded && (
+                                                <div className="px-4 pb-4">
+                                                    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                <tr style={{ color: 'var(--muted)' }}>
+                                                                    <th className="px-3 py-2 text-left text-xs font-bold uppercase">Date</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-bold uppercase">Source</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-bold uppercase">Type</th>
+                                                                    <th className="px-3 py-2 text-right text-xs font-bold uppercase">Amount</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-bold uppercase">Notes</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {payments.map((payment, paymentIndex) => (
+                                                                    <tr key={payment._id || paymentIndex} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                                                                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--ink)' }}>{payment.transactionDate ? new Date(payment.transactionDate).toLocaleString() : "—"}</td>
+                                                                        <td className="px-3 py-2 capitalize" style={{ color: 'var(--muted)' }}>{payment.sourceType || "—"}</td>
+                                                                        <td className="px-3 py-2">
+                                                                            <span className={`text-xs font-semibold px-2 py-1 rounded-md ${payment.paymentType === "Cash In" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                                                                {payment.paymentType}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {Number(payment.amount || 0).toLocaleString()}</td>
+                                                                        <td className="px-3 py-2 truncate max-w-[240px]" style={{ color: 'var(--muted)' }}>{payment.notes || "—"}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
                         <div className="p-12 text-center">
