@@ -61,13 +61,13 @@ function AppRoutes() {
 
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/dashboard/analytics" element={<ProtectedRoute adminOnly><Analytics /></ProtectedRoute>} />
             <Route path="/quick-list" element={<ProtectedRoute><QuickActions /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
-            <Route path="/products/categories" element={<ProtectedRoute><ProductCategoriesPage /></ProtectedRoute>} />
-            <Route path="/products/sub-categories" element={<ProtectedRoute><ProductSubCategoriesPage /></ProtectedRoute>} />
-            <Route path="/products/brands" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
+            <Route path="/products/categories" element={<ProtectedRoute permission="categories.view"><ProductCategoriesPage /></ProtectedRoute>} />
+            <Route path="/products/sub-categories" element={<ProtectedRoute permission="subcategories.view"><ProductSubCategoriesPage /></ProtectedRoute>} />
+            <Route path="/products/brands" element={<ProtectedRoute permission="brands.view"><BrandPage /></ProtectedRoute>} />
             <Route path="/products/view/:id" element={<ProtectedRoute><ViewProductPage /></ProtectedRoute>} />
             <Route path="/products/batches" element={<ProtectedRoute><Products /></ProtectedRoute>} />
 
@@ -82,11 +82,11 @@ function AppRoutes() {
             <Route path="/purchase-returns/:id" element={<ProtectedRoute><PurchaseReturnDetail /></ProtectedRoute>} />
             <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
             <Route path="/order-returns/:id" element={<ProtectedRoute><OrderReturnDetail /></ProtectedRoute>} />
-            <Route path="/customers" element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute permission="customers.view"><CustomerPage /></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
             <Route path="/wastage/:id" element={<ProtectedRoute><WastageDetail /></ProtectedRoute>} />
-            <Route path="/qarzaAccount" element={<ProtectedRoute><QarzaAccounts /></ProtectedRoute>} />
+            <Route path="/qarzaAccount" element={<ProtectedRoute permission="creditsAndDebitsAccounts.view"><QarzaAccounts /></ProtectedRoute>} />
             <Route path="/EachQarzaAccountRecord/:id" element={<ProtectedRoute><EachQarzaAccountRecords /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><AllExpenses /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute><PosPage /></ProtectedRoute>} />
@@ -95,18 +95,18 @@ function AppRoutes() {
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
             {/* Reports Routes */}
-            <Route path="/reports" element={<ProtectedRoute><MainBusinessKPIReport /></ProtectedRoute>} />
-            <Route path="/reports/main-business" element={<ProtectedRoute><MainBusinessKPIReport /></ProtectedRoute>} />
-            <Route path="/reports/main-business/details" element={<ProtectedRoute><MainBusinessReport /></ProtectedRoute>} />
-            <Route path="/reports/sales" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
-            <Route path="/reports/purchases" element={<ProtectedRoute><PurchaseReport /></ProtectedRoute>} />
-            <Route path="/reports/purchases-kpi" element={<ProtectedRoute><PurchaseKPIReport /></ProtectedRoute>} />
-            <Route path="/reports/inventory" element={<ProtectedRoute><InventoryReport /></ProtectedRoute>} />
-            <Route path="/reports/customers" element={<ProtectedRoute><CustomerReport /></ProtectedRoute>} />
-            <Route path="/reports/suppliers" element={<ProtectedRoute><SupplierReport /></ProtectedRoute>} />
-            <Route path="/reports/staff" element={<ProtectedRoute><StaffReport /></ProtectedRoute>} />
-            <Route path="/reports/expenses" element={<ProtectedRoute><ExpenseReport /></ProtectedRoute>} />
-            <Route path="/reports/credits-debits" element={<ProtectedRoute><CreditsDebitsReport /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute adminOnly><MainBusinessKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/main-business" element={<ProtectedRoute adminOnly><MainBusinessKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/main-business/details" element={<ProtectedRoute adminOnly><MainBusinessReport /></ProtectedRoute>} />
+            <Route path="/reports/sales" element={<ProtectedRoute adminOnly><SalesReport /></ProtectedRoute>} />
+            <Route path="/reports/purchases" element={<ProtectedRoute adminOnly><PurchaseReport /></ProtectedRoute>} />
+            <Route path="/reports/purchases-kpi" element={<ProtectedRoute adminOnly><PurchaseKPIReport /></ProtectedRoute>} />
+            <Route path="/reports/inventory" element={<ProtectedRoute adminOnly><InventoryReport /></ProtectedRoute>} />
+            <Route path="/reports/customers" element={<ProtectedRoute adminOnly><CustomerReport /></ProtectedRoute>} />
+            <Route path="/reports/suppliers" element={<ProtectedRoute adminOnly><SupplierReport /></ProtectedRoute>} />
+            <Route path="/reports/staff" element={<ProtectedRoute adminOnly><StaffReport /></ProtectedRoute>} />
+            <Route path="/reports/expenses" element={<ProtectedRoute adminOnly><ExpenseReport /></ProtectedRoute>} />
+            <Route path="/reports/credits-debits" element={<ProtectedRoute adminOnly><CreditsDebitsReport /></ProtectedRoute>} />
 
             {/* Staff Routes */}
             <Route path="/staff" element={<ProtectedRoute><StaffList /></ProtectedRoute>} />
@@ -118,10 +118,10 @@ function AppRoutes() {
 
             {/* Auth Routes */}
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            <Route path="/users/:userId" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
-            <Route path="/user-roles" element={<ProtectedRoute><UserRoleManagement /></ProtectedRoute>} />
-            <Route path="/user-roles/:roleId" element={<ProtectedRoute><UserRoleDetails /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
+            <Route path="/users/:userId" element={<ProtectedRoute adminOnly><UserDetails /></ProtectedRoute>} />
+            <Route path="/user-roles" element={<ProtectedRoute adminOnly><UserRoleManagement /></ProtectedRoute>} />
+            <Route path="/user-roles/:roleId" element={<ProtectedRoute adminOnly><UserRoleDetails /></ProtectedRoute>} />
 
             {/* Default Route */}
             {/* <Route path="/" element={<Login />} /> */}

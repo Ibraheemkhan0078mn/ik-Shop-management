@@ -83,12 +83,10 @@ export const normalizeUserPermissions = (permissions = []) => {
   }
 
   const legacyMap = {
-    dashboard: "dashboard.view",
     pos: "pos.view",
     products: "products.view",
     purchases: "purchases.view",
     expenses: "expenses.view",
-    reports: "reports.view",
     creditsAndDebitsAccounts: "creditsAndDebitsAccounts.view",
     staff: "staff.view",
     manageUsers: "users.manage",

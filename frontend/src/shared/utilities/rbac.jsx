@@ -1,8 +1,6 @@
 import { normalizeUserPermissions } from "./permissionUtils.js";
 
 export const ROUTE_PERMISSIONS = {
-    "/dashboard/analytics": "dashboard.view",
-    "/dashboard/quick-actions": "dashboard.view",
     "/pos": "pos.view",
     "/staff/pos": "pos.view",
     "/products": "products.view",
@@ -27,12 +25,6 @@ export const ROUTE_PERMISSIONS = {
     "/purchase/import": "purchases.create",
     "/purchase/export": "purchases.view",
     "/expenses/business": "expenses.view",
-    "/reports": "reports.view",
-    "/reports/sales": "reports.view",
-    "/reports/purchases": "reports.view",
-    "/reports/purchases-kpi": "reports.view",
-    "/reports/expenses": "reports.view",
-    "/reports/inventory": "reports.view",
     "/accounts": "accounts.view",
     "/accounts/balance": "accounts.view",
     "/accounts/transactions": "accounts.view",

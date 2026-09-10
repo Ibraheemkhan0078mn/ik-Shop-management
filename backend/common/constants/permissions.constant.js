@@ -3,8 +3,7 @@ export const backendBaseUrl = "http://localhost:4000"
 
 // Permissions organized by sidebar menu sequence
 export const DEFAULT_PERMISSIONS = [
-  // Quick List & Dashboard
-  "dashboard.view",
+  // Quick List
   "pos.view",
   "pos.orders.create",
   "pos.orders.delete",
@@ -27,10 +26,6 @@ export const DEFAULT_PERMISSIONS = [
   "categories.create",
   "categories.update",
   "categories.delete",
-  "subcategories.view",
-  "subcategories.create",
-  "subcategories.update",
-  "subcategories.delete",
   "brands.view",
   "brands.create",
   "brands.update",
@@ -38,9 +33,7 @@ export const DEFAULT_PERMISSIONS = [
   "brands.details",
   "batches.view",
   "batches.create",
-  "batches.update",
   "batches.delete",
-  "batches.details",
   
   // Suppliers
   "suppliers.view",
@@ -73,10 +66,6 @@ export const DEFAULT_PERMISSIONS = [
   "creditsAndDebitsAccounts.payment.create",
   "creditsAndDebitsAccounts.payment.update",
   "creditsAndDebitsAccounts.payment.delete",
-  "creditsDebits.view",
-  "creditsDebits.create",
-  "creditsDebits.update",
-  "creditsDebits.delete",
   
   // Staff
   "staff.view",
@@ -99,18 +88,6 @@ export const DEFAULT_PERMISSIONS = [
   "staff.salaryBreakdown.view",
   "staff.paymentSummary.view",
   "staff.orders.view",
-  
-  // Users & Roles
-  "users.view",
-  "users.create",
-  "users.update",
-  "users.delete",
-  "users.manage",
-  "userRoles.view",
-  "userRoles.create",
-  "userRoles.update",
-  "userRoles.delete",
-  "userRoles.details",
   
   // Purchases
   "purchases.view",
@@ -151,18 +128,6 @@ export const DEFAULT_PERMISSIONS = [
   "productReturns.update",
   "productReturns.delete",
   "productReturns.details",
-  
-  // Reports
-  "reports.view",
-  "reports.main",
-  "reports.sales",
-  "reports.purchases",
-  "reports.inventory",
-  "reports.customers",
-  "reports.suppliers",
-  "reports.staff",
-  "reports.expenses",
-  "reports.creditsDebits",
   
   // Quick Actions & Settings
   "quickActions.update",

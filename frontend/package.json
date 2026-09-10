@@ -1,7 +1,7 @@
 {
   "name": "SSI-SOFT",
   "private": true,
-  "version": "1.0.25",
+  "version": "1.0.26",
   "type": "module",
   "author": "IK",
   "scripts": {

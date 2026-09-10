@@ -13,6 +13,7 @@ export const authApi = baseApi.injectEndpoints({
         }),
         getUser: build.query({
             query: (userId) => ({ url: "/auth/me", params: { userId } }),
+            providesTags: (_result, _error, userId) => [{ type: "User", id: userId }],
         }),
         checkAdminRegistration: build.query({
             query: () => ({ url: "/auth/check-admin-registration" }),

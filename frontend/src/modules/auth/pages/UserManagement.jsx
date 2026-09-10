@@ -156,7 +156,6 @@ export default function UserManagement() {
             } else {
                 // Staff permissions - limited permissions
                 rolePermissions = [
-                    "dashboard.view",
                     "pos.view",
                     "pos.orders.create",
                     "pos.orders.view",

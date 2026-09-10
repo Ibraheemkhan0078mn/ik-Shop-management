@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, LogOut, Settings, Menu, X } from "lucide-react";
 import { useSelector } from "react-redux";
-import { useLogout } from "../../modules/auth/services/auth.service.js";
+import { useLogout, useUser } from "../../modules/auth/services/auth.service.js";
 import { useSettings } from "../../modules/settings/hooks/useSettings.js";
 import logo from "../assets/logo.png";
 import { sidebarData } from "../data/sidebar.js";
@@ -12,18 +12,20 @@ import { hasPermission } from "../utilities/permissionUtils.js";
 
 const PERMISSION_MAP = {
   quickList:       p => hasPermission(p, "dashboard.view") || hasPermission(p, "pos.view"),
-  dashboard:       p => hasPermission(p, "dashboard.view"),
+  dashboard:       (_p, role) => role === "admin",
   products:        p => hasPermission(p, "products.view"),
+  categories:      p => hasPermission(p, "categories.view"),
+  brands:           p => hasPermission(p, "brands.view"),
   productWastage:  p => hasPermission(p, "wastage.view"),
   purchases:       p => hasPermission(p, "purchases.view"),
   purchaseReturn:  p => hasPermission(p, "purchaseReturns.view"),
   customers:       p => hasPermission(p, "customers.view"),
   suppliers:       p => hasPermission(p, "suppliers.view"),
-  creditDebits:    p => hasPermission(p, "creditsDebits.view") || hasPermission(p, "accounts.view") || hasPermission(p, "creditsAndDebitsAccounts.view"),
+  creditDebits:    p => hasPermission(p, "creditsAndDebitsAccounts.view"),
   expenses:        p => hasPermission(p, "expenses.view"),
   staff:           p => hasPermission(p, "staff.view"),
-  reports:         p => hasPermission(p, "reports.view"),
-  users:           p => hasPermission(p, "users.view") || hasPermission(p, "users.manage"),
+  reports:         (_p, role) => role === "admin",
+  users:           (_p, role) => role === "admin",
   orders:          p => hasPermission(p, "orders.view") || hasPermission(p, "pos.orders.view"),
 };
 
@@ -31,8 +33,11 @@ export default function Sidebar() {
   const location  = useLocation();
   const logoutUser = useLogout();
   const { settings } = useSettings();
+  const { data: currentUserQuery } = useUser();
   const language = settings?.language || "en";
-  const { permissions = [], role, id: userId } = useSelector(s => s.auth) ?? {};
+  const storedAuth = useSelector(s => s.auth) ?? {};
+  const currentUser = currentUserQuery?.data;
+  const { permissions = [], role, id: userId } = currentUser || storedAuth;
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const appName = "Syed Soft";
@@ -49,12 +54,19 @@ export default function Sidebar() {
     // Check permission map
     const check = PERMISSION_MAP[item.id];
     if (check) {
-      return check(permissions);
+      return check(permissions, role);
     }
     
     // Fallback - deny access if no permission check defined
     return false;
   };
+
+  const visibleNavItems = navItems
+    .map(item => ({
+      ...item,
+      items: item.items?.filter(sub => canAccess(sub)),
+    }))
+    .filter(item => canAccess(item) || item.items?.length);
 
   const isModuleVisible = item => {
     // Map item IDs to module keys
@@ -172,7 +184,7 @@ export default function Sidebar() {
         )}
 
         <ul className="space-y-0.5">
-          {navItems.filter(canAccess).filter(isModuleVisible).map(item => {
+          {visibleNavItems.filter(isModuleVisible).map(item => {
             const Icon       = item.icon;
             const hasChildren = !!item.items?.length;
             const isActive   = activeId === item.id;
