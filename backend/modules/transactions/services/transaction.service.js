@@ -58,6 +58,9 @@ const getTransactions = async (filter = {}) => {
     if (filter.paymentMethod) {
         query.paymentMethod = filter.paymentMethod;
     }
+    if (filter.expenseCategory) {
+        query.expenseCategory = filter.expenseCategory;
+    }
     if (filter.createdBy) {
         query.createdBy = filter.createdBy;
     }

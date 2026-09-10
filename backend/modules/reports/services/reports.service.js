@@ -2235,7 +2235,9 @@ export const getExpenseCategoryBreakdown = async (filters = {}) => {
 
 // Expense Transactions with Pagination
 export const getExpenseTransactions = async (filters = {}) => {
-    const { fromDate, toDate, period, page = 1, limit = 50, category } = filters;
+    const { fromDate, toDate, period, page, limit, category } = filters;
+    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
+    const limitNumber = Math.max(1, Number.parseInt(limit, 10) || 20);
 
     let dateFilter = {};
     if (period === "today") {
@@ -2272,13 +2274,13 @@ export const getExpenseTransactions = async (filters = {}) => {
         matchQuery.expenseCategory = category;
     }
 
-    const skip = (page - 1) * limit;
+    const skip = (pageNumber - 1) * limitNumber;
 
     const [data, total] = await Promise.all([
         findTransactionService(matchQuery, {
             sort: { transactionDate: -1 },
             skip,
-            limit
+            limit: limitNumber
         }),
         countTransactionService(matchQuery)
     ]);
@@ -2286,9 +2288,9 @@ export const getExpenseTransactions = async (filters = {}) => {
     return {
         data,
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber)
     };
 };
 

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Filter } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { RefreshCw, Receipt, DollarSign, TrendingUp, BarChart3, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useGetExpenseKPIReportQuery, useGetExpenseCategoryBreakdownQuery, useGetExpenseTransactionsQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -70,29 +70,45 @@ function TransactionTable({ transactions, labels, total, page, limit, totalPages
                 </table>
             </div>
             {totalPages > 1 && (
-                <div className="px-4 py-3 flex items-center justify-between border-t" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 border-t" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
                     <p className="text-xs" style={{ color: 'var(--muted)' }}>
                         Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} transactions
                     </p>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-1 items-center justify-center">
                         <button
                             onClick={() => onPageChange(page - 1)}
                             disabled={page === 1}
-                            className="px-3 py-1.5 text-xs rounded-lg border disabled:opacity-40 transition-colors"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border disabled:opacity-40 transition-colors"
                             style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                            aria-label="Previous page"
                         >
-                            Previous
+                            <ChevronLeft size={16} />
                         </button>
-                        <span className="px-3 py-1.5 text-xs" style={{ color: 'var(--muted)' }}>Page {page} of {totalPages}</span>
+                        {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                            <button
+                                key={pageNumber}
+                                onClick={() => onPageChange(pageNumber)}
+                                className="w-8 h-8 rounded-lg border text-xs font-semibold transition-colors"
+                                style={{
+                                    borderColor: pageNumber === page ? 'var(--accent-2)' : 'var(--border)',
+                                    background: pageNumber === page ? 'var(--accent-2)' : 'var(--surface)',
+                                    color: pageNumber === page ? '#ffffff' : 'var(--muted)'
+                                }}
+                            >
+                                {pageNumber}
+                            </button>
+                        ))}
                         <button
                             onClick={() => onPageChange(page + 1)}
                             disabled={page === totalPages}
-                            className="px-3 py-1.5 text-xs rounded-lg border disabled:opacity-40 transition-colors"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border disabled:opacity-40 transition-colors"
                             style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                            aria-label="Next page"
                         >
-                            Next
+                            <ChevronRight size={16} />
                         </button>
                     </div>
+                    <span />
                 </div>
             )}
         </div>
@@ -137,7 +153,7 @@ export default function ExpenseReport() {
         breakdownFilters.toDate = toDate;
     }
 
-    const transactionsFilters = { period, page: currentPage, limit: 50 };
+    const transactionsFilters = { period, page: currentPage, limit: 20 };
     if (period === "custom" && fromDate && toDate) {
         transactionsFilters.fromDate = fromDate;
         transactionsFilters.toDate = toDate;
@@ -149,6 +165,10 @@ export default function ExpenseReport() {
     const handlePageChange = (newPage) => {
         setCurrentPage(newPage);
     };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [period, fromDate, toDate, category]);
 
     const { data: kpiData, isLoading: kpiLoading, error: kpiError } = useGetExpenseKPIReportQuery(kpiFilters);
     const { data: breakdownData, isLoading: breakdownLoading, error: breakdownError } = useGetExpenseCategoryBreakdownQuery(breakdownFilters);
@@ -311,7 +331,7 @@ export default function ExpenseReport() {
                                 labels={labels}
                                 total={transactionsData?.total || 0}
                                 page={currentPage}
-                                limit={50}
+                                limit={20}
                                 totalPages={transactionsData?.totalPages || 1}
                                 onPageChange={handlePageChange}
                             />
