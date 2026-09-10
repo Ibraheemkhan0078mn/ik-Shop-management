@@ -58,9 +58,9 @@ export const qarzaApi = baseApi.injectEndpoints({
         }),
 
         getAccountPaymentsPaginated: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source, sortOrder = "desc" } = {}) => ({
                 url: "/qarzaRoutes/payments/pagination",
-                params: { qarzaAccountId, page, limit, type, source },
+                params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),
@@ -94,9 +94,9 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Supplier payments (manual + purchase credit)
         getSupplierPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all" } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "desc" } = {}) => ({
                 url: "/qarzaRoutes/payments/supplier",
-                params: { qarzaAccountId, page, limit, type, source },
+                params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),
@@ -112,9 +112,9 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Customer payments (manual + POS credit)
         getCustomerPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all" } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "desc" } = {}) => ({
                 url: "/qarzaRoutes/payments/customer",
-                params: { qarzaAccountId, page, limit, type, source },
+                params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),
             providesTags: (_r, _e, { qarzaAccountId }) => [{ type: "Qarza", id: qarzaAccountId }],
         }),

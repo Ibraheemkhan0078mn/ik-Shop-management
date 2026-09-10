@@ -84,6 +84,7 @@ export default function CustomerDetail() {
     const [recalculateCustomerBalance] = useRecalculateCustomerBalance();
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [transactionSource, setTransactionSource] = useState("all");
+    const [sortOrder, setSortOrder] = useState("desc");
     const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
     const [pdfTransactions, setPdfTransactions] = useState([]);
     const [updateCustomer] = useUpdateCustomer();
@@ -93,7 +94,7 @@ export default function CustomerDetail() {
 
     const handleExportTransactions = async () => {
         try {
-            const request = { qarzaAccountId, source: transactionSource, page: 1 };
+            const request = { qarzaAccountId, source: transactionSource, sortOrder, page: 1 };
             const countResult = await loadCustomerPayments({ ...request, limit: 1 }).unwrap();
             const totalTransactions = Number(countResult?.total) || 0;
             const result = totalTransactions > 0
@@ -365,6 +366,15 @@ export default function CustomerDetail() {
                                     <option value="orderReturn">Order Returns</option>
                                     <option value="manual">Manual</option>
                                 </select>
+                                <select
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value)}
+                                    aria-label="Transaction order"
+                                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                                >
+                                    <option value="desc">Newest first</option>
+                                    <option value="asc">Oldest first</option>
+                                </select>
                                 <button
                                     onClick={handleExportTransactions}
                                     disabled={isLoadingPdfTransactions}
@@ -459,7 +469,8 @@ export default function CustomerDetail() {
                                         </div>
                                     );
                                 }}
-                                queryArgs={{ qarzaAccountId, source: transactionSource }}
+                                filter={{ source: transactionSource, sortOrder }}
+                                queryArgs={{ qarzaAccountId }}
                             />
                         </div>
                     </div>

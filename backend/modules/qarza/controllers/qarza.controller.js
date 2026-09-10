@@ -181,7 +181,7 @@ export const getPaginatedQarzaPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, source, type } = req.query;
+        let { qarzaAccountId, source, type, sortOrder = 'desc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -210,7 +210,9 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         let transactions = await getTransactions(query);
         
         // Sort by transaction date (newest first)
-        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        transactions.sort((a, b) => sortOrder === 'asc'
+            ? new Date(a.transactionDate) - new Date(b.transactionDate)
+            : new Date(b.transactionDate) - new Date(a.transactionDate));
         
         // Apply pagination manually since getTransactions doesn't support skip/limit
         let total = transactions.length;
@@ -236,7 +238,7 @@ export const getManualPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -260,7 +262,9 @@ export const getManualPayments = async (req, res) => {
         let transactions = await getTransactions(query);
         
         // Sort by transaction date (newest first)
-        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        transactions.sort((a, b) => sortOrder === 'asc'
+            ? new Date(a.transactionDate) - new Date(b.transactionDate)
+            : new Date(b.transactionDate) - new Date(a.transactionDate));
         
         let total = transactions.length;
         let skip = (page - 1) * limit;
@@ -285,7 +289,7 @@ export const getSupplierPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -327,7 +331,9 @@ export const getSupplierPayments = async (req, res) => {
         let transactions = await getTransactions(query);
         
         // Sort by transaction date (newest first)
-        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        transactions.sort((a, b) => sortOrder === 'asc'
+            ? new Date(a.transactionDate) - new Date(b.transactionDate)
+            : new Date(b.transactionDate) - new Date(a.transactionDate));
         
         let total = transactions.length;
         let skip = (page - 1) * limit;
@@ -352,7 +358,7 @@ export const getCustomerPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -393,8 +399,10 @@ export const getCustomerPayments = async (req, res) => {
         
         let transactions = await getTransactions(query);
         
-        // Sort by transaction date (newest first)
-        transactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+        // Sort before pagination so each page reflects the selected order.
+        transactions.sort((a, b) => sortOrder === 'asc'
+            ? new Date(a.transactionDate) - new Date(b.transactionDate)
+            : new Date(b.transactionDate) - new Date(a.transactionDate));
         
         let total = transactions.length;
         let skip = (page - 1) * limit;

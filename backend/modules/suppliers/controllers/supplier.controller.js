@@ -6,6 +6,7 @@ import { getLocalSupplierModel } from "../../../configs/connect.db.js";
 import { findDocs, countDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import {
     supplierCreate as supplierCreateService,
+    getAllSuppliers as getAllSuppliersService,
     getSupplierById as getSupplierByIdService,
     findSupplierByName as findSupplierByNameService,
     supplierUpdate as supplierUpdateService,

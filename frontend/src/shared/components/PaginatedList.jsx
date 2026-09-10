@@ -78,7 +78,7 @@ const PaginatedList = forwardRef(({
     queryArgs = {},
 }, ref) => {
     const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter, refetch } =
-        usePaginatedFetch({ rtkQuery, limit, dataKey, queryArgs })
+        usePaginatedFetch({ rtkQuery, limit, dataKey, queryArgs, filter })
 
     // Expose refetch method to parent via ref
     useImperativeHandle(ref, () => ({

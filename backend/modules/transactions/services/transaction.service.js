@@ -72,6 +72,9 @@ const getTransactions = async (filter = {}) => {
     if (filter.creditType) {
         query.creditType = filter.creditType;
     }
+    if (filter.creditAmount) {
+        query.creditAmount = filter.creditAmount;
+    }
     
     // Date range filters
     if (filter.startDate || filter.endDate) {

@@ -50,12 +50,14 @@ export default function EachQarzaAccountRecords() {
     
     // Filter states
     const [filterType, setFilterType] = useState("all");
+    const [sortOrder, setSortOrder] = useState("desc");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     const refresh = useCallback(() => {}, []);
 
     const clearFilters = () => {
         setFilterType("all");
+        setSortOrder("desc");
     };
 
     const hasActiveFilters = filterType !== "all";
@@ -318,6 +320,19 @@ export default function EachQarzaAccountRecords() {
                                             <option value="cashout">{language === "en" ? "Cash Out" : "کیش آؤٹ"}</option>
                                         </select>
                                     </div>
+                                    <div className="mt-3">
+                                        <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
+                                            {language === "en" ? "Transaction Order" : "لین دین کی ترتیب"}
+                                        </label>
+                                        <select
+                                            value={sortOrder}
+                                            onChange={(e) => setSortOrder(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border-2 border-(--border) bg-(--surface-muted) text-sm outline-none focus:border-(--accent-2) transition-all"
+                                        >
+                                            <option value="desc">{language === "en" ? "Newest first" : "نیا پہلے"}</option>
+                                            <option value="asc">{language === "en" ? "Oldest first" : "پرانا پہلے"}</option>
+                                        </select>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -376,6 +391,7 @@ export default function EachQarzaAccountRecords() {
                     renderItems={renderItems}
                     filter={{
                         type: filterType !== "all" ? filterType : undefined,
+                        sortOrder,
                     }}
                     queryArgs={{ qarzaAccountId: id }}
                 />
