@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
+import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import CreditsDebitsReportPdfTemplate from "../components/CreditsDebitsReportPdfTemplate.jsx";
@@ -72,6 +72,14 @@ export default function CreditsDebitsReport() {
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState(null);
     const [expandedAccountId, setExpandedAccountId] = useState(null);
+    const [page, setPage] = useState(1);
+    const pageLimit = 20;
+    const totalPages = reportData?.pagination?.totalPages || 0;
+    const pageNumbers = useMemo(() => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+        const numbers = new Set([1, totalPages, page, page - 1, page + 1]);
+        return Array.from(numbers).filter((number) => number > 0 && number <= totalPages).sort((a, b) => a - b);
+    }, [page, totalPages]);
 
     // Expand-in-place state: which account row is open, its ledger data, and its own loading flag
 
@@ -119,13 +127,19 @@ export default function CreditsDebitsReport() {
     useEffect(() => {
         fetchReport();
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters.startDate, filters.endDate, filters.accountType, filters.status, filters.search, page]);
+
+    useEffect(() => {
+        setPage(1);
+        setExpandedAccountId(null);
     }, [filters.startDate, filters.endDate, filters.accountType, filters.status, filters.search]);
 
     const fetchReport = async () => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams();
-            Object.entries(filters).forEach(([key, value]) => {
+            const requestFilters = { ...filters, page, limit: pageLimit };
+            Object.entries(requestFilters).forEach(([key, value]) => {
                 if (value && value !== 'all') {
                     queryParams.append(key, value);
                 }
@@ -363,6 +377,59 @@ export default function CreditsDebitsReport() {
                             <Wallet size={40} className="mx-auto mb-4" style={{ color: 'var(--muted)' }} />
                             <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--ink)' }}>{labels.noAccountsFound}</h3>
                             <p style={{ color: 'var(--muted)' }}>{labels.tryAdjustingFilters}</p>
+                        </div>
+                    )}
+                    {reportData?.pagination?.total > 0 && (
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+                            <span className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>
+                                Showing {(reportData.pagination.page - 1) * reportData.pagination.limit + 1}
+                                -{Math.min(reportData.pagination.page * reportData.pagination.limit, reportData.pagination.total)}
+                                of {reportData.pagination.total}
+                            </span>
+                            <div className="flex items-center justify-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                                    disabled={page <= 1 || loading}
+                                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                                    aria-label="Previous page"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                {pageNumbers.map((pageNumber, index) => {
+                                    const previousPageNumber = pageNumbers[index - 1];
+                                    const showGap = previousPageNumber && pageNumber - previousPageNumber > 1;
+                                    return (
+                                        <React.Fragment key={pageNumber}>
+                                            {showGap && <span className="px-1 text-sm" style={{ color: 'var(--muted)' }}>...</span>}
+                                            <button
+                                                type="button"
+                                                onClick={() => setPage(pageNumber)}
+                                                disabled={loading}
+                                                className="w-8 h-8 rounded-lg border text-sm font-semibold disabled:cursor-not-allowed"
+                                                style={{
+                                                    borderColor: pageNumber === page ? 'var(--accent-2)' : 'var(--border)',
+                                                    background: pageNumber === page ? 'var(--accent-2)' : 'var(--surface)',
+                                                    color: pageNumber === page ? '#ffffff' : 'var(--muted)'
+                                                }}
+                                            >
+                                                {pageNumber}
+                                            </button>
+                                        </React.Fragment>
+                                    );
+                                })}
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((currentPage) => Math.min(reportData.pagination.totalPages, currentPage + 1))}
+                                    disabled={page >= reportData.pagination.totalPages || loading}
+                                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                                    aria-label="Next page"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
