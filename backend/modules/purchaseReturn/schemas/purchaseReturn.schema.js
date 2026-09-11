@@ -9,7 +9,16 @@ const purchaseReturnItemSchema = yup.object().shape({
     returnReason: yup.string().required("Return reason is required").oneOf(["damaged", "expired", "wrong_item", "excess", "quality_issue", "other"]),
     condition: yup.string().required("Condition is required").oneOf(["good", "fair", "poor", "damaged"]),
     cut: yup.number().optional().min(0, "Cut must be non-negative"),
-    notes: yup.string().optional()
+    notes: yup.string().optional(),
+    costing: yup.object().optional().shape({
+        purchasedDiscount: yup.number().optional(),
+        purchaseDiscountType: yup.string().optional(),
+        purchasedTax: yup.number().optional(),
+        purchasedTaxType: yup.string().optional(),
+        purchasedDiscountAmount: yup.number().optional(),
+        purchasedTaxAmount: yup.number().optional(),
+        totalCostingAmount: yup.number().optional(),
+    }).nullable()
 });
 
 export const createPurchaseReturnSchema = yup.object().shape({

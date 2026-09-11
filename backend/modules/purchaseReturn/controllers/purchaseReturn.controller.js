@@ -287,30 +287,45 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
         }
     }
 
-    // Calculate total refund amount with discount consideration
+    // Calculate total refund amount
+    // Primary path: use stored costing.totalCostingAmount per item (set by the CRUD form).
+    // Fallback: derive from purchase-level discount/gst for legacy items.
     let totalRefundAmount = 0;
     let totalQuantity = 0;
-    
+
     for (const item of normalizedItems) {
-        let discountedPrice = item.purchasePrice;
-        
-        // Apply purchase discount if available
-        if (purchase.discountType && purchase.discount) {
-            const discount = Number(purchase.discount) || 0;
-            if (purchase.discountType === 'percentage') {
-                // Apply percentage discount
-                discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
-            } else if (purchase.discountType === 'fixed') {
-                // Apply fixed discount (distributed across total quantity)
-                const totalPurchaseQuantity = purchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                const discountPerItem = discount / totalPurchaseQuantity;
-                discountedPrice = item.purchasePrice - discountPerItem;
+        let unitCost;
+
+        if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
+            // Use the exact effective unit cost stored by the CRUD form
+            unitCost = item.costing.totalCostingAmount;
+        } else {
+            // Fallback: derive from purchase-level discount
+            let discountedPrice = Number(item.purchasePrice) || 0;
+            if (purchase.discountType && purchase.discount) {
+                const discount = Number(purchase.discount) || 0;
+                if (purchase.discountType === 'percentage') {
+                    discountedPrice = discountedPrice - (discountedPrice * (discount / 100));
+                } else if (purchase.discountType === 'fixed') {
+                    const totalPurchaseQuantity = purchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
+                    discountedPrice = discountedPrice - (discount / totalPurchaseQuantity);
+                }
             }
+            // Apply tax (fallback path)
+            if (purchase.gstType && purchase.gst) {
+                const tax = Number(purchase.gst) || 0;
+                if (purchase.gstType === 'percentage') {
+                    discountedPrice = discountedPrice + (discountedPrice * (tax / 100));
+                } else if (purchase.gstType === 'fixed') {
+                    discountedPrice = discountedPrice + tax;
+                }
+            }
+            unitCost = discountedPrice;
         }
-        
-        const refund = (item.quantity * discountedPrice) - (item.cut || 0);
+
+        const refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
         totalRefundAmount += refund;
-        totalQuantity += item.quantity;
+        totalQuantity += Number(item.quantity);
     }
 
     const purchaseReturn = await createPurchaseReturnService({
@@ -371,50 +386,42 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     // Fetch the original purchase to get discount info
     const originalPurchase = await findByIdPurchaseService(existing.purchase);
     
-    if (incomingItems) {
-        for (const item of incomingItems) {
-            let discountedPrice = item.purchasePrice;
-            
-            // Apply purchase discount if available
-            if (originalPurchase?.discountType && originalPurchase?.discount) {
-                const discount = Number(originalPurchase.discount) || 0;
-                if (originalPurchase.discountType === 'percentage') {
-                    // Apply percentage discount
-                    discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
-                } else if (originalPurchase.discountType === 'fixed') {
-                    // Apply fixed discount (distributed across total quantity)
-                    const totalPurchaseQuantity = originalPurchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                    const discountPerItem = discount / totalPurchaseQuantity;
-                    discountedPrice = item.purchasePrice - discountPerItem;
-                }
-            }
-            
-            const refund = (item.quantity * discountedPrice) - (item.cut || 0);
-            totalRefundAmount += refund;
-            totalQuantity += item.quantity;
+    /**
+     * Helper: resolve effective unit cost for one item.
+     * Primary path  → item.costing.totalCostingAmount  (stored by CRUD form)
+     * Fallback path → derive from purchase-level discount + gst
+     */
+    const resolveUnitCostForUpdate = (item, purchase) => {
+        if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
+            return item.costing.totalCostingAmount;
         }
-    } else if (existing.items) {
-        for (const item of existing.items) {
-            let discountedPrice = item.purchasePrice;
-            
-            // Apply purchase discount if available
-            if (originalPurchase?.discountType && originalPurchase?.discount) {
-                const discount = Number(originalPurchase.discount) || 0;
-                if (originalPurchase.discountType === 'percentage') {
-                    // Apply percentage discount
-                    discountedPrice = item.purchasePrice - (item.purchasePrice * (discount / 100));
-                } else if (originalPurchase.discountType === 'fixed') {
-                    // Apply fixed discount (distributed across total quantity)
-                    const totalPurchaseQuantity = originalPurchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                    const discountPerItem = discount / totalPurchaseQuantity;
-                    discountedPrice = item.purchasePrice - discountPerItem;
-                }
+        let price = Number(item.purchasePrice) || 0;
+        if (purchase?.discountType && purchase?.discount) {
+            const discount = Number(purchase.discount) || 0;
+            if (purchase.discountType === 'percentage') {
+                price = price - (price * (discount / 100));
+            } else if (purchase.discountType === 'fixed') {
+                const totalQty = purchase.items?.reduce((s, i) => s + (i.quantity || 0), 0) || 1;
+                price = price - (discount / totalQty);
             }
-            
-            const refund = (item.quantity * discountedPrice) - (item.cut || 0);
-            totalRefundAmount += refund;
-            totalQuantity += item.quantity;
         }
+        if (purchase?.gstType && purchase?.gst) {
+            const tax = Number(purchase.gst) || 0;
+            if (purchase.gstType === 'percentage') {
+                price = price + (price * (tax / 100));
+            } else if (purchase.gstType === 'fixed') {
+                price = price + tax;
+            }
+        }
+        return price;
+    };
+
+    const itemsToProcess = incomingItems || existing.items || [];
+    for (const item of itemsToProcess) {
+        const unitCost = resolveUnitCostForUpdate(item, originalPurchase);
+        const refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
+        totalRefundAmount += refund;
+        totalQuantity += Number(item.quantity);
     }
 
     const updated = await updatePurchaseReturnService(id, {

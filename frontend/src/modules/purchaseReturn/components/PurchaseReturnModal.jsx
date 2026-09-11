@@ -592,6 +592,28 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
             .map((item) => {
                 const batchId = item.batch?._id || item.batch;
                 const details = selectedItems[batchId];
+                const costingData = batchCosting[batchId];
+                const costingBreakdown = calculateUnitCostAfterTaxAndDiscount(item);
+
+                // Build the costing object — mirrors what the UI already displays
+                const costing = {
+                    purchasedDiscount: costingData?.found
+                        ? (costingData.discountValue ?? 0)
+                        : (purchaseData?.discount ?? 0),
+                    purchaseDiscountType: costingData?.found
+                        ? (costingData.discountType ?? "percentage")
+                        : (purchaseData?.discountType ?? "percentage"),
+                    purchasedTax: costingData?.found
+                        ? (costingData.taxValue ?? 0)
+                        : (purchaseData?.gst ?? 0),
+                    purchasedTaxType: costingData?.found
+                        ? (costingData.taxType ?? "percentage")
+                        : (purchaseData?.gstType ?? "percentage"),
+                    purchasedDiscountAmount: costingBreakdown.discountAmount,
+                    purchasedTaxAmount: costingBreakdown.taxAmount,
+                    totalCostingAmount: costingBreakdown.unitCosting,
+                };
+
                 return {
                     product: item.product?._id || item.product,
                     batch: batchId,
@@ -602,6 +624,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     condition: details.condition,
                     cut: details.cut,
                     notes: details.notes,
+                    costing,
                 };
             });
 

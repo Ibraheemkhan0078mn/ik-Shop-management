@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Plus } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
@@ -190,18 +190,32 @@ export default function PurchaseReturnDetail() {
                                     <th className="px-3 py-2 text-left font-semibold text-white">#</th>
                                     <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
-                                    <th className="px-3 py-2 text-right font-semibold text-white">Cost Price</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Unit Costing</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Cut Amount</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Refund Amount</th>
-                                    <th className="px-3 py-2 text-center font-semibold text-white">Actions</th>
+                                    <th className="px-3 py-2 text-center font-semibold text-white">Details</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {purchaseReturn?.items?.map((item, index) => {
-                                    const price = item.costPrice || item.purchasePrice || 0;
-                                    const quantity = item.quantity || 0;
-                                    const cutAmount = item.cut || 0;
-                                    const refundAmount = (quantity * price) - cutAmount;
+                                    const rawPrice = Number(item.costPrice || item.purchasePrice) || 0;
+                                    const quantity = Number(item.quantity) || 0;
+                                    const cutAmount = Number(item.cut) || 0;
+
+                                    // ── Use stored costing if available (set by CRUD form) ──
+                                    const costing = item.costing;
+                                    const unitCosting = (costing && typeof costing.totalCostingAmount === 'number')
+                                        ? costing.totalCostingAmount
+                                        : rawPrice;
+                                    const discountAmount = costing?.purchasedDiscountAmount ?? 0;
+                                    const taxAmount = costing?.purchasedTaxAmount ?? 0;
+                                    const discountValue = costing?.purchasedDiscount ?? 0;
+                                    const discountType = costing?.purchaseDiscountType ?? 'percentage';
+                                    const taxValue = costing?.purchasedTax ?? 0;
+                                    const taxType = costing?.purchasedTaxType ?? 'percentage';
+
+                                    const itemTotal = unitCosting * quantity;       // costing × qty
+                                    const refundAmount = itemTotal - cutAmount;     // − cut
 
                                     const isExpanded = expandedItems[index];
 
@@ -215,73 +229,73 @@ export default function PurchaseReturnDetail() {
                                                     {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
-                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{price.toLocaleString()}</td>
-                                                <td className="px-3 py-2 text-right text-red-600">{cutAmount.toLocaleString()}</td>
-                                                <td className="px-3 py-2 text-right font-semibold text-red-600">{refundAmount.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)] font-mono">Rs {unitCosting.toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right text-red-600">Rs {cutAmount.toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right font-semibold" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</td>
                                                 <td className="px-3 py-2 text-center">
                                                     <button
                                                         onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
-                                                        className="p-1 rounded hover:bg-[var(--surface-muted)] transition"
-                                                        style={{ color: "var(--muted)" }}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-lg transition"
+                                                        style={{ background: isExpanded ? "var(--accent)" : "var(--surface-muted)", color: isExpanded ? "#fff" : "var(--muted)" }}
                                                         title={isExpanded ? "Hide calculations" : "Show calculations"}
                                                     >
-                                                        {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                        {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                                        {isExpanded ? "Hide" : "Details"}
                                                     </button>
                                                 </td>
                                             </tr>
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                            {/* Total Price Calculation */}
+                                                    <td colSpan="7" className="px-4 py-4" style={{ background: "var(--surface-muted)" }}>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {/* Panel 1: Costing & Total — mirrors CRUD form */}
                                                             <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Calculation</p>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Costing &amp; Total</p>
                                                                 <div className="text-xs space-y-1">
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Return Quantity:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{quantity}</span>
-                                                                    </div>
                                                                     <div className="flex justify-between">
                                                                         <span style={{ color: "var(--ink)" }}>Cost Price:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {price.toFixed(2)}</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {rawPrice.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Less Discount ({discountType}):</span>
+                                                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {discountAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
+                                                                        <span>Original: {discountType === 'fixed' ? `Rs ${Number(discountValue).toFixed(2)}` : `${Number(discountValue).toFixed(2)}%`}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span style={{ color: "var(--ink)" }}>Plus Tax ({taxType}):</span>
+                                                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {taxAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
+                                                                        <span>Original: {taxType === 'fixed' ? `Rs ${Number(taxValue).toFixed(2)}` : `${Number(taxValue).toFixed(2)}%`}</span>
                                                                     </div>
                                                                     <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Base Total:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(quantity * price).toFixed(2)}</span>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Per-Unit Costing:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {unitCosting.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Total (Costing × Qty):</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {itemTotal.toFixed(2)}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
 
-                                                            {/* Cut Calculation */}
-                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Cut Amount</p>
+                                                            {/* Panel 2: Refund Calculation — mirrors CRUD form */}
+                                                            <div className="p-3 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Refund Calculation</p>
                                                                 <div className="text-xs space-y-1">
                                                                     <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cutAmount.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
-                                                                        <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {cutAmount.toFixed(2)}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Final Refund */}
-                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Final Refund</p>
-                                                                <div className="text-xs space-y-1">
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Base Total:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(quantity * price).toFixed(2)}</span>
+                                                                        <span style={{ color: "var(--ink)" }}>Total:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {itemTotal.toFixed(2)}</span>
                                                                     </div>
                                                                     <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Cut Amount:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {cutAmount.toFixed(2)}</span>
+                                                                        <span style={{ color: "var(--ink)" }}>Less Cut:</span>
+                                                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {cutAmount.toFixed(2)}</span>
                                                                     </div>
-                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Refund Amount:</span>
-                                                                        <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
+                                                                    <div className="flex justify-between font-bold text-sm pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                        <span style={{ color: "var(--accent-2)" }}>Refund:</span>
+                                                                        <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -322,36 +336,45 @@ export default function PurchaseReturnDetail() {
                             </h3>
                         </div>
                         
-                        {/* Calculate summary values */}
+                        {/* Calculate summary values using stored costing (matches CRUD form) */}
                         {(() => {
-                            const totalBaseAmount = (purchaseReturn?.items || []).reduce((sum, it) => {
-                                const price = it.costPrice || it.purchasePrice || 0;
-                                const quantity = it.quantity || 0;
-                                return sum + (quantity * price);
+                            const items = purchaseReturn?.items || [];
+
+                            // Per-item: use costing.totalCostingAmount × qty, else rawPrice × qty
+                            const totalCostingAmount = items.reduce((sum, it) => {
+                                const rawPrice = Number(it.costPrice || it.purchasePrice) || 0;
+                                const unitCosting = (it.costing && typeof it.costing.totalCostingAmount === 'number')
+                                    ? it.costing.totalCostingAmount : rawPrice;
+                                return sum + (unitCosting * (Number(it.quantity) || 0));
                             }, 0);
-                            
-                            const totalCutAmount = (purchaseReturn?.items || []).reduce((sum, it) => {
-                                return sum + (it.cut || 0);
-                            }, 0);
-                            
+
+                            const totalDiscountAmount = items.reduce((sum, it) => sum + (Number(it.costing?.purchasedDiscountAmount) || 0), 0);
+                            const totalTaxAmount = items.reduce((sum, it) => sum + (Number(it.costing?.purchasedTaxAmount) || 0), 0);
+                            const totalCutAmount = items.reduce((sum, it) => sum + (Number(it.cut) || 0), 0);
+                            const computedRefund = totalCostingAmount - totalCutAmount;
+
                             return (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Base Amount Card */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Costing Breakdown */}
                                     <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Base Amount</p>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Costing Breakdown</p>
                                         <div className="text-xs space-y-1">
                                             <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Items Base Total:</span>
-                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalBaseAmount.toFixed(2)}</span>
+                                                <span style={{ color: "var(--ink)" }}>Total Discount:</span>
+                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalDiscountAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Total Tax:</span>
+                                                <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {totalTaxAmount.toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                <span style={{ color: "var(--accent-2)" }}>Base Amount:</span>
-                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalBaseAmount.toFixed(2)}</span>
+                                                <span style={{ color: "var(--accent-2)" }}>Total Costing:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalCostingAmount.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Cut Amount Card */}
+                                    {/* Cut Amount */}
                                     <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                         <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Cut Amount</p>
                                         <div className="text-xs space-y-1">
@@ -360,8 +383,27 @@ export default function PurchaseReturnDetail() {
                                                 <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalCutAmount.toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                <span style={{ color: "var(--accent-2)" }}>After Cut:</span>
-                                                <span className="font-mono text-red-600" style={{ color: "var(--accent-2)" }}>-Rs {totalCutAmount.toFixed(2)}</span>
+                                                <span style={{ color: "#dc2626" }}>Less Cut:</span>
+                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalCutAmount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Final Refund */}
+                                    <div className="p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Computed Refund</p>
+                                        <div className="text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Total Costing:</span>
+                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalCostingAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span style={{ color: "var(--ink)" }}>Less Cut:</span>
+                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalCutAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold text-sm pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                                <span style={{ color: "var(--accent-2)" }}>Refund:</span>
+                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {computedRefund.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
