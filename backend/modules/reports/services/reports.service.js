@@ -3448,7 +3448,10 @@ export const getCreditsDebitsAccountData = async (filters = {}) => {
             totalAccounts,
             totalDebitOnMe,
             totalDebitOnOthers,
-            finalAmount
+            finalAmount,
+            supplier: accountsByType['supplier'] || { count: 0, totalToReceive: 0, totalToGive: 0, totalBalance: 0 },
+            customer: accountsByType['customer'] || { count: 0, totalToReceive: 0, totalToGive: 0, totalBalance: 0 },
+            general: accountsByType['general'] || { count: 0, totalToReceive: 0, totalToGive: 0, totalBalance: 0 }
         },
         accounts: scopedAccountSummaries,
         summary: {

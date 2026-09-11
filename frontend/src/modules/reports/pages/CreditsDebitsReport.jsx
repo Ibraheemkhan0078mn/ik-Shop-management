@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
+import { Wallet, RefreshCw, Filter, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import CreditsDebitsReportPdfTemplate from "../components/CreditsDebitsReportPdfTemplate.jsx";
@@ -281,6 +281,74 @@ export default function CreditsDebitsReport() {
                                 icon={Wallet}
                                 color={(reportData.kpi?.finalAmount || 0) >= 0 ? '#10b981' : '#dc2626'}
                             />
+                        </div>
+                    )}
+                    
+                    {/* Detailed KPI Breakdowns */}
+                    {reportData && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                            {/* Supplier KPI */}
+                            <div className="bg-(--surface-muted) p-4 rounded-xl border border-(--border)">
+                                <h3 className="text-sm font-bold text-(--ink) mb-3 flex items-center gap-2">
+                                    <Users size={16} className="text-(--accent-2)" /> Supplier
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Accounts:</span>
+                                        <span className="font-semibold text-(--ink)">{reportData.kpi?.supplier?.count || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">I Owe:</span>
+                                        <span className="font-semibold text-red-600">Rs {(reportData.kpi?.supplier?.totalToGive || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Owed to Me:</span>
+                                        <span className="font-semibold text-green-600">Rs {(reportData.kpi?.supplier?.totalToReceive || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Customer KPI */}
+                            <div className="bg-(--surface-muted) p-4 rounded-xl border border-(--border)">
+                                <h3 className="text-sm font-bold text-(--ink) mb-3 flex items-center gap-2">
+                                    <Users size={16} className="text-(--accent-2)" /> Customer
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Accounts:</span>
+                                        <span className="font-semibold text-(--ink)">{reportData.kpi?.customer?.count || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">I Owe:</span>
+                                        <span className="font-semibold text-red-600">Rs {(reportData.kpi?.customer?.totalToGive || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Owed to Me:</span>
+                                        <span className="font-semibold text-green-600">Rs {(reportData.kpi?.customer?.totalToReceive || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* General KPI */}
+                            <div className="bg-(--surface-muted) p-4 rounded-xl border border-(--border)">
+                                <h3 className="text-sm font-bold text-(--ink) mb-3 flex items-center gap-2">
+                                    <Users size={16} className="text-(--accent-2)" /> General
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Accounts:</span>
+                                        <span className="font-semibold text-(--ink)">{reportData.kpi?.general?.count || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">I Owe:</span>
+                                        <span className="font-semibold text-red-600">Rs {(reportData.kpi?.general?.totalToGive || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-(--muted)">Owed to Me:</span>
+                                        <span className="font-semibold text-green-600">Rs {(reportData.kpi?.general?.totalToReceive || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 

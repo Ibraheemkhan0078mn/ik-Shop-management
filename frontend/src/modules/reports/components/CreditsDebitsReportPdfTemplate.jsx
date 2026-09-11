@@ -109,7 +109,7 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
                                 </tr>
                             </thead>
                             <tbody>
-                                {accounts.slice(0, 50).map((accountData, index) => (
+                                {accounts.map((accountData, index) => (
                                     <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                         <td style={{ padding: '0.75rem 1rem' }}>
                                             <div>
@@ -129,11 +129,6 @@ export default function CreditsDebitsReportPdfTemplate({ reportData = {}, labels
                             </tbody>
                         </table>
                     </div>
-                    {accounts.length > 50 && (
-                        <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
-                            Showing first 50 of {accounts.length} accounts
-                        </div>
-                    )}
                 </div>
             ) : (
                 <div style={{ padding: '3rem', textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#ffffff' }}>

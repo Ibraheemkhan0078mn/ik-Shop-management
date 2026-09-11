@@ -1235,6 +1235,29 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
         const totalDebitOnOthers = filteredSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0); // I owe others (need to pay)
         const finalAmount = totalDebitOnOthers - totalDebitOnMe; // Positive = I need to receive, Negative = Others owe me
 
+        // Calculate KPI breakdown by account type
+        const supplierSummaries = filteredSummaries.filter(a => a.account.type === 'supplier');
+        const customerSummaries = filteredSummaries.filter(a => a.account.type === 'customer');
+        const generalSummaries = filteredSummaries.filter(a => a.account.type === 'general');
+
+        const supplierKPI = {
+            count: supplierSummaries.length,
+            totalToGive: supplierSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0),
+            totalToReceive: supplierSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0)
+        };
+
+        const customerKPI = {
+            count: customerSummaries.length,
+            totalToGive: customerSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0),
+            totalToReceive: customerSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0)
+        };
+
+        const generalKPI = {
+            count: generalSummaries.length,
+            totalToGive: generalSummaries.reduce((sum, a) => sum + (a.remainingBalance > 0 ? a.remainingBalance : 0), 0),
+            totalToReceive: generalSummaries.reduce((sum, a) => sum + (a.remainingBalance < 0 ? Math.abs(a.remainingBalance) : 0), 0)
+        };
+
         return res.json({
             success: true,
             data: {
@@ -1242,7 +1265,10 @@ export const getCreditsDebitsReport = asyncHandler(async (req, res) => {
                     totalAccounts,
                     totalDebitOnMe,
                     totalDebitOnOthers,
-                    finalAmount
+                    finalAmount,
+                    supplier: supplierKPI,
+                    customer: customerKPI,
+                    general: generalKPI
                 },
                 accounts: filteredSummaries
             }
