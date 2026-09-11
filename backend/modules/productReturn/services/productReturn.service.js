@@ -19,7 +19,8 @@ const createProductReturn = async (returnData) => {
     
     // Calculate refundAmount for each item if not provided or validate it
     const itemsWithCalculatedRefund = returnData.items.map(item => {
-        const calculatedRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+        const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+        const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
         return {
             ...item,
             cut: item.cut || 0,
@@ -126,7 +127,8 @@ const updateProductReturn = async (id, updateData) => {
     let itemsToUpdate = updateData.items;
     if (itemsToUpdate) {
         itemsToUpdate = itemsToUpdate.map(item => {
-            const calculatedRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+            const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+            const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
             return {
                 ...item,
                 cut: item.cut || 0,
@@ -223,7 +225,8 @@ const recalculateProductReturnRefundAmount = async (productReturnId) => {
 
     // Recalculate total refund amount from items (similar to order fix)
     const calculatedRefundAmount = productReturn.items.reduce((sum, item) => {
-        const itemRefund = (item.quantity * item.originalPrice) - (item.cut || 0);
+        const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+        const itemRefund = (item.quantity * unitCost) - (item.cut || 0);
         return sum + itemRefund;
     }, 0);
 

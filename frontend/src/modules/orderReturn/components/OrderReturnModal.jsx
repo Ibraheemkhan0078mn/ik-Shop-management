@@ -172,19 +172,50 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                         Show Refund Calculation
                                     </button>
                                     {expandedCalculation[itemId] && (
-                                        <div className="mt-2 p-3 bg-(--surface) rounded-lg text-xs" style={{ border: "1px solid var(--border)" }}>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between">
-                                                    <span>Original Total:</span>
-                                                    <span>Rs {((details.returnQuantity || 1) * (item.unitPrice || item.originalPrice || 0)).toFixed(2)}</span>
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {/* Costing & Total Panel */}
+                                            <div className="p-3 bg-(--surface) rounded-lg border border-(--border)">
+                                                <p className="text-xs font-semibold text-(--muted) mb-2">Costing & Total</p>
+                                                <div className="text-xs space-y-1.5">
+                                                    <div className="flex justify-between text-(--ink)">
+                                                        <span>Price:</span>
+                                                        <span>Rs {Number(item.unitPrice || item.originalPrice || 0).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-red-600">
+                                                        <span>Less Discount:</span>
+                                                        <span>- Rs {Number(item.quantity ? (item.discountAmount / item.quantity) : (item.discountAmount || 0)).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-blue-600">
+                                                        <span>Plus Tax:</span>
+                                                        <span>+ Rs {Number(item.quantity ? (item.taxAmount / item.quantity) : (item.taxAmount || 0)).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-semibold pt-1 border-t border-(--border)">
+                                                        <span>Unit Costing:</span>
+                                                        <span>Rs {Number(details.unitCosting || details.originalPrice || 0).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-bold text-(--accent-2) pt-1">
+                                                        <span>Total (Costing × {(details.returnQuantity || 1)}):</span>
+                                                        <span>Rs {(Number(details.unitCosting || details.originalPrice || 0) * (details.returnQuantity || 1)).toFixed(2)}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span>Cut Amount:</span>
-                                                    <span>- Rs {(details.cut || 0).toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex justify-between font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                    <span>Refund Amount:</span>
-                                                    <span>Rs {(((details.returnQuantity || 1) * (item.unitPrice || item.originalPrice || 0)) - (details.cut || 0)).toFixed(2)}</span>
+                                            </div>
+
+                                            {/* Refund Calculation Panel */}
+                                            <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                                                <p className="text-xs font-semibold text-green-800 mb-2">Refund Calculation</p>
+                                                <div className="text-xs space-y-1.5">
+                                                    <div className="flex justify-between text-green-700">
+                                                        <span>Total:</span>
+                                                        <span>Rs {(Number(details.unitCosting || details.originalPrice || 0) * (details.returnQuantity || 1)).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-red-600">
+                                                        <span>Less Cut:</span>
+                                                        <span>- Rs {(details.cut || 0).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-bold text-green-700 text-sm pt-1 border-t border-green-200">
+                                                        <span>Refund:</span>
+                                                        <span>Rs {Math.max(0, (((details.returnQuantity || 1) * Number(details.unitCosting || details.originalPrice || 0)) - (details.cut || 0))).toFixed(2)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -269,12 +300,14 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                             
                             if (orderItem) {
                                 const itemId = orderItem._id || orderItem.product;
+                                const unitCosting = returnItem.costing?.itemTotal ?? (returnItem.originalPrice || 0);
                                 selectedItemsObj[itemId] = {
                                     returnQuantity: returnItem.quantity,
                                     returnReason: returnItem.returnReason,
                                     cut: returnItem.cut || 0,
                                     refundAmount: returnItem.refundAmount,
                                     originalPrice: returnItem.originalPrice,
+                                    unitCosting: unitCosting,
                                 };
                                 console.log("Added to selectedItems:", itemId, selectedItemsObj[itemId]);
                             } else {
@@ -397,14 +430,16 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 return newSelected;
             } else {
                 // Select with default values
+                const unitCosting = item.quantity ? (item.itemTotal / item.quantity) : (item.unitPrice || item.originalPrice || 0);
                 return {
                     ...prev,
                     [itemId]: {
                         returnQuantity: 1,
                         returnReason: "damaged",
                         cut: 0,
-                        refundAmount: item.unitPrice || item.originalPrice || 0,
+                        refundAmount: unitCosting,
                         originalPrice: item.unitPrice || item.originalPrice || 0,
+                        unitCosting: unitCosting,
                     },
                 };
             }
@@ -426,7 +461,8 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 const details = updated[itemId];
                 const qty = Number(details.returnQuantity) || 1;
                 const cut = Number(details.cut) || 0;
-                const refundAmount = (qty * details.originalPrice) - cut;
+                const unitCosting = details.unitCosting || details.originalPrice || 0;
+                const refundAmount = (qty * unitCosting) - cut;
                 updated[itemId].refundAmount = Math.max(0, refundAmount);
             }
             
@@ -485,6 +521,16 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 (oi._id === itemId || oi.product === itemId)
             );
             
+            const costingObj = {
+                taxPercent: orderItem?.taxPercent || 0,
+                taxType: orderItem?.taxType || "percentage",
+                taxAmount: orderItem?.quantity ? (orderItem.taxAmount / orderItem.quantity) : (orderItem?.taxAmount || 0),
+                discountPercent: orderItem?.discountPercent || 0,
+                discountAmount: orderItem?.quantity ? (orderItem.discountAmount / orderItem.quantity) : (orderItem?.discountAmount || 0),
+                discountType: orderItem?.discountType || "percentage",
+                itemTotal: details.unitCosting || details.originalPrice || 0
+            };
+            
             return {
                 productId: orderItem?.product || orderItem?.productId || itemId, // Use actual product ID from order item
                 productName: orderItem?.name || orderItem?.productName || "",
@@ -494,6 +540,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 originalPrice: details.originalPrice,
                 refundAmount: details.refundAmount,
                 cut: details.cut,
+                costing: costingObj,
             };
         });
 

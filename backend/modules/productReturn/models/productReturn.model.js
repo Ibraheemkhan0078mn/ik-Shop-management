@@ -37,6 +37,19 @@ const productReturnItemSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    // Costing breakdown sub-schema — mirrors what the order originally stored
+    costing: {
+        type: new mongoose.Schema({
+            taxPercent: { type: Number, default: 0 },
+            taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+            taxAmount: { type: Number, default: 0 },
+            discountPercent: { type: Number, default: 0 },
+            discountAmount: { type: Number, default: 0 },
+            discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+            itemTotal: { type: Number, default: 0 }, // representing final unit costing
+        }, { _id: false }),
+        default: () => ({})
+    }
 });
 
 const productReturnSchema = new mongoose.Schema(
