@@ -181,7 +181,7 @@ export const getPaginatedQarzaPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, source, type, sortOrder = 'desc' } = req.query;
+        let { qarzaAccountId, source, type, sortOrder = 'asc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -238,7 +238,7 @@ export const getManualPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'asc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -289,7 +289,7 @@ export const getSupplierPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'asc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });
@@ -358,7 +358,7 @@ export const getCustomerPayments = async (req, res) => {
     try {
         let page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 20;
-        let { qarzaAccountId, type, source = 'all', sortOrder = 'desc' } = req.query;
+        let { qarzaAccountId, type, source = 'all', sortOrder = 'asc' } = req.query;
 
         if (!qarzaAccountId) {
             return res.json({ success: false, msg: "Account ID is required" });

@@ -14,7 +14,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [transactionSource, setTransactionSource] = useState("all");
-    const [sortOrder, setSortOrder] = useState("desc");
+    const [sortOrder, setSortOrder] = useState("asc");
     const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
     const [pdfTransactions, setPdfTransactions] = useState([]);
 

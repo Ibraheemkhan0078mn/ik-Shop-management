@@ -84,7 +84,7 @@ export default function CustomerDetail() {
     const [recalculateCustomerBalance] = useRecalculateCustomerBalance();
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [transactionSource, setTransactionSource] = useState("all");
-    const [sortOrder, setSortOrder] = useState("desc");
+    const [sortOrder, setSortOrder] = useState("asc");
     const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
     const [pdfTransactions, setPdfTransactions] = useState([]);
     const [updateCustomer] = useUpdateCustomer();

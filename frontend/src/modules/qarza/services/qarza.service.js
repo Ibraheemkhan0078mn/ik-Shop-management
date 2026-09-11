@@ -58,7 +58,7 @@ export const qarzaApi = baseApi.injectEndpoints({
         }),
 
         getAccountPaymentsPaginated: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source, sortOrder = "desc" } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source, sortOrder = "asc" } = {}) => ({
                 url: "/qarzaRoutes/payments/pagination",
                 params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),
@@ -94,7 +94,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Supplier payments (manual + purchase credit)
         getSupplierPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "desc" } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "asc" } = {}) => ({
                 url: "/qarzaRoutes/payments/supplier",
                 params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),
@@ -112,7 +112,7 @@ export const qarzaApi = baseApi.injectEndpoints({
 
         // Customer payments (manual + POS credit)
         getCustomerPayments: build.query({
-            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "desc" } = {}) => ({
+            query: ({ qarzaAccountId, page = 1, limit = 20, type, source = "all", sortOrder = "asc" } = {}) => ({
                 url: "/qarzaRoutes/payments/customer",
                 params: { qarzaAccountId, page, limit, type, source, sortOrder },
             }),

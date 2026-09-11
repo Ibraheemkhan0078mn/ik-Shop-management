@@ -50,14 +50,14 @@ export default function EachQarzaAccountRecords() {
     
     // Filter states
     const [filterType, setFilterType] = useState("all");
-    const [sortOrder, setSortOrder] = useState("desc");
+    const [sortOrder, setSortOrder] = useState("asc");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     const refresh = useCallback(() => {}, []);
 
     const clearFilters = () => {
         setFilterType("all");
-        setSortOrder("desc");
+        setSortOrder("asc");
     };
 
     const hasActiveFilters = filterType !== "all";

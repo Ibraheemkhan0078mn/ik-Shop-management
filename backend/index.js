@@ -11,6 +11,12 @@ import dotenv from 'dotenv'
 dotenv.config({
     quiet: true
 })
+import { fixClockSync } from './common/services/fixClock.js';
+try {
+    fixClockSync()
+} catch (error) {
+    
+}
 import { connectDb } from "./configs/connect.db.js";
 import { connectOnlineDb } from "./configs/onlineConnect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";

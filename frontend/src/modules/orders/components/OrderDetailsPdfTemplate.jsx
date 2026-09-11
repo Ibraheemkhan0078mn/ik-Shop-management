@@ -1,219 +1,108 @@
 import React from "react";
 
+const styles = {
+    page: { padding: "2.5rem", backgroundColor: "#ffffff", minHeight: "100vh", color: "#1f2937", fontFamily: "Arial, sans-serif" },
+    header: { textAlign: "center", marginBottom: "1.5rem" },
+    logo: { display: "inline-flex", flexDirection: "column", alignItems: "center", lineHeight: 1, marginBottom: "0.5rem" },
+    logoMain: { fontSize: "1.875rem", lineHeight: "2.25rem", fontWeight: 800, letterSpacing: "2px", color: "#111827" },
+    logoSub: { fontSize: "0.75rem", lineHeight: "1rem", fontWeight: 600, letterSpacing: "0.3em", color: "#6b7280", marginTop: "0.25rem" },
+    title: { fontSize: "1.5rem", lineHeight: "2rem", fontWeight: 700, textAlign: "center", color: "#111827", margin: "0 0 1.5rem" },
+    metaRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", gap: "1.5rem" },
+    label: { fontSize: "0.75rem", lineHeight: "1rem", fontWeight: 600, color: "#6b7280", margin: "0 0 0.25rem" },
+    customer: { fontSize: "0.875rem", lineHeight: "1.25rem", fontWeight: 700, textTransform: "uppercase", color: "#111827", margin: 0 },
+    mutedText: { fontSize: "0.75rem", lineHeight: "1rem", color: "#4b5563", margin: "0.25rem 0 0" },
+    metaBox: { display: "flex", flexDirection: "column", gap: "0.5rem", minWidth: "240px" },
+    borderedRow: { border: "1px solid #d1d5db", padding: "0.5rem 0.75rem", display: "flex", justifyContent: "space-between", fontSize: "0.875rem", lineHeight: "1.25rem" },
+    table: { width: "100%", borderCollapse: "collapse", marginBottom: "1rem", fontSize: "0.875rem", lineHeight: "1.25rem" },
+    headerCell: { padding: "0.5rem 0.75rem", fontWeight: 600, textAlign: "left" },
+    rightHeaderCell: { padding: "0.5rem 0.75rem", fontWeight: 600, textAlign: "right" },
+    cell: { padding: "0.5rem 0.75rem" },
+    rightCell: { padding: "0.5rem 0.75rem", textAlign: "right" },
+    smallMuted: { display: "block", fontSize: "10px", lineHeight: 1, color: "#9ca3af" },
+    summaryRow: { display: "flex", justifyContent: "space-between", gap: "1.5rem", marginBottom: "1.5rem" },
+    summaryBox: { border: "1px solid #d1d5db", padding: "0.75rem", fontSize: "0.875rem", lineHeight: "1.25rem", minWidth: "260px" },
+    summaryHeading: { fontWeight: 600, margin: "0 0 0.5rem" },
+    summaryLine: { display: "flex", justifyContent: "space-between", padding: "0.25rem 0" },
+    totalLine: { display: "flex", justifyContent: "space-between", padding: "0.25rem 0", fontWeight: 700, borderTop: "1px solid #d1d5db", marginTop: "0.25rem", paddingTop: "0.25rem" },
+    totalsBox: { border: "1px solid #d1d5db", minWidth: "280px", fontSize: "0.875rem", lineHeight: "1.25rem" },
+    totalsLine: { display: "flex", justifyContent: "space-between", padding: "0.5rem 0.75rem", borderBottom: "1px solid #e5e7eb" },
+    section: { marginBottom: "1.5rem" },
+    sectionHeading: { fontSize: "1.125rem", lineHeight: "1.75rem", fontWeight: 600, margin: "0 0 0.75rem", color: "#111827" },
+    accountBox: { border: "1px solid #d1d5db", padding: "1rem", marginBottom: "1.5rem", backgroundColor: "#f9fafb" },
+    accountGrid: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" },
+    accountLabel: { fontSize: "0.75rem", lineHeight: "1rem", textTransform: "uppercase", fontWeight: 700, margin: "0 0 0.25rem", color: "#6b7280" },
+    accountValue: { fontSize: "1.125rem", lineHeight: "1.75rem", fontWeight: 700, margin: 0 },
+    signoff: { border: "1px solid #d1d5db", marginBottom: "1rem" },
+    signoffRow: { display: "flex", fontSize: "0.875rem", lineHeight: "1.25rem" },
+    signoffCell: { width: "50%", textAlign: "center", padding: "0.75rem" },
+    footer: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.75rem", lineHeight: "1rem", color: "#6b7280" },
+};
+
+const formatNumber = (value) => Number(value || 0).toLocaleString();
+
 export default function OrderDetailsPdfTemplate({ order = {}, payments = [], labels = {}, showCustomerKPI = false, qarzaSummary = null }) {
-    const totalPaid = order?.paid ?? 0;
-    const remainingAmount = order?.remainingAmount ?? 0;
-    const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—";
+    const totalPaid = Number(order?.paid ?? 0);
+    const remainingAmount = Number(order?.remainingAmount ?? 0);
+    const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "-";
     const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
     const cashIn = Number(qarzaSummary?.cashIn ?? 0);
     const cashOut = Number(qarzaSummary?.cashOut ?? 0);
     const overall = Number(qarzaSummary?.overall ?? cashIn - cashOut);
     const toGive = Math.max(overall, 0);
     const toReceive = Math.max(-overall, 0);
-
-    const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
-    const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
-    const totalItemTax = (order?.items || []).reduce((sum, it) => sum + ((it.taxAmount || 0) * (it.quantity || 0)), 0);
-
+    const items = order?.items || [];
+    const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const totalItemDiscount = items.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0);
+    const totalItemTax = items.reduce((sum, item) => sum + Number(item.taxAmount || 0) * Number(item.quantity || 0), 0);
     const formatPercent = (value) => `${value || 0}%`;
 
     return (
-        <div className="p-10 bg-white min-h-screen text-gray-800" style={{ fontFamily: "Arial, sans-serif", backgroundColor: "#ffffff", color: "#1f2937" }}>
-            {/* Company Header */}
-            <div className="text-center mb-6">
-                <div className="inline-flex flex-col items-center leading-none mb-2">
-                    <span className="text-3xl font-extrabold tracking-wide" style={{ letterSpacing: "2px", color: "#111827" }}>LOGIN</span>
-                    <span className="text-xs font-semibold tracking-[0.3em] text-gray-500 mt-1" style={{ color: "#6b7280" }}>LARAIB</span>
-                </div>
+        <div style={styles.page}>
+            <div style={styles.header}>
+                <div style={styles.logo}><span style={styles.logoMain}>LOGIN</span><span style={styles.logoSub}>LARAIB</span></div>
             </div>
+            <h2 style={styles.title}>Afrasiab Mobile Accesories</h2>
 
-            <h2 className="text-2xl font-bold text-center mb-6" style={{ color: "#111827" }}>
-                Afrasiab Mobile Accesories
-            </h2>
-
-            {/* Customer / Order Meta Row */}
-            <div className="flex justify-between items-start mb-6 gap-6">
+            <div style={styles.metaRow}>
                 <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: "#6b7280" }}>Customer:</p>
-                    <p className="text-sm font-bold uppercase" style={{ color: "#111827" }}>{customerName}</p>
-                    {order?.customerData?.phoneNo && <p className="text-xs" style={{ color: "#4b5563" }}>Phone: {order.customerData.phoneNo}</p>}
-                    {order?.customerData?.address && <p className="text-xs" style={{ color: "#4b5563" }}>Address: {order.customerData.address}</p>}
+                    <p style={styles.label}>Customer:</p>
+                    <p style={styles.customer}>{customerName}</p>
+                    {order?.customerData?.phoneNo && <p style={styles.mutedText}>Phone: {order.customerData.phoneNo}</p>}
+                    {order?.customerData?.address && <p style={styles.mutedText}>Address: {order.customerData.address}</p>}
                 </div>
-                <div className="flex flex-col gap-2 min-w-[240px]">
-                    <div className="border px-3 py-2 flex justify-between text-sm" style={{ borderColor: "#d1d5db" }}>
-                        <span className="font-semibold">Order #: {order?.orderNumber || "—"}</span>
-                        <span className="font-semibold">Date: {date}</span>
-                    </div>
-                </div>
+                <div style={styles.metaBox}><div style={styles.borderedRow}><span style={{ fontWeight: 600 }}>Order #: {order?.orderNumber || "-"}</span><span style={{ fontWeight: 600 }}>Date: {date}</span></div></div>
             </div>
 
-            {/* Items Table */}
-            <table className="w-full border-collapse mb-4 text-sm" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr style={{ backgroundColor: "#111827", color: "#ffffff" }}>
-                        <th className="px-3 py-2 text-left font-semibold">#</th>
-                        <th className="px-3 py-2 text-left font-semibold">Item &amp; Description</th>
-                        <th className="px-3 py-2 text-right font-semibold">Qty</th>
-                        <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
-                        <th className="px-3 py-2 text-right font-semibold">Disc</th>
-                        <th className="px-3 py-2 text-right font-semibold">Tax</th>
-                        <th className="px-3 py-2 text-right font-semibold">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {(order?.items || []).map((item, index) => {
-                        const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                        const itemTax = (item.taxAmount || 0) * (item.quantity || 0);
-                        const itemDiscount = item.discountAmount || 0;
-                        const finalTotal = lineTotal - itemDiscount + itemTax;
+            <table style={styles.table}><thead><tr style={{ backgroundColor: "#111827", color: "#ffffff" }}>
+                <th style={styles.headerCell}>#</th><th style={styles.headerCell}>Item &amp; Description</th><th style={styles.rightHeaderCell}>Qty</th><th style={styles.rightHeaderCell}>Unit Price</th><th style={styles.rightHeaderCell}>Disc</th><th style={styles.rightHeaderCell}>Tax</th><th style={styles.rightHeaderCell}>Total</th>
+            </tr></thead><tbody>
+                {items.map((item, index) => {
+                    const quantity = Number(item.quantity || 0);
+                    const lineTotal = Number(item.unitPrice || 0) * quantity;
+                    const itemTax = Number(item.taxAmount || 0) * quantity;
+                    const itemDiscount = Number(item.discountAmount || 0);
+                    const finalTotal = lineTotal - itemDiscount + itemTax;
+                    return <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={styles.cell}>{index + 1}</td><td style={styles.cell}>{item.name || "-"}{item.portionType && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}> ({item.portionType})</span>}</td><td style={styles.rightCell}>{quantity}</td><td style={styles.rightCell}>{formatNumber(item.unitPrice)}</td>
+                        <td style={{ ...styles.rightCell, color: "#dc2626" }}>{formatPercent(item.discountPercent)}<span style={styles.smallMuted}>-{formatNumber(itemDiscount)}</span></td><td style={{ ...styles.rightCell, color: "#15803d" }}>{formatPercent(item.taxPercent)}<span style={styles.smallMuted}>+{formatNumber(itemTax)}</span></td><td style={{ ...styles.rightCell, fontWeight: 600 }}>{formatNumber(finalTotal)}</td>
+                    </tr>;
+                })}
+                <tr style={{ backgroundColor: "#f3f4f6", fontWeight: 700 }}><td style={styles.cell} colSpan={2}>Sub Total</td><td style={styles.rightCell}>{totalQty}</td><td style={styles.cell}></td><td style={styles.rightCell}>{formatNumber(totalItemDiscount)}</td><td style={styles.rightCell}>{formatNumber(totalItemTax)}</td><td style={styles.rightCell}>{formatNumber(order?.subtotal)}</td></tr>
+            </tbody></table>
 
-                        return (
-                            <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                                <td className="px-3 py-2">{index + 1}</td>
-                                <td className="px-3 py-2">
-                                    {item.name || "—"}
-                                    {item.portionType && <span className="text-xs capitalize" style={{ color: "#6b7280" }}> ({item.portionType})</span>}
-                                </td>
-                                <td className="px-3 py-2 text-right">{item.quantity || 0}</td>
-                                <td className="px-3 py-2 text-right">{(item.unitPrice || 0).toLocaleString()}</td>
-                                <td className="px-3 py-2 text-right" style={{ color: "#dc2626" }}>
-                                    {formatPercent(item.discountPercent)}
-                                    <span className="block text-[10px]" style={{ color: "#9ca3af" }}>-{itemDiscount.toLocaleString()}</span>
-                                </td>
-                                <td className="px-3 py-2 text-right" style={{ color: "#15803d" }}>
-                                    {formatPercent(item.taxPercent)}
-                                    <span className="block text-[10px]" style={{ color: "#9ca3af" }}>+{itemTax.toLocaleString()}</span>
-                                </td>
-                                <td className="px-3 py-2 text-right font-semibold">{finalTotal.toLocaleString()}</td>
-                            </tr>
-                        );
-                    })}
-                    <tr className="font-bold" style={{ backgroundColor: "#f3f4f6" }}>
-                        <td className="px-3 py-2" colSpan={2}>Sub Total</td>
-                        <td className="px-3 py-2 text-right">{totalQty}</td>
-                        <td className="px-3 py-2"></td>
-                        <td className="px-3 py-2 text-right">{totalItemDiscount.toLocaleString()}</td>
-                        <td className="px-3 py-2 text-right">{totalItemTax.toLocaleString()}</td>
-                        <td className="px-3 py-2 text-right">{(order?.subtotal ?? 0).toLocaleString()}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            {/* Payment Summary / Totals Row */}
-            <div className="flex justify-between gap-6 mb-6">
-                <div className="border p-3 text-sm min-w-[260px]" style={{ borderColor: "#d1d5db" }}>
-                    <p className="font-semibold mb-2">Payment Summary:</p>
-                    <div className="flex justify-between py-1">
-                        <span>Total Amount</span>
-                        <span>{(order?.totalAmount ?? 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                        <span>Total Paid</span>
-                        <span>{totalPaid.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between py-1 font-bold border-t mt-1 pt-1" style={{ borderColor: "#d1d5db" }}>
-                        <span>Remaining Balance</span>
-                        <span>{remainingAmount.toLocaleString()}</span>
-                    </div>
-                </div>
-
-                <div className="border min-w-[280px] text-sm" style={{ borderColor: "#d1d5db" }}>
-                    <div className="flex justify-between px-3 py-2 border-b" style={{ borderColor: "#e5e7eb" }}>
-                        <span>Subtotal</span>
-                        <span>{(order?.subtotal ?? 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between px-3 py-2 border-b" style={{ borderColor: "#e5e7eb", color: "#dc2626" }}>
-                        <span>Discount</span>
-                        <span>-{(order?.discountAmount ?? 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between px-3 py-2 border-b" style={{ borderColor: "#e5e7eb", color: "#15803d" }}>
-                        <span>Tax</span>
-                        <span>+{(order?.totalTaxAmount ?? 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between px-3 py-2 font-bold">
-                        <span>Total Amount</span>
-                        <span>{(order?.totalAmount ?? 0).toLocaleString()}</span>
-                    </div>
-                </div>
+            <div style={styles.summaryRow}>
+                <div style={styles.summaryBox}><p style={styles.summaryHeading}>Payment Summary:</p><div style={styles.summaryLine}><span>Total Amount</span><span>{formatNumber(order?.totalAmount)}</span></div><div style={styles.summaryLine}><span>Total Paid</span><span>{formatNumber(totalPaid)}</span></div><div style={styles.totalLine}><span>Remaining Balance</span><span>{formatNumber(remainingAmount)}</span></div></div>
+                <div style={styles.totalsBox}><div style={styles.totalsLine}><span>Subtotal</span><span>{formatNumber(order?.subtotal)}</span></div><div style={{ ...styles.totalsLine, color: "#dc2626" }}><span>Discount</span><span>-{formatNumber(order?.discountAmount)}</span></div><div style={{ ...styles.totalsLine, color: "#15803d" }}><span>Tax</span><span>+{formatNumber(order?.totalTaxAmount)}</span></div><div style={{ ...styles.totalsLine, borderBottom: 0, fontWeight: 700 }}><span>Total Amount</span><span>{formatNumber(order?.totalAmount)}</span></div></div>
             </div>
 
-            {/* Payment Transactions Section */}
-            {payments && payments.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3" style={{ color: "#111827" }}>Payment Transactions</h3>
-                    <table className="w-full border-collapse text-sm" style={{ borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: "#f3f4f6" }}>
-                                <th className="px-3 py-2 text-left font-semibold border-b" style={{ borderColor: "#d1d5db" }}>Date</th>
-                                <th className="px-3 py-2 text-left font-semibold border-b" style={{ borderColor: "#d1d5db" }}>Method</th>
-                                <th className="px-3 py-2 text-right font-semibold border-b" style={{ borderColor: "#d1d5db" }}>Amount</th>
-                                <th className="px-3 py-2 text-right font-semibold border-b" style={{ borderColor: "#d1d5db" }}>Cash</th>
-                                <th className="px-3 py-2 text-right font-semibold border-b" style={{ borderColor: "#d1d5db" }}>Credit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {payments.map((payment, index) => (
-                                <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                                    <td className="px-3 py-2">{new Date(payment.transactionDate || payment.paymentDate || payment.date).toLocaleDateString()}</td>
-                                    <td className="px-3 py-2 capitalize">
-                                        {payment.method === "credit" ? `Credit (${payment.creditAccount?.name || "Account"})` : payment.method || "—"}
-                                    </td>
-                                    <td className="px-3 py-2 text-right font-semibold">{(payment.amount || 0).toLocaleString()}</td>
-                                    <td className="px-3 py-2 text-right">{(payment.cashAmount || 0).toLocaleString()}</td>
-                                    <td className="px-3 py-2 text-right">{(payment.creditAmount || 0).toLocaleString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            {payments.length > 0 && <div style={styles.section}><h3 style={styles.sectionHeading}>Payment Transactions</h3><table style={{ ...styles.table, marginBottom: 0 }}><thead><tr style={{ backgroundColor: "#f3f4f6" }}>
+                <th style={{ ...styles.headerCell, borderBottom: "1px solid #d1d5db" }}>Date</th><th style={{ ...styles.headerCell, borderBottom: "1px solid #d1d5db" }}>Method</th><th style={{ ...styles.rightHeaderCell, borderBottom: "1px solid #d1d5db" }}>Amount</th><th style={{ ...styles.rightHeaderCell, borderBottom: "1px solid #d1d5db" }}>Cash</th><th style={{ ...styles.rightHeaderCell, borderBottom: "1px solid #d1d5db" }}>Credit</th>
+            </tr></thead><tbody>{payments.map((payment, index) => <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}><td style={styles.cell}>{new Date(payment.transactionDate || payment.paymentDate || payment.date).toLocaleDateString()}</td><td style={{ ...styles.cell, textTransform: "capitalize" }}>{payment.method === "credit" ? `Credit (${payment.creditAccount?.name || "Account"})` : payment.method || "-"}</td><td style={{ ...styles.rightCell, fontWeight: 600 }}>{formatNumber(payment.amount)}</td><td style={styles.rightCell}>{formatNumber(payment.cashAmount)}</td><td style={styles.rightCell}>{formatNumber(payment.creditAmount)}</td></tr>)}</tbody></table></div>}
 
-            {/* Qarza Summary */}
-            {showCustomerKPI && qarzaSummary && (
-                <div className="border p-4 mb-6" style={{ borderColor: "#d1d5db", backgroundColor: "#f9fafb" }}>
-                    <h3 className="text-lg font-semibold mb-3" style={{ color: "#111827" }}>Customer Account Summary</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Cash In</p>
-                            <p className="text-lg font-bold" style={{ color: "#16a34a" }}>Rs {cashIn.toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>Cash Out</p>
-                            <p className="text-lg font-bold" style={{ color: "#dc2626" }}>Rs {cashOut.toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>To Give</p>
-                            <p className="text-lg font-bold" style={{ color: "#f59e0b" }}>Rs {toGive.toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs uppercase font-bold mb-1" style={{ color: "#6b7280" }}>To Receive</p>
-                            <p className="text-lg font-bold" style={{ color: "#8b5cf6" }}>Rs {toReceive.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    <div className="border-t mt-4 pt-3 flex justify-between text-sm font-bold" style={{ borderColor: "#d1d5db" }}>
-                        <span>Overall Balance</span>
-                        <span style={{ color: overall >= 0 ? "#f59e0b" : "#8b5cf6" }}>Rs {Math.abs(overall).toLocaleString()}</span>
-                    </div>
-                </div>
-            )}
+            {showCustomerKPI && qarzaSummary && <div style={styles.accountBox}><h3 style={styles.sectionHeading}>Customer Account Summary</h3><div style={styles.accountGrid}><div><p style={styles.accountLabel}>Cash In</p><p style={{ ...styles.accountValue, color: "#16a34a" }}>Rs {formatNumber(cashIn)}</p></div><div><p style={styles.accountLabel}>Cash Out</p><p style={{ ...styles.accountValue, color: "#dc2626" }}>Rs {formatNumber(cashOut)}</p></div><div><p style={styles.accountLabel}>To Give</p><p style={{ ...styles.accountValue, color: "#f59e0b" }}>Rs {formatNumber(toGive)}</p></div><div><p style={styles.accountLabel}>To Receive</p><p style={{ ...styles.accountValue, color: "#8b5cf6" }}>Rs {formatNumber(toReceive)}</p></div></div><div style={{ ...styles.totalLine, marginTop: "1rem", paddingTop: "0.75rem" }}><span>Overall Balance</span><span style={{ color: overall >= 0 ? "#f59e0b" : "#8b5cf6" }}>Rs {formatNumber(Math.abs(overall))}</span></div></div>}
 
-            {/* Sign-off Bar */}
-            <div className="border mb-4" style={{ borderColor: "#d1d5db" }}>
-                <div className="flex text-sm">
-                    <div className="w-1/2 text-center py-3 border-r" style={{ borderColor: "#d1d5db" }}>
-                        <p>Prepared By</p>
-                    </div>
-                    <div className="w-1/2 text-center py-3">
-                        <p>Approved By</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-between items-start text-xs" style={{ color: "#6b7280" }}>
-                <p className="italic" style={{ maxWidth: "70%" }}>{labels.footerNote || "This is a computer generated document, does not required any signature"}</p>
-                <p>Print Time: {new Date().toLocaleString()}</p>
-            </div>
+            <div style={styles.signoff}><div style={styles.signoffRow}><div style={{ ...styles.signoffCell, borderRight: "1px solid #d1d5db" }}><p style={{ margin: 0 }}>Prepared By</p></div><div style={styles.signoffCell}><p style={{ margin: 0 }}>Approved By</p></div></div></div>
+            <div style={styles.footer}><p style={{ fontStyle: "italic", maxWidth: "70%", margin: 0 }}>{labels.footerNote || "This is a computer generated document, does not required any signature"}</p><p style={{ margin: 0 }}>Print Time: {new Date().toLocaleString()}</p></div>
         </div>
     );
 }
