@@ -87,7 +87,7 @@ function MetricSection({ title, icon: Icon, color, children }) {
 export default function MainBusinessKPIReport() {
     const { settings } = useSettings();
     const labels = getReportsLabels(settings?.language || "en");
-    const [period, setPeriod] = useState("all");
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const filters = useMemo(() => ({ period, ...(period === "custom" && fromDate && toDate ? { fromDate, toDate } : {}) }), [period, fromDate, toDate]);

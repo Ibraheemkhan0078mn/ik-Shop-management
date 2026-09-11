@@ -38,7 +38,7 @@ function KpiCard({ label, value, icon: Icon, color = "var(--accent-2)", money = 
 export default function InventoryReport() {
     const { settings } = useSettings();
     const labels = getReportsLabels(settings?.language || "en");
-    const [period, setPeriod] = useState("month");
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [categoryId, setCategoryId] = useState("");

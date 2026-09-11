@@ -87,7 +87,7 @@ export default function CustomerReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [period, setPeriod] = useState("month");
+    const [period, setPeriod] = useState("today");
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState(null);

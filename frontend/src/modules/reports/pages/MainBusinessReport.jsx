@@ -551,7 +551,7 @@ export default function MainBusinessReport() {
     ], [labels]);
 
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-    const [period, setPeriod] = useState("all");
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [expandedSections, setExpandedSections] = useState({});

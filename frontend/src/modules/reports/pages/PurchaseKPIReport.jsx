@@ -219,7 +219,7 @@ export default function PurchaseKPIReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [period, setPeriod] = useState("all");
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [supplierId, setSupplierId] = useState("");

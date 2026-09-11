@@ -93,7 +93,7 @@ export default function ExpenseReport() {
     const labels = getReportsLabels(language);
 
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-    const [period, setPeriod] = useState("month");
+    const [period, setPeriod] = useState("today");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [category, setCategory] = useState("all");

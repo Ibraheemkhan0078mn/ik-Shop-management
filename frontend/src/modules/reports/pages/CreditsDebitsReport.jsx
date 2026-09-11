@@ -62,7 +62,7 @@ export default function CreditsDebitsReport() {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getReportsLabels(language);
-    const [transactionPeriod, setTransactionPeriod] = useState("month");
+    const [transactionPeriod, setTransactionPeriod] = useState("today");
     const [customFromDate, setCustomFromDate] = useState("");
     const [customToDate, setCustomToDate] = useState("");
     const [accountType, setAccountType] = useState("all");
