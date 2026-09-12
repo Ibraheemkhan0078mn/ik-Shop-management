@@ -231,50 +231,54 @@ export default function OrderReturnDetail() {
                                             {isExpanded && (
                                                 <tr>
                                                     <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
-                                                            {/* Costing & Total Panel */}
-                                                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <p className="text-sm font-semibold mb-3" style={{ color: "var(--ink)" }}>Costing & Total</p>
-                                                                <div className="text-sm space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--muted)" }}>Price:</span>
-                                                                        <span className="font-mono text-[var(--ink)]">Rs {originalPrice.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-red-600">Less Discount:</span>
-                                                                        <span className="font-mono text-red-600">- Rs {(item.costing?.discountAmount || 0).toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-blue-600">Plus Tax:</span>
-                                                                        <span className="font-mono text-blue-600">+ Rs {(item.costing?.taxAmount || 0).toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-semibold pt-2 mt-1" style={{ borderTop: "1px dashed var(--border)" }}>
-                                                                        <span style={{ color: "var(--ink)" }}>Unit Costing:</span>
-                                                                        <span className="font-mono text-[var(--ink)]">Rs {unitCosting.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-bold pt-2 mt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Total (Costing × {quantity}):</span>
-                                                                        <span className="font-mono text-[var(--accent-2)]">Rs {(quantity * unitCosting).toFixed(2)}</span>
-                                                                    </div>
+                                                        <div className="p-4 rounded-lg max-w-4xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                            <div className="text-sm space-y-1.5">
+                                                                {/* Row 1: Original Price */}
+                                                                <div className="flex justify-between items-center py-1">
+                                                                    <span style={{ color: "var(--ink)" }}>1. Original Price:</span>
+                                                                    <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                        Rs {originalPrice.toFixed(2)}
+                                                                    </span>
                                                                 </div>
-                                                            </div>
+                                                                
+                                                                {/* Row 2: Discount */}
+                                                                <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(220, 38, 38, 0.05)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>
+                                                                        2. Discount: {item.costing?.discountPercent || 0} {item.costing?.discountType === 'fixed' ? 'Rs' : '%'}
+                                                                    </span>
+                                                                    <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                        -Rs {(item.costing?.discountAmount || 0).toFixed(2)} → Rs {(originalPrice - (item.costing?.discountAmount || 0)).toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                {/* Row 3: Tax */}
+                                                                <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>
+                                                                        3. Tax: {item.costing?.taxType === 'fixed' ? `Rs ${item.costing?.taxPercent || 0}` : `${item.costing?.taxPercent || 0}%`}
+                                                                    </span>
+                                                                    <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                        +Rs {(item.costing?.taxAmount || 0).toFixed(2)} → Rs {unitCosting.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                {/* Row 4: Multiply by Quantity */}
+                                                                <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>
+                                                                        4. Multiply: ×{quantity} items
+                                                                    </span>
+                                                                    <span className="font-mono font-bold" style={{ color: "var(--accent-2)" }}>
+                                                                        Rs {(quantity * unitCosting).toFixed(2)}
+                                                                    </span>
+                                                                </div>
 
-                                                            {/* Refund Calculation Panel */}
-                                                            <div className="p-4 rounded-lg bg-green-50/50 border border-green-100">
-                                                                <p className="text-sm font-semibold mb-3 text-green-800">Refund Calculation</p>
-                                                                <div className="text-sm space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-green-700">Total:</span>
-                                                                        <span className="font-mono text-green-700">Rs {(quantity * unitCosting).toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-red-600">Less Cut:</span>
-                                                                        <span className="font-mono text-red-600">- Rs {cut.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-bold text-lg pt-2 mt-1 border-t border-green-200">
-                                                                        <span className="text-green-700">Refund Amount:</span>
-                                                                        <span className="font-mono text-green-700">Rs {refundAmount.toFixed(2)}</span>
-                                                                    </div>
+                                                                {/* Row 5: Refund */}
+                                                                <div className="flex justify-between items-center py-1 px-2 rounded mt-2" style={{ background: "rgba(34, 197, 94, 0.08)", borderTop: "2px solid var(--accent-2)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>
+                                                                        5. Less Cut: Rs {cut.toFixed(2)}
+                                                                    </span>
+                                                                    <span className="font-mono font-bold" style={{ color: "#16a34a" }}>
+                                                                        Refund: Rs {refundAmount.toFixed(2)}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>
