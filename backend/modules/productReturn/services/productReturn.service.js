@@ -19,12 +19,37 @@ const createProductReturn = async (returnData) => {
     
     // Calculate refundAmount for each item if not provided or validate it
     const itemsWithCalculatedRefund = returnData.items.map(item => {
-        const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+        // Recalculate unit costing based on taxType and discountType
+        const price = item.originalPrice || 0;
+        const taxPercent = item.costing?.taxPercent || 0;
+        const taxType = item.costing?.taxType || "percentage";
+        const discountPercent = item.costing?.discountPercent || 0;
+        const discountType = item.costing?.discountType || "percentage";
+        
+        // Calculate discount amount per unit
+        const discountAmount = discountType === "percentage" 
+            ? (price * discountPercent) / 100 
+            : discountPercent;
+        
+        // Calculate tax amount per unit (tax applies after discount)
+        const priceAfterDiscount = price - discountAmount;
+        const taxAmount = taxType === "percentage" 
+            ? (priceAfterDiscount * taxPercent) / 100 
+            : taxPercent;
+        
+        const unitCost = price - discountAmount + taxAmount;
         const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
+        
         return {
             ...item,
             cut: item.cut || 0,
             refundAmount: item.refundAmount || calculatedRefund,
+            costing: {
+                ...item.costing,
+                itemTotal: unitCost,
+                taxAmount,
+                discountAmount,
+            },
         };
     });
     
@@ -127,12 +152,37 @@ const updateProductReturn = async (id, updateData) => {
     let itemsToUpdate = updateData.items;
     if (itemsToUpdate) {
         itemsToUpdate = itemsToUpdate.map(item => {
-            const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+            // Recalculate unit costing based on taxType and discountType
+            const price = item.originalPrice || 0;
+            const taxPercent = item.costing?.taxPercent || 0;
+            const taxType = item.costing?.taxType || "percentage";
+            const discountPercent = item.costing?.discountPercent || 0;
+            const discountType = item.costing?.discountType || "percentage";
+            
+            // Calculate discount amount per unit
+            const discountAmount = discountType === "percentage" 
+                ? (price * discountPercent) / 100 
+                : discountPercent;
+            
+            // Calculate tax amount per unit (tax applies after discount)
+            const priceAfterDiscount = price - discountAmount;
+            const taxAmount = taxType === "percentage" 
+                ? (priceAfterDiscount * taxPercent) / 100 
+                : taxPercent;
+            
+            const unitCost = price - discountAmount + taxAmount;
             const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
+            
             return {
                 ...item,
                 cut: item.cut || 0,
                 refundAmount: item.refundAmount || calculatedRefund,
+                costing: {
+                    ...item.costing,
+                    itemTotal: unitCost,
+                    taxAmount,
+                    discountAmount,
+                },
             };
         });
         
@@ -223,9 +273,27 @@ const recalculateProductReturnRefundAmount = async (productReturnId) => {
         throw new Error("Product return not found");
     }
 
-    // Recalculate total refund amount from items (similar to order fix)
+    // Recalculate total refund amount from items using taxType and discountType
     const calculatedRefundAmount = productReturn.items.reduce((sum, item) => {
-        const unitCost = item.costing?.itemTotal ?? item.originalPrice;
+        // Recalculate unit costing based on taxType and discountType
+        const price = item.originalPrice || 0;
+        const taxPercent = item.costing?.taxPercent || 0;
+        const taxType = item.costing?.taxType || "percentage";
+        const discountPercent = item.costing?.discountPercent || 0;
+        const discountType = item.costing?.discountType || "percentage";
+        
+        // Calculate discount amount per unit
+        const discountAmount = discountType === "percentage" 
+            ? (price * discountPercent) / 100 
+            : discountPercent;
+        
+        // Calculate tax amount per unit (tax applies after discount)
+        const priceAfterDiscount = price - discountAmount;
+        const taxAmount = taxType === "percentage" 
+            ? (priceAfterDiscount * taxPercent) / 100 
+            : taxPercent;
+        
+        const unitCost = price - discountAmount + taxAmount;
         const itemRefund = (item.quantity * unitCost) - (item.cut || 0);
         return sum + itemRefund;
     }, 0);

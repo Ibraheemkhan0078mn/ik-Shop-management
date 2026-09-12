@@ -209,10 +209,20 @@ export const getPaginatedQarzaPayments = async (req, res) => {
         // Get all transactions for this account
         let transactions = await getTransactions(query);
         
-        // Sort by transaction date (newest first)
-        transactions.sort((a, b) => sortOrder === 'asc'
-            ? new Date(a.transactionDate) - new Date(b.transactionDate)
-            : new Date(b.transactionDate) - new Date(a.transactionDate));
+        // Sort by transaction date (newest first), then by createdTimeForSync for same-day transactions
+        transactions.sort((a, b) => {
+            const dateA = new Date(a.transactionDate);
+            const dateB = new Date(b.transactionDate);
+            const dateDiff = sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            
+            // If dates are different, return the date difference
+            if (dateDiff !== 0) return dateDiff;
+            
+            // If dates are the same, sort by createdTimeForSync
+            const syncA = new Date(a.createdTimeForSync || 0);
+            const syncB = new Date(b.createdTimeForSync || 0);
+            return sortOrder === 'asc' ? syncA - syncB : syncB - syncA;
+        });
         
         // Apply pagination manually since getTransactions doesn't support skip/limit
         let total = transactions.length;
@@ -261,10 +271,20 @@ export const getManualPayments = async (req, res) => {
         
         let transactions = await getTransactions(query);
         
-        // Sort by transaction date (newest first)
-        transactions.sort((a, b) => sortOrder === 'asc'
-            ? new Date(a.transactionDate) - new Date(b.transactionDate)
-            : new Date(b.transactionDate) - new Date(a.transactionDate));
+        // Sort by transaction date (newest first), then by createdTimeForSync for same-day transactions
+        transactions.sort((a, b) => {
+            const dateA = new Date(a.transactionDate);
+            const dateB = new Date(b.transactionDate);
+            const dateDiff = sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            
+            // If dates are different, return the date difference
+            if (dateDiff !== 0) return dateDiff;
+            
+            // If dates are the same, sort by createdTimeForSync
+            const syncA = new Date(a.createdTimeForSync || 0);
+            const syncB = new Date(b.createdTimeForSync || 0);
+            return sortOrder === 'asc' ? syncA - syncB : syncB - syncA;
+        });
         
         let total = transactions.length;
         let skip = (page - 1) * limit;
@@ -330,10 +350,20 @@ export const getSupplierPayments = async (req, res) => {
         
         let transactions = await getTransactions(query);
         
-        // Sort by transaction date (newest first)
-        transactions.sort((a, b) => sortOrder === 'asc'
-            ? new Date(a.transactionDate) - new Date(b.transactionDate)
-            : new Date(b.transactionDate) - new Date(a.transactionDate));
+        // Sort by transaction date (newest first), then by createdTimeForSync for same-day transactions
+        transactions.sort((a, b) => {
+            const dateA = new Date(a.transactionDate);
+            const dateB = new Date(b.transactionDate);
+            const dateDiff = sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            
+            // If dates are different, return the date difference
+            if (dateDiff !== 0) return dateDiff;
+            
+            // If dates are the same, sort by createdTimeForSync
+            const syncA = new Date(a.createdTimeForSync || 0);
+            const syncB = new Date(b.createdTimeForSync || 0);
+            return sortOrder === 'asc' ? syncA - syncB : syncB - syncA;
+        });
         
         let total = transactions.length;
         let skip = (page - 1) * limit;
@@ -400,9 +430,20 @@ export const getCustomerPayments = async (req, res) => {
         let transactions = await getTransactions(query);
         
         // Sort before pagination so each page reflects the selected order.
-        transactions.sort((a, b) => sortOrder === 'asc'
-            ? new Date(a.transactionDate) - new Date(b.transactionDate)
-            : new Date(b.transactionDate) - new Date(a.transactionDate));
+        // Primary sort by transaction date, secondary sort by createdTimeForSync for same-day transactions
+        transactions.sort((a, b) => {
+            const dateA = new Date(a.transactionDate);
+            const dateB = new Date(b.transactionDate);
+            const dateDiff = sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            
+            // If dates are different, return the date difference
+            if (dateDiff !== 0) return dateDiff;
+            
+            // If dates are the same, sort by createdTimeForSync
+            const syncA = new Date(a.createdTimeForSync || 0);
+            const syncB = new Date(b.createdTimeForSync || 0);
+            return sortOrder === 'asc' ? syncA - syncB : syncB - syncA;
+        });
         
         let total = transactions.length;
         let skip = (page - 1) * limit;

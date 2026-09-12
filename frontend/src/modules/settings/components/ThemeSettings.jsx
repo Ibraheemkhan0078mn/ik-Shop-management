@@ -366,7 +366,7 @@ const EMPTY_THEME = {
 
 export default function ThemeSettings({ labels }) {
     const [theme, setTheme] = useState(EMPTY_THEME);
-    const [selectedPreset, setSelectedPreset] = useState("classic-warm");
+    const [selectedPreset, setSelectedPreset] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
@@ -394,10 +394,9 @@ export default function ThemeSettings({ labels }) {
                     ...data.colors,
                 };
 
+                // Match preset by exact color comparison only
                 const matchedPreset = THEME_PRESETS.find(
-                    (preset) =>
-                        preset.title === data.name ||
-                        JSON.stringify(preset.colors) === JSON.stringify(loadedColors),
+                    (preset) => JSON.stringify(preset.colors) === JSON.stringify(loadedColors),
                 );
 
                 setSelectedPreset(matchedPreset ? matchedPreset.id : "custom");
@@ -422,7 +421,7 @@ export default function ThemeSettings({ labels }) {
 
     const persistTheme = async (themeData) => {
         try {
-            const response = await fetch(getApiUrl("/theme/active"), {
+            const response = await fetch(getApiUrl("/api/theme/active"), {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(themeData),

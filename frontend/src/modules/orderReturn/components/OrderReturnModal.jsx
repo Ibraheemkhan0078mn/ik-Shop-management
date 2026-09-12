@@ -179,15 +179,29 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                 <div className="text-xs space-y-1.5">
                                                     <div className="flex justify-between text-(--ink)">
                                                         <span>Price:</span>
-                                                        <span>Rs {Number(item.unitPrice || item.originalPrice || 0).toFixed(2)}</span>
+                                                        <span>Rs {Number(details.originalPrice || item.unitPrice || item.originalPrice || 0).toFixed(2)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-red-600">
                                                         <span>Less Discount:</span>
-                                                        <span>- Rs {Number(item.quantity ? (item.discountAmount / item.quantity) : (item.discountAmount || 0)).toFixed(2)}</span>
+                                                        <span>- Rs {(() => {
+                                                            const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
+                                                            return details.discountType === "percentage" 
+                                                                ? (price * (details.discountPercent || 0) / 100) 
+                                                                : (details.discountPercent || 0);
+                                                        })().toFixed(2)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-blue-600">
                                                         <span>Plus Tax:</span>
-                                                        <span>+ Rs {Number(item.quantity ? (item.taxAmount / item.quantity) : (item.taxAmount || 0)).toFixed(2)}</span>
+                                                        <span>+ Rs {(() => {
+                                                            const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
+                                                            const discountAmount = details.discountType === "percentage" 
+                                                                ? (price * (details.discountPercent || 0) / 100) 
+                                                                : (details.discountPercent || 0);
+                                                            const priceAfterDiscount = price - discountAmount;
+                                                            return details.taxType === "percentage" 
+                                                                ? (priceAfterDiscount * (details.taxPercent || 0) / 100) 
+                                                                : (details.taxPercent || 0);
+                                                        })().toFixed(2)}</span>
                                                     </div>
                                                     <div className="flex justify-between font-semibold pt-1 border-t border-(--border)">
                                                         <span>Unit Costing:</span>
@@ -308,6 +322,11 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                     refundAmount: returnItem.refundAmount,
                                     originalPrice: returnItem.originalPrice,
                                     unitCosting: unitCosting,
+                                    // Store tax and discount details for recalculation
+                                    taxPercent: returnItem.costing?.taxPercent || orderItem.taxPercent || 0,
+                                    taxType: returnItem.costing?.taxType || orderItem.taxType || "percentage",
+                                    discountPercent: returnItem.costing?.discountPercent || orderItem.discountPercent || 0,
+                                    discountType: returnItem.costing?.discountType || orderItem.discountType || "percentage",
                                 };
                                 console.log("Added to selectedItems:", itemId, selectedItemsObj[itemId]);
                             } else {
@@ -429,8 +448,26 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 delete newSelected[itemId];
                 return newSelected;
             } else {
-                // Select with default values
-                const unitCosting = item.quantity ? (item.itemTotal / item.quantity) : (item.unitPrice || item.originalPrice || 0);
+                // Calculate unit costing based on taxType and discountType
+                const price = item.unitPrice || item.originalPrice || 0;
+                const discountPercent = item.discountPercent || 0;
+                const discountType = item.discountType || "percentage";
+                const taxPercent = item.taxPercent || 0;
+                const taxType = item.taxType || "percentage";
+                
+                // Calculate discount amount per unit
+                const discountAmount = discountType === "percentage" 
+                    ? (price * discountPercent) / 100 
+                    : discountPercent;
+                
+                // Calculate tax amount per unit (tax applies after discount)
+                const priceAfterDiscount = price - discountAmount;
+                const taxAmount = taxType === "percentage" 
+                    ? (priceAfterDiscount * taxPercent) / 100 
+                    : taxPercent;
+                
+                const unitCosting = price - discountAmount + taxAmount;
+                
                 return {
                     ...prev,
                     [itemId]: {
@@ -438,8 +475,13 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                         returnReason: "damaged",
                         cut: 0,
                         refundAmount: unitCosting,
-                        originalPrice: item.unitPrice || item.originalPrice || 0,
+                        originalPrice: price,
                         unitCosting: unitCosting,
+                        // Store tax and discount details for recalculation
+                        taxPercent,
+                        taxType,
+                        discountPercent,
+                        discountType,
                     },
                 };
             }
@@ -461,8 +503,25 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 const details = updated[itemId];
                 const qty = Number(details.returnQuantity) || 1;
                 const cut = Number(details.cut) || 0;
-                const unitCosting = details.unitCosting || details.originalPrice || 0;
+                
+                // Recalculate unit costing based on stored tax/discount details
+                const price = details.originalPrice || 0;
+                const discountPercent = details.discountPercent || 0;
+                const discountType = details.discountType || "percentage";
+                const taxPercent = details.taxPercent || 0;
+                const taxType = details.taxType || "percentage";
+                
+                const discountAmount = discountType === "percentage" 
+                    ? (price * discountPercent) / 100 
+                    : discountPercent;
+                const priceAfterDiscount = price - discountAmount;
+                const taxAmount = taxType === "percentage" 
+                    ? (priceAfterDiscount * taxPercent) / 100 
+                    : taxPercent;
+                const unitCosting = price - discountAmount + taxAmount;
+                
                 const refundAmount = (qty * unitCosting) - cut;
+                updated[itemId].unitCosting = unitCosting;
                 updated[itemId].refundAmount = Math.max(0, refundAmount);
             }
             
