@@ -310,9 +310,10 @@ export default function PosPaymentModal({
         // Use originalBatchPrice if available (when custom price was set), otherwise use unitPrice
         const baseUnitPrice = item.originalBatchPrice || item.unitPrice;
         const currentUnitPrice = item.unitPrice; // This might be custom or original
+        const quantity = item.qty || 0;
         
         // Calculate lineTotal (base amount before discount)
-        const lineTotal = currentUnitPrice * (item.qty || 0);
+        const lineTotal = currentUnitPrice * quantity;
         const maxDiscountValue = getItemDiscountLimit(item, index, discountType);
         const itemDiscountValue = maxDiscountValue > 0
             ? Math.min(configuredDiscountValue, maxDiscountValue)
@@ -325,8 +326,8 @@ export default function PosPaymentModal({
                 discountPercent = itemDiscountValue;
                 discountAmount = (lineTotal * itemDiscountValue) / 100;
             } else {
-                // Fixed amount discount
-                discountAmount = Math.min(itemDiscountValue, lineTotal);
+                // Fixed amount discount - configuredDiscountValue is per-unit, so multiply by quantity
+                discountAmount = Math.min(itemDiscountValue * quantity, lineTotal);
                 discountPercent = (discountAmount / lineTotal) * 100;
             }
         }
@@ -337,7 +338,8 @@ export default function PosPaymentModal({
         // Calculate tax on price after discount
         let itemTaxAmount = 0;
         if (item.taxType === 'fixed') {
-            itemTaxAmount = (item.taxPercent || 0) * (item.qty || 0);
+            // Fixed tax - taxPercent is per-unit, so multiply by quantity
+            itemTaxAmount = (item.taxPercent || 0) * quantity;
         } else {
             itemTaxAmount = (priceAfterDiscount * (item.taxPercent || 0)) / 100;
         }
@@ -360,13 +362,13 @@ export default function PosPaymentModal({
         };
     });
     
-    // Calculate bill subtotal as sum of priceAfterDiscount (after item discounts, before tax and order discount)
-    const billSubtotal = discountedCartItems.reduce((sum, item) => sum + (item.priceAfterDiscount || 0), 0);
+    // Calculate bill subtotal as sum of all item totals (including item taxes and discounts)
+    const billSubtotal = discountedCartItems.reduce((sum, item) => sum + (item.itemTotal || 0), 0);
     
-    // Calculate total tax from all items
+    // Calculate total tax from all items (for reference)
     const totalTax = discountedCartItems.reduce((sum, item) => sum + (item.itemTaxAmount || 0), 0);
     
-    // Calculate total discount from per-item discounts
+    // Calculate total discount from per-item discounts (for reference)
     const itemDiscountTotal = discountedCartItems.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
     
     // Calculate order-level discount based on type
@@ -381,7 +383,7 @@ export default function PosPaymentModal({
     }
     
     const totalDiscount = orderDiscountAmount + itemDiscountTotal;
-    const total = Math.max(0, billSubtotal - orderDiscountAmount + totalTax);
+    const total = Math.max(0, billSubtotal - orderDiscountAmount);  // billSubtotal already includes item taxes
     const hybridQarza = total - (Number(hybridCash) || 0);
     const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
 
@@ -572,30 +574,7 @@ export default function PosPaymentModal({
                         <div className="flex-1 lg:w-1/2 p-4 border-b lg:border-b-0 lg:border-r border-[var(--border)] overflow-y-auto">
                             <h3 className="text-sm font-bold mb-3" style={{ color: "var(--ink)" }}>{labels.paymentOptions || "Payment Options"}</h3>
                             
-                            {/* Total banner */}
-                            <div
-                                className="px-4 py-3 rounded-xl mb-4"
-                                style={{ background: "linear-gradient(135deg, rgba(15,118,110,0.08), rgba(15,118,110,0.04))", border: "1px solid rgba(15,118,110,0.15)" }}
-                            >
-                                <div className="flex items-end justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium mb-0.5" style={{ color: "var(--accent-2)" }}>{labels.grandTotal}</p>
-                                        <p className="text-2xl font-extrabold" style={{ color: "var(--accent-2)" }}>
-                                            Rs {total.toLocaleString()}
-                                        </p>
-                                        {totalDiscount > 0 && (
-                                            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                                                Rs {billSubtotal.toLocaleString()} − Rs {totalDiscount.toLocaleString()} {labels.discount}
-                                            </p>
-                                        )}
-                                        {totalTax > 0 && totalDiscount === 0 && (
-                                            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                                                Rs {billSubtotal.toLocaleString()}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+
 
                             {/* Row 1: Discount & Staff */}
                             <div className="grid grid-cols-2 gap-3">
@@ -973,113 +952,39 @@ export default function PosPaymentModal({
                                             {/* Expanded details */}
                                             {expandedCalculation[index] && (
                                                 <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        {/* Price Card */}
-                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Price</p>
-                                                            <div className="text-xs space-y-1">
-                                                                {item.customInput && (
-                                                                    <>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--muted)" }}>Batch Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--muted)" }}>Rs {item.baseUnitPrice.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--accent-2)" }}>Custom Price:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {item.currentUnitPrice.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                                {!item.customInput && (
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Unit Price:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {item.currentUnitPrice.toFixed(2)}</span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{item.qty} {item.unit || ''}</span>
-                                                                </div>
-                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                    <span style={{ color: "var(--accent-2)" }}>Total Price:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.lineTotal || 0).toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
+                                                    <div className="text-xs space-y-1.5">
+                                                        {/* Row 1: Original Value */}
+                                                        <div className="flex justify-between items-center py-1">
+                                                            <span style={{ color: "var(--ink)" }}>1. Original Price:</span>
+                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>Rs {item.currentUnitPrice.toFixed(2)}</span>
                                                         </div>
-
-                                                        {/* Discount Card */}
-                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Discount</p>
-                                                            <div className="text-xs space-y-1">
-                                                                {item.isDiscountAllowed !== false ? (
-                                                                    <>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount:</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.itemDiscountValue || 0} {item.discountType === 'fixed' ? 'Rs' : '%'}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
-                                                                            <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {item.discountAmount.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--muted)" }}>Discount:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--muted)" }}>Not allowed</span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                    <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
+                                                        
+                                                        {/* Row 2: Discount */}
+                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(220, 38, 38, 0.05)" }}>
+                                                            <span style={{ color: "var(--ink)" }}>
+                                                                2. Discount: {item.itemDiscountValue || 0} {item.discountType === 'fixed' ? 'Rs' : '%'}
+                                                            </span>
+                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                -Rs {(item.discountAmount / item.qty).toFixed(2)} → Rs {(item.priceAfterDiscount / item.qty).toFixed(2)}
+                                                            </span>
                                                         </div>
-
-                                                        {/* Tax Card */}
-                                                        <div className="p-3 rounded-lg" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Tax</p>
-                                                            <div className="text-xs space-y-1">
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>Tax Rate:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>
-                                                                        {item.taxType === 'fixed' 
-                                                                            ? `Rs ${item.taxPercent || 0} (fixed)` 
-                                                                            : `${item.taxPercent || 0}% (percentage)`
-                                                                        }
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
-                                                                    <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {(item.itemTaxAmount * item.qty).toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                    <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
+                                                        
+                                                        {/* Row 3: Tax */}
+                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>
+                                                            <span style={{ color: "var(--ink)" }}>
+                                                                3. Tax: {item.taxType === 'fixed' ? `Rs ${item.taxPercent || 0}` : `${item.taxPercent || 0}%`}
+                                                            </span>
+                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                +Rs {(item.itemTaxAmount / item.qty).toFixed(2)} → Rs {((item.itemTotal || 0) / item.qty).toFixed(2)}
+                                                            </span>
                                                         </div>
-
-                                                        {/* Final Item Total Card */}
-                                                        <div className="p-3 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                                                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Item Total</p>
-                                                            <div className="text-xs space-y-1">
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>After Discount:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.priceAfterDiscount || 0).toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.itemTaxAmount * item.qty).toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between font-bold text-sm pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                    <span style={{ color: "var(--accent-2)" }}>Final Total:</span>
-                                                                    <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
+                                                        
+                                                        {/* Row 4: Multiply by Quantity */}
+                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
+                                                            <span style={{ color: "var(--ink)" }}>
+                                                                4. Multiply: ×{item.qty} items
+                                                            </span>
+                                                            <span className="font-mono font-bold text-sm" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
                                                         </div>
                                                     </div>
 
@@ -1087,26 +992,6 @@ export default function PosPaymentModal({
                                                     {item.isDiscountAllowed !== false && (
                                                         <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                                             <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Apply Discount</p>
-                                                            <div className="grid grid-cols-2 gap-3 mb-2">
-                                                                <div>
-                                                                    <label className="text-xs" style={{ color: "var(--muted)" }}>Max Discount:</label>
-                                                                    <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
-                                                                        {item.discountLimitType === 'fixed' 
-                                                                            ? `Rs ${item.maxDiscountPercent || 0}` 
-                                                                            : `${item.maxDiscountPercent || 0}%`
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="text-xs" style={{ color: "var(--muted)" }}>Max Amount:</label>
-                                                                    <div className="px-2 py-1 text-xs rounded font-mono" style={{ background: "var(--surface-muted)", color: "var(--ink)" }}>
-                                                                        Rs {item.discountLimitType === 'fixed' 
-                                                                            ? ((item.maxDiscountPercent || 0) * item.qty).toFixed(2)
-                                                                            : ((item.unitPrice * item.qty * (item.maxDiscountPercent || 0)) / 100).toFixed(2)
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                            </div>
                                                             <div className="flex items-center gap-2">
                                                                 <select
                                                                     value={itemDiscountTypes[index] || 'percentage'}
@@ -1171,30 +1056,30 @@ export default function PosPaymentModal({
                         </div>
                     </div>
 
-                    {/* Second Container: Summary */}
+                    {/* Bill Summary Section */}
                     <div className="p-4 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
-                        <h4 className="text-xs font-bold mb-2" style={{ color: "var(--muted)" }}>{labels.billSummary || "Bill Summary"}</h4>
-                        <div className="flex justify-between items-center text-sm">
-                            <div className="space-y-1">
-                                <div className="flex justify-between gap-4">
-                                    <span style={{ color: "var(--muted)" }}>{labels.subtotal || "Subtotal"}:</span>
-                                    <span className="font-medium" style={{ color: "var(--ink)" }}>Rs {billSubtotal.toLocaleString()}</span>
-                                </div>
-                                {itemDiscountTotal > 0 && (
-                                    <div className="flex justify-between gap-4">
-                                        <span style={{ color: "var(--muted)" }}>{labels.itemDiscount || "Item Discount"}:</span>
-                                        <span className="font-medium" style={{ color: "var(--ink)" }}>-Rs {itemDiscountTotal.toLocaleString()}</span>
-                                    </div>
-                                )}
-                                {discountAmt > 0 && (
-                                    <div className="flex justify-between gap-4">
-                                        <span style={{ color: "var(--muted)" }}>{labels.orderDiscount || "Order Discount"}:</span>
-                                        <span className="font-medium" style={{ color: "var(--ink)" }}>-Rs {discountAmt.toLocaleString()}</span>
-                                    </div>
-                                )}
+                        <h4 className="text-xs font-bold mb-3 uppercase tracking-wide" style={{ color: "var(--muted)" }}>{labels.billSummary || "Bill Summary"}</h4>
+                        <div className="space-y-2 text-sm">
+                            {/* Subtotal from all items (after item discounts and taxes) */}
+                            <div className="flex justify-between items-center">
+                                <span style={{ color: "var(--muted)" }}>{labels.subtotal || "Subtotal"}:</span>
+                                <span className="font-medium" style={{ color: "var(--ink)" }}>Rs {billSubtotal.toLocaleString()}</span>
                             </div>
-                            <div className="text-right">
-                                <span className="font-bold text-lg" style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
+                            
+                            {/* Order-level discount only */}
+                            {orderDiscountAmount > 0 && (
+                                <div className="flex justify-between items-center text-red-600">
+                                    <span>{labels.orderDiscount || "Discount"}{orderDiscountType === 'percentage' ? ` (${discountAmt}%)` : ''}:</span>
+                                    <span className="font-medium">-Rs {orderDiscountAmount.toLocaleString()}</span>
+                                </div>
+                            )}
+                            
+                            {/* Divider */}
+                            <div className="border-t pt-2" style={{ borderColor: "var(--border)" }}>
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-base" style={{ color: "var(--ink)" }}>{labels.grandTotal || "Grand Total"}:</span>
+                                    <span className="font-bold text-xl" style={{ color: "var(--accent-2)" }}>Rs {total.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

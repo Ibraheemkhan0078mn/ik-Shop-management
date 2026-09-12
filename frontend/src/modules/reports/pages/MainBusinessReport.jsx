@@ -258,7 +258,7 @@ function TransactionTable({ transactions, type, labels }) {
                                                                         {item.discountAmount > 0 ? (
                                                                             <>
                                                                                 <div>Rs {item.discountAmount.toLocaleString()}</div>
-                                                                                <div className="mt-0.5">({item.discountPercent}%)</div>
+                                                                                <div className="mt-0.5">({item.discountType === "fixed" ? `Rs ${item.discountPercent}` : `${item.discountPercent}%`})</div>
                                                                             </>
                                                                         ) : '-'}
                                                                     </td>
@@ -266,7 +266,7 @@ function TransactionTable({ transactions, type, labels }) {
                                                                         {item.taxAmount > 0 ? (
                                                                             <>
                                                                                 <div>Rs {item.taxAmount.toLocaleString()}</div>
-                                                                                <div className="mt-0.5">({item.taxPercent}%)</div>
+                                                                                <div className="mt-0.5">({item.taxType === "fixed" ? `Rs ${item.taxPercent}` : `${item.taxPercent}%`})</div>
                                                                             </>
                                                                         ) : '-'}
                                                                     </td>

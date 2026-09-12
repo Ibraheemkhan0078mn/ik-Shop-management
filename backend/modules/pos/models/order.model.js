@@ -37,6 +37,8 @@ const orderSchema = new mongoose.Schema(
         subtotal: { type: Number, required: true, default: 0 },
         discountAmount: { type: Number, default: 0 },
         discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+        orderDiscountValue: { type: Number, default: 0 }, // Original discount input (e.g., 10 for 10% or 100 for Rs 100)
+        orderDiscountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" }, // How discount was entered
         totalTaxAmount: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true, default: 0 },
         paid: { type: Number, default: 0 },

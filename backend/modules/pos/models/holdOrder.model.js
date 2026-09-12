@@ -25,6 +25,8 @@ const holdOrderSchema = new mongoose.Schema(
         items: { type: [holdItemSchema], required: true },
         subtotal: { type: Number, required: true, default: 0 },
         discountAmount: { type: Number, default: 0 },
+        orderDiscountValue: { type: Number, default: 0 }, // Original discount input value
+        orderDiscountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" }, // How discount was entered
         totalAmount: { type: Number, required: true, default: 0 },
         customerName: { type: String, default: "" },
         waiter: { type: String, default: "" },

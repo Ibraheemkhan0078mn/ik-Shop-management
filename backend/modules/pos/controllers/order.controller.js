@@ -249,6 +249,27 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     });
 
     const validatedData = { ...req.body, items: normalizedItems };
+    
+    // Recalculate order totals based on normalized items
+    const recalculatedSubtotal = normalizedItems.reduce((sum, item) => sum + item.itemTotal, 0);
+    const recalculatedTotalTax = normalizedItems.reduce((sum, item) => sum + item.taxAmount, 0);
+    
+    // Recalculate order discount based on the new subtotal
+    let recalculatedOrderDiscount = 0;
+    if (validatedData.orderDiscountType === 'percentage' && validatedData.orderDiscountValue > 0) {
+        recalculatedOrderDiscount = (recalculatedSubtotal * validatedData.orderDiscountValue) / 100;
+    } else if (validatedData.orderDiscountType === 'fixed' && validatedData.orderDiscountValue > 0) {
+        recalculatedOrderDiscount = Math.min(validatedData.orderDiscountValue, recalculatedSubtotal);
+    }
+    
+    const recalculatedTotal = Math.max(0, recalculatedSubtotal - recalculatedOrderDiscount);
+    
+    // Override with recalculated values
+    validatedData.subtotal = recalculatedSubtotal;
+    validatedData.totalTaxAmount = recalculatedTotalTax;
+    validatedData.discountAmount = recalculatedOrderDiscount;
+    validatedData.totalAmount = recalculatedTotal;
+    validatedData.remainingAmount = recalculatedTotal; // Initially unpaid
 
     // Prevent duplicate order numbers
     const duplicate = await findOrderByNumberService(validatedData.orderNumber);

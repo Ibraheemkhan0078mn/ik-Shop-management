@@ -41,7 +41,9 @@ export default function OrderDetailsPage() {
     const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
     const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
     const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
-    const totalItemTax = (order?.items || []).reduce((sum, it) => sum + ((it.taxAmount || 0) * (it.quantity || 0)), 0);
+    const totalItemTax = (order?.items || []).reduce((sum, it) => sum + (it.taxAmount || 0), 0);
+    const totalLineTotal = (order?.items || []).reduce((sum, it) => sum + ((it.unitPrice || 0) * (it.quantity || 0)), 0);
+    const totalItemFinal = (order?.items || []).reduce((sum, it) => sum + (it.itemTotal || 0), 0);
 
     const handleRecalculate = async () => {
         try {
@@ -199,12 +201,8 @@ export default function OrderDetailsPage() {
                                         <span className="font-bold text-(--ink)">{order?.orderNumber || "—"}</span>
                                     </div>
                                     <div className="border border-(--border) px-3 py-2 flex justify-between">
-                                        <span className="text-(--muted)">Date:</span>
-                                        <span className="font-semibold text-(--ink)">{date}</span>
-                                    </div>
-                                    <div className="border border-(--border) px-3 py-2 flex justify-between">
-                                        <span className="text-(--muted)">Time Placed:</span>
-                                        <span className="font-semibold text-(--ink)">{time}</span>
+                                        <span className="text-(--muted)">Date & Time:</span>
+                                        <span className="font-semibold text-(--ink)">{date} - {time}</span>
                                     </div>
                                     <div className="border border-(--border) px-3 py-2 flex justify-between">
                                         <span className="text-(--muted)">Order Type:</span>
@@ -212,20 +210,6 @@ export default function OrderDetailsPage() {
                                             order?.orderType === "wholesale" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
                                         }`}>{order?.orderType || "retail"}</span>
                                     </div>
-                                    {order?.discountAmount > 0 && (
-                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-red-600">
-                                            <span>Order Discount:</span>
-                                            <span className="font-semibold">
-                                                {order?.discountType === "percentage" ? `RS: ${order?.discountAmount}` : `Rs ${order?.discountAmount?.toLocaleString()}`}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {order?.totalTaxAmount > 0 && (
-                                        <div className="border border-(--border) px-3 py-2 flex justify-between text-green-700">
-                                            <span>Total Tax:</span>
-                                            <span className="font-semibold">Rs {order?.totalTaxAmount?.toLocaleString()}</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -252,7 +236,7 @@ export default function OrderDetailsPage() {
                                 <tbody>
                                     {(order?.items || []).map((item, index) => {
                                         const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                                        const itemTax = (item.taxAmount || 0) * (item.quantity || 0);
+                                        const itemTax = item.taxAmount || 0; // taxAmount is already the total tax
                                         const itemDiscount = item.discountAmount || 0;
                                         const finalTotal = item.itemTotal || (lineTotal - itemDiscount + itemTax);
 
@@ -286,7 +270,9 @@ export default function OrderDetailsPage() {
                                                 <td className="px-3 py-3 text-right">
                                                     {item.discountPercent > 0 && (
                                                         <div className="text-red-600">
-                                                            <p className="font-semibold">{item.discountPercent}%</p>
+                                                            <p className="font-semibold">
+                                                                {item.discountType === "fixed" ? `Rs ${item.discountPercent}` : `${item.discountPercent}%`}
+                                                            </p>
                                                             <p className="text-xs">-Rs {itemDiscount.toLocaleString()}</p>
                                                         </div>
                                                     )}
@@ -295,7 +281,9 @@ export default function OrderDetailsPage() {
                                                 <td className="px-3 py-3 text-right">
                                                     {item.taxPercent > 0 && (
                                                         <div className="text-green-700">
-                                                            <p className="font-semibold">{item.taxPercent}%</p>
+                                                            <p className="font-semibold">
+                                                                {item.taxType === "fixed" ? `Rs ${item.taxPercent}` : `${item.taxPercent}%`}
+                                                            </p>
                                                             <p className="text-xs">+Rs {itemTax.toLocaleString()}</p>
                                                         </div>
                                                     )}
@@ -311,87 +299,70 @@ export default function OrderDetailsPage() {
                                         <td className="px-3 py-3 text-(--ink)" colSpan={2}>Subtotal</td>
                                         <td className="px-3 py-3 text-center text-(--ink)">{totalQty}</td>
                                         <td className="px-3 py-3"></td>
-                                        <td className="px-3 py-3"></td>
+                                        <td className="px-3 py-3 text-right text-(--ink)">Rs {totalLineTotal.toLocaleString()}</td>
                                         <td className="px-3 py-3 text-right text-red-600">-Rs {totalItemDiscount.toLocaleString()}</td>
                                         <td className="px-3 py-3 text-right text-green-700">+Rs {totalItemTax.toLocaleString()}</td>
-                                        <td className="px-3 py-3 text-right text-(--accent-2)">Rs {(order?.subtotal ?? 0).toLocaleString()}</td>
+                                        <td className="px-3 py-3 text-right text-(--accent-2)">Rs {totalItemFinal.toLocaleString()}</td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
-                        {/* Totals & Payment Summary Grid */}
-                        <div className="grid grid-cols-2 gap-6 mb-6">
-                            {/* Left: Calculation Breakdown */}
+                        {/* Amount Breakdown - Full Width */}
+                        <div className="mb-6">
                             <div className="border border-(--border) rounded-lg overflow-hidden">
                                 <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--accent-2)" }}>
                                     <DollarSign size={14} className="text-white" />
                                     <p className="text-xs font-bold text-white uppercase tracking-wide">Amount Breakdown</p>
                                 </div>
-                                <div className="p-4 space-y-2 text-sm">
-                                    <div className="flex justify-between py-1.5">
+                                <div className="p-4">
+                                    <div className="flex justify-between items-center py-2 text-sm">
                                         <span className="text-(--muted)">Subtotal (Items)</span>
                                         <span className="font-semibold text-(--ink)">Rs {(order?.subtotal ?? 0).toLocaleString()}</span>
                                     </div>
                                     {order?.discountAmount > 0 && (
-                                        <div className="flex justify-between py-1.5 text-red-600">
-                                            <span>Order Discount {order?.discountType === "percentage" ? `` : ""}</span>
+                                        <div className="flex justify-between items-center py-2 text-sm text-red-600">
+                                            <span className="font-semibold">
+                                                Order Discount
+                                                {order?.orderDiscountValue && order?.orderDiscountType === "percentage" 
+                                                    ? ` (${order.orderDiscountValue}%)` 
+                                                    : ""
+                                                }
+                                            </span>
                                             <span className="font-semibold">-Rs {(order?.discountAmount ?? 0).toLocaleString()}</span>
                                         </div>
                                     )}
-                                    {order?.totalTaxAmount > 0 && (
-                                        <div className="flex justify-between py-1.5 text-green-700">
-                                            <span>Total Tax</span>
-                                            <span className="font-semibold">+Rs {(order?.totalTaxAmount ?? 0).toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    <div className="border-t-2 border-(--border) pt-2 mt-2">
-                                        <div className="flex justify-between py-1.5">
+                                    <div className="border-t-2 border-(--border) pt-3 mt-3">
+                                        <div className="flex justify-between items-center py-2">
                                             <span className="font-bold text-lg text-(--ink)">Grand Total</span>
                                             <span className="font-bold text-lg text-(--accent-2)">Rs {(order?.totalAmount ?? 0).toLocaleString()}</span>
                                         </div>
+                                        <div className="flex justify-between items-center py-2 text-sm">
+                                            <span className="text-(--muted)">Total Paid</span>
+                                            <span className="font-semibold text-green-600">Rs {totalPaid.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-t border-(--border) pt-2">
+                                            <span className="font-bold text-lg text-(--ink)">Balance Due</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-bold text-lg ${remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}>
+                                                    Rs {remainingAmount.toLocaleString()}
+                                                </span>
+                                                {remainingAmount === 0 ? (
+                                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">PAID IN FULL</span>
+                                                ) : remainingAmount < (order?.totalAmount ?? 0) ? (
+                                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">PARTIALLY PAID</span>
+                                                ) : (
+                                                    <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">UNPAID</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                     {order?.staffCommission > 0 && (
-                                        <div className="flex justify-between py-1.5 text-xs border-t border-(--border) pt-2">
+                                        <div className="flex justify-between items-center py-2 text-sm border-t border-(--border) pt-2 mt-2">
                                             <span className="text-(--muted)">Staff Commission</span>
                                             <span className="font-semibold text-purple-600">Rs {order.staffCommission.toLocaleString()}</span>
                                         </div>
                                     )}
-                                </div>
-                            </div>
-
-                            {/* Right: Payment Status */}
-                            <div className="border border-(--border) rounded-lg overflow-hidden">
-                                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--accent-2)" }}>
-                                    <CreditCard size={14} className="text-white" />
-                                    <p className="text-xs font-bold text-white uppercase tracking-wide">Payment Status</p>
-                                </div>
-                                <div className="p-4 space-y-2 text-sm">
-                                    <div className="flex justify-between py-1.5">
-                                        <span className="text-(--muted)">Total Amount</span>
-                                        <span className="font-semibold text-(--ink)">Rs {(order?.totalAmount ?? 0).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between py-1.5">
-                                        <span className="text-(--muted)">Total Paid</span>
-                                        <span className="font-semibold text-green-600">Rs {totalPaid.toLocaleString()}</span>
-                                    </div>
-                                    <div className="border-t-2 border-(--border) pt-2 mt-2">
-                                        <div className="flex justify-between py-1.5">
-                                            <span className="font-bold text-lg text-(--ink)">Balance Due</span>
-                                            <span className={`font-bold text-lg ${remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}>
-                                                Rs {remainingAmount.toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-center pt-2">
-                                        {remainingAmount === 0 ? (
-                                            <span className="px-3 py-1.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">PAID IN FULL</span>
-                                        ) : remainingAmount < (order?.totalAmount ?? 0) ? (
-                                            <span className="px-3 py-1.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">PARTIALLY PAID</span>
-                                        ) : (
-                                            <span className="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">UNPAID</span>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         </div>

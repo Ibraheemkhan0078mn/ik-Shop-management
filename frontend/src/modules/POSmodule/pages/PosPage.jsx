@@ -778,17 +778,14 @@ export default function PosPage() {
       });
 
       // Calculate order totals
-      // subtotal = sum of priceAfterDiscount (discounted amount before tax and before order discount)
+      // subtotal = sum of all item totals (including item discounts and taxes)
       const itemDiscountTotal = updatedCartItems.reduce((sum, item) => sum + (Number(item.discountAmount) || 0), 0);
-      const priceAfterItemDiscounts = updatedCartItems.reduce((sum, item) => {
-        const lineTotal = item.unitPrice * item.qty;
-        const itemDiscount = Number(item.discountAmount) || 0;
-        return sum + (lineTotal - itemDiscount);
-      }, 0);
       
-      const billSubtotal = priceAfterItemDiscounts;  // Subtotal is sum of prices after item discounts, before tax and order discount
+      // billSubtotal is the sum of all itemTotal values (after item discounts and taxes, before order discount)
+      const billSubtotal = updatedCartItems.reduce((sum, item) => sum + (Number(item.itemTotal) || 0), 0);
+      
       const totalTaxAmount = updatedCartItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0) * (Number(item.qty) || 0), 0);
-      const totalAmount = Math.max(0, billSubtotal - discountAmount + totalTaxAmount);
+      const totalAmount = Math.max(0, billSubtotal - discountAmount);  // billSubtotal already includes item taxes
 
       const orderPayload = {
         orderNumber: orderNumberData.orderNumber,
@@ -796,6 +793,8 @@ export default function PosPage() {
         subtotal: billSubtotal,
         discountAmount,
         discountType: orderDiscountType || 'percentage',
+        orderDiscountValue: orderDiscount || 0, // Original input value (e.g., 10 for 10%)
+        orderDiscountType: orderDiscountType || 'percentage', // How it was entered
         totalTaxAmount,
         totalAmount,
         items: buildOrderItemsFromCart(updatedCartItems),
