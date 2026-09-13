@@ -2,8 +2,10 @@ import { createPurchaseService, findPurchaseService, findOnePurchaseService, fin
 import { findOneBatchService, createBatchService, updateBatchService } from "./batch.crud.js";
 import { adjustStock, calculateStockDiff } from "../../../common/services/stockManager.js";
 import { getTransactions } from "../../transactions/services/transaction.service.js";
+import { updateTransaction } from "../../transactions/services/transaction.service.js";
 import { generateBatchNumber } from "./batch.service.js";
 import { updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
+import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
 
 const generatePurchaseNumber = async () => {
     const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
@@ -411,6 +413,61 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
         totalAmount: data.totalAmount,
         notes: data.notes,
     });
+
+    // A delivered purchase creates one automatic supplier-credit transaction.
+    // Keep that transaction synchronized when the purchase total or supplier changes.
+    if (existing.status === 'delivered') {
+        const previousSupplierId = existing.supplier?._id || existing.supplier;
+        const previousSupplier = previousSupplierId
+            ? await findOneSupplierService({ _id: previousSupplierId })
+            : null;
+        const currentSupplier = data.supplier
+            ? await findOneSupplierService({ _id: data.supplier })
+            : null;
+        const currentCreditAccount = currentSupplier?.qarzaAccountId;
+        const purchaseTransactions = await getTransactions({ sourceType: 'purchase', sourceId: id });
+        const automaticCredit = purchaseTransactions.find((transaction) => (
+            transaction.method === 'credit' &&
+            typeof transaction.notes === 'string' &&
+            transaction.notes.startsWith('Auto-created credit transaction on delivery for purchase')
+        ));
+
+        if (automaticCredit && currentCreditAccount) {
+            await updateTransaction(automaticCredit._id, {
+                amount: Number(purchase.totalAmount) || 0,
+                creditAmount: Number(purchase.totalAmount) || 0,
+                cashAmount: 0,
+                creditAccount: currentCreditAccount,
+                creditType: 'cashin',
+                notes: `Auto-created credit transaction on delivery for purchase ${purchase.invoiceNumber}`,
+            });
+        } else if (!automaticCredit && currentCreditAccount) {
+            const { createPurchaseTransaction } = await import("../../transactions/services/transaction.service.js");
+            await createPurchaseTransaction({
+                purchase: id,
+                paymentMethod: 'credit',
+                amount: Number(purchase.totalAmount) || 0,
+                cashAmount: 0,
+                creditAmount: Number(purchase.totalAmount) || 0,
+                creditAccount: currentCreditAccount,
+                paymentDate: new Date(),
+                notes: `Auto-created credit transaction on delivery for purchase ${purchase.invoiceNumber}`,
+            });
+        }
+
+        await recalculatePurchasePaidAmount(id);
+
+        const accountIds = new Set([
+            previousSupplier?.qarzaAccountId?.toString(),
+            currentCreditAccount?.toString(),
+        ].filter(Boolean));
+        if (accountIds.size > 0) {
+            const { recalculateSupplierBalance } = await import("../../qarza/services/recalculateSupplierBalance.service.js");
+            for (const accountId of accountIds) {
+                await recalculateSupplierBalance(accountId);
+            }
+        }
+    }
 
     return purchase;
 };

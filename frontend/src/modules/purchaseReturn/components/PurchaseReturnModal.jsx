@@ -1068,16 +1068,57 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                         </Field>
                                                     </div>
                                                     <Field className="mt-3">
-                                                        <div 
-                                                            className="flex items-center justify-between cursor-pointer"
-                                                            onClick={() => setExpandedCalculation(prev => ({
-                                                                ...prev,
-                                                                [batchId]: !prev[batchId]
-                                                            }))}
-                                                        >
-                                                            <Label className="cursor-pointer">{labels.refundPreview}</Label>
-                                                            {expandedCalculation[batchId] ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </div>
+                                                        {(() => {
+                                                            const calculation = getReturnCalculationBreakdown(item, details);
+                                                            const discountTotal = calculation.itemDiscount + calculation.invoiceDiscount;
+                                                            const taxTotal = calculation.itemTax + calculation.invoiceTax;
+
+                                                            return (
+                                                                <>
+                                                                    <Label>{labels.refundPreview}</Label>
+                                                                    <div className="rounded-xl px-4 py-3 space-y-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                        <div className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
+                                                                            {calculation.returnQuantity} item(s) returned
+                                                                        </div>
+                                                                        <div className="flex justify-between text-sm">
+                                                                            <span style={{ color: "var(--ink)" }}>Original value</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calculation.baseTotal.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-sm">
+                                                                            <span style={{ color: "var(--ink)" }}>Discount already given</span>
+                                                                            <span className="font-mono text-red-600">- Rs {discountTotal.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-sm">
+                                                                            <span style={{ color: "var(--ink)" }}>Tax already added</span>
+                                                                            <span className="font-mono text-green-700">+ Rs {taxTotal.toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-sm">
+                                                                            <span style={{ color: "var(--ink)" }}>Your share of shipping</span>
+                                                                            <span className="font-mono text-green-700">+ Rs {calculation.shipping.toFixed(2)}</span>
+                                                                        </div>
+                                                                        {calculation.cut > 0 && (
+                                                                            <div className="flex justify-between text-sm">
+                                                                                <span style={{ color: "var(--ink)" }}>Cut from refund</span>
+                                                                                <span className="font-mono text-red-600">- Rs {calculation.cut.toFixed(2)}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="flex justify-between pt-2 text-sm font-bold" style={{ borderTop: "1px solid var(--border)" }}>
+                                                                            <span style={{ color: "var(--ink)" }}>You will get back</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calculation.refund.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="inline-flex items-center gap-1 text-xs font-semibold"
+                                                                        style={{ color: "var(--accent-2)" }}
+                                                                        onClick={() => setExpandedCalculation(prev => ({ ...prev, [batchId]: !prev[batchId] }))}
+                                                                    >
+                                                                        {expandedCalculation[batchId] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                        {expandedCalculation[batchId] ? "Hide full calculation" : "See how this was calculated"}
+                                                                    </button>
+                                                                </>
+                                                            );
+                                                        })()}
                                                         {expandedCalculation[batchId] && (
                                                             <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                                                                 <div className="text-xs space-y-1.5">
@@ -1135,6 +1176,26 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     {/* Total refund summary */}
                     {purchaseData && Object.keys(selectedItems).length > 0 && (
                         <Card>
+                            {(() => {
+                                const selectedCalculations = purchaseData.items
+                                    .filter((item) => selectedItems[item.batch?._id || item.batch])
+                                    .map((item) => getReturnCalculationBreakdown(item, selectedItems[item.batch?._id || item.batch]));
+                                const returnedBase = selectedCalculations.reduce((sum, calculation) => sum + calculation.baseTotal, 0);
+                                const invoiceBase = selectedCalculations[0]?.invoiceBaseTotal || 0;
+                                const allQuantitiesReturned = purchaseData.items.every((item) => {
+                                    const details = selectedItems[item.batch?._id || item.batch];
+                                    return details && Number(details.returnQuantity) >= Number(item.quantity || 0);
+                                });
+                                const matchesInvoice = Math.abs(totalRefund - Number(purchaseData.totalAmount || 0)) < 0.01;
+
+                                return (
+                                    <div className="mb-3 rounded-xl px-3 py-2 text-xs" style={{ background: allQuantitiesReturned && matchesInvoice ? "rgba(22,163,74,0.08)" : "var(--surface-muted)", color: "var(--ink)" }}>
+                                        {allQuantitiesReturned
+                                            ? `Returning everything: total refund Rs ${totalRefund.toFixed(2)} ${matchesInvoice ? "matches the original invoice total." : `compared with the original invoice total of Rs ${Number(purchaseData.totalAmount || 0).toFixed(2)}.`}`
+                                            : `This return covers ${invoiceBase > 0 ? ((returnedBase / invoiceBase) * 100).toFixed(2) : "0.00"}% of the invoice item value.`}
+                                    </div>
+                                );
+                            })()}
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                                     {labels.totalRefundAmount} ({Object.keys(selectedItems).length} {labels.items})
