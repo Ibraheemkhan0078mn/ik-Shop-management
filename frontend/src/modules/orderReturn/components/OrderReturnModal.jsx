@@ -25,6 +25,38 @@ const RETURN_REASONS = [
     { value: "other", label: "Other" },
 ];
 
+const calculateReturnItemTotals = (details, item, quantity = details.returnQuantity) => {
+    const returnQuantity = Number(quantity) || 0;
+    const price = Number(details.originalPrice || item?.unitPrice || item?.originalPrice || 0);
+    const discountValue = Number(details.discountPercent || 0);
+    const taxValue = Number(details.taxPercent || 0);
+    const discountType = details.discountType || "percentage";
+    const taxType = details.taxType || "percentage";
+    const perUnitOrderDiscountShare = Number(details.perUnitOrderDiscountShare || 0);
+    const lineTotal = price * returnQuantity;
+    const discountAmount = discountType === "fixed"
+        ? discountValue * returnQuantity
+        : (lineTotal * discountValue) / 100;
+    const orderDiscountAmount = perUnitOrderDiscountShare * returnQuantity;
+    const priceAfterItemDiscount = Math.max(0, lineTotal - discountAmount);
+    const priceAfterDiscount = Math.max(0, priceAfterItemDiscount - orderDiscountAmount);
+    const taxAmount = taxType === "fixed"
+        ? taxValue * returnQuantity
+        : (priceAfterDiscount * taxValue) / 100;
+    const itemTotal = priceAfterDiscount + taxAmount;
+
+    return {
+        lineTotal,
+        discountAmount,
+        orderDiscountAmount,
+        priceAfterItemDiscount,
+        priceAfterDiscount,
+        taxAmount,
+        itemTotal,
+        unitCosting: returnQuantity > 0 ? itemTotal / returnQuantity : 0,
+    };
+};
+
 // ─── Sub-components ───────────────────────────────────────────
 const OrderNumberSearch = ({ value, onChange, onSearch, error, isLoading }) => (
     <div className="mb-6">
@@ -174,11 +206,11 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                     {expandedCalculation[itemId] && (
                                         <div className="mt-2 p-3 bg-(--surface) rounded-lg border border-(--border)">
                                             <div className="text-xs space-y-1.5">
-                                                {/* Row 1: Original Price */}
+                                                {/* Row 1: Multiply by quantity */}
                                                 <div className="flex justify-between items-center py-1">
-                                                    <span style={{ color: "var(--ink)" }}>1. Original Price:</span>
+                                                    <span style={{ color: "var(--ink)" }}>1. Price × quantity:</span>
                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                        Rs {Number(details.originalPrice || item.unitPrice || item.originalPrice || 0).toFixed(2)}
+                                                        Rs {calculateReturnItemTotals(details, item).lineTotal.toFixed(2)}
                                                     </span>
                                                 </div>
                                                 
@@ -189,19 +221,8 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                     </span>
                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
                                                         -Rs {(() => {
-                                                            const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
-                                                            const discountAmount = details.discountType === "percentage" 
-                                                                ? (price * (details.discountPercent || 0) / 100) 
-                                                                : (details.discountPercent || 0);
-                                                            return discountAmount.toFixed(2);
-                                                        })()} → Rs {(() => {
-                                                            const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
-                                                            const discountAmount = details.discountType === "percentage" 
-                                                                ? (price * (details.discountPercent || 0) / 100) 
-                                                                : (details.discountPercent || 0);
-                                                            const priceAfterDiscount = price - discountAmount;
-                                                            return priceAfterDiscount.toFixed(2);
-                                                        })()}
+                                                            return calculateReturnItemTotals(details, item).discountAmount.toFixed(2);
+                                                        })()} → Rs {calculateReturnItemTotals(details, item).priceAfterItemDiscount.toFixed(2)}
                                                     </span>
                                                 </div>
 
@@ -223,12 +244,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                             </div>
                                                             <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
                                                                 -Rs {details.perUnitOrderDiscountShare.toFixed(2)} → Rs {(() => {
-                                                                    const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
-                                                                    const discountAmount = details.discountType === "percentage" 
-                                                                        ? (price * (details.discountPercent || 0) / 100) 
-                                                                        : (details.discountPercent || 0);
-                                                                    const priceAfterDiscount = price - discountAmount - details.perUnitOrderDiscountShare;
-                                                                    return priceAfterDiscount.toFixed(2);
+                                                                    return calculateReturnItemTotals(details, item).priceAfterDiscount.toFixed(2);
                                                                 })()}
                                                             </span>
                                                         </div>
@@ -265,26 +281,18 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                     </span>
                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
                                                         +Rs {(() => {
-                                                            const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
-                                                            const discountAmount = details.discountType === "percentage" 
-                                                                ? (price * (details.discountPercent || 0) / 100) 
-                                                                : (details.discountPercent || 0);
-                                                            const priceAfterDiscount = price - discountAmount - (details.perUnitOrderDiscountShare || 0);
-                                                            const taxAmount = details.taxType === "percentage" 
-                                                                ? (priceAfterDiscount * (details.taxPercent || 0) / 100) 
-                                                                : (details.taxPercent || 0);
-                                                            return taxAmount.toFixed(2);
-                                                        })()} → Rs {Number(details.unitCosting || details.originalPrice || 0).toFixed(2)}
+                                                            return calculateReturnItemTotals(details, item).taxAmount.toFixed(2);
+                                                        })()} → Rs {calculateReturnItemTotals(details, item).itemTotal.toFixed(2)}
                                                     </span>
                                                 </div>
                                                 
                                                 {/* Row 4: Multiply by Quantity */}
                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
                                                     <span style={{ color: "var(--ink)" }}>
-                                                        4. Multiply: ×{details.returnQuantity || 1} items
+                                                        4. Returned line total:
                                                     </span>
                                                     <span className="font-mono font-bold text-sm" style={{ color: "var(--accent-2)" }}>
-                                                        Rs {(Number(details.unitCosting || details.originalPrice || 0) * (details.returnQuantity || 1)).toFixed(2)}
+                                                        Rs {calculateReturnItemTotals(details, item).itemTotal.toFixed(2)}
                                                     </span>
                                                 </div>
 
@@ -294,7 +302,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                         5. Less Cut: Rs {Number(details.cut || 0).toFixed(2)}
                                                     </span>
                                                     <span className="font-mono font-bold text-sm" style={{ color: "#16a34a" }}>
-                                                        Refund: Rs {Math.max(0, (((details.returnQuantity || 1) * Number(details.unitCosting || details.originalPrice || 0)) - Number(details.cut || 0))).toFixed(2)}
+                                                        Refund: Rs {Math.max(0, calculateReturnItemTotals(details, item).itemTotal - Number(details.cut || 0)).toFixed(2)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -515,26 +523,22 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 delete newSelected[itemId];
                 return newSelected;
             } else {
-                // Calculate unit costing based on taxType and discountType
                 const price = item.unitPrice || item.originalPrice || 0;
                 const discountPercent = item.discountPercent || 0;
                 const discountType = item.discountType || "percentage";
                 const taxPercent = item.taxPercent || 0;
                 const taxType = item.taxType || "percentage";
                 const perUnitOrderDiscountShare = item.perUnitOrderDiscountShare || 0;
-                
-                // Calculate discount amount per unit
-                const discountAmount = discountType === "percentage" 
-                    ? (price * discountPercent) / 100 
-                    : discountPercent;
-                
-                // Calculate tax amount per unit (tax applies after discount and order discount)
-                const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
-                const taxAmount = taxType === "percentage" 
-                    ? (priceAfterDiscount * taxPercent) / 100 
-                    : taxPercent;
-                
-                const unitCosting = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
+                const initialDetails = {
+                    originalPrice: price,
+                    discountPercent,
+                    discountType,
+                    taxPercent,
+                    taxType,
+                    perUnitOrderDiscountShare,
+                    returnQuantity: 1,
+                };
+                const { unitCosting } = calculateReturnItemTotals(initialDetails, item, 1);
                 
                 return {
                     ...prev,
@@ -574,22 +578,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 const qty = Number(details.returnQuantity) || 1;
                 const cut = Number(details.cut) || 0;
                 
-                // Recalculate unit costing based on stored tax/discount details
-                const price = details.originalPrice || 0;
-                const discountPercent = details.discountPercent || 0;
-                const discountType = details.discountType || "percentage";
-                const taxPercent = details.taxPercent || 0;
-                const taxType = details.taxType || "percentage";
-                const perUnitOrderDiscountShare = details.perUnitOrderDiscountShare || 0;
-                
-                const discountAmount = discountType === "percentage" 
-                    ? (price * discountPercent) / 100 
-                    : discountPercent;
-                const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
-                const taxAmount = taxType === "percentage" 
-                    ? (priceAfterDiscount * taxPercent) / 100 
-                    : taxPercent;
-                const unitCosting = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
+                const { unitCosting } = calculateReturnItemTotals(details, null, qty);
                 
                 const refundAmount = (qty * unitCosting) - cut;
                 updated[itemId].unitCosting = unitCosting;

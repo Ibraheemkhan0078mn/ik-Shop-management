@@ -202,6 +202,12 @@ export default function OrderReturnDetail() {
                                     const quantity = item.quantity || 0;
                                     const cut = item.cut || 0;
                                     const refundAmount = item.refundAmount || 0;
+                                    const lineTotal = originalPrice * quantity;
+                                    const discountAmount = (item.costing?.discountAmount || 0) * quantity;
+                                    const orderDiscountAmount = (item.perItemOrderDiscountShare?.perUnitOrderDiscountShare || 0) * quantity;
+                                    const priceAfterItemDiscount = lineTotal - discountAmount;
+                                    const priceAfterDiscount = Math.max(0, priceAfterItemDiscount - orderDiscountAmount);
+                                    const taxAmount = (item.costing?.taxAmount || 0) * quantity;
                                     const isExpanded = expandedItems[index];
 
                                     return (
@@ -233,11 +239,11 @@ export default function OrderReturnDetail() {
                                                     <td colSpan="7" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
                                                         <div className="p-4 rounded-lg max-w-4xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                                             <div className="text-sm space-y-1.5">
-                                                                {/* Row 1: Original Price */}
+                                                                {/* Row 1: Multiply by quantity */}
                                                                 <div className="flex justify-between items-center py-1">
-                                                                    <span style={{ color: "var(--ink)" }}>1. Original Price:</span>
+                                                                    <span style={{ color: "var(--ink)" }}>1. Price × quantity:</span>
                                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                        Rs {originalPrice.toFixed(2)}
+                                                                        Rs {lineTotal.toFixed(2)}
                                                                     </span>
                                                                 </div>
                                                                 
@@ -247,7 +253,7 @@ export default function OrderReturnDetail() {
                                                                         2. Discount: {item.costing?.discountPercent || 0} {item.costing?.discountType === 'fixed' ? 'Rs' : '%'}
                                                                     </span>
                                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                        -Rs {(item.costing?.discountAmount || 0).toFixed(2)} → Rs {(originalPrice - (item.costing?.discountAmount || 0)).toFixed(2)}
+                                                                        -Rs {discountAmount.toFixed(2)} → Rs {priceAfterItemDiscount.toFixed(2)}
                                                                     </span>
                                                                 </div>
 
@@ -258,7 +264,7 @@ export default function OrderReturnDetail() {
                                                                             2.5. Order Discount Share:
                                                                         </span>
                                                                         <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                            -Rs {item.perItemOrderDiscountShare.perUnitOrderDiscountShare.toFixed(2)} → Rs {(originalPrice - (item.costing?.discountAmount || 0) - item.perItemOrderDiscountShare.perUnitOrderDiscountShare).toFixed(2)}
+                                                                            -Rs {orderDiscountAmount.toFixed(2)} → Rs {priceAfterDiscount.toFixed(2)}
                                                                         </span>
                                                                     </div>
                                                                 )}
@@ -269,17 +275,17 @@ export default function OrderReturnDetail() {
                                                                         3. Tax: {item.costing?.taxType === 'fixed' ? `Rs ${item.costing?.taxPercent || 0}` : `${item.costing?.taxPercent || 0}%`}
                                                                     </span>
                                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                        +Rs {(item.costing?.taxAmount || 0).toFixed(2)} → Rs {unitCosting.toFixed(2)}
+                                                                        +Rs {taxAmount.toFixed(2)} → Rs {(priceAfterDiscount + taxAmount).toFixed(2)}
                                                                     </span>
                                                                 </div>
                                                                 
                                                                 {/* Row 4: Multiply by Quantity */}
                                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
                                                                     <span style={{ color: "var(--ink)" }}>
-                                                                        4. Multiply: ×{quantity} items
+                                                                        4. Returned line total:
                                                                     </span>
                                                                     <span className="font-mono font-bold" style={{ color: "var(--accent-2)" }}>
-                                                                        Rs {(quantity * unitCosting).toFixed(2)}
+                                                                        Rs {(priceAfterDiscount + taxAmount).toFixed(2)}
                                                                     </span>
                                                                 </div>
 

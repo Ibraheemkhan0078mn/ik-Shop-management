@@ -347,22 +347,27 @@ export default function PosPage() {
           // Preserve the original batch price for reference (only save it once)
           const originalBatchPrice = item.originalBatchPrice || item.unitPrice;
           
-          // Calculate new tax amount based on new price
+          const quantity = Number(item.qty) || 0;
+          const lineTotal = Number(newPrice) * quantity;
+          const discountAmount = (lineTotal * (item.discountPercent || 0)) / 100;
+          const priceAfterDiscount = lineTotal - discountAmount;
+
+          // Calculate tax after the line discount
           let newTaxAmount = 0;
           if (item.taxType === 'fixed') {
-            newTaxAmount = item.taxPercent || 0;
+            newTaxAmount = (item.taxPercent || 0) * quantity;
           } else {
-            newTaxAmount = (newPrice * (item.taxPercent || 0)) / 100;
+            newTaxAmount = (priceAfterDiscount * (item.taxPercent || 0)) / 100;
           }
           
-          // Calculate new item total
-          const newItemTotal = (newPrice * item.qty) + (newTaxAmount * item.qty);
+          const newItemTotal = priceAfterDiscount + newTaxAmount;
           
           return {
             ...item,
             unitPrice: newPrice,
             originalBatchPrice, // Preserve original batch price
             taxAmount: newTaxAmount,
+            discountAmount,
             itemTotal: newItemTotal,
             customInput: true,  // Mark as custom input
           };
@@ -394,29 +399,29 @@ export default function PosPage() {
 
     const basePrice = Number(selectedBatch?.sellingPrice || product.perItemPrice || product.defaultSalePrice) || 0;
     const discountPercent = Number(product.discount) || 0;
-    const priceAfterDiscount = basePrice - (basePrice * discountPercent) / 100;
-
-    let finalUnitPrice = priceAfterDiscount;
-    if (portionType === "half") finalUnitPrice = priceAfterDiscount / 2;
-    if (portionType === "custom") finalUnitPrice = Number(customPrice) || priceAfterDiscount;
+    let finalUnitPrice = basePrice;
+    if (portionType === "half") finalUnitPrice = basePrice / 2;
+    if (portionType === "custom") finalUnitPrice = Number(customPrice) || basePrice;
 
     const batchId = selectedBatch?._id || null;
 
-    // Calculate tax amount
+    // Keep the cart price before discount; the payment flow applies discounts to the line total.
+    const lineTotal = finalUnitPrice;
+    const discountAmount = (lineTotal * discountPercent) / 100;
+    const priceAfterDiscount = lineTotal - discountAmount;
+
+    // Calculate tax after the item discount
     const taxPercent = Number(product.taxPercent) || 0;
     const taxType = product.taxType || "percentage";
     let taxAmount = 0;
     if (taxType === "percentage") {
-      taxAmount = (finalUnitPrice * taxPercent) / 100;
+      taxAmount = (priceAfterDiscount * taxPercent) / 100;
     } else {
       taxAmount = taxPercent;
     }
 
-    // Calculate discount amount
-    const discountAmount = (basePrice * discountPercent) / 100;
-
-    // Calculate item total (price + tax - discount)
-    const itemTotal = (finalUnitPrice * 1) + taxAmount - discountAmount;
+    // Calculate item total after line discount and tax
+    const itemTotal = priceAfterDiscount + taxAmount;
 
     setCartItems((prev) => {
       // Check if item with same product and batch already exists in cart
@@ -452,7 +457,7 @@ export default function PosPage() {
           lineItemId: generateLineItemId(), // Add stable unique ID
           qty: 1,
           unitPrice: finalUnitPrice,
-          originalPrice: priceAfterDiscount,
+          originalPrice: finalUnitPrice,
           image: toImageUrl(product.image),
           portionType,
           batchId,

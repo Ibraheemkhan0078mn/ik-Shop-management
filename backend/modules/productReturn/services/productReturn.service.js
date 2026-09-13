@@ -35,42 +35,48 @@ export const calculatePerUnitOrderDiscountShare = (order, orderItem) => {
     return perUnitOrderDiscountShare;
 };
 
+const calculateReturnItemTotals = (item) => {
+    const quantity = Number(item.quantity) || 0;
+    const price = Number(item.originalPrice) || 0;
+    const discountValue = Number(item.costing?.discountPercent) || 0;
+    const discountType = item.costing?.discountType || "percentage";
+    const taxValue = Number(item.costing?.taxPercent) || 0;
+    const taxType = item.costing?.taxType || "percentage";
+    const perUnitOrderDiscountShare = Number(item.perItemOrderDiscountShare?.perUnitOrderDiscountShare) || 0;
+
+    // Calculate the complete returned line before applying discounts and tax.
+    const lineTotal = price * quantity;
+    const discountAmount = discountType === "fixed"
+        ? discountValue * quantity
+        : (lineTotal * discountValue) / 100;
+    const orderDiscountAmount = perUnitOrderDiscountShare * quantity;
+    const priceAfterDiscount = Math.max(0, lineTotal - discountAmount - orderDiscountAmount);
+    const taxAmount = taxType === "fixed"
+        ? taxValue * quantity
+        : (priceAfterDiscount * taxValue) / 100;
+    const itemTotal = priceAfterDiscount + taxAmount;
+    const unitCost = quantity > 0 ? itemTotal / quantity : 0;
+    const refundAmount = Math.max(0, itemTotal - (Number(item.cut) || 0));
+
+    return { lineTotal, discountAmount, orderDiscountAmount, priceAfterDiscount, taxAmount, itemTotal, unitCost, refundAmount };
+};
+
 const createProductReturn = async (returnData) => {
     const returnNumber = await generateReturnNumber();
     
     // Calculate refundAmount for each item if not provided or validate it
     const itemsWithCalculatedRefund = returnData.items.map(item => {
-        // Recalculate unit costing based on taxType and discountType
-        const price = item.originalPrice || 0;
-        const taxPercent = item.costing?.taxPercent || 0;
-        const taxType = item.costing?.taxType || "percentage";
-        const discountPercent = item.costing?.discountPercent || 0;
-        const discountType = item.costing?.discountType || "percentage";
-        const perUnitOrderDiscountShare = item.perItemOrderDiscountShare?.perUnitOrderDiscountShare || 0;
-        
-        // Calculate discount amount per unit
-        const discountAmount = discountType === "percentage" 
-            ? (price * discountPercent) / 100 
-            : discountPercent;
-        
-        // Calculate tax amount per unit (tax applies after discount and order discount)
-        const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
-        const taxAmount = taxType === "percentage" 
-            ? (priceAfterDiscount * taxPercent) / 100 
-            : taxPercent;
-        
-        const unitCost = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
-        const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
+        const totals = calculateReturnItemTotals(item);
         
         return {
             ...item,
             cut: item.cut || 0,
-            refundAmount: item.refundAmount || calculatedRefund,
+            refundAmount: totals.refundAmount,
             costing: {
                 ...item.costing,
-                itemTotal: unitCost,
-                taxAmount,
-                discountAmount,
+                itemTotal: totals.unitCost,
+                taxAmount: totals.taxAmount / (Number(item.quantity) || 1),
+                discountAmount: totals.discountAmount / (Number(item.quantity) || 1),
             },
             perItemOrderDiscountShare: item.perItemOrderDiscountShare || {},
         };
@@ -175,37 +181,17 @@ const updateProductReturn = async (id, updateData) => {
     let itemsToUpdate = updateData.items;
     if (itemsToUpdate) {
         itemsToUpdate = itemsToUpdate.map(item => {
-            // Recalculate unit costing based on taxType and discountType
-            const price = item.originalPrice || 0;
-            const taxPercent = item.costing?.taxPercent || 0;
-            const taxType = item.costing?.taxType || "percentage";
-            const discountPercent = item.costing?.discountPercent || 0;
-            const discountType = item.costing?.discountType || "percentage";
-            const perUnitOrderDiscountShare = item.perItemOrderDiscountShare?.perUnitOrderDiscountShare || 0;
-            
-            // Calculate discount amount per unit
-            const discountAmount = discountType === "percentage" 
-                ? (price * discountPercent) / 100 
-                : discountPercent;
-            
-            // Calculate tax amount per unit (tax applies after discount and order discount)
-            const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
-            const taxAmount = taxType === "percentage" 
-                ? (priceAfterDiscount * taxPercent) / 100 
-                : taxPercent;
-            
-            const unitCost = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
-            const calculatedRefund = (item.quantity * unitCost) - (item.cut || 0);
+            const totals = calculateReturnItemTotals(item);
             
             return {
                 ...item,
                 cut: item.cut || 0,
-                refundAmount: item.refundAmount || calculatedRefund,
+                refundAmount: totals.refundAmount,
                 costing: {
                     ...item.costing,
-                    itemTotal: unitCost,
-                    taxAmount,
-                    discountAmount,
+                    itemTotal: totals.unitCost,
+                    taxAmount: totals.taxAmount / (Number(item.quantity) || 1),
+                    discountAmount: totals.discountAmount / (Number(item.quantity) || 1),
                 },
                 perItemOrderDiscountShare: item.perItemOrderDiscountShare || {},
             };
@@ -299,30 +285,9 @@ const recalculateProductReturnRefundAmount = async (productReturnId) => {
     }
 
     // Recalculate total refund amount from items using taxType and discountType
-    const calculatedRefundAmount = productReturn.items.reduce((sum, item) => {
-        // Recalculate unit costing based on taxType and discountType
-        const price = item.originalPrice || 0;
-        const taxPercent = item.costing?.taxPercent || 0;
-        const taxType = item.costing?.taxType || "percentage";
-        const discountPercent = item.costing?.discountPercent || 0;
-        const discountType = item.costing?.discountType || "percentage";
-        const perUnitOrderDiscountShare = item.perItemOrderDiscountShare?.perUnitOrderDiscountShare || 0;
-        
-        // Calculate discount amount per unit
-        const discountAmount = discountType === "percentage" 
-            ? (price * discountPercent) / 100 
-            : discountPercent;
-        
-        // Calculate tax amount per unit (tax applies after discount and order discount)
-        const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
-        const taxAmount = taxType === "percentage" 
-            ? (priceAfterDiscount * taxPercent) / 100 
-            : taxPercent;
-        
-        const unitCost = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
-        const itemRefund = (item.quantity * unitCost) - (item.cut || 0);
-        return sum + itemRefund;
-    }, 0);
+    const calculatedRefundAmount = productReturn.items.reduce((sum, item) => (
+        sum + calculateReturnItemTotals(item).refundAmount
+    ), 0);
 
     // Update the product return with correct total
     await updateProductReturnService(productReturnId, {
