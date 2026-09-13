@@ -11,6 +11,7 @@ import {
     updateReturnStatus,
     getPaginatedProductReturns,
     recalculateProductReturnRefundAmount,
+    calculatePerUnitOrderDiscountShare,
 } from "../services/productReturn.service.js";
 import {
     createProductReturnPayment,
@@ -36,9 +37,21 @@ export const getOrderForReturn = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse("Order not found", 404));
     }
     
+    // Calculate per-unit order discount share for each item
+    const itemsWithOrderDiscountShare = order.items.map(item => {
+        const perUnitOrderDiscountShare = calculatePerUnitOrderDiscountShare(order, item);
+        return {
+            ...item.toObject ? item.toObject() : item,
+            perUnitOrderDiscountShare,
+        };
+    });
+    
     res.status(200).json({
         success: true,
-        data: order,
+        data: {
+            ...order.toObject ? order.toObject() : order,
+            items: itemsWithOrderDiscountShare,
+        },
     });
 });
 

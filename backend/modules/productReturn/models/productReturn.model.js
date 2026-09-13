@@ -49,6 +49,19 @@ const productReturnItemSchema = new mongoose.Schema({
             itemTotal: { type: Number, default: 0 }, // representing final unit costing
         }, { _id: false }),
         default: () => ({})
+    },
+    // Order discount share for recalculation
+    perItemOrderDiscountShare: {
+        type: new mongoose.Schema({
+            orderDiscountValue: { type: Number, default: 0 }, // Original order discount input (e.g., 10 for 10% or 100 for Rs 100)
+            orderDiscountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+            orderDiscountAmount: { type: Number, default: 0 }, // Total order discount amount
+            orderSubtotal: { type: Number, default: 0 }, // Order subtotal before discount
+            itemQuantityInOrder: { type: Number, default: 0 }, // Quantity of this item in the original order
+            itemLineTotal: { type: Number, default: 0 }, // Line total of this item in the original order
+            perUnitOrderDiscountShare: { type: Number, default: 0 }, // Per-unit order discount share for this item
+        }, { _id: false }),
+        default: () => ({})
     }
 });
 

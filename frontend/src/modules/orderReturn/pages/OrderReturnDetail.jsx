@@ -250,6 +250,18 @@ export default function OrderReturnDetail() {
                                                                         -Rs {(item.costing?.discountAmount || 0).toFixed(2)} → Rs {(originalPrice - (item.costing?.discountAmount || 0)).toFixed(2)}
                                                                     </span>
                                                                 </div>
+
+                                                                {/* Row 2.5: Order Discount Share */}
+                                                                {item.perItemOrderDiscountShare?.perUnitOrderDiscountShare > 0 && (
+                                                                    <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(249, 115, 22, 0.05)" }}>
+                                                                        <span style={{ color: "var(--ink)" }}>
+                                                                            2.5. Order Discount Share:
+                                                                        </span>
+                                                                        <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                            -Rs {item.perItemOrderDiscountShare.perUnitOrderDiscountShare.toFixed(2)} → Rs {(originalPrice - (item.costing?.discountAmount || 0) - item.perItemOrderDiscountShare.perUnitOrderDiscountShare).toFixed(2)}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                                 
                                                                 {/* Row 3: Tax */}
                                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>

@@ -50,7 +50,7 @@ const OrderNumberSearch = ({ value, onChange, onSearch, error, isLoading }) => (
     </div>
 );
 
-const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, expandedCalculation, onToggleCalculation, itemLimits }) => (
+const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, expandedCalculation, onToggleCalculation, itemLimits, fetchedOrder, expandedOrderDiscountExplanation, onToggleOrderDiscountExplanation }) => (
     <div className="mb-6">
         <h3 className="text-lg font-semibold text-(--ink) mb-4 font-display">Order Items</h3>
         <div className="space-y-3">
@@ -204,6 +204,59 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                         })()}
                                                     </span>
                                                 </div>
+
+                                                {/* Row 2.5: Order Discount Share */}
+                                                {details.perUnitOrderDiscountShare > 0 && (
+                                                    <>
+                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(249, 115, 22, 0.05)" }}>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => onToggleOrderDiscountExplanation(itemId)}
+                                                                    className="text-xs text-(--muted) hover:text-(--ink) transition-colors"
+                                                                    style={{ fontSize: '10px' }}
+                                                                >
+                                                                    {expandedOrderDiscountExplanation[itemId] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                                </button>
+                                                                <span style={{ color: "var(--ink)" }}>
+                                                                    2.5. Order Discount Share:
+                                                                </span>
+                                                            </div>
+                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                -Rs {details.perUnitOrderDiscountShare.toFixed(2)} → Rs {(() => {
+                                                                    const price = details.originalPrice || item.unitPrice || item.originalPrice || 0;
+                                                                    const discountAmount = details.discountType === "percentage" 
+                                                                        ? (price * (details.discountPercent || 0) / 100) 
+                                                                        : (details.discountPercent || 0);
+                                                                    const priceAfterDiscount = price - discountAmount - details.perUnitOrderDiscountShare;
+                                                                    return priceAfterDiscount.toFixed(2);
+                                                                })()}
+                                                            </span>
+                                                        </div>
+                                                        {expandedOrderDiscountExplanation[itemId] && (
+                                                            <div className="mt-1 px-2 py-2 rounded text-xs" style={{ background: "rgba(249, 115, 22, 0.08)", borderLeft: "3px solid #f97316" }}>
+                                                                <p className="font-semibold mb-1" style={{ color: "#f97316" }}>How is this calculated?</p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
+                                                                    This is your share of the whole order discount applied to this item.
+                                                                </p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
+                                                                    <strong>Formula:</strong> (Item's share of order) ÷ (Item quantity in order)
+                                                                </p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
+                                                                    <strong>Item's share of order:</strong> Rs {item.lineTotal?.toFixed(2)} ÷ Rs {fetchedOrder?.subtotal?.toFixed(2)} = {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * 100).toFixed(1)}% of order
+                                                                </p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
+                                                                    <strong>Total order discount:</strong> Rs {fetchedOrder?.discountAmount?.toFixed(2)}
+                                                                </p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
+                                                                    <strong>Your item's discount share:</strong> {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * 100).toFixed(1)}% of Rs {fetchedOrder?.discountAmount?.toFixed(2)} = Rs {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * (fetchedOrder?.discountAmount || 0)).toFixed(2)}
+                                                                </p>
+                                                                <p style={{ color: "var(--muted)" }}>
+                                                                    <strong>Per-unit discount share:</strong> Rs {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * (fetchedOrder?.discountAmount || 0)).toFixed(2)} ÷ {item.quantity} items = <strong>Rs {details.perUnitOrderDiscountShare.toFixed(2)} per unit</strong>
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
                                                 
                                                 {/* Row 3: Tax */}
                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>
@@ -216,7 +269,7 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                             const discountAmount = details.discountType === "percentage" 
                                                                 ? (price * (details.discountPercent || 0) / 100) 
                                                                 : (details.discountPercent || 0);
-                                                            const priceAfterDiscount = price - discountAmount;
+                                                            const priceAfterDiscount = price - discountAmount - (details.perUnitOrderDiscountShare || 0);
                                                             const taxAmount = details.taxType === "percentage" 
                                                                 ? (priceAfterDiscount * (details.taxPercent || 0) / 100) 
                                                                 : (details.taxPercent || 0);
@@ -269,6 +322,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
     const [submitting, setSubmitting] = useState(false);
     const [editingRefund, setEditingRefund] = useState(null);
     const [expandedCalculation, setExpandedCalculation] = useState({});
+    const [expandedOrderDiscountExplanation, setExpandedOrderDiscountExplanation] = useState({});
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [itemLimits, setItemLimits] = useState({});
 
@@ -467,19 +521,20 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 const discountType = item.discountType || "percentage";
                 const taxPercent = item.taxPercent || 0;
                 const taxType = item.taxType || "percentage";
+                const perUnitOrderDiscountShare = item.perUnitOrderDiscountShare || 0;
                 
                 // Calculate discount amount per unit
                 const discountAmount = discountType === "percentage" 
                     ? (price * discountPercent) / 100 
                     : discountPercent;
                 
-                // Calculate tax amount per unit (tax applies after discount)
-                const priceAfterDiscount = price - discountAmount;
+                // Calculate tax amount per unit (tax applies after discount and order discount)
+                const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
                 const taxAmount = taxType === "percentage" 
                     ? (priceAfterDiscount * taxPercent) / 100 
                     : taxPercent;
                 
-                const unitCosting = price - discountAmount + taxAmount;
+                const unitCosting = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
                 
                 return {
                     ...prev,
@@ -495,6 +550,8 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                         taxType,
                         discountPercent,
                         discountType,
+                        // Store order discount share details
+                        perUnitOrderDiscountShare,
                     },
                 };
             }
@@ -523,15 +580,16 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 const discountType = details.discountType || "percentage";
                 const taxPercent = details.taxPercent || 0;
                 const taxType = details.taxType || "percentage";
+                const perUnitOrderDiscountShare = details.perUnitOrderDiscountShare || 0;
                 
                 const discountAmount = discountType === "percentage" 
                     ? (price * discountPercent) / 100 
                     : discountPercent;
-                const priceAfterDiscount = price - discountAmount;
+                const priceAfterDiscount = price - discountAmount - perUnitOrderDiscountShare;
                 const taxAmount = taxType === "percentage" 
                     ? (priceAfterDiscount * taxPercent) / 100 
                     : taxPercent;
-                const unitCosting = price - discountAmount + taxAmount;
+                const unitCosting = price - discountAmount - perUnitOrderDiscountShare + taxAmount;
                 
                 const refundAmount = (qty * unitCosting) - cut;
                 updated[itemId].unitCosting = unitCosting;
@@ -544,6 +602,13 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
 
     const toggleCalculation = (itemId) => {
         setExpandedCalculation((prev) => ({
+            ...prev,
+            [itemId]: !prev[itemId],
+        }));
+    };
+
+    const toggleOrderDiscountExplanation = (itemId) => {
+        setExpandedOrderDiscountExplanation((prev) => ({
             ...prev,
             [itemId]: !prev[itemId],
         }));
@@ -603,6 +668,17 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 itemTotal: details.unitCosting || details.originalPrice || 0
             };
             
+            // Build perItemOrderDiscountShare object for recalculation
+            const perItemOrderDiscountShareObj = {
+                orderDiscountValue: fetchedOrder?.orderDiscountValue || 0,
+                orderDiscountType: fetchedOrder?.orderDiscountType || "percentage",
+                orderDiscountAmount: fetchedOrder?.discountAmount || 0,
+                orderSubtotal: fetchedOrder?.subtotal || 0,
+                itemQuantityInOrder: orderItem?.quantity || 0,
+                itemLineTotal: orderItem?.lineTotal || 0,
+                perUnitOrderDiscountShare: details.perUnitOrderDiscountShare || 0,
+            };
+            
             return {
                 productId: orderItem?.product || orderItem?.productId || itemId, // Use actual product ID from order item
                 productName: orderItem?.name || orderItem?.productName || "",
@@ -613,6 +689,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 refundAmount: details.refundAmount,
                 cut: details.cut,
                 costing: costingObj,
+                perItemOrderDiscountShare: perItemOrderDiscountShareObj,
             };
         });
 
@@ -902,6 +979,9 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                                     expandedCalculation={expandedCalculation}
                                     onToggleCalculation={toggleCalculation}
                                     itemLimits={itemLimits}
+                                    fetchedOrder={fetchedOrder}
+                                    expandedOrderDiscountExplanation={expandedOrderDiscountExplanation}
+                                    onToggleOrderDiscountExplanation={toggleOrderDiscountExplanation}
                                 />
                             )}
 
