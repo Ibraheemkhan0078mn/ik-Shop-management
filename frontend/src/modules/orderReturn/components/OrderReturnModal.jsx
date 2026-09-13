@@ -37,19 +37,21 @@ const calculateReturnItemTotals = (details, item, quantity = details.returnQuant
     const discountAmount = discountType === "fixed"
         ? discountValue * returnQuantity
         : (lineTotal * discountValue) / 100;
-    const orderDiscountAmount = perUnitOrderDiscountShare * returnQuantity;
     const priceAfterItemDiscount = Math.max(0, lineTotal - discountAmount);
-    const priceAfterDiscount = Math.max(0, priceAfterItemDiscount - orderDiscountAmount);
     const taxAmount = taxType === "fixed"
         ? taxValue * returnQuantity
-        : (priceAfterDiscount * taxValue) / 100;
-    const itemTotal = priceAfterDiscount + taxAmount;
+        : (priceAfterItemDiscount * taxValue) / 100;
+    const priceAfterItemTax = priceAfterItemDiscount + taxAmount;
+    const orderDiscountAmount = perUnitOrderDiscountShare * returnQuantity;
+    const priceAfterDiscount = Math.max(0, priceAfterItemTax - orderDiscountAmount);
+    const itemTotal = priceAfterDiscount;
 
     return {
         lineTotal,
         discountAmount,
         orderDiscountAmount,
         priceAfterItemDiscount,
+        priceAfterItemTax,
         priceAfterDiscount,
         taxAmount,
         itemTotal,
@@ -226,54 +228,6 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                     </span>
                                                 </div>
 
-                                                {/* Row 2.5: Order Discount Share */}
-                                                {details.perUnitOrderDiscountShare > 0 && (
-                                                    <>
-                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(249, 115, 22, 0.05)" }}>
-                                                            <div className="flex items-center gap-2">
-                                                                <button
-                                                                    onClick={() => onToggleOrderDiscountExplanation(itemId)}
-                                                                    className="text-xs text-(--muted) hover:text-(--ink) transition-colors"
-                                                                    style={{ fontSize: '10px' }}
-                                                                >
-                                                                    {expandedOrderDiscountExplanation[itemId] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                                                </button>
-                                                                <span style={{ color: "var(--ink)" }}>
-                                                                    2.5. Order Discount Share:
-                                                                </span>
-                                                            </div>
-                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
-                                                                -Rs {details.perUnitOrderDiscountShare.toFixed(2)} → Rs {(() => {
-                                                                    return calculateReturnItemTotals(details, item).priceAfterDiscount.toFixed(2);
-                                                                })()}
-                                                            </span>
-                                                        </div>
-                                                        {expandedOrderDiscountExplanation[itemId] && (
-                                                            <div className="mt-1 px-2 py-2 rounded text-xs" style={{ background: "rgba(249, 115, 22, 0.08)", borderLeft: "3px solid #f97316" }}>
-                                                                <p className="font-semibold mb-1" style={{ color: "#f97316" }}>How is this calculated?</p>
-                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
-                                                                    This is your share of the whole order discount applied to this item.
-                                                                </p>
-                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
-                                                                    <strong>Formula:</strong> (Item's share of order) ÷ (Item quantity in order)
-                                                                </p>
-                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
-                                                                    <strong>Item's share of order:</strong> Rs {item.lineTotal?.toFixed(2)} ÷ Rs {fetchedOrder?.subtotal?.toFixed(2)} = {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * 100).toFixed(1)}% of order
-                                                                </p>
-                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
-                                                                    <strong>Total order discount:</strong> Rs {fetchedOrder?.discountAmount?.toFixed(2)}
-                                                                </p>
-                                                                <p className="mb-1" style={{ color: "var(--muted)" }}>
-                                                                    <strong>Your item's discount share:</strong> {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * 100).toFixed(1)}% of Rs {fetchedOrder?.discountAmount?.toFixed(2)} = Rs {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * (fetchedOrder?.discountAmount || 0)).toFixed(2)}
-                                                                </p>
-                                                                <p style={{ color: "var(--muted)" }}>
-                                                                    <strong>Per-unit discount share:</strong> Rs {((item.lineTotal || 0) / (fetchedOrder?.subtotal || 1) * (fetchedOrder?.discountAmount || 0)).toFixed(2)} ÷ {item.quantity} items = <strong>Rs {details.perUnitOrderDiscountShare.toFixed(2)} per unit</strong>
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                                
                                                 {/* Row 3: Tax */}
                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>
                                                     <span style={{ color: "var(--ink)" }}>
@@ -282,9 +236,39 @@ const OrderItemPicker = ({ items, selectedItems, onSelect, onItemDetailChange, e
                                                     <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
                                                         +Rs {(() => {
                                                             return calculateReturnItemTotals(details, item).taxAmount.toFixed(2);
-                                                        })()} → Rs {calculateReturnItemTotals(details, item).itemTotal.toFixed(2)}
+                                                        })()} → Rs {(() => {
+                                                            const calculation = calculateReturnItemTotals(details, item);
+                                                            return (calculation.priceAfterItemDiscount + calculation.taxAmount).toFixed(2);
+                                                        })()}
                                                     </span>
                                                 </div>
+
+                                                {/* Row 3.5: Order Discount Share */}
+                                                {details.perUnitOrderDiscountShare > 0 && (
+                                                    <>
+                                                        <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(249, 115, 22, 0.05)" }}>
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => onToggleOrderDiscountExplanation(itemId)} className="text-xs text-(--muted) hover:text-(--ink) transition-colors" style={{ fontSize: '10px' }}>
+                                                                    {expandedOrderDiscountExplanation[itemId] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                                </button>
+                                                                <span style={{ color: "var(--ink)" }}>3.5. Order Discount Share:</span>
+                                                            </div>
+                                                            <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                -Rs {details.perUnitOrderDiscountShare.toFixed(2)} → Rs {calculateReturnItemTotals(details, item).itemTotal.toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                        {expandedOrderDiscountExplanation[itemId] && (
+                                                            <div className="mt-1 px-2 py-2 rounded text-xs" style={{ background: "rgba(249, 115, 22, 0.08)", borderLeft: "3px solid #f97316" }}>
+                                                                <p className="font-semibold mb-1" style={{ color: "#f97316" }}>How is this calculated?</p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}><strong>Item amount after item discount and tax:</strong> Rs {Number(item.itemTotal || 0).toFixed(2)}</p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}><strong>Order subtotal:</strong> Rs {Number(fetchedOrder?.subtotal || 0).toFixed(2)}</p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}><strong>Item share:</strong> {((Number(item.itemTotal || 0) / Number(fetchedOrder?.subtotal || 1)) * 100).toFixed(4)}%</p>
+                                                                <p className="mb-1" style={{ color: "var(--muted)" }}><strong>Discount share:</strong> {((Number(item.itemTotal || 0) / Number(fetchedOrder?.subtotal || 1)) * 100).toFixed(4)}% × Rs {Number(fetchedOrder?.discountAmount || 0).toFixed(2)} = Rs {(Number(details.perUnitOrderDiscountShare || 0) * Number(item.quantity || 0)).toFixed(2)}</p>
+                                                                <p style={{ color: "var(--muted)" }}><strong>Per unit:</strong> Rs {(Number(details.perUnitOrderDiscountShare || 0) * Number(item.quantity || 0)).toFixed(2)} ÷ {item.quantity} = <strong>Rs {Number(details.perUnitOrderDiscountShare || 0).toFixed(2)}</strong></p>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
                                                 
                                                 {/* Row 4: Multiply by Quantity */}
                                                 <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
@@ -664,7 +648,7 @@ const OrderReturnModal = ({ isOpen, onClose, editData, isEditMode, isViewMode, o
                 orderDiscountAmount: fetchedOrder?.discountAmount || 0,
                 orderSubtotal: fetchedOrder?.subtotal || 0,
                 itemQuantityInOrder: orderItem?.quantity || 0,
-                itemLineTotal: orderItem?.lineTotal || 0,
+                itemLineTotal: orderItem?.itemTotal ?? orderItem?.lineTotal ?? 0,
                 perUnitOrderDiscountShare: details.perUnitOrderDiscountShare || 0,
             };
             

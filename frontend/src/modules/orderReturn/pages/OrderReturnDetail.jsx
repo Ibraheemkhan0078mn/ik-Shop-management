@@ -206,8 +206,9 @@ export default function OrderReturnDetail() {
                                     const discountAmount = (item.costing?.discountAmount || 0) * quantity;
                                     const orderDiscountAmount = (item.perItemOrderDiscountShare?.perUnitOrderDiscountShare || 0) * quantity;
                                     const priceAfterItemDiscount = lineTotal - discountAmount;
-                                    const priceAfterDiscount = Math.max(0, priceAfterItemDiscount - orderDiscountAmount);
                                     const taxAmount = (item.costing?.taxAmount || 0) * quantity;
+                                    const priceAfterItemTax = priceAfterItemDiscount + taxAmount;
+                                    const priceAfterDiscount = Math.max(0, priceAfterItemTax - orderDiscountAmount);
                                     const isExpanded = expandedItems[index];
 
                                     return (

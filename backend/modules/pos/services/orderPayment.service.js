@@ -148,7 +148,7 @@ export const totalOrderRecalculation = async (orderId) => {
     }
 
     // Recalculate each item
-    let calculatedSubtotal = 0;  // Sum of priceAfterDiscount (after item discount, before tax)
+    let calculatedSubtotal = 0;  // Sum of item totals after item discount and tax
     let calculatedTotalTax = 0;
     let calculatedTotalDiscount = 0;
 
@@ -180,9 +180,8 @@ export const totalOrderRecalculation = async (orderId) => {
         // Final item total
         const itemTotal = priceAfterDiscount + taxAmount;
 
-        // Accumulate for order totals
-        // CRITICAL: subtotal = sum of priceAfterDiscount (after item discounts, before order discount and tax)
-        calculatedSubtotal += priceAfterDiscount;
+        // Accumulate the same item totals used when the order was created.
+        calculatedSubtotal += itemTotal;
         calculatedTotalDiscount += discountAmount;
         calculatedTotalTax += taxAmount;
 
@@ -202,10 +201,9 @@ export const totalOrderRecalculation = async (orderId) => {
     calculatedTotalTax = Math.round(calculatedTotalTax * 100) / 100;
 
     // Calculate final order total
-    // Note: order.discountAmount is the order-level discount (separate from item discounts)
-    // totalAmount = subtotal - orderDiscount + tax
+    // order.discountAmount is the order-level discount; item tax is already in subtotal.
     const orderDiscount = Number(order.discountAmount) || 0;
-    const calculatedTotalAmount = Math.round((calculatedSubtotal - orderDiscount + calculatedTotalTax) * 100) / 100;
+    const calculatedTotalAmount = Math.round((calculatedSubtotal - orderDiscount) * 100) / 100;
 
     // Recalculate payment status with the new total
     const paymentStatus = await calculateOrderPaymentStatus(orderId, calculatedTotalAmount);
@@ -214,7 +212,7 @@ export const totalOrderRecalculation = async (orderId) => {
     const updateData = {
         items: recalculatedItems,
         subtotal: calculatedSubtotal,
-        discountAmount: calculatedTotalDiscount,
+        discountAmount: orderDiscount,
         totalTaxAmount: calculatedTotalTax,
         totalAmount: calculatedTotalAmount,
         paid: paymentStatus.totalPaid,

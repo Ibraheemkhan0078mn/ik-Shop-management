@@ -20,7 +20,9 @@ export const calculatePerUnitOrderDiscountShare = (order, orderItem) => {
     
     const orderSubtotal = order.subtotal || 0;
     const orderDiscountAmount = order.discountAmount || 0;
-    const itemLineTotal = orderItem.lineTotal || 0;
+    // Order subtotal is made from item totals after item discount and tax.
+    // Use the same post-item-adjustment amount for proportional allocation.
+    const itemLineTotal = orderItem.itemTotal ?? orderItem.lineTotal ?? 0;
     const itemQuantity = orderItem.quantity || 1;
     
     // If no order discount or subtotal, return 0
@@ -50,11 +52,13 @@ const calculateReturnItemTotals = (item) => {
         ? discountValue * quantity
         : (lineTotal * discountValue) / 100;
     const orderDiscountAmount = perUnitOrderDiscountShare * quantity;
-    const priceAfterDiscount = Math.max(0, lineTotal - discountAmount - orderDiscountAmount);
+    const priceAfterItemDiscount = Math.max(0, lineTotal - discountAmount);
     const taxAmount = taxType === "fixed"
         ? taxValue * quantity
-        : (priceAfterDiscount * taxValue) / 100;
-    const itemTotal = priceAfterDiscount + taxAmount;
+        : (priceAfterItemDiscount * taxValue) / 100;
+    const priceAfterItemTax = priceAfterItemDiscount + taxAmount;
+    const priceAfterDiscount = Math.max(0, priceAfterItemTax - orderDiscountAmount);
+    const itemTotal = priceAfterDiscount;
     const unitCost = quantity > 0 ? itemTotal / quantity : 0;
     const refundAmount = Math.max(0, itemTotal - (Number(item.cut) || 0));
 
