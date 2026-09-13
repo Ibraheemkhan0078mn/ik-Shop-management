@@ -174,36 +174,12 @@ const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
         throw new Error("Purchase not found or has no items");
     }
 
-    // For purchase returns, recalculate total based on costPrice instead of price
-    const totalItemValueCostBased = purchase.items.reduce((sum, item) => {
-        const quantity = Number(item.quantity) || 0;
-        const costPrice = Number(item.costPrice) || 0;
-        return sum + (quantity * costPrice);
-    }, 0);
-
-    // Calculate overall discount amount based on cost-based total
-    const overallDiscountAmount = calculateDiscountAmount(
-        totalItemValueCostBased,
-        purchase.discount,
-        purchase.discountType
-    );
-
-    // Calculate overall tax amount based on cost-based total
-    const overallTaxAmount = calculateTaxAmount(
-        totalItemValueCostBased,
-        overallDiscountAmount,
-        purchase.gst,
-        purchase.gstType
-    );
-
     // Calculate total shipping cost
     const totalShippingCost = Number(purchase.shippingCost) || 0;
 
-    // Use cost-based total for proportional distribution
-    const totalItemValue = totalItemValueCostBased;
-
-    // Calculate total values for each item (quantity multiplied first)
-    const itemsWithPerUnitValues = purchase.items.map(item => {
+    // The purchase invoice applies bill-level adjustments after each item's own
+    // discount and tax. Build the same item-net subtotal used by the invoice.
+    const itemCalculations = purchase.items.map(item => {
         const quantity = Number(item.quantity) || 0;
         const price = Number(item.price) || 0;
         const costPrice = Number(item.costPrice) || 0;
@@ -226,19 +202,59 @@ const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
             item.taxType
         );
 
+        const itemNetTotal = baseTotal - totalItemDiscount + totalItemTax;
+
+        return {
+            item,
+            quantity,
+            price,
+            costPrice,
+            baseTotal,
+            totalItemDiscount,
+            totalItemTax,
+            itemNetTotal,
+        };
+    });
+
+    const invoiceBaseTotal = itemCalculations.reduce((sum, calculation) => sum + calculation.itemNetTotal, 0);
+    const overallDiscountAmount = calculateDiscountAmount(
+        invoiceBaseTotal,
+        purchase.discount,
+        purchase.discountType
+    );
+    const overallTaxAmount = calculateTaxAmount(
+        invoiceBaseTotal,
+        overallDiscountAmount,
+        purchase.gst,
+        purchase.gstType
+    );
+
+    // Calculate return allocations from the same net item share used by the invoice.
+    const itemsWithPerUnitValues = itemCalculations.map(calculation => {
+        const {
+            item,
+            quantity,
+            price,
+            costPrice,
+            baseTotal,
+            totalItemDiscount,
+            totalItemTax,
+            itemNetTotal,
+        } = calculation;
+
         // Step 4: Distribute overall discount proportionally based on item's share of subtotal
-        const totalOverallDiscount = totalItemValue > 0 
-            ? (baseTotal / totalItemValue) * overallDiscountAmount 
+        const totalOverallDiscount = invoiceBaseTotal > 0
+            ? (itemNetTotal / invoiceBaseTotal) * overallDiscountAmount
             : 0;
 
         // Step 5: Distribute overall tax proportionally based on item's share of subtotal
-        const totalOverallTax = totalItemValue > 0 
-            ? (baseTotal / totalItemValue) * overallTaxAmount 
+        const totalOverallTax = invoiceBaseTotal > 0
+            ? (itemNetTotal / invoiceBaseTotal) * overallTaxAmount
             : 0;
 
         // Step 6: Distribute shipping cost proportionally based on item's share of subtotal
-        const totalShipping = totalItemValue > 0 
-            ? (baseTotal / totalItemValue) * totalShippingCost 
+        const totalShipping = invoiceBaseTotal > 0
+            ? (itemNetTotal / invoiceBaseTotal) * totalShippingCost
             : 0;
 
         // Calculate final total after all adjustments
@@ -250,6 +266,19 @@ const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
             quantity,
             price,
             costPrice,
+            itemDiscountValue: Number(item.discount) || 0,
+            itemDiscountType: item.discountType || 'percentage',
+            itemTaxValue: Number(item.tax) || 0,
+            itemTaxType: item.taxType || 'percentage',
+            invoiceDiscountValue: Number(purchase.discount) || 0,
+            invoiceDiscountType: purchase.discountType || 'percentage',
+            invoiceBaseTotal,
+            invoiceTotalDiscountAmount: overallDiscountAmount,
+            invoiceTaxValue: Number(purchase.gst) || 0,
+            invoiceTaxType: purchase.gstType || 'percentage',
+            invoiceTotalTaxAmount: overallTaxAmount,
+            invoiceShippingCost: totalShippingCost,
+            invoiceItemNetTotal: itemNetTotal,
             baseTotal,
             totalItemDiscount,
             totalItemTax,
