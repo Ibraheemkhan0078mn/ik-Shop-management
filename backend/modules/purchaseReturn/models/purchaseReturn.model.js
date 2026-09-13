@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
-// Costing breakdown sub-schema — mirrors what the CRUD form calculates per batch
+// Costing breakdown sub-schema — stores complete calculation breakdown for each item
 const purchaseReturnItemCostingSchema = new mongoose.Schema({
+    // Per-unit values (for backward compatibility)
     purchasedDiscount: { type: Number, default: 0 },        // discount value (% or fixed)
     purchaseDiscountType: { type: String, default: "percentage" }, // "percentage" | "fixed"
     purchasedTax: { type: Number, default: 0 },             // tax value (% or fixed)
@@ -9,6 +10,16 @@ const purchaseReturnItemCostingSchema = new mongoose.Schema({
     purchasedDiscountAmount: { type: Number, default: 0 },  // computed discount in Rs per unit
     purchasedTaxAmount: { type: Number, default: 0 },       // computed tax in Rs per unit
     totalCostingAmount: { type: Number, default: 0 },       // effective unit cost = price - discount + tax
+    
+    // Total-based calculation breakdown (new calculation flow)
+    costPrice: { type: Number, default: 0 },              // cost price per unit
+    baseTotal: { type: Number, default: 0 },              // quantity × costPrice
+    totalItemDiscount: { type: Number, default: 0 },       // total item discount amount
+    totalItemTax: { type: Number, default: 0 },            // total item tax amount
+    totalOverallDiscount: { type: Number, default: 0 },    // total overall discount amount
+    totalOverallTax: { type: Number, default: 0 },         // total overall tax amount
+    totalShipping: { type: Number, default: 0 },           // total shipping amount
+    finalTotal: { type: Number, default: 0 },             // final total after all adjustments
 }, { _id: false });
 
 const purchaseReturnItemSchema = new mongoose.Schema({

@@ -124,3 +124,13 @@ export const getPurchaseReturnSummaryApi = async (purchaseId) => {
         throw error;
     }
 };
+
+export const getPurchasePerUnitValuesApi = async (purchaseId) => {
+    try {
+        const response = await api.get(`/purchases/${purchaseId}/per-unit-values`);
+        return response.data;
+    } catch (error) {
+        showError(error?.response?.data?.message || error?.message || "Failed to fetch per-unit values");
+        throw error;
+    }
+};

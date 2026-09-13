@@ -288,17 +288,22 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
     }
 
     // Calculate total refund amount
-    // Primary path: use stored costing.totalCostingAmount per item (set by the CRUD form).
-    // Fallback: derive from purchase-level discount/gst for legacy items.
+    // Primary path: use new total-based costing breakdown (costPrice, baseTotal, etc.)
+    // Secondary path: use legacy costing.totalCostingAmount per item
+    // Fallback: derive from purchase-level discount/gst for legacy items
     let totalRefundAmount = 0;
     let totalQuantity = 0;
 
     for (const item of normalizedItems) {
-        let unitCost;
+        let refund;
 
-        if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
-            // Use the exact effective unit cost stored by the CRUD form
-            unitCost = item.costing.totalCostingAmount;
+        if (item.costing && typeof item.costing.finalTotal === 'number') {
+            // Use the new total-based calculation stored by the CRUD form
+            refund = item.costing.finalTotal - (Number(item.cut) || 0);
+        } else if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
+            // Legacy path: use per-unit costing
+            const unitCost = item.costing.totalCostingAmount;
+            refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
         } else {
             // Fallback: derive from purchase-level discount
             let discountedPrice = Number(item.purchasePrice) || 0;
@@ -320,10 +325,9 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
                     discountedPrice = discountedPrice + tax;
                 }
             }
-            unitCost = discountedPrice;
+            refund = (Number(item.quantity) * discountedPrice) - (Number(item.cut) || 0);
         }
 
-        const refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
         totalRefundAmount += refund;
         totalQuantity += Number(item.quantity);
     }
@@ -388,10 +392,15 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     
     /**
      * Helper: resolve effective unit cost for one item.
-     * Primary path  → item.costing.totalCostingAmount  (stored by CRUD form)
+     * Primary path  → item.costing.finalTotal (new total-based calculation)
+     * Secondary path → item.costing.totalCostingAmount  (legacy per-unit costing)
      * Fallback path → derive from purchase-level discount + gst
      */
     const resolveUnitCostForUpdate = (item, purchase) => {
+        if (item.costing && typeof item.costing.finalTotal === 'number') {
+            // Return the final total directly (already includes quantity)
+            return item.costing.finalTotal / (Number(item.quantity) || 1);
+        }
         if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
             return item.costing.totalCostingAmount;
         }
@@ -418,8 +427,14 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
 
     const itemsToProcess = incomingItems || existing.items || [];
     for (const item of itemsToProcess) {
-        const unitCost = resolveUnitCostForUpdate(item, originalPurchase);
-        const refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
+        let refund;
+        if (item.costing && typeof item.costing.finalTotal === 'number') {
+            // Use the new total-based calculation stored by the CRUD form
+            refund = item.costing.finalTotal - (Number(item.cut) || 0);
+        } else {
+            const unitCost = resolveUnitCostForUpdate(item, originalPurchase);
+            refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
+        }
         totalRefundAmount += refund;
         totalQuantity += Number(item.quantity);
     }

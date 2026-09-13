@@ -16,6 +16,7 @@ import {
     calculatePurchasePaymentStatus,
     recalculatePurchasePaidAmount,
 } from "../services/purchase.service.js";
+import { calculatePerUnitValuesForPurchaseReturn } from "../services/purchaseRecalculation.service.js";
 import { createPurchasePayment } from "../services/purchasePayment.service.js";
 import { getTransactions, deleteTransaction } from "../../transactions/services/transaction.service.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
@@ -474,6 +475,21 @@ export const generatePurchaseNumberData = asyncHandler(async (req, res, next) =>
         });
     } catch (error) {
         return next(new ErrorResponse(error.message, 500));
+    }
+});
+
+export const getPurchasePerUnitValues = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        const perUnitValues = await calculatePerUnitValuesForPurchaseReturn(id);
+        
+        res.status(200).json({
+            success: true,
+            message: "Per-unit values calculated successfully",
+            data: perUnitValues
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
     }
 });
 

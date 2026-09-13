@@ -14,6 +14,7 @@ import {
     deletePurchasePaymentData,
     recalculatePurchasePaidAmountData,
     generatePurchaseNumberData,
+    getPurchasePerUnitValues,
 } from "../controllers/purchase.controller.js";
 import { protect, authorize } from "../../auth/middlewares/auth.middleware.js";
 
@@ -26,6 +27,7 @@ router.get("/", getPurchasesData);
 router.get("/getPurchaseById/:id", getPurchaseDataById);
 router.post("/getPurchaseByInvoiceNumber", getPurchaseDataByInvoiceNumber);
 router.get("/pagination", getPaginatedPurchasesData);
+router.get("/:id/per-unit-values", getPurchasePerUnitValues);
 router.post("/", authorize("admin"), createPurchaseData);
 router.put("/updatePurchase/:id", authorize("admin"), updatePurchaseData);
 router.put("/:id/status", authorize("admin"), updatePurchaseStatus);

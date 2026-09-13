@@ -159,6 +159,110 @@ const hasExistingBatch = (item) => {
     return !!(item.batch && item.batchNumber);
 };
 
+/**
+ * Calculate per-unit values for each item in a purchase for return calculations
+ * This function distributes overall-level discount, tax, and shipping proportionally across items
+ * 
+ * @param {String} purchaseId - The ID of the purchase document
+ * @returns {Promise<Array>} Array of items with per-unit breakdown
+ */
+const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
+    const { getPurchaseById } = await import("./purchase.service.js");
+    
+    const purchase = await getPurchaseById(purchaseId);
+    if (!purchase || !purchase.items || !Array.isArray(purchase.items)) {
+        throw new Error("Purchase not found or has no items");
+    }
+
+    // For purchase returns, recalculate total based on costPrice instead of price
+    const totalItemValueCostBased = purchase.items.reduce((sum, item) => {
+        const quantity = Number(item.quantity) || 0;
+        const costPrice = Number(item.costPrice) || 0;
+        return sum + (quantity * costPrice);
+    }, 0);
+
+    // Calculate overall discount amount based on cost-based total
+    const overallDiscountAmount = calculateDiscountAmount(
+        totalItemValueCostBased,
+        purchase.discount,
+        purchase.discountType
+    );
+
+    // Calculate overall tax amount based on cost-based total
+    const overallTaxAmount = calculateTaxAmount(
+        totalItemValueCostBased,
+        overallDiscountAmount,
+        purchase.gst,
+        purchase.gstType
+    );
+
+    // Calculate total shipping cost
+    const totalShippingCost = Number(purchase.shippingCost) || 0;
+
+    // Use cost-based total for proportional distribution
+    const totalItemValue = totalItemValueCostBased;
+
+    // Calculate total values for each item (quantity multiplied first)
+    const itemsWithPerUnitValues = purchase.items.map(item => {
+        const quantity = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const costPrice = Number(item.costPrice) || 0;
+        
+        // Step 1: Multiply quantity first - Base total
+        const baseTotal = quantity * costPrice;
+
+        // Step 2: Calculate item-level discount amount on base total
+        const totalItemDiscount = calculateDiscountAmount(
+            baseTotal,
+            item.discount,
+            item.discountType
+        );
+
+        // Step 3: Calculate item-level tax amount on (base total - item discount)
+        const totalItemTax = calculateTaxAmount(
+            baseTotal,
+            totalItemDiscount,
+            item.tax,
+            item.taxType
+        );
+
+        // Step 4: Distribute overall discount proportionally based on item's share of subtotal
+        const totalOverallDiscount = totalItemValue > 0 
+            ? (baseTotal / totalItemValue) * overallDiscountAmount 
+            : 0;
+
+        // Step 5: Distribute overall tax proportionally based on item's share of subtotal
+        const totalOverallTax = totalItemValue > 0 
+            ? (baseTotal / totalItemValue) * overallTaxAmount 
+            : 0;
+
+        // Step 6: Distribute shipping cost proportionally based on item's share of subtotal
+        const totalShipping = totalItemValue > 0 
+            ? (baseTotal / totalItemValue) * totalShippingCost 
+            : 0;
+
+        // Calculate final total after all adjustments
+        const finalTotal = baseTotal - totalItemDiscount + totalItemTax - totalOverallDiscount + totalOverallTax + totalShipping;
+
+        return {
+            productId: item.product,
+            batchId: item.batch && item.batch._id ? item.batch._id.toString() : String(item.batch),
+            quantity,
+            price,
+            costPrice,
+            baseTotal,
+            totalItemDiscount,
+            totalItemTax,
+            totalOverallDiscount,
+            totalOverallTax,
+            totalShipping,
+            finalTotal
+        };
+    });
+
+    return itemsWithPerUnitValues;
+};
+
 export {
     calculateSubtotal,
     calculateDiscountAmount,
@@ -167,5 +271,6 @@ export {
     recalculatePurchaseTotals,
     recalculateItemTotals,
     extractBatchDetailsForItem,
-    hasExistingBatch
+    hasExistingBatch,
+    calculatePerUnitValuesForPurchaseReturn
 };
