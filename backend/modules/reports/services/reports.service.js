@@ -41,6 +41,7 @@ import {
 import {
     findCustomerService,
     countCustomerService,
+    findByIdCustomerService,
 } from '../../customer/services/customer.crud.js';
 import {
     findStaffService,
@@ -278,6 +279,19 @@ export const generateSalesReportData = async (filters = {}) => {
 
     // Fetch orders
     const orders = await findOrderService({ ...dateFilter, ...orderFilter });
+    const customerById = new Map();
+    await Promise.all(
+        orders
+            .filter(order => order.customerId)
+            .map(async order => {
+                const customer = await findByIdCustomerService(order.customerId);
+                if (customer) {
+                    const customerData = customer.toObject ? customer.toObject() : customer;
+                    customerById.set(String(order.customerId), customerData.name);
+                    order.customerName = customerData.name;
+                }
+            })
+    );
 
     const costingCache = new Map();
     const getItemCosting = async (item) => {
@@ -549,7 +563,7 @@ export const generateSalesReportData = async (filters = {}) => {
                     netMargin: orderNetSales > 0 ? Number(((orderNetProfit / orderNetSales) * 100).toFixed(2)) : 0,
                     // Customer and order info
                     paymentMethod: order.paymentMethod,
-                    customerName: order.customerName || 'Walk-in',
+                    customerName: customerById.get(String(order.customerId)) || order.customerName || 'Walk-in',
                     customerType: order.customerType,
                     customerId: order.customerId,
                     orderType: order.orderType || 'retail',
