@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getLocalTimeWithoutUTC } from "../date.js";
 
 const resolveModel = ({ model, modelName }) => {
   if (model) return model;
@@ -26,11 +27,11 @@ export const getNextSequence = async ({ sequenceName }) => {
 
 export const createDoc = async ({ model, modelName, data }) => {
   const Model = resolveModel({ model, modelName });
-  // Add sync timestamps for create operations
+  // Add sync timestamps for create operations using local time without UTC conversion
   const dataWithSyncTimestamps = {
     ...data,
-    createdTimeForSync: new Date(),
-    updateTimeForSync: new Date()
+    createdTimeForSync: getLocalTimeWithoutUTC(),
+    updateTimeForSync: getLocalTimeWithoutUTC()
   };
   return Model.create(dataWithSyncTimestamps);
 };
@@ -73,10 +74,10 @@ export const updateDocs = async ({ model, modelName, filter, data, options = {} 
   // Add isDeleted filter unless explicitly requested to include deleted documents
   const finalFilter = includeDeleted ? filter : { ...filter, isDeleted: { $ne: true } };
 
-  // Add sync timestamp for update operations
+  // Add sync timestamp for update operations using local time without UTC conversion
   const dataWithSyncTimestamp = {
     ...data,
-    updateTimeForSync: new Date()
+    updateTimeForSync: getLocalTimeWithoutUTC()
   };
 
   if (many) return Model.updateMany(finalFilter, dataWithSyncTimestamp, { runValidators, upsert });
@@ -92,7 +93,7 @@ export const deleteDocs = async ({ model, modelName, filter, options = {} }) => 
     const updateData = {
       isDeleted: true,
       deletedAt: new Date(),
-      updateTimeForSync: new Date()
+      updateTimeForSync: getLocalTimeWithoutUTC()
     };
 
     if (many) {

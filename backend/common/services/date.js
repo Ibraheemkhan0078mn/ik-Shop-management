@@ -27,3 +27,23 @@ export const getCustomStartEndMonthRanges = (startDate, endDate) => {
     };
 };
 
+/**
+ * Get current local time WITHOUT UTC conversion
+ * This stores the local time as-is in MongoDB (e.g., if it's 9 AM locally, it stores 9 AM, not 4 AM UTC)
+ * Used specifically for createdTimeForSync field to maintain local time consistency
+ */
+export const getLocalTimeWithoutUTC = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const date = now.getDate();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+    const milliseconds = now.getMilliseconds();
+    
+    // Create a new Date using UTC methods but with local time values
+    // This ensures the stored time matches the local time display
+    return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds));
+};
+
