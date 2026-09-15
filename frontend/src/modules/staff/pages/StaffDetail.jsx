@@ -348,7 +348,7 @@ export default function StaffDetail() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6 border-b border-[var(--border)]">
+            <div className="flex flex-wrap gap-2 mb-6 border-b border-[var(--border)]">
                 {["profile", "documents", "percentageChanges", "percentageShare", "saleOrders", "salaryChanges", "salaryBreakdown", "staffPayments", "paymentSummary"].map((tab) => (
                     <button
                         key={tab}
@@ -359,7 +359,7 @@ export default function StaffDetail() {
                                 : "text-[var(--muted)] hover:text-[var(--ink)]"
                         }`}
                     >
-                        {tab === "saleOrders" ? labels.saleOrders : tab === "staffPayments" ? labels.staffPayments : tab === "salaryBreakdown" ? labels.salaryBreakdown : tab === "paymentSummary" ? labels.paymentSummary : tab === "percentageShare" ? "Percentage Share" : labels[tab] || tab}
+                        {tab === "saleOrders" ? labels.saleOrders : tab === "staffPayments" ? labels.staffPayments : tab === "salaryBreakdown" ? labels.salaryBreakdown : tab === "paymentSummary" ? labels.paymentSummary : tab === "percentageShare" ? "Percentage Share" : tab === "percentageChanges" ? "Describe Percentage" : tab === "salaryChanges" ? "Describe Salary" : labels[tab] || tab}
                     </button>
                 ))}
             </div>

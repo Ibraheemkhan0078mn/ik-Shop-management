@@ -1354,6 +1354,7 @@ export const calculatePaymentSummary = async (staffId, startDate = null, endDate
     totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     
     totalRemaining = Math.max(0, totalEarnings - totalPaid);
+    totalAdvance = Math.max(0, totalPaid - totalEarnings);
     
     if (totalEarnings > 0 && totalPaid >= totalEarnings) {
         paymentStatus = 'advanced';
