@@ -35,6 +35,9 @@ import {
     countWastageService,
 } from '../../wastage/services/wastage.crud.js';
 import {
+    calculateWastageValues,
+} from '../../wastage/services/wastage.service.js';
+import {
     findProductService,
     countProductService,
 } from '../../product/services/product.crud.js';
@@ -2383,7 +2386,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter, { populate: 'supplier' }),
         getExpenseKPIReport(filters),
-        findWastageService(dateFilter),
+        findWastageService(dateFilter, { populate: [{ path: 'items.product', select: 'name _id' }] }),
         findPurchaseReturnService(dateFilter),
         findProductReturnService(dateFilter),
         findStaffSalaryPaymentService({ ...dateFilter, status: 'paid' }),
@@ -2403,7 +2406,7 @@ const prepareMainBusinessReport = async (filters = {}) => {
         findOrderService({ ...previousDateFilter, status: "completed" }),
         findPurchaseService(previousDateFilter),
         findTransactionService({ ...previousDateFilter, sourceType: 'expense', isDeleted: false }),
-        findWastageService(previousDateFilter),
+        findWastageService(previousDateFilter, { populate: [{ path: 'items.product', select: 'name _id' }] }),
         findPurchaseReturnService(previousDateFilter),
         findProductReturnService(previousDateFilter),
         findStaffSalaryPaymentService({ ...previousDateFilter, status: 'paid' })
@@ -2444,8 +2447,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     // Calculate average expense value
     const avgExpenseValue = expenseCount > 0 ? totalExpenses / expenseCount : 0;
 
-    const totalWastage = wastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
-    const wastageCount = wastages.length;
+    // Calculate wastages using the new service function
+    const wastageCalculations = calculateWastageValues(wastages);
+    const totalWastage = wastageCalculations.totalWastageAmount;
+    const wastageCount = wastageCalculations.wastageCount;
 
     // Calculate wastage as percentage of purchases
     const wastagePercentOfPurchases = totalPurchases > 0 ? ((totalWastage / totalPurchases) * 100).toFixed(1) : 0;
@@ -2487,8 +2492,10 @@ const prepareMainBusinessReport = async (filters = {}) => {
     const previousTotalExpenses = previousExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
     const previousExpenseCount = previousExpenses.length;
 
-    const previousTotalWastage = previousWastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
-    const previousWastageCount = previousWastages.length;
+    // Calculate previous period wastages
+    const previousWastageCalculations = calculateWastageValues(previousWastages);
+    const previousTotalWastage = previousWastageCalculations.totalWastageAmount;
+    const previousWastageCount = previousWastageCalculations.wastageCount;
 
     const previousTotalPurchaseReturns = previousPurchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
     const previousPurchaseReturnCount = previousPurchaseReturns.length;
@@ -2586,23 +2593,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
         count: data.count
     }));
 
-    // Calculate wastages by product
-    const wastagesByProductMap = {};
-    wastages.forEach(wastage => {
-        const productName = wastage.productName || 'unknown';
-        if (!wastagesByProductMap[productName]) {
-            wastagesByProductMap[productName] = { total: 0, count: 0, totalQuantity: 0 };
-        }
-        wastagesByProductMap[productName].total += (wastage.quantity || 0) * (wastage.costPrice || 0);
-        wastagesByProductMap[productName].count += 1;
-        wastagesByProductMap[productName].totalQuantity += wastage.quantity || 0;
-    });
-    const wastagesByProduct = Object.entries(wastagesByProductMap).map(([productName, data]) => ({
-        _id: productName,
-        total: data.total,
-        count: data.count,
-        totalQuantity: data.totalQuantity
-    }));
+    // Use wastages by product from the calculation function
+    const wastagesByProduct = wastageCalculations.wastagesByProduct;
 
     // Calculate salaries by staff
     const salariesByStaffMap = {};
@@ -2744,16 +2736,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
         createdAt: expense.date
     }));
 
-    const wastagesList = wastages
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 100)
-        .map(wastage => ({
-            _id: wastage._id,
-            quantity: wastage.quantity,
-            costPrice: wastage.costPrice,
-            productName: wastage.productName,
-            createdAt: wastage.createdAt
-        }));
+    // Use wastages list from the calculation function (already sorted and processed)
+    const wastagesList = wastageCalculations.wastagesList.slice(0, 100);
 
     const purchaseReturnsList = purchaseReturns
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -3006,12 +2990,16 @@ const prepareMainBusinessReport = async (filters = {}) => {
                 date: expense.createdAt
             })),
             wastages: wastagesList.map(wastage => ({
-                id: wastage._id,
+                id: wastage.id,
+                wastageNumber: wastage.wastageNumber,
                 productName: wastage.productName,
                 quantity: wastage.quantity,
+                unit: wastage.unit,
                 costPrice: wastage.costPrice,
-                totalLoss: wastage.quantity * wastage.costPrice,
-                date: wastage.createdAt
+                totalLoss: wastage.totalLoss,
+                reason: wastage.reason,
+                batchNumber: wastage.batchNumber,
+                date: wastage.date
             })),
             purchaseReturns: purchaseReturnsList.map(ret => ({
                 id: ret._id,
@@ -3896,30 +3884,48 @@ export const getProductWastageReport = async (filters = {}) => {
 
     // Fetch data using service functions
     const [data, total, productList] = await Promise.all([
-        findWastageService(matchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        findWastageService(matchQuery, { 
+            populate: [{ path: 'items.product', select: 'name _id' }],
+            sort: { createdAt: -1 },
+            skip: skip,
+            limit: limit
+        }),
         countWastageService(matchQuery),
         findProductService({})
     ]);
 
-    // Calculate wastage by product manually
+    // Calculate wastage by product manually using items array
     const wastageByProductMap = {};
+    let totalQuantity = 0;
+    let totalLoss = 0;
+    
     data.forEach(wastage => {
-        const productId = wastage.product?.toString();
-        if (!productId) return;
-        
-        if (!wastageByProductMap[productId]) {
-            const product = productList.find(p => p._id?.toString() === productId);
-            wastageByProductMap[productId] = {
-                productName: product?.name || 'Unknown',
-                totalQuantity: 0,
-                totalLoss: 0,
-                count: 0
-            };
-        }
-        
-        wastageByProductMap[productId].totalQuantity += wastage.quantity || 0;
-        wastageByProductMap[productId].totalLoss += (wastage.quantity || 0) * (wastage.costPrice || 0);
-        wastageByProductMap[productId].count += 1;
+        const items = wastage.items || [];
+        items.forEach(item => {
+            const productId = item.product?._id?.toString() || item.product?.toString();
+            if (!productId) return;
+            
+            const quantity = Number(item.quantity || 0);
+            const costPrice = Number(item.costPrice || 0);
+            const itemTotalLoss = Number(item.totalLoss || (quantity * costPrice));
+            
+            if (!wastageByProductMap[productId]) {
+                const product = productList.find(p => p._id?.toString() === productId);
+                wastageByProductMap[productId] = {
+                    productName: product?.name || item.product?.name || 'Unknown',
+                    totalQuantity: 0,
+                    totalLoss: 0,
+                    count: 0
+                };
+            }
+            
+            wastageByProductMap[productId].totalQuantity += quantity;
+            wastageByProductMap[productId].totalLoss += itemTotalLoss;
+            wastageByProductMap[productId].count += 1;
+            
+            totalQuantity += quantity;
+            totalLoss += itemTotalLoss;
+        });
     });
     
     const wastageByProduct = Object.values(wastageByProductMap);
@@ -3931,8 +3937,8 @@ export const getProductWastageReport = async (filters = {}) => {
         limit,
         totalPages: Math.ceil(total / limit),
         summary: {
-            totalQuantity: data.reduce((sum, w) => sum + (w.quantity || 0), 0),
-            totalLoss: data.reduce((sum, w) => sum + ((w.quantity || 0) * (w.costPrice || 0)), 0),
+            totalQuantity,
+            totalLoss,
             totalRecords: data.length,
         },
         wastageByProduct
@@ -4833,7 +4839,7 @@ export const getProfitLossReport = async (filters = {}) => {
         findOrderService({ ...dateFilter, status: "completed" }),
         findPurchaseService(dateFilter),
         findTransactionService({ ...dateFilter, sourceType: 'expense', isDeleted: false }),
-        findWastageService(dateFilter),
+        findWastageService(dateFilter, { populate: [{ path: 'items.product', select: 'name _id' }] }),
         findStaffSalaryPaymentService(dateFilter),
         findProductReturnService(dateFilter)
     ]);
@@ -4844,7 +4850,11 @@ export const getProfitLossReport = async (filters = {}) => {
     const netRevenue = totalRevenue - totalDiscount;
     const totalCOGS = purchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
     const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-    const totalWastage = wastages.reduce((sum, wastage) => sum + ((wastage.quantity || 0) * (wastage.costPrice || 0)), 0);
+    
+    // Calculate wastages using the service function
+    const wastageCalculations = calculateWastageValues(wastages);
+    const totalWastage = wastageCalculations.totalWastageAmount;
+    
     const totalSalaries = salaryPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     const totalRefunds = productReturns.reduce((sum, ret) => sum + (ret.refundAmount || 0), 0);
 
