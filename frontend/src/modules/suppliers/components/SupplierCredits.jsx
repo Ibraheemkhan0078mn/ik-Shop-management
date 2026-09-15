@@ -234,7 +234,7 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                                 {new Date(item.transactionDate || item.date).toLocaleDateString()}
                                                             </td>
                                                             <td className="px-4 py-3 text-center">
-                                                                {item.sourceType !== 'purchase' && item.sourceType !== 'purchaseReturn' && (
+                                                                {item.sourceType === 'qarza' && (
                                                                     <>
                                                                         <button
                                                                             onClick={() => setModal({ mode: "update", payment: item })}

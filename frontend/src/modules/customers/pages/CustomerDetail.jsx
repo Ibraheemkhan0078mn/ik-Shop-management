@@ -443,7 +443,7 @@ export default function CustomerDetail() {
                                                                     {new Date(item.transactionDate || item.date).toLocaleDateString()}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-center">
-                                                                    {item.sourceType !== 'sale' && (
+                                                                    {item.sourceType === 'qarza' && (
                                                                         <>
                                                                             <button
                                                                                 onClick={() => setModal({ mode: "update", payment: item })}
