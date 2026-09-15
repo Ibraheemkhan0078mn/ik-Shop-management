@@ -88,14 +88,30 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { staffId }) => [{ type: "SalaryPayment", id: staffId }],
+            invalidatesTags: (result, error, { staffId }) => [
+                { type: "SalaryPayment", id: staffId },
+                { type: "Staff", id: staffId }
+            ],
         }),
         deleteSalaryPayment: builder.mutation({
             query: (paymentId) => ({
                 url: `/staff/salary-payment/${paymentId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, paymentId) => [{ type: "SalaryPayment" }],
+            invalidatesTags: (result, error, paymentId) => {
+                // If we have the staffId from the result, use it for targeted invalidation
+                const staffId = result?.data?.staffId;
+                if (staffId) {
+                    return [
+                        { type: "SalaryPayment", id: staffId },
+                        { type: "Staff", id: staffId },
+                        "SalaryPayment",
+                        "Staff"
+                    ];
+                }
+                // Fallback to invalidating all if staffId is not available
+                return ["SalaryPayment", "Staff"];
+            },
         }),
 
         // Sale Bills
@@ -112,14 +128,30 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { staffId }) => [{ type: "SaleBill", id: staffId }],
+            invalidatesTags: (result, error, { staffId }) => [
+                { type: "SaleBill", id: staffId },
+                { type: "Staff", id: staffId }
+            ],
         }),
         markSaleBillAsPaid: builder.mutation({
             query: (id) => ({
                 url: `/staff/sale-bill/${id}/pay`,
                 method: "PUT",
             }),
-            invalidatesTags: (result, error, id) => [{ type: "SaleBill", id }],
+            invalidatesTags: (result, error, id) => {
+                // If we have the staffId from the result, use it for targeted invalidation
+                const staffId = result?.data?.staffId;
+                if (staffId) {
+                    return [
+                        { type: "SaleBill", id: staffId },
+                        { type: "Staff", id: staffId },
+                        "SaleBill",
+                        "Staff"
+                    ];
+                }
+                // Fallback to invalidating all if staffId is not available
+                return ["SaleBill", "Staff"];
+            },
         }),
 
         // Attendance
@@ -142,7 +174,21 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { date }) => [{ type: "Attendance", id: date }],
+            invalidatesTags: (result, error, { date, records }) => {
+                // Invalidate attendance for the specific date
+                const tags = [{ type: "Attendance", id: date }, "Attendance"];
+                
+                // Also invalidate affected staff members if we have the records
+                if (records && Array.isArray(records)) {
+                    records.forEach(record => {
+                        if (record.staffId) {
+                            tags.push({ type: "Staff", id: record.staffId });
+                        }
+                    });
+                }
+                
+                return tags;
+            },
         }),
         getAttendanceHistory: builder.query({
             query: (params) => ({
@@ -206,7 +252,10 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { staffId }) => [{ type: "SalaryChange", id: staffId }, { type: "Staff", id: staffId }],
+            invalidatesTags: (result, error, { staffId }) => [
+                { type: "SalaryChange", id: staffId },
+                { type: "Staff", id: staffId }
+            ],
         }),
         updateSalaryChange: builder.mutation({
             query: ({ id, data }) => ({
@@ -214,14 +263,19 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: ["SalaryChange"],
+            invalidatesTags: (result, error, { id, data }) => [
+                { type: "SalaryChange", id: data?.staffId },
+                { type: "Staff", id: data?.staffId },
+                "SalaryChange",
+                "Staff"
+            ],
         }),
         deleteSalaryChange: builder.mutation({
             query: (id) => ({
                 url: `/staff/salary-change/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["SalaryChange"],
+            invalidatesTags: ["SalaryChange", "Staff"],
         }),
 
         // Percentage Changes
@@ -237,7 +291,10 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, { staffId }) => [{ type: "PercentageChange", id: staffId }, { type: "Staff", id: staffId }],
+            invalidatesTags: (result, error, { staffId }) => [
+                { type: "PercentageChange", id: staffId },
+                { type: "Staff", id: staffId }
+            ],
         }),
         updatePercentageChange: builder.mutation({
             query: ({ id, data }) => ({
@@ -245,14 +302,19 @@ export const staffApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: ["PercentageChange"],
+            invalidatesTags: (result, error, { id, data }) => [
+                { type: "PercentageChange", id: data?.staffId },
+                { type: "Staff", id: data?.staffId },
+                "PercentageChange",
+                "Staff"
+            ],
         }),
         deletePercentageChange: builder.mutation({
             query: (id) => ({
                 url: `/staff/percentage-change/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["PercentageChange"],
+            invalidatesTags: ["PercentageChange", "Staff"],
         }),
 
         // Staff Roles
