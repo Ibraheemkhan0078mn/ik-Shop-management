@@ -8,6 +8,7 @@ import {
     wastageUpdate as wastageUpdateService,
     wastageDelete as wastageDeleteService,
     countWastages as countWastagesService,
+    calculateWastageItems,
 } from "../services/wastage.service.js";
 
 // ─── GET ALL (simple, no pagination) ────────────────────────────────────────
@@ -90,8 +91,10 @@ export const createWastage = asyncHandler(async (req, res, next) => {
     let totalQuantity = 0;
     let totalLossAmount = 0;
 
+    validatedData.items = await calculateWastageItems(validatedData.items);
+
     validatedData.items = validatedData.items.map((item) => {
-        const totalLoss = (item.quantity || 0) * (item.costPrice || 0);
+        const totalLoss = Number(item.totalLoss) || 0;
         totalQuantity += item.quantity || 0;
         totalLossAmount += totalLoss;
         return { ...item, totalLoss };
@@ -143,8 +146,10 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
         let totalQuantity = 0;
         let totalLossAmount = 0;
 
+        validatedData.items = await calculateWastageItems(validatedData.items);
+
         validatedData.items = validatedData.items.map((item) => {
-            const totalLoss = (item.quantity || 0) * (item.costPrice || 0);
+            const totalLoss = Number(item.totalLoss) || 0;
             totalQuantity += item.quantity || 0;
             totalLossAmount += totalLoss;
             return { ...item, totalLoss };

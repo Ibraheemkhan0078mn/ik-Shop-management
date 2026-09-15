@@ -21,7 +21,22 @@ const wastageSchema = new mongoose.Schema({
         expiryDate: { type: Date },                                            // Batch expiry (for expired reason)
         quantity: { type: Number, required: true },                          // How many units wasted
         unit: { type: String },                                          // e.g. tablet, bottle, strip, piece
-        costPrice: { type: Number },                                          // Cost at time of wastage (for loss report)
+        baseCostPrice: { type: Number, default: 0 },                         // Batch purchase price before adjustments
+        discountValue: { type: Number, default: 0 },
+        discountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+        discountAmount: { type: Number, default: 0 },
+        taxValue: { type: Number, default: 0 },
+        taxType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+        taxAmount: { type: Number, default: 0 },
+        purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchases' },
+        invoiceDiscountValue: { type: Number, default: 0 },
+        invoiceDiscountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+        invoiceDiscountAmount: { type: Number, default: 0 },
+        invoiceTaxValue: { type: Number, default: 0 },
+        invoiceTaxType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+        invoiceTaxAmount: { type: Number, default: 0 },
+        shippingAmount: { type: Number, default: 0 },
+        costPrice: { type: Number, default: 0 },                              // Effective cost at time of wastage
         totalLoss: { type: Number },                                          // quantity × costPrice
     }],
 

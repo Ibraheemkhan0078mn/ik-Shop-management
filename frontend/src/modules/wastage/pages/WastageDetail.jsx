@@ -15,6 +15,39 @@ const STATUS_STYLE = {
     rejected: { background: "rgba(220,38,38,0.1)", color: "#dc2626", text: "Rejected" },
 };
 
+const money = value => `Rs ${Number(value || 0).toLocaleString()}`;
+const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%" : " Rs"}`;
+
+function CostingDetails({ item }) {
+    const quantity = Number(item.quantity) || 0;
+    const totalLoss = Number(item.totalLoss ?? quantity * (Number(item.costPrice) || 0));
+    const calculatedUnitCost = (Number(item.baseCostPrice) || 0)
+        - (Number(item.discountAmount) || 0)
+        + (Number(item.taxAmount) || 0);
+    const isCorrect = Math.abs(calculatedUnitCost - (Number(item.costPrice) || 0)) < 0.01;
+
+    return (
+        <details open className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--accent-2)]">Calculation Details</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-3 pb-3 text-xs text-[var(--ink)]">
+                <div className="space-y-1">
+                    <p className="font-semibold text-[var(--muted)]">Batch costing (per unit)</p>
+                    <p>Base purchase price: <strong>{money(item.baseCostPrice)}</strong></p>
+                    <p>Discount: <strong>{rate(item.discountValue, item.discountType)}</strong> = {money(item.discountAmount)}</p>
+                    <p>Tax: <strong>{rate(item.taxValue, item.taxType)}</strong> = {money(item.taxAmount)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p>Final unit cost: <strong>{money(item.costPrice)}</strong></p>
+                    <p className={isCorrect ? "text-emerald-600" : "text-red-600"}>
+                        Calculation check: <strong>{isCorrect ? "Applied correctly" : `Mismatch (expected ${money(calculatedUnitCost)})`}</strong>
+                    </p>
+                    <p>Loss: <strong>{quantity} × {money(item.costPrice)} = {money(totalLoss)}</strong></p>
+                </div>
+            </div>
+        </details>
+    );
+}
+
 export default function WastageDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -137,13 +170,17 @@ export default function WastageDetail() {
                     </div>
 
                     {/* Items Table - Invoice style */}
-                    <table className="w-full border-collapse mb-4 text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] border-collapse mb-4 text-sm">
                         <thead>
                             <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
                                 <th className="px-3 py-2 text-left font-semibold text-white">#</th>
                                 <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
                                 <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Cost Price</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Base Cost</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Discount</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Tax</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Effective Cost</th>
                                 <th className="px-3 py-2 text-right font-semibold text-white">Loss Amount</th>
                             </tr>
                         </thead>
@@ -158,11 +195,14 @@ export default function WastageDetail() {
                                             {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
                                         </td>
                                         <td className="px-3 py-2 text-right text-[var(--ink)]">{item.quantity || 0}</td>
-                                        <td className="px-3 py-2 text-right text-[var(--ink)]">Rs {(item.costPrice || 0).toLocaleString()}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
+                                        <td className="px-3 py-2 text-right text-[var(--ink)]">{money(item.baseCostPrice || item.costPrice)}</td>
+                                        <td className="px-3 py-2 text-right text-red-600">{rate(item.discountValue, item.discountType)}<span className="block text-xs">-{money(item.discountAmount)}</span></td>
+                                        <td className="px-3 py-2 text-right text-green-700">{rate(item.taxValue, item.taxType)}<span className="block text-xs">+{money(item.taxAmount)}</span></td>
+                                        <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">{money(item.costPrice)}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</td>
                                     </tr>
                                     <tr>
-                                        <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
+                                        <td colSpan="8" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                                     <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Item Details</p>
@@ -205,10 +245,11 @@ export default function WastageDetail() {
                                                         <div className="h-px bg-[var(--border)] my-1"></div>
                                                         <div className="flex justify-between font-semibold">
                                                             <span style={{ color: "var(--ink)" }}>Loss Amount:</span>
-                                                            <span className="font-mono text-red-600">Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</span>
+                                                            <span className="font-mono text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</span>
                                                         </div>
                                                     </div>
                                                 </div>
+                                                <CostingDetails item={item} />
                                             </div>
                                         </td>
                                     </tr>
@@ -220,6 +261,7 @@ export default function WastageDetail() {
                             </tr>
                         </tbody>
                     </table>
+                    </div>
 
                     {/* Sign-off Bar */}
                     <div className="border border-[var(--border)] mt-6 mb-4">

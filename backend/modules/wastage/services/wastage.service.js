@@ -1,4 +1,60 @@
 import { createWastageService, findWastageService, findOneWastageService, findByIdWastageService, updateWastageService, deleteOneWastageService, countWastageService } from "./wastage.crud.js";
+import { findOneBatchService } from "../../productPurchases/services/batch.crud.js";
+import { getProductCostingByBatch } from "../../product/services/productCosting.service.js";
+
+const calculateWastageItemCosting = async (item) => {
+    let batchId = item.batch?._id || item.batch;
+    let batch = batchId ? await findOneBatchService({ _id: batchId, product: item.product }) : null;
+
+    if (!batch && item.batchNumber && item.product) {
+        batch = await findOneBatchService({ product: item.product, batchNumber: item.batchNumber });
+        batchId = batch?._id;
+    }
+
+    const costing = batchId
+        ? await getProductCostingByBatch(item.product, batchId)
+        : { found: false };
+
+    if (!costing.found) {
+        const fallbackCost = Number(item.costPrice) || 0;
+        return {
+            ...item,
+            costPrice: fallbackCost,
+            totalLoss: (Number(item.quantity) || 0) * fallbackCost,
+        };
+    }
+
+    const quantity = Number(item.quantity) || 0;
+    const finalCosting = {
+        baseCostPrice: costing.basePurchasePrice,
+        discountValue: costing.discountValue,
+        discountType: costing.discountType,
+        discountAmount: costing.discountAmount,
+        taxValue: costing.taxValue,
+        taxType: costing.taxType,
+        taxAmount: costing.taxAmount,
+        invoiceDiscountValue: 0,
+        invoiceDiscountType: "percentage",
+        invoiceDiscountAmount: 0,
+        invoiceTaxValue: 0,
+        invoiceTaxType: "percentage",
+        invoiceTaxAmount: 0,
+        shippingAmount: 0,
+        effectiveCostPrice: costing.effectiveCostPrice,
+    };
+
+    return {
+        ...item,
+        batch: batch._id,
+        batchNumber: item.batchNumber || costing.batchNumber,
+        expiryDate: item.expiryDate || batch.expiryDate,
+        ...finalCosting,
+        costPrice: finalCosting.effectiveCostPrice,
+        totalLoss: quantity * finalCosting.effectiveCostPrice,
+    };
+};
+
+const calculateWastageItems = async (items = []) => Promise.all(items.map(calculateWastageItemCosting));
 
 const wastageCreate = async (data) => {
     return await createWastageService(data);
@@ -110,4 +166,5 @@ export {
     wastageDelete,
     countWastages,
     calculateWastageValues,
+    calculateWastageItems,
 };

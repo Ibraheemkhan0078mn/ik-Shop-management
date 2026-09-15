@@ -4,10 +4,26 @@ import * as Yup from "yup";
 // ─── ITEM SUB-SCHEMA ─────────────────────────────────────────────────────────
 const wastageItemSchema = Yup.object({
     product: Yup.string().required("Product is required"),
+    batch: Yup.string().optional(),
     batchNumber: Yup.string().optional(),
     expiryDate: Yup.date().optional().nullable(),
     quantity: Yup.number().required("Quantity is required").min(1, "Quantity must be at least 1"),
     costPrice: Yup.number().optional().min(0, "Cost price cannot be negative"),
+    baseCostPrice: Yup.number().optional().min(0),
+    discountValue: Yup.number().optional().min(0),
+    discountType: Yup.string().optional(),
+    discountAmount: Yup.number().optional().min(0),
+    taxValue: Yup.number().optional().min(0),
+    taxType: Yup.string().optional(),
+    taxAmount: Yup.number().optional().min(0),
+    purchase: Yup.string().optional(),
+    invoiceDiscountValue: Yup.number().optional().min(0),
+    invoiceDiscountType: Yup.string().optional(),
+    invoiceDiscountAmount: Yup.number().optional().min(0),
+    invoiceTaxValue: Yup.number().optional().min(0),
+    invoiceTaxType: Yup.string().optional(),
+    invoiceTaxAmount: Yup.number().optional().min(0),
+    shippingAmount: Yup.number().optional().min(0),
 });
 
 // ─── CREATE SCHEMA ───────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 // src/modules/wastage/components/WastageModal.jsx
-import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Plus, Package, Calendar, FileText, DollarSign, AlertTriangle, Trash, ChevronDown } from "lucide-react";
+import React,{ useState, useEffect, useMemo, useRef } from "react";
+import { X, Plus, Package, Calendar, FileText, DollarSign, AlertTriangle, Trash, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useCreateWastage, useUpdateWastage, useWastage } from "../services/wastage.service.js";
 import { useProducts } from "../../productsModule/services/product.service.js";
@@ -26,6 +26,28 @@ const emptyForm = () => ({
   wastageDate: new Date().toISOString().split("T")[0],
   notes: "",
 });
+
+const money = value => `Rs ${Number(value || 0).toLocaleString()}`;
+const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%" : " Rs"}`;
+
+const CostingDetails = ({ item, labels }) => (
+  <details className="mt-2 rounded-lg border p-2 text-xs" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+        <summary className="cursor-pointer font-semibold" style={{ color: "var(--accent-2)" }}>{labels.calculationDetails}</summary>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2" style={{ color: "var(--muted)" }}>
+      <div>
+            <p>{labels.basePrice || "Base price/unit"}: <strong style={{ color: "var(--ink)" }}>{money(item.baseCostPrice)}</strong></p>
+            <p>{labels.batchDiscount || "Batch discount"}: <strong style={{ color: "var(--ink)" }}>{rate(item.discountValue, item.discountType)}</strong> = {money(item.discountAmount)}</p>
+            <p>{labels.batchTax || "Batch tax"}: <strong style={{ color: "var(--ink)" }}>{rate(item.taxValue, item.taxType)}</strong> = {money(item.taxAmount)}</p>
+      </div>
+      <div>
+            <p>{labels.finalUnitCost || "Final unit cost"}: <strong style={{ color: "var(--ink)" }}>{money(item.costPrice)}</strong></p>
+            <p className={Math.abs((Number(item.baseCostPrice) || 0) - (Number(item.discountAmount) || 0) + (Number(item.taxAmount) || 0) - (Number(item.costPrice) || 0)) < 0.01 ? "text-emerald-600" : "text-red-600"}>
+              Calculation check: <strong>{Math.abs((Number(item.baseCostPrice) || 0) - (Number(item.discountAmount) || 0) + (Number(item.taxAmount) || 0) - (Number(item.costPrice) || 0)) < 0.01 ? "Applied correctly" : "Mismatch"}</strong>
+        </p>
+      </div>
+    </div>
+  </details>
+);
 
 // ─── API-based searchable select for products ─────────────────────────────────────
 const ApiProductSelect = ({ value, onChange, placeholder = "Search products...", productName = "" }) => {
@@ -201,13 +223,16 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
   const [updateWastage, { isLoading: isUpdating }] = useUpdateWastage();
   const isSubmitting = isCreating || isUpdating;
 
-  const { data: productsRaw = [] } = useProducts();
-  const products = useMemo(() => productsRaw?.data ?? productsRaw ?? [], [productsRaw]);
-
   const [form, setForm] = useState(emptyForm());
   const [currentItem, setCurrentItem] = useState(blankItem());
   const [items, setItems] = useState([]);
   const [editingIndex, setEditingIndex] = useState(-1);
+  const [expandedCostingIndex, setExpandedCostingIndex] = useState(-1);
+
+  const { data: productsRaw = [] } = useProducts();
+  const products = useMemo(() => productsRaw?.data ?? productsRaw ?? [], [productsRaw]);
+  const { data: productBatchesRaw = [] } = useBatchesByProduct(currentItem.product, { skip: !currentItem.product });
+  const productBatches = useMemo(() => productBatchesRaw?.data ?? productBatchesRaw ?? [], [productBatchesRaw]);
 
   const updateForm = (field, value) => setForm(p => ({ ...p, [field]: value }));
   const updateCurrent = (field, value) => setCurrentItem(p => ({ ...p, [field]: value }));
@@ -224,9 +249,25 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
     setItems((existingWastage.items ?? []).map(it => ({
       product: it.product?._id ?? it.product ?? "",
       productName: it.product?.name ?? "",
+      batch: it.batch?._id ?? it.batch ?? "",
       batchNumber: it.batchNumber ?? "",
       expiryDate: it.expiryDate ? new Date(it.expiryDate).toISOString().split("T")[0] : "",
       quantity: it.quantity ?? "",
+      baseCostPrice: it.baseCostPrice ?? "",
+      discountValue: it.discountValue ?? "",
+      discountType: it.discountType ?? "percentage",
+      discountAmount: it.discountAmount ?? "",
+      taxValue: it.taxValue ?? "",
+      taxType: it.taxType ?? "percentage",
+      taxAmount: it.taxAmount ?? "",
+      purchase: it.purchase?._id ?? it.purchase ?? "",
+      invoiceDiscountValue: it.invoiceDiscountValue ?? "",
+      invoiceDiscountType: it.invoiceDiscountType ?? "percentage",
+      invoiceDiscountAmount: it.invoiceDiscountAmount ?? "",
+      invoiceTaxValue: it.invoiceTaxValue ?? "",
+      invoiceTaxType: it.invoiceTaxType ?? "percentage",
+      invoiceTaxAmount: it.invoiceTaxAmount ?? "",
+      shippingAmount: it.shippingAmount ?? "",
       costPrice: it.costPrice ?? "",
       reason: it.reason ?? "",
       notes: it.notes ?? "",
@@ -235,16 +276,18 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
 
   // ── Memoized Options ──────────────────────────────────────────────────
   const batchOptions = useMemo(() => {
-    const selectedProduct = products.find(p => p._id === currentItem.product);
-    const batches = selectedProduct?.batches || [];
-    return batches.map(b => ({
+    return productBatches.map(b => ({
       label: b.batchNumber,
       value: b.batchNumber,
+      id: b._id,
       expiryDate: b.expiryDate ?? "",
       quantity: b.quantity,
-      purchasePrice: b.purchasePrice
+      purchasePrice: b.purchasePrice,
+      discount: b.discount,
+      gst: b.gst,
+      gstType: b.gstType,
     }));
-  }, [currentItem.product, products]);
+  }, [productBatches]);
 
   const reasonOptions = useMemo(() => [
     { label: labels.expired, value: "expired" },
@@ -316,6 +359,7 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
       // Add new item
       setItems(prev => [...prev, row]);
     }
+    setExpandedCostingIndex(-1);
     setCurrentItem(blankItem());
   };
 
@@ -372,8 +416,8 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
   // ─── render ───────────────────────────────────────────────────────────────
   // layout: [add-item-form | items-added]  →  [wastage details]  →  [summary]  →  [submit]
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto" onClick={onClose}>
-      <div className="relative w-[70%] max-w-6xl sm:my-4 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-3 lg:p-5 overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full sm:w-[96%] xl:w-[90%] max-w-7xl sm:my-3 min-h-full sm:min-h-0 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden" style={{ background: "var(--app-bg)", border: "1px solid var(--border)" }} onClick={e => e.stopPropagation()}>
 
         {/* header */}
         <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-10" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
@@ -422,12 +466,30 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                         const val = e.target.value;
                         const b = batchOptions.find(o => o.value === val);
                         updateCurrent("batchNumber", val);
+                        updateCurrent("batch", b?.id || "");
                         if (b?.expiryDate) {
                           updateCurrent("expiryDate", new Date(b.expiryDate).toISOString().split("T")[0]);
                         }
                         // Use batch's purchasePrice for cost price
                         if (b?.purchasePrice !== undefined) {
-                          updateCurrent("costPrice", String(b.purchasePrice));
+                          const base = Number(b.purchasePrice) || 0;
+                          const discountValue = Number(b.discount?.amount) || 0;
+                          const discountType = b.discount?.type || "percentage";
+                          const discountAmount = b.discount?.type === "fixed"
+                            ? discountValue
+                            : (base * discountValue) / 100;
+                          const afterDiscount = Math.max(0, base - discountAmount);
+                          const taxValue = Number(b.gst) || 0;
+                          const taxType = b.gstType || "percentage";
+                          const taxAmount = taxType === "fixed" ? taxValue : (afterDiscount * taxValue) / 100;
+                          updateCurrent("baseCostPrice", base);
+                          updateCurrent("discountValue", discountValue);
+                          updateCurrent("discountType", discountType);
+                          updateCurrent("discountAmount", discountAmount);
+                          updateCurrent("taxValue", taxValue);
+                          updateCurrent("taxType", taxType);
+                          updateCurrent("taxAmount", taxAmount);
+                          updateCurrent("costPrice", String(Math.max(0, afterDiscount + taxAmount)));
                         }
                       }}
                       disabled={!currentItem.product}
@@ -536,6 +598,7 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                         const batch = batchOptions.find(b => b.value === it.batchNumber);
                         const stock = batch?.quantity || 0;
                         return (
+                          <React.Fragment key={idx}>
                           <tr key={idx} className="transition" style={{ borderBottom: "1px solid var(--border)", background: editingIndex === idx ? "rgba(15,118,110,0.05)" : "transparent" }}
                             onMouseEnter={e => { if (editingIndex !== idx) e.currentTarget.style.background = "var(--surface-muted)"; }}
                             onMouseLeave={e => { if (editingIndex !== idx) e.currentTarget.style.background = "transparent"; }}>
@@ -544,9 +607,13 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                             <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{stock}</td>
                             <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity}</td>
                             <td className="px-2 sm:px-3 py-3" style={{ color: "var(--muted)" }}>{reasonOptions.find(r => r.value === it.reason)?.label ?? it.reason}</td>
-                            <td className="px-2 sm:px-3 py-3 max-w-[160px] truncate" style={{ color: "var(--muted)" }}>{it.notes || "—"}</td>
-                            <td className="px-2 sm:px-3 py-3"><div className="flex justify-center gap-1"><Btn variant="ghost" size="sm" onClick={() => handleEditItem(idx)}>{labels.edit}</Btn><Btn variant="danger" size="sm" onClick={() => removeItem(idx)}><Trash className="w-3 h-3" /></Btn></div></td>
+                            <td className="px-2 sm:px-3 py-3 max-w-[160px]" style={{ color: "var(--muted)" }}>
+                              <div className="truncate">{it.notes || "—"}</div>
+                            </td>
+                            <td className="px-2 sm:px-3 py-3"><div className="flex justify-center gap-1"><Btn variant="ghost" size="sm" onClick={() => setExpandedCostingIndex(expandedCostingIndex === idx ? -1 : idx)} title={expandedCostingIndex === idx ? labels.hideCalculation : labels.showCalculation}>{expandedCostingIndex === idx ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}</Btn><Btn variant="ghost" size="sm" onClick={() => handleEditItem(idx)}>{labels.edit}</Btn><Btn variant="danger" size="sm" onClick={() => removeItem(idx)}><Trash className="w-3 h-3" /></Btn></div></td>
                           </tr>
+                          {expandedCostingIndex === idx && <tr style={{ borderBottom: "1px solid var(--border)" }}><td colSpan={7} className="px-2 sm:px-3 pb-3"><CostingDetails item={it} labels={labels} /></td></tr>}
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
