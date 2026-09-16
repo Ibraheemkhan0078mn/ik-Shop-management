@@ -67,7 +67,7 @@ export default function InventoryReport() {
     const columns = [
         ["Product", product => <div className="flex items-center gap-2 min-w-[180px]"><img src={toImageUrl(product.image) || ""} alt="" className="w-9 h-9 rounded-lg object-cover" style={{ background: 'var(--surface-muted)' }} onError={e => { e.currentTarget.style.display = "none" }} /><span className="font-medium">{product.name || "—"}</span></div>],
         ["Code", product => product.productCode || product.hotKeySku || product.barcode || "—"],
-        ["Current Stock", product => product.currentStock], ["Purchased Qty", product => product.totalPurchased], ["Purchase Frequency", product => product.purchaseFrequency], ["Purchase Return Qty", product => product.purchaseReturnQuantity], ["Purchase Return Frequency", product => product.purchaseReturnFrequency], ["Order Qty", product => product.orderQuantity], ["Order Frequency", product => product.orderFrequency], ["Order Return Qty", product => product.orderReturnQuantity], ["Order Return Frequency", product => product.orderReturnFrequency], ["Wastage Qty", product => product.wastageQuantity], ["Wastage Frequency", product => product.wastageFrequency], ["Revenue", product => `Rs ${Number(product.totalRevenue || 0).toLocaleString()}`],
+        ["Current Stock", product => product.currentStock], ["Avg. Cost", product => `Rs ${Number(product.averageCostPrice || 0).toLocaleString()}`], ["Stock Value", product => `Rs ${Number(product.stockValue || 0).toLocaleString()}`], ["Purchased Qty", product => product.totalPurchased], ["Purchase Frequency", product => product.purchaseFrequency], ["Purchase Return Qty", product => product.purchaseReturnQuantity], ["Purchase Return Frequency", product => product.purchaseReturnFrequency], ["Order Qty", product => product.orderQuantity], ["Order Frequency", product => product.orderFrequency], ["Order Return Qty", product => product.orderReturnQuantity], ["Order Return Frequency", product => product.orderReturnFrequency], ["Wastage Qty", product => product.wastageQuantity], ["Wastage Frequency", product => product.wastageFrequency], ["Revenue", product => `Rs ${Number(product.totalRevenue || 0).toLocaleString()}`],
     ];
 
     return (
@@ -124,6 +124,7 @@ export default function InventoryReport() {
                     <div className="flex flex-wrap gap-3 mb-6">
                         <KpiCard label="Products" value={summary.totalProducts} icon={Package} color="#3b82f6" />
                         <KpiCard label="Current Stock" value={summary.currentStock} icon={Package} color="#0ea5e9" />
+                        <KpiCard label="Stock Value" value={summary.stockValue} icon={DollarSign} color="#14b8a6" money />
                         <KpiCard label="Purchased" value={summary.purchasedQuantity} icon={Receipt} color="#6366f1" />
                         <KpiCard label="Purchase Returns" value={summary.purchaseReturnQuantity} icon={RotateCcw} color="#06b6d4" />
                         <KpiCard label="Orders" value={summary.orderQuantity} icon={TrendingUp} color="#10b981" />

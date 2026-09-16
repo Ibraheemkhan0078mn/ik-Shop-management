@@ -1,6 +1,7 @@
 import {
     buildDateFilter,
     getTodayRange,
+    enrichMainBusinessSummaryWithInventory,
 } from './reports.service.js';
 
 describe('Reports Service Helper Functions', () => {
@@ -39,6 +40,20 @@ describe('Reports Service Helper Functions', () => {
             expect(startOfDay).toBeInstanceOf(Date);
             expect(endOfDay).toBeInstanceOf(Date);
             expect(startOfDay < endOfDay).toBe(true);
+        });
+    });
+
+    describe('enrichMainBusinessSummaryWithInventory', () => {
+        it('should keep current stock and stock value from inventory summary', () => {
+            const merged = enrichMainBusinessSummaryWithInventory(
+                { totalSales: 5000 },
+                { currentStock: 42, stockValue: 1234.5 }
+            );
+
+            expect(merged.totalSales).toBe(5000);
+            expect(merged.currentStock).toBe(42);
+            expect(merged.stockValue).toBe(1234.5);
+            expect(merged.inventory).toEqual({ currentStock: 42, stockValue: 1234.5 });
         });
     });
 });

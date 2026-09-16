@@ -623,6 +623,8 @@ export default function MainBusinessReport() {
         { label: labels.totalExpenses, value: summary.totalExpenses, icon: Receipt, color: COLORS.expenses },
         { label: labels.totalSalaries, value: summary.totalSalaries, icon: Users, color: COLORS.salaries },
         { label: labels.wastageLoss, value: summary.totalWastage, icon: AlertCircle, color: COLORS.wastage },
+        { label: 'Current Stock', value: summary.currentStock, icon: Package, color: '#0ea5e9' },
+        { label: 'Stock Value', value: summary.stockValue, icon: DollarSign, color: '#14b8a6' },
     ];
 
     return (

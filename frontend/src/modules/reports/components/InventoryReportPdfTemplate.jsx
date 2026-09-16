@@ -65,6 +65,11 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
                         color="#3b82f6"
                     />
                     <KpiCard
+                        label="Stock Value"
+                        value={`Rs ${Number(summary.stockValue || 0).toLocaleString()}`}
+                        color="#14b8a6"
+                    />
+                    <KpiCard
                         label="Dead Stock"
                         value={summary.deadStockCount}
                         color="#ef4444"
@@ -121,6 +126,8 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Code</th>
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Category</th>
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Stock</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Avg. Cost</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Stock Value</th>
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Min</th>
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Max</th>
                                 <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#6b7280' }}>Purchased</th>
@@ -135,7 +142,7 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
                         <tbody>
                             {products.length === 0 ? (
                                 <tr>
-                                    <td colSpan="14" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>No inventory data found</td>
+                                    <td colSpan="16" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280' }}>No inventory data found</td>
                                 </tr>
                             ) : (
                                 products.slice(0, 50).map((product) => (
@@ -163,6 +170,8 @@ export default function InventoryReportPdfTemplate({ reportData = {}, labels = {
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', color: '#6b7280' }}>{product.code || '—'}</td>
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', color: '#6b7280' }}>{product.category?.name || '—'}</td>
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>{product.currentStock}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>Rs {Number(product.averageCostPrice || 0).toLocaleString()}</td>
+                                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#1f2937' }}>Rs {Number(product.stockValue || 0).toLocaleString()}</td>
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.minStock || '—'}</td>
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.maxStock || '—'}</td>
                                         <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontSize: '0.875rem', textAlign: 'right', color: '#6b7280' }}>{product.totalPurchased || 0}</td>

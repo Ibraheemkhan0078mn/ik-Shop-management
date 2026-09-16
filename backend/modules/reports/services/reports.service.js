@@ -2414,7 +2414,8 @@ const prepareMainBusinessReport = async (filters = {}) => {
 
     // Use the reusable generateSalesReportData function for sales calculations
     const salesReportData = await generateSalesReportData({ fromDate, toDate, period, page: 1, limit: 100 });
-    
+    const inventorySummary = await getInventoryKPIReport(filters);
+
     // Extract sales data from the report
     const totalSales = salesReportData.summary.totalSales;
     const totalDiscount = salesReportData.summary.totalDiscount;
@@ -2776,29 +2777,33 @@ const prepareMainBusinessReport = async (filters = {}) => {
             };
         });
 
+    const baseSummary = {
+        totalSales,
+        totalPurchases,
+        totalExpenses,
+        totalSalaries,
+        totalPurchaseReturns,
+        totalProductReturns,
+        totalWastage,
+        totalReceivable,
+        totalPayable,
+        totalCostOfGoodsSold,
+        grossProfit,
+        grossMarginPercentage,
+        netProfit,
+        netMarginPercentage,
+        retailSales,
+        wholesaleSales,
+        salesMargin,
+        // Credits/Debits summary data
+        totalCreditsDebitsBalance,
+        totalCreditsDebitsPayments,
+    };
+
+    const enrichedSummary = enrichMainBusinessSummaryWithInventory(baseSummary, inventorySummary);
+
     return {
-        summary: {
-            totalSales,
-            totalPurchases,
-            totalExpenses,
-            totalSalaries,
-            totalPurchaseReturns,
-            totalProductReturns,
-            totalWastage,
-            totalReceivable,
-            totalPayable,
-            totalCostOfGoodsSold,
-            grossProfit,
-            grossMarginPercentage,
-            netProfit,
-            netMarginPercentage,
-            retailSales,
-            wholesaleSales,
-            salesMargin,
-            // Credits/Debits summary data
-            totalCreditsDebitsBalance,
-            totalCreditsDebitsPayments,
-        },
+        summary: enrichedSummary,
         details: {
             salesCount,
             purchaseCount,
@@ -3064,6 +3069,13 @@ export const calculateProfitAndLoss = ({ salesProfit = 0, totalWastage = 0, tota
     - Number(totalExpenses || 0)
     - Number(totalStaffPayments || 0)
 );
+
+export const enrichMainBusinessSummaryWithInventory = (summary = {}, inventorySummary = {}) => ({
+    ...summary,
+    currentStock: Number(inventorySummary.currentStock || 0),
+    stockValue: Number(inventorySummary.stockValue || 0),
+    inventory: inventorySummary,
+});
 
 export const getMainBusinessReport = (filters = {}) => getPreparedMainBusinessReport(filters);
 
@@ -3793,6 +3805,21 @@ const sumMatchingItems = (documents, productId, getProductId, getQuantity, getRe
     return result;
 }, { quantity: 0, frequency: 0, revenue: 0 });
 
+const getBatchEffectiveCost = (batch) => {
+    const purchasePrice = Number(batch.purchasePrice) || 0;
+    const discountValue = Number(batch.discount?.amount) || 0;
+    const discountAmount = batch.discount?.type === "fixed"
+        ? discountValue
+        : (purchasePrice * discountValue) / 100;
+    const priceAfterDiscount = Math.max(0, purchasePrice - discountAmount);
+    const taxValue = Number(batch.gst) || 0;
+    const taxAmount = batch.gstType === "fixed"
+        ? taxValue
+        : (priceAfterDiscount * taxValue) / 100;
+
+    return Math.max(0, priceAfterDiscount + taxAmount);
+};
+
 const getInventoryProductStats = (product, context) => {
     const productId = product._id.toString();
     const purchase = sumMatchingItems(context.purchases, productId, item => item.product, item => item.quantity);
@@ -3807,13 +3834,23 @@ const getInventoryProductStats = (product, context) => {
         result.frequency += 1;
         return result;
     }, { quantity: 0, frequency: 0 });
-    const currentStock = context.batches
-        .filter(batch => batch.product?.toString() === productId)
-        .reduce((sum, batch) => sum + Number(batch.quantity || 0), 0);
+    const productBatches = context.batches.filter(batch => batch.product?.toString() === productId);
+    const stockValuation = productBatches.reduce((result, batch) => {
+        const quantity = Number(batch.quantity) || 0;
+        const unitCost = getBatchEffectiveCost(batch);
+        result.quantity += quantity;
+        result.value += quantity * unitCost;
+        return result;
+    }, { quantity: 0, value: 0 });
+    const averageCostPrice = stockValuation.quantity > 0
+        ? stockValuation.value / stockValuation.quantity
+        : 0;
 
     return {
         ...product,
-        currentStock,
+        currentStock: stockValuation.quantity,
+        averageCostPrice,
+        stockValue: stockValuation.value,
         totalPurchased: purchase.quantity,
         purchaseFrequency: purchase.frequency,
         purchaseReturnQuantity: purchaseReturn.quantity,
@@ -3850,6 +3887,7 @@ export const getInventoryKPIReport = async (filters = {}) => {
     return {
         totalProducts: stats.length,
         currentStock: stats.reduce((sum, item) => sum + item.currentStock, 0),
+        stockValue: stats.reduce((sum, item) => sum + item.stockValue, 0),
         purchasedQuantity: stats.reduce((sum, item) => sum + item.totalPurchased, 0),
         purchaseFrequency: stats.reduce((sum, item) => sum + item.purchaseFrequency, 0),
         purchaseReturnQuantity: stats.reduce((sum, item) => sum + item.purchaseReturnQuantity, 0),
