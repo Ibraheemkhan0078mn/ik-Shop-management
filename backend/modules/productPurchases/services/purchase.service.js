@@ -6,6 +6,35 @@ import { updateTransaction } from "../../transactions/services/transaction.servi
 import { generateBatchNumber } from "./batch.service.js";
 import { updateDocs } from "../../../common/services/db/mongodbCentralizedCrud.service.js";
 import { findOneSupplierService } from "../../suppliers/services/supplier.crud.js";
+import mongoose from "mongoose";
+
+const calculatePurchaseItemCosting = (item) => {
+    const quantity = Number(item.quantity) || 0;
+    const costPrice = Number(item.costPrice || item.price) || 0;
+    const baseTotal = quantity * costPrice;
+    const discount = Number(item.discount) || 0;
+    const discountAmount = item.discountType === "fixed" ? Math.min(baseTotal, discount) : Math.min(baseTotal, (baseTotal * discount) / 100);
+    const afterDiscount = Math.max(0, baseTotal - discountAmount);
+    const tax = Number(item.tax) || 0;
+    const taxAmount = item.taxType === "fixed" ? tax : (afterDiscount * tax) / 100;
+    const totalCosting = afterDiscount + taxAmount;
+    return { perUnitCosting: quantity > 0 ? totalCosting / quantity : 0, totalCosting };
+};
+
+const getBatchUsageForPurchase = async (batchId, purchaseId) => {
+    const batch = await findOneBatchService({ _id: batchId });
+    const purchases = await findPurchaseService({ "items.batch": batchId }, { select: "_id" });
+    const purchaseIds = purchases.map(purchase => String(purchase._id));
+    const currentPurchaseId = String(purchaseId);
+    return {
+        batchId: String(batchId),
+        originPurchaseId: batch?.originPurchaseId ? String(batch.originPurchaseId) : null,
+        purchaseIds,
+        usageCount: purchaseIds.length,
+        usedByOtherPurchase: purchaseIds.some(id => id !== currentPurchaseId),
+        editable: purchaseIds.length === 1 && purchaseIds[0] === currentPurchaseId,
+    };
+};
 
 const generatePurchaseNumber = async () => {
     const allPurchases = await findPurchaseService({ invoiceNumber: /^PI-\d+$/ }, {
@@ -131,17 +160,12 @@ const getPaginatedPurchases = async (filters = {}) => {
     };
 };
 
-const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
+const createPurchase = async (purchaseData, ProductModel) => {
     const purchaseItems = [];
+    const purchaseId = new mongoose.Types.ObjectId();
 
     for (const item of purchaseData.items) {
-        // Debug log to verify discount and tax values
-        console.log('Purchase Item Data:', {
-            discount: item.discount,
-            discountType: item.discountType,
-            tax: item.tax,
-            taxType: item.taxType
-        });
+        const costing = calculatePurchaseItemCosting(item);
         
         let batchNumber = item.batchNumber;
         
@@ -171,23 +195,34 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
                 supplier: purchaseData.supplier,
                 quantity: 0,
                 purchasePrice: item.costPrice || item.price,
+                originPurchaseId: purchaseId,
+                perUnitCosting: costing.perUnitCosting,
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 gst: Number(item.tax) || 0,
                 gstType: item.taxType || "percentage",
+                gstInputType: item.taxInputType || item.taxType || "percentage",
+                gstInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+                gstScope: item.taxScope || "entire",
             };
             
             // Add discount object with amount
             if (item.discount !== undefined && item.discount !== null) {
                 batchData.discount = {
                     amount: Number(item.discount),
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             } else {
                 batchData.discount = {
                     amount: 0,
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             }
             
@@ -202,12 +237,16 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
             // Only update batch metadata — do NOT modify quantity here.
             // Batch quantity is managed solely through updatePurchaseStatus (ordered → delivered).
             const updateData = {
-                purchasePrice: item.price,
+                purchasePrice: item.costPrice || item.price,
+                perUnitCosting: costing.perUnitCosting,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 supplier: purchaseData.supplier,
                 gst: Number(item.tax) || 0,
                 gstType: item.taxType || "percentage",
+                gstInputType: item.taxInputType || item.taxType || "percentage",
+                gstInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+                gstScope: item.taxScope || "entire",
             };
             
             // Add discount object with amount
@@ -232,16 +271,25 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
             quantity: item.quantity,
             price: item.price,
             costPrice: item.costPrice || 0,
+            perUnitCosting: costing.perUnitCosting,
+            totalCosting: costing.totalCosting,
             discount: Number(item.discount) || 0,
             discountType: item.discountType || "percentage",
+            discountInputType: item.discountInputType || item.discountType || "percentage",
+            discountInputValue: Number(item.discountInputValue ?? item.discount) || 0,
+            discountScope: item.discountScope || "entire",
             tax: Number(item.tax) || 0,
             taxType: item.taxType || "percentage",
+            taxInputType: item.taxInputType || item.taxType || "percentage",
+            taxInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+            taxScope: item.taxScope || "entire",
             mfgDate: item.mfgDate,
             expiryDate: item.expiryDate,
         });
     }
 
     const purchase = await createPurchaseService({
+        _id: purchaseId,
         supplier: purchaseData.supplier,
         date: purchaseData.date,
         invoiceNumber: purchaseData.invoiceNumber,
@@ -264,7 +312,7 @@ const createPurchase = async (purchaseData, BatchModel, ProductModel) => {
     return purchase;
 };
 
-const updatePurchase = async (id, data, BatchModel, ProductModel) => {
+const updatePurchase = async (id, data, ProductModel) => {
     const existing = await findByIdPurchaseService(id);
     if (!existing) {
         throw new Error("Purchase not found");
@@ -274,6 +322,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
 
     // First pass: create/update batches (without adjusting stock yet)
     for (const item of data.items) {
+        const costing = calculatePurchaseItemCosting(item);
         let batchNumber = item.batchNumber;
         
         // If batchNumber is not provided, generate a unique one via API
@@ -301,6 +350,10 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
 
         // Always look up batch by batchNumber to ensure consistency with stock adjustments
         let batch = await findOneBatchService({ batchNumber: batchNumber, product: item.product });
+        if (batch && item.batchMetadataEdited) {
+            const usage = await getBatchUsageForPurchase(batch._id, id);
+            if (!usage.editable) throw new Error(`Batch ${batch.batchNumber} is locked because it belongs to another purchase or is reused`);
+        }
         
         if (!batch) {
             // Create new batch with quantity=0 - adjustStock will handle the increment
@@ -310,23 +363,34 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 supplier: data.supplier, 
                 quantity: 0,  // Start at 0, adjustStock will increment
                 purchasePrice: item.costPrice || item.price, 
+                originPurchaseId: id,
+                perUnitCosting: costing.perUnitCosting,
                 sellingPrice: item.price,
                 mfgDate: item.mfgDate, 
                 expiryDate: item.expiryDate,
                 gst: Number(item.tax) || 0,
                 gstType: item.taxType || "percentage",
+                gstInputType: item.taxInputType || item.taxType || "percentage",
+                gstInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+                gstScope: item.taxScope || "entire",
             };
             
             // Add discount object with amount
             if (item.discount !== undefined && item.discount !== null) {
                 batchData.discount = {
                     amount: Number(item.discount),
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             } else {
                 batchData.discount = {
                     amount: 0,
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             }
             
@@ -337,27 +401,37 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
                 filter: { _id: item.product },
                 data: { $push: { batches: batch._id } }
             });
-        } else {
+        } else if (item.batchMetadataEdited) {
             // Update existing batch (quantity is NOT updated here - adjustStock already handles it)
             const updateData = {
                 purchasePrice: item.costPrice || item.price,
+                perUnitCosting: costing.perUnitCosting,
                 mfgDate: item.mfgDate,
                 expiryDate: item.expiryDate,
                 supplier: data.supplier,
                 gst: Number(item.tax) || 0,
                 gstType: item.taxType || "percentage",
+                gstInputType: item.taxInputType || item.taxType || "percentage",
+                gstInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+                gstScope: item.taxScope || "entire",
             };
             
             // Add discount object with amount
             if (item.discount !== undefined && item.discount !== null) {
                 updateData.discount = {
                     amount: Number(item.discount),
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             } else {
                 updateData.discount = {
                     amount: 0,
-                    type: item.discountType || "percentage"
+                    type: item.discountType || "percentage",
+                    inputType: item.discountInputType || item.discountType || "percentage",
+                    inputValue: Number(item.discountInputValue ?? item.discount) || 0,
+                    scope: item.discountScope || "entire"
                 };
             }
             
@@ -370,10 +444,18 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
             quantity: item.quantity, 
             price: item.price,
             costPrice: item.costPrice || 0,
+            perUnitCosting: costing.perUnitCosting,
+            totalCosting: costing.totalCosting,
             discount: Number(item.discount) || 0,
             discountType: item.discountType || "percentage",
+            discountInputType: item.discountInputType || item.discountType || "percentage",
+            discountInputValue: Number(item.discountInputValue ?? item.discount) || 0,
+            discountScope: item.discountScope || "entire",
             tax: Number(item.tax) || 0,
             taxType: item.taxType || "percentage",
+            taxInputType: item.taxInputType || item.taxType || "percentage",
+            taxInputValue: Number(item.taxInputValue ?? item.tax) || 0,
+            taxScope: item.taxScope || "entire",
             mfgDate: item.mfgDate, 
             expiryDate: item.expiryDate,
         });
@@ -472,7 +554,7 @@ const updatePurchase = async (id, data, BatchModel, ProductModel) => {
     return purchase;
 };
 
-const deletePurchase = async (id, BatchModel, ProductModel) => {
+const deletePurchase = async (id) => {
     const existing = await findByIdPurchaseService(id);
     if (!existing) {
         throw new Error("Purchase not found");
@@ -555,4 +637,4 @@ const recalculatePurchasePaidAmount = async (purchaseId) => {
     return paymentStatus;
 };
 
-export { getPurchases, getPurchaseById, getPurchaseByInvoiceNumber, getPaginatedPurchases, createPurchase, updatePurchase, deletePurchase, generatePurchaseNumber, calculatePurchasePaymentStatus, recalculatePurchasePaidAmount };
+export { getPurchases, getPurchaseById, getPurchaseByInvoiceNumber, getPaginatedPurchases, createPurchase, updatePurchase, deletePurchase, generatePurchaseNumber, calculatePurchasePaymentStatus, recalculatePurchasePaidAmount, getBatchUsageForPurchase };

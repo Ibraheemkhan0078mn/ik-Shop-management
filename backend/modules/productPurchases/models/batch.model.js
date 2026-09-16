@@ -26,6 +26,17 @@ const batchSchema = new mongoose.Schema(
             required: true,
             min: 0,
         },
+        originPurchaseId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Purchases",
+            default: null,
+            index: true,
+        },
+        perUnitCosting: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
         sellingPrice: {
             type: Number,
             required: true,
@@ -50,6 +61,17 @@ const batchSchema = new mongoose.Schema(
                 enum: ["percentage", "fixed"],
                 default: "percentage",
             },
+            inputType: {
+                type: String,
+                enum: ["percentage", "fixed"],
+                default: "percentage",
+            },
+            inputValue: { type: Number, default: 0 },
+            scope: {
+                type: String,
+                enum: ["entire", "perUnit"],
+                default: "entire",
+            },
         },
         gst: {
             type: Number,
@@ -59,6 +81,17 @@ const batchSchema = new mongoose.Schema(
             type: String,
             enum: ["percentage", "fixed"],
             default: "percentage",
+        },
+        gstInputType: {
+            type: String,
+            enum: ["percentage", "fixed"],
+            default: "percentage",
+        },
+        gstInputValue: { type: Number, default: 0 },
+        gstScope: {
+            type: String,
+            enum: ["entire", "perUnit"],
+            default: "entire",
         },
         gstDiscount: {
             type: Number,

@@ -26,12 +26,35 @@ const purchaseItemSchema = new mongoose.Schema({
         required: true,
         default: 0,
     },
+    perUnitCosting: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
+    totalCosting: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
     discount: {
         type: Number,
         default: 0,
     },
     discountType: {
         type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+    },
+    discountInputType: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+    },
+    discountInputValue: { type: Number, default: 0 },
+    discountScope: {
+        type: String,
+        enum: ["entire", "perUnit"],
+        default: "entire",
     },
     tax: {
         type: Number,
@@ -39,6 +62,19 @@ const purchaseItemSchema = new mongoose.Schema({
     },
     taxType: {
         type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+    },
+    taxInputType: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+    },
+    taxInputValue: { type: Number, default: 0 },
+    taxScope: {
+        type: String,
+        enum: ["entire", "perUnit"],
+        default: "entire",
     },
     mfgDate: {
         type: Date,

@@ -3,7 +3,6 @@ import {
     getLocalBatchModel,
     getLocalProductModel,
 } from "../../../configs/connect.db.js";
-import mongoose from "mongoose";
 import {
     getPurchases,
     getPurchaseById,
@@ -15,6 +14,7 @@ import {
     generatePurchaseNumber,
     calculatePurchasePaymentStatus,
     recalculatePurchasePaidAmount,
+    getBatchUsageForPurchase,
 } from "../services/purchase.service.js";
 import { calculatePerUnitValuesForPurchaseReturn } from "../services/purchaseRecalculation.service.js";
 import { createPurchasePayment } from "../services/purchasePayment.service.js";
@@ -65,7 +65,6 @@ export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
                 name: supplier.name
             };
         } else {
-            console.log("Supplier not found for ID:", purchase.supplier);
         }
     }
 
@@ -75,7 +74,6 @@ export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
         for (const item of purchase.items) {
             if (item.product) {
                 const product = await findOneProductService({ _id: item.product });
-                console.log(product, "the product")
                 if (product) {
                     item.product = {
                         _id: product._id,
@@ -83,15 +81,17 @@ export const getPurchaseDataByInvoiceNumber = asyncHandler(async (req, res) => {
                         productCode: product.productCode
                     };
                 } else {
-                    console.log("Product not found for ID:", item.product);
                 }
             }
         }
     }
 
-    console.log("Final purchase data:", JSON.stringify(purchase, null, 2));
-
     return res.status(200).json({ success: true, message: "Purchase found", data: purchase});
+});
+
+export const getBatchUsageForPurchaseData = asyncHandler(async (req, res) => {
+    const usage = await getBatchUsageForPurchase(req.params.batchId, req.params.purchaseId);
+    res.status(200).json({ success: true, data: usage });
 });
 
 
@@ -106,12 +106,11 @@ export const getPaginatedPurchasesData = asyncHandler(async (req, res) => {
 });
 
 export const createPurchaseData = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
     const validatedData = req.body || {};
 
-    const purchase = await createPurchase(validatedData, BatchModel, ProductModel);
+    const purchase = await createPurchase(validatedData, ProductModel);
 
     res.status(201).json({
         success: true,
@@ -272,13 +271,12 @@ export const createPurchaseData = asyncHandler(async (req, res, next) => {
 
 
 export const updatePurchaseData = asyncHandler(async (req, res, next) => {
-    const BatchModel = getLocalBatchModel();
     const ProductModel = getLocalProductModel();
 
     const data = req.body || {};
 
     try {
-        const updated = await updatePurchase(req.params.id, data, BatchModel, ProductModel);
+        const updated = await updatePurchase(req.params.id, data, ProductModel);
         res.status(200).json({ success: true, message: "Purchase updated successfully", data: updated });
     } catch (error) {
         return res.status(404).json({ success: false, message: error.message });
@@ -294,11 +292,8 @@ export const updatePurchaseData = asyncHandler(async (req, res, next) => {
 
 
 export const deletePurchaseData = asyncHandler(async (req, res) => {
-    const BatchModel = getLocalBatchModel();
-    const ProductModel = getLocalProductModel();
-
     try {
-        await deletePurchase(req.params.id, BatchModel, ProductModel);
+        await deletePurchase(req.params.id);
         res.status(200).json({ success: true, message: "Purchase deleted successfully" });
     } catch (error) {
         return res.status(404).json({ success: false, message: error.message });

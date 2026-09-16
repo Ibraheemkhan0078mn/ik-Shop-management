@@ -202,7 +202,9 @@ const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
             item.taxType
         );
 
-        const itemNetTotal = baseTotal - totalItemDiscount + totalItemTax;
+        const itemNetTotal = Number.isFinite(Number(item.totalCosting)) && Number(item.totalCosting) > 0
+            ? Number(item.totalCosting)
+            : baseTotal - totalItemDiscount + totalItemTax;
 
         return {
             item,
@@ -285,7 +287,8 @@ const calculatePerUnitValuesForPurchaseReturn = async (purchaseId) => {
             totalOverallDiscount,
             totalOverallTax,
             totalShipping,
-            finalTotal
+            finalTotal,
+            perUnitCosting: quantity > 0 ? finalTotal / quantity : 0,
         };
     });
 

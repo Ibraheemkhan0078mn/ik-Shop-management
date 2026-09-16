@@ -3,10 +3,9 @@ import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.j
 import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, File, X, ChevronDown, Lock, Unlock, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
-import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase, useGeneratePurchaseNumber } from "../services/purchases.service";
+import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase, useGeneratePurchaseNumber, useBatchUsageForPurchase } from "../services/purchases.service";
 import { useProducts } from "../../productsModule/services/product.service";
 import { useBatchesByProduct, useGenerateBatchNumber } from "../services/batch.service";
-import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
 import ProductCRUDModal from "../../productsModule/components/ProductCRUDModal.jsx";
 import SupplierModal from "../../suppliers/components/SupplierModal.jsx";
 import { getPurchaseLabels } from "../labels/purchaseLabels.js";
@@ -16,21 +15,22 @@ import { SupplierService } from "../../suppliers/services/suppliers.service.js";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const toInputDate = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
-const sanitize = (v) => String(v || "").trim().replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-_]/g, "").toUpperCase();
-const makeInvoice = (name, stamp) => `PI-${stamp.slice(-6)}`;
 
 const emptyItem = () => ({
     item: "", name: "", quantity: "", unit: "", perItemPrice: "", costPrice: "",
     mfgDate: "", expiryDate: "", batchNumber: "", batchMode: "new", batchSelection: "",
-    discount: "", discountType: "percentage", tax: "", taxType: "percentage",
+    discount: "", discountType: "percentage", discountInputType: "percentage", discountInputValue: "", discountScope: "entire",
+    tax: "", taxType: "percentage", taxInputType: "percentage", taxInputValue: "", taxScope: "entire",
 });
 
-const calculateItemDiscountAmount = (quantity, pricePerUnit, discount, discountType) => {
+const getScopeMultiplier = (quantity, scope) => scope === "perUnit" ? Number(quantity || 0) : 1;
+
+const calculateItemDiscountAmount = (quantity, pricePerUnit, discount, discountType, discountScope = "entire") => {
     const baseTotal = Number(quantity || 0) * Number(pricePerUnit || 0);
     const discountValue = Number(discount || 0);
     if (!discountValue) return 0;
     const discountAmount = discountType === "fixed"
-        ? discountValue
+        ? discountValue * getScopeMultiplier(quantity, discountScope)
         : (baseTotal * discountValue) / 100;
     return Math.min(baseTotal, discountAmount);
 };
@@ -39,40 +39,68 @@ const calculateItemTotalPrice = (quantity, costPrice) => {
     return Number(quantity || 0) * Number(costPrice || 0);
 };
 
-const calculateItemAfterDiscount = (quantity, costPrice, discount, discountType) => {
+const calculateItemAfterDiscount = (quantity, costPrice, discount, discountType, discountScope = "entire") => {
     const totalPrice = calculateItemTotalPrice(quantity, costPrice);
-    const discountAmount = calculateItemDiscountAmount(quantity, costPrice, discount, discountType);
+    const discountAmount = calculateItemDiscountAmount(quantity, costPrice, discount, discountType, discountScope);
     return Math.max(0, totalPrice - discountAmount);
 };
 
-const calculateItemTaxOnAfterDiscount = (quantity, costPrice, discount, discountType, tax, taxType) => {
-    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
+const calculateItemTaxOnAfterDiscount = (quantity, costPrice, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
+    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType, discountScope);
     const taxValue = Number(tax || 0);
     if (!taxValue) return 0;
-    return taxType === "fixed" ? taxValue : (afterDiscount * taxValue) / 100;
+    return taxType === "fixed" ? taxValue * getScopeMultiplier(quantity, taxScope) : (afterDiscount * taxValue) / 100;
 };
 
-const calculateItemFinalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType) => {
-    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
-    const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType);
+const calculateItemFinalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
+    const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType, discountScope);
+    const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType, discountScope, taxScope);
     return afterDiscount + taxAmount;
 };
 
-const calculateItemTaxAmount = (quantity, pricePerUnit, discount, discountType, tax, taxType) => {
+const calculateItemTaxAmount = (quantity, pricePerUnit, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
     const baseTotal = Number(quantity || 0) * Number(pricePerUnit || 0);
-    const discountAmount = calculateItemDiscountAmount(quantity, pricePerUnit, discount, discountType);
+    const discountAmount = calculateItemDiscountAmount(quantity, pricePerUnit, discount, discountType, discountScope);
     const afterDiscount = Math.max(0, baseTotal - discountAmount);
     const taxValue = Number(tax || 0);
     if (!taxValue) return 0;
-    return taxType === "fixed" ? taxValue : (afterDiscount * taxValue) / 100;
+    return taxType === "fixed" ? taxValue * getScopeMultiplier(quantity, taxScope) : (afterDiscount * taxValue) / 100;
 };
 
-const calculateItemLineTotal = (quantity, pricePerUnit, discount, discountType, tax, taxType) => {
+const calculateItemLineTotal = (quantity, pricePerUnit, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
     const baseTotal = Number(quantity || 0) * Number(pricePerUnit || 0);
-    const discountAmount = calculateItemDiscountAmount(quantity, pricePerUnit, discount, discountType);
+    const discountAmount = calculateItemDiscountAmount(quantity, pricePerUnit, discount, discountType, discountScope);
     const afterDiscount = Math.max(0, baseTotal - discountAmount);
-    const taxAmount = calculateItemTaxAmount(quantity, pricePerUnit, discount, discountType, tax, taxType);
+    const taxAmount = calculateItemTaxAmount(quantity, pricePerUnit, discount, discountType, tax, taxType, discountScope, taxScope);
     return afterDiscount + taxAmount;
+};
+
+const convertItemRatesToPercentages = (item) => {
+    const baseTotal = Number(item.quantity || 0) * Number(item.costPrice || item.price || 0);
+    const discountAmount = calculateItemDiscountAmount(item.quantity, item.costPrice || item.price, item.discount, item.discountType, item.discountScope);
+    const afterDiscount = Math.max(0, baseTotal - discountAmount);
+
+    return {
+        ...item,
+        discount: item.discountType === "fixed" && baseTotal > 0
+            ? (discountAmount / baseTotal) * 100
+            : Number(item.discount || 0),
+        discountType: "percentage",
+        tax: item.taxType === "fixed" && afterDiscount > 0
+            ? (calculateItemTaxAmount(item.quantity, item.costPrice || item.price, item.discount, item.discountType, item.tax, item.taxType, item.discountScope, item.taxScope) / afterDiscount) * 100
+            : Number(item.tax || 0),
+        taxType: "percentage",
+    };
+};
+
+const calculateItemCosting = (item) => {
+    const quantity = Number(item.quantity) || 0;
+    const baseTotal = calculateItemTotalPrice(quantity, item.costPrice);
+    const discountAmount = calculateItemDiscountAmount(quantity, item.costPrice, item.discount, item.discountType, item.discountScope);
+    const afterDiscount = Math.max(0, baseTotal - discountAmount);
+    const taxAmount = calculateItemTaxAmount(quantity, item.costPrice, item.discount, item.discountType, item.tax, item.taxType, item.discountScope, item.taxScope);
+    const totalCosting = afterDiscount + taxAmount;
+    return { baseTotal, discountAmount, afterDiscount, taxAmount, totalCosting, perUnitCosting: quantity > 0 ? totalCosting / quantity : 0 };
 };
 
 const emptyBill = () => ({
@@ -395,7 +423,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const { data: productsRaw, refetch: refetchProducts } = useProducts();
     const { data: purchasesRaw } = useAllPurchases();
     const [generateBatchNumber] = useGenerateBatchNumber();
-    const [generatePurchaseNumber, { data: purchaseNumberData }] = useGeneratePurchaseNumber();
+    const [generatePurchaseNumber] = useGeneratePurchaseNumber();
     const [createPurchase, { isLoading: isCreating }] = useCreatePurchase();
     const [updatePurchase, { isLoading: isUpdating }] = useUpdatePurchase();
     const isSubmitting = isCreating || isUpdating;
@@ -419,31 +447,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const hasRecalculatedRef = useRef(false);
     const batchGenerationRequestRef = useRef(0);
 
-    const supplierOptions = useMemo(() => {
-        if (isUpdate && bill.supplier) {
-            // In update mode, include all suppliers but disable inactive ones except the selected one
-            return suppliersList.map(s => ({
-                label: s.name,
-                value: s._id,
-                disabled: s.isActive === false && s._id !== bill.supplier,
-            }));
-        } else {
-            // In create mode, only show active suppliers
-            return suppliersList
-                .filter(s => s.isActive !== false)
-                .map(s => ({
-                    label: s.name,
-                    value: s._id,
-                    disabled: false,
-                }));
-        }
-    }, [suppliersList, isUpdate, bill.supplier]);
-
     const { data: batchesRaw = [] } = useBatchesByProduct(itemForm.item, { skip: !itemForm.item });
     const availableBatches = Array.isArray(batchesRaw) ? batchesRaw : [];
     const selectedBatch = availableBatches.find(b => b._id === itemForm.batchSelection);
     const isExistingMode = itemForm.batchMode === "existing" && Boolean(itemForm.batchSelection);
-    const selectedSupplierName = suppliersList.find(s => s._id === bill.supplier)?.name ?? "";
+    const { data: selectedBatchUsage } = useBatchUsageForPurchase({ purchaseId, batchId: itemForm.batchSelection }, { skip: !isUpdate || !purchaseId || !itemForm.batchSelection });
+    const isBatchMetadataLocked = isExistingMode && isUpdate && selectedBatchUsage && !selectedBatchUsage.editable;
 
     // Calculate stock status for purchase form
     const getStockStatus = (productId, newQuantity) => {
@@ -504,12 +513,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             name: it.product?.name ?? "",
             quantity: it.quantity ?? 0, unit: it.unit ?? "",
             pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
-            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.costPrice ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage"),
+            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.costPrice ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage", it.discountScope ?? "entire", it.taxScope ?? "entire"),
             mfgDate: toInputDate(it.mfgDate), expiryDate: toInputDate(it.expiryDate),
             batchNumber: it.batchNumber ?? it.batch?.batchNumber ?? "", batchMode: (it.batchId ?? it.batch?._id) ? "existing" : "new",
             batchSelection: it.batchId ?? it.batch?._id ?? "", batchId: it.batchId ?? it.batch?._id ?? "",
-            discount: it.discount ?? 0, discountType: it.discountType ?? "percentage",
-            tax: it.tax ?? 0, taxType: it.taxType ?? "percentage",
+            discount: it.discount ?? 0, discountType: it.discountType ?? "percentage", discountScope: it.discountScope ?? "entire",
+            discountInputType: it.discountInputType ?? it.discountType ?? "percentage", discountInputValue: it.discountInputValue ?? it.discount ?? 0,
+            tax: it.tax ?? 0, taxType: it.taxType ?? "percentage", taxScope: it.taxScope ?? "entire",
+            taxInputType: it.taxInputType ?? it.taxType ?? "percentage", taxInputValue: it.taxInputValue ?? it.tax ?? 0,
         })));
         setBill({
             supplier: existingPurchase.supplier?._id ?? existingPurchase.supplier ?? "",
@@ -533,9 +544,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         if (!isUpdate || !existingPurchase || addedItems.length === 0 || hasRecalculatedRef.current) return;
         
         // Recalculate each item's totals
-        const finalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType) => {
-            const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType);
-            const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType);
+        const finalSubtotal = (quantity, costPrice, discount, discountType, tax, taxType, discountScope, taxScope) => {
+            const afterDiscount = calculateItemAfterDiscount(quantity, costPrice, discount, discountType, discountScope);
+            const taxAmount = calculateItemTaxOnAfterDiscount(quantity, costPrice, discount, discountType, tax, taxType, discountScope, taxScope);
             return afterDiscount + taxAmount;
         };
         
@@ -547,7 +558,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             const tax = Number(it.tax) || 0;
             const taxType = it.taxType || 'percentage';
             
-            const totalPurchasePrice = finalSubtotal(quantity, costPrice, discount, discountType, tax, taxType);
+            const totalPurchasePrice = finalSubtotal(quantity, costPrice, discount, discountType, tax, taxType, it.discountScope, it.taxScope);
             
             return {
                 ...it,
@@ -612,9 +623,14 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             perItemPrice: editingIndex === null && selectedBatch.sellingPrice != null ? String(selectedBatch.sellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(selectedBatch.mfgDate),
             expiryDate: toInputDate(selectedBatch.expiryDate),
-            discount: editingIndex === null ? String(selectedBatch.discount?.amount || 0) : p.discount,
-            discountType: editingIndex === null && selectedBatch.discount?.type ? selectedBatch.discount.type : p.discountType,
-            tax: editingIndex === null ? String(selectedBatch.gst || 0) : p.tax,
+            discountType: editingIndex === null && selectedBatch.discount?.inputType ? selectedBatch.discount.inputType : p.discountType,
+            discountInputType: editingIndex === null && selectedBatch.discount?.inputType ? selectedBatch.discount.inputType : p.discountInputType,
+            discountInputValue: editingIndex === null ? String(selectedBatch.discount?.inputValue ?? selectedBatch.discount?.amount ?? 0) : p.discountInputValue,
+            discount: editingIndex === null ? String(selectedBatch.discount?.inputValue ?? selectedBatch.discount?.amount ?? 0) : p.discount,
+            taxType: editingIndex === null && selectedBatch.gstInputType ? selectedBatch.gstInputType : p.taxType,
+            taxInputType: editingIndex === null && selectedBatch.gstInputType ? selectedBatch.gstInputType : p.taxInputType,
+            taxInputValue: editingIndex === null ? String(selectedBatch.gstInputValue ?? selectedBatch.gst ?? 0) : p.taxInputValue,
+            tax: editingIndex === null ? String(selectedBatch.gstInputValue ?? selectedBatch.gst ?? 0) : p.tax,
         }));
     }, [selectedBatch, isExistingMode, editingIndex]);
 
@@ -676,8 +692,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     // calculations
     const calculations = useMemo(() => {
         const itemsBase = addedItems.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.costPrice || 0), 0);
-        const itemsDiscountTotal = addedItems.reduce((s, it) => s + calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType), 0);
-        const itemsTaxTotal = addedItems.reduce((s, it) => s + calculateItemTaxAmount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType), 0);
+        const itemsDiscountTotal = addedItems.reduce((s, it) => s + calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType, it.discountScope), 0);
+        const itemsTaxTotal = addedItems.reduce((s, it) => s + calculateItemTaxAmount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType, it.discountScope, it.taxScope), 0);
         const subtotalAfterItems = addedItems.reduce((s, it) => s + (Number(it.totalPurchasePrice) || 0), 0);
         const billDiscount = bill.discountType === "percentage" ? (subtotalAfterItems * Number(bill.discount || 0)) / 100 : Number(bill.discount || 0);
         const afterBillDiscount = subtotalAfterItems - billDiscount;
@@ -699,6 +715,15 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     }, [addedItems, bill]);
 
     const calc = calculations;
+
+    const itemFormCosting = calculateItemCosting(itemForm);
+    const itemFormBaseTotal = itemFormCosting.baseTotal;
+    const itemFormDiscountAmount = itemFormCosting.discountAmount;
+    const itemFormAfterDiscount = itemFormCosting.afterDiscount;
+    const itemFormTaxAmount = itemFormCosting.taxAmount;
+    const itemFormDiscountPercentage = itemFormBaseTotal > 0 ? (itemFormDiscountAmount / itemFormBaseTotal) * 100 : 0;
+    const itemFormTaxPercentage = itemFormAfterDiscount > 0 ? (itemFormTaxAmount / itemFormAfterDiscount) * 100 : 0;
+    const itemFormFinalTotal = itemFormCosting.totalCosting;
 
     // frequent items
     const frequentItems = useMemo(() => {
@@ -761,20 +786,30 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             mfgDate: toInputDate(b.mfgDate),
             expiryDate: toInputDate(b.expiryDate),
             discount: String(b.discount?.amount ?? 0),
-            discountType: b.discount?.type || "percentage",
-            tax: String(b.gst ?? 0),
-            taxType: b.gstType || "percentage",
+            discountType: b.discount?.inputType || "percentage",
+            discountInputType: b.discount?.inputType || "percentage",
+            discountInputValue: String(b.discount?.inputValue ?? b.discount?.amount ?? 0),
+            tax: String(b.gstInputValue ?? b.gst ?? 0),
+            taxType: b.gstInputType || "percentage",
+            taxInputType: b.gstInputType || "percentage",
+            taxInputValue: String(b.gstInputValue ?? b.gst ?? 0),
+            discountScope: "entire",
+            taxScope: "entire",
         }));
     };
 
     const handleAddItem = () => {
         if (!itemForm.item) return showError(labels.selectItem);
-        if (!itemForm.quantity || Number(itemForm.quantity) <= 0) return showError(labels.enterValidQuantity);
+        if (!itemForm.quantity || Number(itemForm.quantity) <= 0) return showError(labels.enterValidQuantity || "Please enter a valid quantity.");
         if (itemForm.costPrice === "" || Number(itemForm.costPrice) < 0) return showError(labels.enterValidPrice);
+        if (!Number.isFinite(Number(itemForm.discount)) || Number(itemForm.discount) < 0) return showError("Please enter a valid discount.");
+        if (!Number.isFinite(Number(itemForm.tax)) || Number(itemForm.tax) < 0) return showError("Please enter a valid tax.");
+        if (itemForm.discountType === "percentage" && Number(itemForm.discount) > 100) return showError("Discount percentage cannot exceed 100%.");
+        if (itemForm.taxType === "percentage" && Number(itemForm.tax) > 100) return showError("Tax percentage cannot exceed 100%.");
         if (itemForm.batchMode === "existing" && !itemForm.batchSelection) return showError(labels.selectBatch);
 
         const prod = productsList.find(p => p._id === itemForm.item);
-        const batchNo = itemForm.batchNumber?.trim();
+        const batchNo = itemForm.batchNumber ? itemForm.batchNumber.trim() : "";
         if (!batchNo) return showError(labels.batchNumberRequired);
 
         if (editingIndex === null && addedItems.some(it => it.item === itemForm.item)) {
@@ -786,13 +821,28 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             quantity: Number(itemForm.quantity), unit: itemForm.unit,
             pricePerUnit: Number(itemForm.perItemPrice) || 0,
             costPrice: Number(itemForm.costPrice),
-            totalPurchasePrice: calculateItemFinalSubtotal(Number(itemForm.quantity), Number(itemForm.costPrice), Number(itemForm.discount) || 0, itemForm.discountType, Number(itemForm.tax) || 0, itemForm.taxType),
+            totalPurchasePrice: itemFormCosting.totalCosting,
+            perUnitCosting: itemFormCosting.perUnitCosting,
             mfgDate: itemForm.mfgDate, expiryDate: itemForm.expiryDate,
             batchNumber: batchNo, batchMode: itemForm.batchMode,
             batchSelection: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
             batchId: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
-            discount: Number(itemForm.discount) || 0, discountType: itemForm.discountType,
-            tax: Number(itemForm.tax) || 0, taxType: itemForm.taxType,
+            batchMetadataEdited: Boolean(isExistingMode && selectedBatchUsage?.editable && (
+                String(itemForm.costPrice) !== String(selectedBatch?.purchasePrice ?? "") ||
+                String(itemForm.perItemPrice) !== String(selectedBatch?.sellingPrice ?? "") ||
+                itemForm.mfgDate !== toInputDate(selectedBatch?.mfgDate) ||
+                itemForm.expiryDate !== toInputDate(selectedBatch?.expiryDate) ||
+                String(itemForm.discount) !== String(selectedBatch?.discount?.inputValue ?? selectedBatch?.discount?.amount ?? 0) ||
+                itemForm.discountType !== (selectedBatch?.discount?.inputType || "percentage") ||
+                itemForm.discountScope !== (selectedBatch?.discount?.scope || "entire") ||
+                String(itemForm.tax) !== String(selectedBatch?.gstInputValue ?? selectedBatch?.gst ?? 0) ||
+                itemForm.taxType !== (selectedBatch?.gstInputType || "percentage") ||
+                itemForm.taxScope !== (selectedBatch?.gstScope || "entire")
+            )),
+            discount: Number(itemForm.discount) || 0, discountType: itemForm.discountType, discountScope: itemForm.discountScope,
+            discountInputType: itemForm.discountType, discountInputValue: Number(itemForm.discount) || 0,
+            tax: Number(itemForm.tax) || 0, taxType: itemForm.taxType, taxScope: itemForm.taxScope,
+            taxInputType: itemForm.taxType, taxInputValue: Number(itemForm.tax) || 0,
         };
 
         if (editingIndex !== null) {
@@ -815,7 +865,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             batchNumber: it.batchNumber, batchMode: hasExistingBatch ? "existing" : "new",
             batchSelection: hasExistingBatch ? it.batchId : "",
             discount: it.discount, discountType: it.discountType,
-            tax: it.tax, taxType: it.taxType,
+            discountInputType: it.discountInputType || it.discountType, discountInputValue: it.discountInputValue ?? it.discount,
+            discountScope: it.discountScope || "entire",
+            tax: it.tax, taxType: it.taxType, taxInputType: it.taxInputType || it.taxType, taxInputValue: it.taxInputValue ?? it.tax, taxScope: it.taxScope || "entire",
         });
         setEditingIndex(idx);
     };
@@ -833,7 +885,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             const tax = Number(it.tax) || 0;
             const taxType = it.taxType || 'percentage';
             
-            const totalPurchasePrice = calculateItemFinalSubtotal(quantity, costPrice, discount, discountType, tax, taxType);
+            const totalPurchasePrice = calculateItemFinalSubtotal(quantity, costPrice, discount, discountType, tax, taxType, it.discountScope, it.taxScope);
             
             return {
                 ...it,
@@ -863,16 +915,39 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             // gst: Number(bill.gst), gstType: bill.gstType,
             // shippingCost: Number(bill.shippingCost), 
             totalAmount: calc.subtotalAfterItems, // Use subtotalAfterItems instead of calc.total
-            items: addedItems.map(it => ({
-                product: it.item,
-                batchNumber: it.batchNumber,
-                isNewBatch: it.batchMode === "new",
-                quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
-                discount: it.discount, discountType: it.discountType,
-                tax: it.tax, taxType: it.taxType,
+            items: addedItems.map(it => {
+                const percentageItem = convertItemRatesToPercentages({
+                    quantity: it.quantity,
+                    price: it.pricePerUnit,
+                    costPrice: it.costPrice || 0,
+                    discount: it.discount,
+                    discountType: it.discountType,
+                    discountInputType: it.discountInputType || it.discountType,
+                    discountInputValue: it.discountInputValue ?? it.discount,
+                    discountScope: it.discountScope,
+                    tax: it.tax,
+                    taxType: it.taxType,
+                    taxInputType: it.taxInputType || it.taxType,
+                    taxInputValue: it.taxInputValue ?? it.tax,
+                    taxScope: it.taxScope,
+                });
+
+                return {
+                    product: it.item,
+                    batchNumber: it.batchNumber,
+                    isNewBatch: it.batchMode === "new",
+                    quantity: it.quantity, price: it.pricePerUnit, costPrice: it.costPrice || 0,
+                    discount: percentageItem.discount, discountType: percentageItem.discountType,
+                    tax: percentageItem.tax, taxType: percentageItem.taxType,
+                    discountInputType: percentageItem.discountInputType, discountInputValue: percentageItem.discountInputValue,
+                    discountScope: percentageItem.discountScope, taxInputType: percentageItem.taxInputType,
+                    taxInputValue: percentageItem.taxInputValue, taxScope: percentageItem.taxScope,
+                    batchMetadataEdited: it.batchMetadataEdited === true,
+                    perUnitCosting: it.perUnitCosting, totalCosting: it.totalPurchasePrice,
                 mfgDate: it.mfgDate ? new Date(it.mfgDate).toISOString() : undefined,
                 expiryDate: it.expiryDate ? new Date(it.expiryDate).toISOString() : undefined,
-            })),
+                };
+            }),
         };
         try {
             if (isUpdate) {
@@ -1023,67 +1098,55 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             onChange={handleItemChange}
                                             min="0"
                                             onWheel={e => e.target.blur()}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isBatchMetadataLocked}
+                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field><Label>{labels.discount}</Label>
-                                        <Inp 
-                                            name="discount" 
-                                            type="number" 
-                                            placeholder="0" 
-                                            value={itemForm.discount} 
-                                            onChange={handleItemChange}
-                                            min="0" 
-                                            max="100"
-                                            onWheel={e => e.target.blur()}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
-                                        />
-                                    </Field>
+                                <div className="space-y-4">
                                     <Field>
-                                        <Label>{labels.discountType}</Label>
-                                        <Sel 
-                                            value={itemForm.discountType} 
-                                            onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))}
-                                            disabled={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
-                                        >
-                                            <option value="percentage">{labels.percentage}</option>
-                                            <option value="fixed">{labels.fixed}</option>
-                                        </Sel>
+                                        <Label>{labels.discount}</Label>
+                                        <div className="flex gap-3 mb-2 text-xs" style={{ color: "var(--muted)" }}>
+                                            {["percentage", "fixed"].map(type => (
+                                                <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="discountType" value={type} checked={itemForm.discountType === type} disabled={isBatchMetadataLocked} onChange={e => setItemForm(p => ({ ...p, discountType: e.target.value }))} />
+                                                    {type === "percentage" ? labels.percentage : labels.fixed}
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Inp name="discount" type="number" placeholder={itemForm.discountType === "fixed" ? "Fixed amount" : "Percentage"} value={itemForm.discount} onChange={handleItemChange} min="0" max={itemForm.discountType === "percentage" ? "100" : undefined} onWheel={e => e.target.blur()} readOnly={isBatchMetadataLocked} style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}} />
+                                            <Sel value={itemForm.discountScope} onChange={e => setItemForm(p => ({ ...p, discountScope: e.target.value }))} disabled={isBatchMetadataLocked}>
+                                                <option value="entire">Entire calculation</option>
+                                                <option value="perUnit">Per unit</option>
+                                            </Sel>
+                                        </div>
+                                        <p className="text-[11px] mt-1.5" style={{ color: "var(--muted)" }}>
+                                            {itemForm.discountType === "fixed" ? `Amount: Rs ${itemFormDiscountAmount.toFixed(2)} | Equivalent: ${itemFormDiscountPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormDiscountAmount.toFixed(2)}`}
+                                        </p>
                                     </Field>
-                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field><Label>{labels.taxPercent}</Label>
-                                        <Inp 
-                                            name="tax" 
-                                            type="number" 
-                                            placeholder="0" 
-                                            value={itemForm.tax} 
-                                            onChange={handleItemChange}
-                                            min="0" 
-                                            max="100"
-                                            onWheel={e => e.target.blur()}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
-                                        />
-                                    </Field>
                                     <Field>
-                                        <Label>{labels.taxType || "Tax Type"}</Label>
-                                        <Sel 
-                                            value={itemForm.taxType} 
-                                            onChange={e => setItemForm(p => ({ ...p, taxType: e.target.value }))}
-                                            disabled={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
-                                        >
-                                            <option value="percentage">{labels.percentage}</option>
-                                            <option value="fixed">{labels.fixed}</option>
-                                        </Sel>
+                                        <Label>{labels.taxPercent || "Tax"}</Label>
+                                        <div className="flex gap-3 mb-2 text-xs" style={{ color: "var(--muted)" }}>
+                                            {["percentage", "fixed"].map(type => (
+                                                <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="taxType" value={type} checked={itemForm.taxType === type} disabled={isBatchMetadataLocked} onChange={e => setItemForm(p => ({ ...p, taxType: e.target.value }))} />
+                                                    {type === "percentage" ? labels.percentage : labels.fixed}
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Inp name="tax" type="number" placeholder={itemForm.taxType === "fixed" ? "Fixed amount" : "Percentage"} value={itemForm.tax} onChange={handleItemChange} min="0" max={itemForm.taxType === "percentage" ? "100" : undefined} onWheel={e => e.target.blur()} readOnly={isBatchMetadataLocked} style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}} />
+                                            <Sel value={itemForm.taxScope} onChange={e => setItemForm(p => ({ ...p, taxScope: e.target.value }))} disabled={isBatchMetadataLocked}>
+                                                <option value="entire">Entire calculation</option>
+                                                <option value="perUnit">Per unit</option>
+                                            </Sel>
+                                        </div>
+                                        <p className="text-[11px] mt-1.5" style={{ color: "var(--muted)" }}>
+                                            {itemForm.taxType === "fixed" ? `Amount: Rs ${itemFormTaxAmount.toFixed(2)} | Equivalent: ${itemFormTaxPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormTaxAmount.toFixed(2)}`}
+                                        </p>
                                     </Field>
                                 </div>
 
@@ -1094,8 +1157,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             type="date" 
                                             value={itemForm.mfgDate} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isBatchMetadataLocked}
+                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                     <Field><Label>{labels.expiryDate}</Label>
@@ -1104,8 +1167,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             type="date" 
                                             value={itemForm.expiryDate} 
                                             onChange={handleItemChange}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isBatchMetadataLocked}
+                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
                                 </div>
@@ -1120,10 +1183,20 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             onChange={handleItemChange}
                                             min="0"
                                             onWheel={e => e.target.blur()}
-                                            readOnly={isExistingMode}
-                                            style={isExistingMode ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                            readOnly={isBatchMetadataLocked}
+                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
+                                </div>
+
+                                <div className="p-3 rounded-xl text-xs space-y-1.5" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                    <p className="font-semibold mb-2" style={{ color: "var(--ink)" }}>Item calculation summary</p>
+                                    <div className="flex justify-between"><span>Base total</span><span>Rs {itemFormBaseTotal.toFixed(2)}</span></div>
+                                    <div className="flex justify-between"><span>Discount</span><span>Rs {itemFormDiscountAmount.toFixed(2)} ({itemFormDiscountPercentage.toFixed(2)}%)</span></div>
+                                    <div className="flex justify-between"><span>After discount</span><span>Rs {itemFormAfterDiscount.toFixed(2)}</span></div>
+                                    <div className="flex justify-between"><span>Tax</span><span>Rs {itemFormTaxAmount.toFixed(2)} ({itemFormTaxPercentage.toFixed(2)}%)</span></div>
+                                    <div className="flex justify-between"><span>Per-unit costing</span><span>Rs {itemFormCosting.perUnitCosting.toFixed(2)}</span></div>
+                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)", color: "var(--accent-2)" }}><span>Final item total</span><span>Rs {itemFormFinalTotal.toFixed(2)}</span></div>
                                 </div>
 
                                 {!isUpdate && bill.supplier && frequentItems.length > 0 && (
@@ -1159,10 +1232,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <tbody>
                                             {addedItems.map((it, idx) => {
                                                 const totalPrice = calculateItemTotalPrice(it.quantity, it.costPrice);
-                                                const discountAmount = calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType);
-                                                const afterDiscount = calculateItemAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType);
-                                                const taxAmount = calculateItemTaxOnAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType);
-                                                const finalSubtotal = calculateItemFinalSubtotal(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType);
+                                                const discountAmount = calculateItemDiscountAmount(it.quantity, it.costPrice, it.discount, it.discountType, it.discountScope);
+                                                const afterDiscount = calculateItemAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.discountScope);
+                                                const taxAmount = calculateItemTaxOnAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType, it.discountScope, it.taxScope);
+                                                const finalSubtotal = calculateItemFinalSubtotal(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType, it.discountScope, it.taxScope);
                                                 const isExpanded = expandedItems[idx];
                                                 
                                                 return (

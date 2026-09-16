@@ -33,6 +33,12 @@ export const purchaseApi = baseApi.injectEndpoints({
             providesTags: (result, error, id) => [{ type: "Purchase", id }],
         }),
 
+        getBatchUsageForPurchase: build.query({
+            query: ({ purchaseId, batchId }) => ({ url: `/purchases/${purchaseId}/batch-usage/${batchId}` }),
+            transformResponse: (raw) => raw.data || raw,
+            providesTags: (result, error, { batchId }) => [{ type: "Batch", id: `usage-${batchId}` }],
+        }),
+
         // Create
         createPurchase: build.mutation({
             query: (body) => ({ url: "/purchases", method: "POST", body }),
@@ -126,6 +132,7 @@ export const {
     useGetAllPurchasesQuery: useAllPurchases,
     useGetPurchaseByIdQuery: usePurchase,
     useGetPurchaseByInvoiceNumberQuery: usePurchaseByInvoiceNumber,
+    useGetBatchUsageForPurchaseQuery: useBatchUsageForPurchase,
     useCreatePurchaseMutation: useCreatePurchase,
     useUpdatePurchaseMutation: useUpdatePurchase,
     useDeletePurchaseMutation: useDeletePurchase,
