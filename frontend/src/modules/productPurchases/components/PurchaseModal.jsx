@@ -1,6 +1,6 @@
 // src/modules/productPurchases/components/PurchaseModal.jsx
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
-import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, Truck, File, X, ChevronDown, Lock, Unlock, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Plus, TrendingUp, Package, Calendar, FileText, DollarSign, File, X, ChevronDown, Lock, Unlock, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
 import { useAllPurchases, useCreatePurchase, usePurchase, useUpdatePurchase, useGeneratePurchaseNumber } from "../services/purchases.service";
@@ -77,8 +77,10 @@ const calculateItemLineTotal = (quantity, pricePerUnit, discount, discountType, 
 
 const emptyBill = () => ({
     supplier: "", purchaseDate: new Date().toISOString().slice(0, 10),
-    invoiceNumber: "", notes: "", discount: 0, discountType: "percentage",
-    gst: 0, gstType: "percentage", shippingCost: 0,
+    invoiceNumber: "", notes: "", 
+    // Purchase level discount, tax, and shipping - commented out
+    // discount: 0, discountType: "percentage",
+    // gst: 0, gstType: "percentage", shippingCost: 0,
 });
 
 // ─── primitives ───────────────────────────────────────────────────────────────
@@ -515,11 +517,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             purchaseDate: existingPurchase.date ? new Date(existingPurchase.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
             invoiceNumber: existingPurchase.invoiceNumber ?? "",
             notes: existingPurchase.notes ?? "",
-            discount: existingPurchase.discount ?? 0,
-            discountType: existingPurchase.discountType ?? "percentage",
-            gst: existingPurchase.gst ?? 0,
-            gstType: existingPurchase.gstType ?? "percentage",
-            shippingCost: existingPurchase.shippingCost ?? 0,
+            // Purchase level discount, tax, and shipping - commented out
+            // discount: existingPurchase.discount ?? 0,
+            // discountType: existingPurchase.discountType ?? "percentage",
+            // gst: existingPurchase.gst ?? 0,
+            // gstType: existingPurchase.gstType ?? "percentage",
+            // shippingCost: existingPurchase.shippingCost ?? 0,
         });
         // Reset recalculation flag when loading new purchase
         hasRecalculatedRef.current = false;
@@ -855,9 +858,11 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             supplier: bill.supplier, date: bill.purchaseDate,
             invoiceNumber: bill.invoiceNumber, notes: bill.notes ?? "",
             subtotal: calc.subtotalAfterItems,
-            discount: Number(bill.discount), discountType: bill.discountType,
-            gst: Number(bill.gst), gstType: bill.gstType,
-            shippingCost: Number(bill.shippingCost), totalAmount: calc.total,
+            // Purchase level discount, tax, and shipping - commented out
+            // discount: Number(bill.discount), discountType: bill.discountType,
+            // gst: Number(bill.gst), gstType: bill.gstType,
+            // shippingCost: Number(bill.shippingCost), 
+            totalAmount: calc.subtotalAfterItems, // Use subtotalAfterItems instead of calc.total
             items: addedItems.map(it => ({
                 product: it.item,
                 batchNumber: it.batchNumber,
@@ -1339,7 +1344,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 </div>
                             </Field>
                             <Field><Label><Calendar className="inline w-3 h-3 mr-1" />{labels.date} *</Label><Inp type="date" name="purchaseDate" value={bill.purchaseDate} onChange={handleBillChange} /></Field>
-                            <Field>
+                            {/* Purchase level discount - commented out */}
+                            {/* <Field>
                                 <Label><DollarSign className="inline w-3 h-3 mr-1" />{labels.discount}</Label>
                                 <div className="flex gap-2">
                                     <Inp type="number" name="discount" placeholder="0" value={bill.discount} onChange={handleBillChange} min="0" max="100" onWheel={e => e.target.blur()} />
@@ -1348,8 +1354,9 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <option value="fixed">{labels.fixed}</option>
                                     </Sel>
                                 </div>
-                            </Field>
-                            <Field>
+                            </Field> */}
+                            {/* Purchase level tax - commented out */}
+                            {/* <Field>
                                 <Label>{labels.taxGst}</Label>
                                 <div className="flex gap-2">
                                     <Inp type="number" name="gst" placeholder="0" value={bill.gst} onChange={handleBillChange} min="0" max="100" onWheel={e => e.target.blur()} />
@@ -1358,9 +1365,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <option value="fixed">{labels.fixed}</option>
                                     </Sel>
                                 </div>
-                            </Field>
-                            <Field><Label><Truck className="inline w-3 h-3 mr-1" />{labels.shipping}</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} min="0" onWheel={e => e.target.blur()} /></Field>
-                            <Field className="sm:col-span-2 lg:col-span-2"><Label><File className="inline w-3 h-3 mr-1" />{labels.notes}</Label><Txt name="notes" rows={1} placeholder={labels.optionalNote} value={bill.notes} onChange={handleBillChange} /></Field>
+                            </Field> */}
+                            {/* Purchase level shipping - commented out */}
+                            {/* <Field><Label><Truck className="inline w-3 h-3 mr-1" />{labels.shipping}</Label><Inp type="number" name="shippingCost" placeholder="0" value={bill.shippingCost} onChange={handleBillChange} min="0" onWheel={e => e.target.blur()} /></Field> */}
+                            <Field className="sm:col-span-2 lg:col-span-4"><Label><File className="inline w-3 h-3 mr-1" />{labels.notes}</Label><Txt name="notes" rows={1} placeholder={labels.optionalNote} value={bill.notes} onChange={handleBillChange} /></Field>
                         </div>
                     </Card>
 
@@ -1392,8 +1400,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                 </div>
                             </div>
 
-                            {/* Bill Discount Card */}
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            {/* Bill Discount Card - commented out */}
+                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                 <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.discount} ({labels.billDetails})</p>
                                 <div className="text-xs space-y-1">
                                     <div className="flex justify-between">
@@ -1409,10 +1417,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
-                            {/* Bill Tax Card */}
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            {/* Bill Tax Card - commented out */}
+                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                 <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.taxGst} ({labels.billDetails})</p>
                                 <div className="text-xs space-y-1">
                                     <div className="flex justify-between">
@@ -1432,10 +1440,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillTax.toFixed(2)}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
-                            {/* Shipping Card */}
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            {/* Shipping Card - commented out */}
+                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                 <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.shipping}</p>
                                 <div className="text-xs space-y-1">
                                     <div className="flex justify-between">
@@ -1451,11 +1459,11 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
 
-                        {/* Final Total Card */}
-                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                        {/* Final Total Card - commented out (purchase level discount, tax, shipping) */}
+                        {/* <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
                             <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>{labels.total}</p>
                             <div className="text-xs space-y-1">
                                 <div className="flex justify-between">
@@ -1474,6 +1482,15 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <span style={{ color: "var(--accent-2)" }}>Grand Total:</span>
                                     <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
                                 </div>
+                            </div>
+                        </div> */}
+
+                        {/* Simple Total Card (items subtotal only) */}
+                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>{labels.total}</p>
+                            <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                <span style={{ color: "var(--accent-2)" }}>Total:</span>
+                                <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
                             </div>
                         </div>
                     </Card>
