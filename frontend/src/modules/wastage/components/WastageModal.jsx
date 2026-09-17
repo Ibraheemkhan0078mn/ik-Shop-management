@@ -30,24 +30,47 @@ const emptyForm = () => ({
 const money = value => `Rs ${Number(value || 0).toLocaleString()}`;
 const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%" : " Rs"}`;
 
-const CostingDetails = ({ item, labels }) => (
-  <details className="mt-2 rounded-lg border p-2 text-xs" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
-        <summary className="cursor-pointer font-semibold" style={{ color: "var(--accent-2)" }}>{labels.calculationDetails}</summary>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2" style={{ color: "var(--muted)" }}>
-      <div>
-            <p>{labels.basePrice || "Base price/unit"}: <strong style={{ color: "var(--ink)" }}>{money(item.baseCostPrice)}</strong></p>
-            <p>{labels.batchDiscount || "Batch discount"}: <strong style={{ color: "var(--ink)" }}>{rate(item.discountValue, item.discountType)}</strong> = {money(item.discountAmount)}</p>
-            <p>{labels.batchTax || "Batch tax"}: <strong style={{ color: "var(--ink)" }}>{rate(item.taxValue, item.taxType)}</strong> = {money(item.taxAmount)}</p>
-      </div>
-      <div>
-            <p>{labels.finalUnitCost || "Final unit cost"}: <strong style={{ color: "var(--ink)" }}>{money(item.costPrice)}</strong></p>
-            <p className={Math.abs((Number(item.baseCostPrice) || 0) - (Number(item.discountAmount) || 0) + (Number(item.taxAmount) || 0) - (Number(item.costPrice) || 0)) < 0.01 ? "text-emerald-600" : "text-red-600"}>
-              Calculation check: <strong>{Math.abs((Number(item.baseCostPrice) || 0) - (Number(item.discountAmount) || 0) + (Number(item.taxAmount) || 0) - (Number(item.costPrice) || 0)) < 0.01 ? "Applied correctly" : "Mismatch"}</strong>
-        </p>
-      </div>
+const getBatchCostingSnapshot = (batch = {}) => {
+  const baseCostPrice = Number(batch.costPrice ?? batch.purchasePrice ?? 0);
+  const discountType = batch.discountEntryType ?? batch.discountType ?? "percentage";
+  const discountValue = Number(batch.discountEntryValue ?? batch.discountInPercentage ?? batch.discount?.amount ?? 0);
+  const discountAmount = discountType === "fixed"
+    ? discountValue
+    : (baseCostPrice * discountValue) / 100;
+  const discountedUnitPrice = Math.max(0, baseCostPrice - discountAmount);
+  const taxType = batch.taxEntryType ?? batch.gstType ?? "percentage";
+  const taxValue = Number(batch.taxEntryValue ?? batch.taxInPercentage ?? batch.gst ?? 0);
+  const taxAmount = taxType === "fixed"
+    ? taxValue
+    : (discountedUnitPrice * taxValue) / 100;
+  const effectiveCostPrice = Number(batch.perUnitCosting ?? (discountedUnitPrice + taxAmount) ?? 0);
+
+  return {
+    baseCostPrice,
+    discountType,
+    discountValue,
+    discountAmount,
+    taxType,
+    taxValue,
+    taxAmount,
+    effectiveCostPrice,
+  };
+};
+
+const CostingDetails = ({ item, labels }) => {
+  const quantity = Number(item.quantity) || 0;
+  const costPrice = Number(item.costPrice || 0);
+  const lossAmount = Number(item.totalLoss ?? quantity * costPrice);
+
+  return (
+    <div className="mt-2 rounded-lg border p-2 text-xs" style={{ borderColor: "var(--border)", background: "var(--surface-muted)" }}>
+      <p className="font-semibold" style={{ color: "var(--accent-2)" }}>{labels.calculationDetails}</p>
+      <p className="mt-2" style={{ color: "var(--ink)" }}>
+        Per item costing: <strong>{money(costPrice)}</strong> × Quantity: <strong>{quantity}</strong> = <strong>{money(lossAmount)}</strong>
+      </p>
     </div>
-  </details>
-);
+  );
+};
 
 // ─── API-based searchable select for products ─────────────────────────────────────
 const ApiProductSelect = ({ value, onChange, placeholder = "Search products...", productName = "" }) => {
@@ -276,17 +299,26 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
 
   // ── Memoized Options ──────────────────────────────────────────────────
   const batchOptions = useMemo(() => {
-    return productBatches.map(b => ({
-      label: b.batchNumber,
-      value: b.batchNumber,
-      id: b._id,
-      expiryDate: b.expiryDate ?? "",
-      quantity: b.quantity,
-      purchasePrice: b.purchasePrice,
-      discount: b.discount,
-      gst: b.gst,
-      gstType: b.gstType,
-    }));
+    return productBatches.map(b => {
+      const snapshot = getBatchCostingSnapshot(b);
+      return {
+        label: b.batchNumber,
+        value: b.batchNumber,
+        id: b._id,
+        expiryDate: b.expiryDate ?? "",
+        quantity: b.quantity,
+        costPrice: b.costPrice ?? b.purchasePrice ?? snapshot.baseCostPrice,
+        perUnitCosting: b.perUnitCosting ?? snapshot.effectiveCostPrice,
+        discountEntryValue: b.discountEntryValue ?? b.discountInPercentage ?? b.discount?.amount ?? snapshot.discountValue,
+        discountEntryType: b.discountEntryType ?? b.discountType ?? snapshot.discountType,
+        taxEntryValue: b.taxEntryValue ?? b.taxInPercentage ?? b.gst ?? snapshot.taxValue,
+        taxEntryType: b.taxEntryType ?? b.gstType ?? snapshot.taxType,
+        discount: b.discount,
+        gst: b.gst,
+        gstType: b.gstType,
+        ...snapshot,
+      };
+    });
   }, [productBatches]);
 
   const reasonOptions = useMemo(() => [
@@ -465,32 +497,22 @@ function WastageModalInner({ mode = "create", wastageId, onClose, onSuccess }) {
                       onChange={e => {
                         const val = e.target.value;
                         const b = batchOptions.find(o => o.value === val);
+                        const snapshot = getBatchCostingSnapshot(b || {});
+
                         updateCurrent("batchNumber", val);
                         updateCurrent("batch", b?.id || "");
                         if (b?.expiryDate) {
                           updateCurrent("expiryDate", new Date(b.expiryDate).toISOString().split("T")[0]);
                         }
-                        // Use batch's purchasePrice for cost price
-                        if (b?.purchasePrice !== undefined) {
-                          const base = Number(b.purchasePrice) || 0;
-                          const discountValue = Number(b.discount?.amount) || 0;
-                          const discountType = b.discount?.type || "percentage";
-                          const discountAmount = b.discount?.type === "fixed"
-                            ? discountValue
-                            : (base * discountValue) / 100;
-                          const afterDiscount = Math.max(0, base - discountAmount);
-                          const taxValue = Number(b.gst) || 0;
-                          const taxType = b.gstType || "percentage";
-                          const taxAmount = taxType === "fixed" ? taxValue : (afterDiscount * taxValue) / 100;
-                          updateCurrent("baseCostPrice", base);
-                          updateCurrent("discountValue", discountValue);
-                          updateCurrent("discountType", discountType);
-                          updateCurrent("discountAmount", discountAmount);
-                          updateCurrent("taxValue", taxValue);
-                          updateCurrent("taxType", taxType);
-                          updateCurrent("taxAmount", taxAmount);
-                          updateCurrent("costPrice", String(Math.max(0, afterDiscount + taxAmount)));
-                        }
+
+                        updateCurrent("baseCostPrice", snapshot.baseCostPrice);
+                        updateCurrent("discountValue", snapshot.discountValue);
+                        updateCurrent("discountType", snapshot.discountType);
+                        updateCurrent("discountAmount", snapshot.discountAmount);
+                        updateCurrent("taxValue", snapshot.taxValue);
+                        updateCurrent("taxType", snapshot.taxType);
+                        updateCurrent("taxAmount", snapshot.taxAmount);
+                        updateCurrent("costPrice", String(snapshot.effectiveCostPrice || 0));
                       }}
                       disabled={!currentItem.product}
                     >

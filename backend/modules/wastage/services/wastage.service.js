@@ -1,6 +1,36 @@
 import { createWastageService, findWastageService, findOneWastageService, findByIdWastageService, updateWastageService, deleteOneWastageService, countWastageService } from "./wastage.crud.js";
 import { findOneBatchService } from "../../productPurchases/services/batch.crud.js";
-import { getProductCostingByBatch } from "../../product/services/productCosting.service.js";
+
+const resolveBatchWastageCosting = (batch = {}, item = {}) => {
+    const baseCostPrice = Number(batch.costPrice ?? batch.purchasePrice ?? item.costPrice ?? item.price ?? 0);
+    const discountValue = Number(batch.discountEntryValue ?? batch.discountInPercentage ?? batch.discount?.amount ?? item.discountValue ?? item.discount ?? 0);
+    const discountType = batch.discountEntryType ?? batch.discountType ?? item.discountType ?? "percentage";
+    const discountAmount = discountType === "fixed"
+        ? discountValue
+        : (baseCostPrice * discountValue) / 100;
+
+    const discountedUnitPrice = Math.max(0, baseCostPrice - discountAmount);
+    const taxValue = Number(batch.taxEntryValue ?? batch.taxInPercentage ?? batch.gst ?? item.taxValue ?? item.tax ?? 0);
+    const taxType = batch.taxEntryType ?? batch.taxType ?? item.taxType ?? "percentage";
+    const taxAmount = taxType === "fixed"
+        ? taxValue
+        : (discountedUnitPrice * taxValue) / 100;
+
+    const effectiveCostPrice = Number(batch.perUnitCosting ?? (discountedUnitPrice + taxAmount) ?? 0);
+    const quantity = Number(item.quantity) || 0;
+
+    return {
+        baseCostPrice,
+        discountValue,
+        discountType,
+        discountAmount,
+        taxValue,
+        taxType,
+        taxAmount,
+        effectiveCostPrice: effectiveCostPrice || 0,
+        totalLoss: quantity * (effectiveCostPrice || 0),
+    };
+};
 
 const calculateWastageItemCosting = async (item) => {
     let batchId = item.batch?._id || item.batch;
@@ -11,22 +41,15 @@ const calculateWastageItemCosting = async (item) => {
         batchId = batch?._id;
     }
 
-    const costing = batchId
-        ? await getProductCostingByBatch(item.product, batchId)
-        : { found: false };
-
-    if (!costing.found) {
-        const fallbackCost = Number(item.costPrice) || 0;
-        return {
-            ...item,
-            costPrice: fallbackCost,
-            totalLoss: (Number(item.quantity) || 0) * fallbackCost,
-        };
-    }
-
+    const costing = resolveBatchWastageCosting(batch || {}, item);
     const quantity = Number(item.quantity) || 0;
-    const finalCosting = {
-        baseCostPrice: costing.basePurchasePrice,
+
+    return {
+        ...item,
+        batch: batch?._id || item.batch || null,
+        batchNumber: item.batchNumber || batch?.batchNumber || "",
+        expiryDate: item.expiryDate || batch?.expiryDate || "",
+        baseCostPrice: costing.baseCostPrice,
         discountValue: costing.discountValue,
         discountType: costing.discountType,
         discountAmount: costing.discountAmount,
@@ -40,17 +63,8 @@ const calculateWastageItemCosting = async (item) => {
         invoiceTaxType: "percentage",
         invoiceTaxAmount: 0,
         shippingAmount: 0,
-        effectiveCostPrice: costing.effectiveCostPrice,
-    };
-
-    return {
-        ...item,
-        batch: batch._id,
-        batchNumber: item.batchNumber || costing.batchNumber,
-        expiryDate: item.expiryDate || batch.expiryDate,
-        ...finalCosting,
-        costPrice: finalCosting.effectiveCostPrice,
-        totalLoss: quantity * finalCosting.effectiveCostPrice,
+        costPrice: costing.effectiveCostPrice,
+        totalLoss: quantity * costing.effectiveCostPrice,
     };
 };
 
@@ -159,6 +173,7 @@ const calculateWastageValues = (wastages) => {
 };
 
 export {
+    resolveBatchWastageCosting,
     wastageCreate,
     getAllWastages,
     getWastageById,

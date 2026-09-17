@@ -20,31 +20,16 @@ const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%
 
 function CostingDetails({ item }) {
     const quantity = Number(item.quantity) || 0;
-    const totalLoss = Number(item.totalLoss ?? quantity * (Number(item.costPrice) || 0));
-    const calculatedUnitCost = (Number(item.baseCostPrice) || 0)
-        - (Number(item.discountAmount) || 0)
-        + (Number(item.taxAmount) || 0);
-    const isCorrect = Math.abs(calculatedUnitCost - (Number(item.costPrice) || 0)) < 0.01;
+    const unitCosting = Number(item.costPrice || 0);
+    const totalLoss = Number(item.totalLoss ?? (quantity * unitCosting));
 
     return (
-        <details open className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--accent-2)]">Calculation Details</summary>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-3 pb-3 text-xs text-[var(--ink)]">
-                <div className="space-y-1">
-                    <p className="font-semibold text-[var(--muted)]">Batch costing (per unit)</p>
-                    <p>Base purchase price: <strong>{money(item.baseCostPrice)}</strong></p>
-                    <p>Discount: <strong>{rate(item.discountValue, item.discountType)}</strong> = {money(item.discountAmount)}</p>
-                    <p>Tax: <strong>{rate(item.taxValue, item.taxType)}</strong> = {money(item.taxAmount)}</p>
-                </div>
-                <div className="space-y-1">
-                    <p>Final unit cost: <strong>{money(item.costPrice)}</strong></p>
-                    <p className={isCorrect ? "text-emerald-600" : "text-red-600"}>
-                        Calculation check: <strong>{isCorrect ? "Applied correctly" : `Mismatch (expected ${money(calculatedUnitCost)})`}</strong>
-                    </p>
-                    <p>Loss: <strong>{quantity} × {money(item.costPrice)} = {money(totalLoss)}</strong></p>
-                </div>
-            </div>
-        </details>
+        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--ink)]">
+            <p className="font-semibold text-[var(--accent-2)]">Calculation</p>
+            <p className="mt-1">
+                Per item costing: <strong>{money(unitCosting)}</strong> × Quantity: <strong>{quantity}</strong> = <strong>{money(totalLoss)}</strong>
+            </p>
+        </div>
     );
 }
 
@@ -205,46 +190,18 @@ export default function WastageDetail() {
                                         <td colSpan="8" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Item Details</p>
+                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Loss Formula</p>
                                                     <div className="text-xs space-y-1">
-                                                        <div className="flex justify-between">
-                                                            <span style={{ color: "var(--ink)" }}>Product ID:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.product?._id || item.productId || "—"}</span>
+                                                        <div className="flex justify-between gap-4">
+                                                            <span style={{ color: "var(--ink)" }}>Per item costing:</span>
+                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{money(item.costPrice || 0)}</span>
                                                         </div>
-                                                        <div className="flex justify-between">
-                                                            <span style={{ color: "var(--ink)" }}>Product Name:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.product?.name || item.productName || "—"}</span>
-                                                        </div>
-                                                        {item.batchNumber && (
-                                                            <div className="flex justify-between">
-                                                                <span style={{ color: "var(--ink)" }}>Batch Number:</span>
-                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{item.batchNumber}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex justify-between">
+                                                        <div className="flex justify-between gap-4">
                                                             <span style={{ color: "var(--ink)" }}>Quantity:</span>
                                                             <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Loss Calculation</p>
-                                                    <div className="text-xs space-y-1">
-                                                        <div className="flex justify-between">
-                                                            <span style={{ color: "var(--ink)" }}>Cost Price:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(item.costPrice || 0).toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span style={{ color: "var(--ink)" }}>Line Total:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {((item.costPrice || 0) * (item.quantity || 0)).toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="h-px bg-[var(--border)] my-1"></div>
-                                                        <div className="flex justify-between font-semibold">
-                                                            <span style={{ color: "var(--ink)" }}>Loss Amount:</span>
+                                                        <div className="flex justify-between gap-4 font-semibold">
+                                                            <span style={{ color: "var(--ink)" }}>Loss:</span>
                                                             <span className="font-mono text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</span>
                                                         </div>
                                                     </div>
