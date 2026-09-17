@@ -1321,8 +1321,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     <table className="w-full text-sm min-w-[480px]">
                                         <thead>
                                             <tr className="text-xs uppercase tracking-wider" style={{ background: "var(--surface-muted)", borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
-                                                {[labels.item, labels.batch, labels.qty, labels.salePrice || "Sale Price", labels.costPrice || "Cost Price", labels.discount, labels.tax, labels.total, labels.actions].map(h => (
-                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === (labels.salePrice || "Sale Price") || h === (labels.costPrice || "Cost Price") || h === labels.total ? "text-right" : "text-left"}`}>{h}</th>
+                                                {[labels.item, labels.batch, labels.qty, labels.costPrice || "Cost Price", labels.discount, labels.tax, labels.total, labels.salePrice || "Sale Price", labels.actions].map(h => (
+                                                    <th key={h} className={`px-2 sm:px-3 py-3 font-semibold ${h === labels.actions ? "text-center" : h === labels.qty || h === (labels.costPrice || "Cost Price") || h === labels.total || h === (labels.salePrice || "Sale Price") ? "text-right" : "text-left"}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -1333,6 +1333,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                 const afterDiscount = calculateItemAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.discountScope);
                                                 const taxAmount = calculateItemTaxOnAfterDiscount(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType, it.discountScope, it.taxScope);
                                                 const finalSubtotal = calculateItemFinalSubtotal(it.quantity, it.costPrice, it.discount, it.discountType, it.tax, it.taxType, it.discountScope, it.taxScope);
+                                                const discountPercentEquivalent = it.discountType === "fixed" && Number(it.costPrice || 0) > 0 ? (discountAmount / (Number(it.quantity || 0) * Number(it.costPrice || 0) || 1)) * 100 : Number(it.discount || 0);
+                                                const taxPercentEquivalent = it.taxType === "fixed" && afterDiscount > 0 ? (taxAmount / afterDiscount) * 100 : Number(it.tax || 0);
                                                 const isExpanded = expandedItems[idx];
                                                 
                                                 return (
@@ -1341,11 +1343,11 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                             <td className="px-2 sm:px-3 py-3 font-medium" style={{ color: "var(--ink)" }}>{it.name}</td>
                                                             <td className="px-2 sm:px-3 py-3 font-mono text-xs" style={{ color: "var(--muted)" }}>{it.batchNumber}</td>
                                                             <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{it.quantity} <span className="text-xs" style={{ color: "var(--muted)" }}>{it.unit}</span></td>
-                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--accent-2)" }}>{Number(it.pricePerUnit || 0).toFixed(2)}</td>
                                                             <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>{Number(it.costPrice || 0).toFixed(2)}</td>
-                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.discount || 0).toFixed(2)} ${it.discountType === "fixed" ? labels.fixed : labels.percentage}`}</td>
-                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${Number(it.tax || 0).toFixed(2)} ${it.taxType === "fixed" ? labels.fixed : labels.percentage}`}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${discountPercentEquivalent.toFixed(2)}%`}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--muted)" }}>{`${taxPercentEquivalent.toFixed(2)}%`}</td>
                                                             <td className="px-2 sm:px-3 py-3 text-right tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{Number(it.totalPurchasePrice).toFixed(2)}</td>
+                                                            <td className="px-2 sm:px-3 py-3 text-right tabular-nums" style={{ color: "var(--accent-2)" }}>{Number(it.pricePerUnit || 0).toFixed(2)}</td>
                                                             <td className="px-2 sm:px-3 py-3">
                                                                 <div className="flex justify-center gap-1 items-center">
                                                                     <button 
@@ -1407,7 +1409,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                                             <div className="text-xs space-y-1">
                                                                                 <div className="flex justify-between">
                                                                                     <span style={{ color: "var(--ink)" }}>Discount:</span>
-                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(it.discount).toFixed(2)} {it.discountType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{`${(it.discountType === "fixed" && Number(it.costPrice || 0) > 0 ? (discountAmount / (Number(it.quantity || 0) * Number(it.costPrice || 0) || 1)) * 100 : Number(it.discount || 0)).toFixed(2)}%`}</span>
                                                                                 </div>
                                                                                 <div className="flex justify-between">
                                                                                     <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
@@ -1430,7 +1432,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                                                 </div>
                                                                                 <div className="flex justify-between">
                                                                                     <span style={{ color: "var(--ink)" }}>Tax:</span>
-                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(it.tax).toFixed(2)} {it.taxType === "fixed" ? labels.fixed : labels.percentage}</span>
+                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{`${(it.taxType === "fixed" && afterDiscount > 0 ? (taxAmount / afterDiscount) * 100 : Number(it.tax || 0)).toFixed(2)}%`}</span>
                                                                                 </div>
                                                                                 <div className="flex justify-between">
                                                                                     <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
