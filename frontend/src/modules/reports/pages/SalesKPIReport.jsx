@@ -66,7 +66,7 @@ function getTableHeaders(type, labels) {
     }
 }
 
-const MAX_TRANSACTIONS_DISPLAY = 50;
+const MAX_TRANSACTIONS_DISPLAY = 100000;
 
 function formatMoney(value) {
     return `Rs ${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -387,7 +387,7 @@ export default function SalesKPIReport() {
     const [orderId, setOrderId] = useState("");
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [page, setPage] = useState(1);
-    const limit = 100;
+    const limit = 100000;
 
     const PERIOD_OPTIONS = useMemo(() => [
         { value: "all", label: "All time" },

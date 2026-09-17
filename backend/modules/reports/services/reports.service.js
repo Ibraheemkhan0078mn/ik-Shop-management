@@ -225,33 +225,27 @@ export const getDashboardSummary = async (filters = {}) => {
 // Reusable function to generate sales report data with detailed profit calculations
 // This extracts the sales logic from prepareMainBusinessReport for reuse
 export const generateSalesReportData = async (filters = {}) => {
-    const { fromDate, toDate, period = "all", page = 1, limit = 100, orderId } = filters;
+    const { fromDate, toDate, period = "all", orderId } = filters;
 
     let dateFilter = {};
     let orderFilter = { status: "completed" };
 
-    // Apply orderId filter if provided - when orderId is provided, ignore all other filters
     if (orderId) {
-        // Check if it's a valid MongoDB ObjectId (24-character hex string)
         if (/^[0-9a-fA-F]{24}$/.test(orderId)) {
-            orderFilter = { _id: orderId }; // Search by MongoDB ObjectId
+            orderFilter = { _id: orderId };
         } else {
-            // Otherwise, treat it as an order number (human-readable)
-            // Use $or to try multiple search strategies
             orderFilter = {
                 $or: [
-                    { orderNumber: orderId }, // Exact match
-                    { orderNumber: { $regex: orderId, $options: 'i' } }, // Partial match (case-insensitive)
-                    { orderNumber: { $regex: `^${orderId}$`, $options: 'i' } } // Exact match (case-insensitive)
+                    { orderNumber: orderId },
+                    { orderNumber: { $regex: orderId, $options: 'i' } },
+                    { orderNumber: { $regex: `^${orderId}$`, $options: 'i' } }
                 ]
             };
         }
-        // Clear date filter and status filter when orderId is specified
         dateFilter = {};
-        // Remove status filter to find the order regardless of status
         delete orderFilter.status;
     }
-    
+
     if (period === "custom" && fromDate && toDate) {
         dateFilter = buildDateFilter(fromDate, toDate);
     } else if (period === "today") {
@@ -276,60 +270,18 @@ export const generateSalesReportData = async (filters = {}) => {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         dateFilter = { createdAt: { $gte: startOfYear, $lte: endOfYear } };
-    } else if (period === "all") {
+    } else {
         dateFilter = {};
     }
 
-    // Fetch orders
     const orders = await findOrderService({ ...dateFilter, ...orderFilter });
-    const customerById = new Map();
-    await Promise.all(
-        orders
-            .filter(order => order.customerId)
-            .map(async order => {
-                const customer = await findByIdCustomerService(order.customerId);
-                if (customer) {
-                    const customerData = customer.toObject ? customer.toObject() : customer;
-                    customerById.set(String(order.customerId), customerData.name);
-                    order.customerName = customerData.name;
-                }
-            })
-    );
 
-    const costingCache = new Map();
-    const getItemCosting = async (item) => {
-        const productId = item.productId || item.product;
-        const cacheKey = `${String(productId || '')}:${String(item.batchId || '')}`;
-        if (!costingCache.has(cacheKey)) {
-            costingCache.set(cacheKey, getProductCostingByBatch(productId, item.batchId));
-        }
-        return costingCache.get(cacheKey);
-    };
-
-    // Returns are reported against the order date so a filtered sale remains auditable
-    // even when its approved return was processed later.
-    const orderIds = orders.map(order => order._id);
-    const productReturns = orderIds.length > 0
-        ? await findProductReturnService({
-            referenceOrderId: { $in: orderIds },
-            returnStatus: { $in: ['approved', 'completed'] },
-            isDeleted: false
-        })
-        : [];
-    const returnsByOrder = productReturns.reduce((map, productReturn) => {
-        const key = String(productReturn.referenceOrderId);
-        if (!map.has(key)) map.set(key, []);
-        map.get(key).push(productReturn);
-        return map;
-    }, new Map());
-
-    // If orderId was specified but no order found, return empty results
     if (orderId && orders.length === 0) {
         return {
             data: [],
             total: 0,
-            page,
-            limit,
+            page: 1,
+            limit: 0,
             totalPages: 0,
             summary: {
                 totalSales: 0,
@@ -338,6 +290,7 @@ export const generateSalesReportData = async (filters = {}) => {
                 grossProfit: 0,
                 grossMarginPercentage: 0,
                 totalReturnRefunds: 0,
+                totalReturnedQuantity: 0,
                 returnedCOGS: 0,
                 netSales: 0,
                 netCOGS: 0,
@@ -356,154 +309,81 @@ export const generateSalesReportData = async (filters = {}) => {
         };
     }
 
-    // Calculate gross sales totals. Return-adjusted totals are calculated below.
-    const totalSales = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    const totalDiscount = orders.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
-    const salesCount = orders.length;
+    const customerById = new Map();
+    await Promise.all(
+        orders
+            .filter(order => order.customerType === 'regular' && order.customerId)
+            .map(async (order) => {
+                const customer = await findByIdCustomerService(order.customerId);
+                const customerData = customer?.toObject ? customer.toObject() : customer;
+                if (customerData?.name) {
+                    customerById.set(String(order.customerId), customerData.name);
+                    order.customerName = customerData.name;
+                }
+            })
+    );
 
-    // Calculate retail vs wholesale sales
-    const retailSales = orders
-        .filter(order => order.orderType === 'retail' || order.customerType === 'regular')
-        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    
-    const wholesaleSales = orders
-        .filter(order => order.orderType === 'wholesale' || order.customerType === 'wholesale')
-        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const costingCache = new Map();
+    const getItemCosting = async (item) => {
+        const productId = item.productId || item.product;
+        const batchId = item.batchId || item.batch || null;
+        const cacheKey = `${String(productId || '')}:${String(batchId || '')}`;
 
-    // Calculate average order value
-    const avgOrderValue = salesCount > 0 ? totalSales / salesCount : 0;
+        if (!costingCache.has(cacheKey)) {
+            let costing = null;
 
-    // Calculate sales margin (revenue - cost of goods sold)
-    let totalCostOfGoodsSold = 0;
-    for (const order of orders) {
-        if (order.items) {
-            for (const item of order.items) {
-                const costing = await getItemCosting(item);
-                totalCostOfGoodsSold += costing.effectiveCostPrice * (item.quantity || 0);
+            if (batchId) {
+                const batch = await findByIdBatchService(batchId);
+                if (batch) {
+                    const directCost = Number(batch.perUnitCosting ?? batch.costPrice ?? batch.purchasePrice ?? 0) || 0;
+                    costing = {
+                        productId,
+                        batchId,
+                        batchNumber: batch.batchNumber || null,
+                        sellingPrice: Number(batch.defaultSellingPrice ?? batch.sellingPrice ?? 0) || 0,
+                        basePurchasePrice: directCost,
+                        discountValue: 0,
+                        discountType: "percentage",
+                        discountAmount: 0,
+                        taxValue: 0,
+                        taxType: "percentage",
+                        taxAmount: 0,
+                        effectiveCostPrice: directCost,
+                        found: true,
+                    };
+                }
             }
+
+            if (!costing) {
+                costing = await getProductCostingByBatch(productId, batchId);
+            }
+
+            costingCache.set(cacheKey, costing);
         }
-    }
-    const totalReturnRefunds = productReturns.reduce((sum, productReturn) => sum + (productReturn.totalRefundAmount || 0), 0);
-    const returnCount = productReturns.length;
-    const totalReturnedQuantity = productReturns.reduce((sum, productReturn) => (
-        sum + (productReturn.items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
-    ), 0);
-    let returnedCOGS = 0;
+
+        return costingCache.get(cacheKey);
+    };
+
+    const orderIds = orders.map(order => order._id);
+    const productReturns = orderIds.length > 0
+        ? await findProductReturnService({
+            referenceOrderId: { $in: orderIds },
+            returnStatus: { $in: ['approved', 'completed'] },
+            isDeleted: false
+        })
+        : [];
+
+    const returnsByOrder = new Map();
     for (const productReturn of productReturns) {
-        const order = orders.find(candidate => String(candidate._id) === String(productReturn.referenceOrderId));
-        for (const returnedItem of productReturn.items || []) {
-            const soldItem = order?.items?.find(item => String(item.batchId) === String(returnedItem.batchId) && String(item.product) === String(returnedItem.productId));
-            let costPrice = 0;
-            if (returnedItem.batchId) {
-                const costing = await getItemCosting({
-                    productId: returnedItem.productId,
-                    batchId: returnedItem.batchId,
-                });
-                costPrice = costing.effectiveCostPrice;
-            } else if (soldItem) {
-                costPrice = (await getItemCosting(soldItem)).effectiveCostPrice;
-            }
-            returnedCOGS += costPrice * (returnedItem.quantity || 0);
-        }
+        const key = String(productReturn.referenceOrderId);
+        if (!returnsByOrder.has(key)) returnsByOrder.set(key, []);
+        returnsByOrder.get(key).push(productReturn);
     }
-    const netSales = totalSales - totalReturnRefunds;
-    const netCOGS = totalCostOfGoodsSold - returnedCOGS;
-    const netProfit = netSales - netCOGS;
-    const netMarginPercentage = netSales > 0 ? Number(((netProfit / netSales) * 100).toFixed(1)) : 0;
-    const salesMargin = netProfit;
 
-    const grossProfit = totalSales - totalCostOfGoodsSold;
-    const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
-
-    // Calculate sales by payment method
-    const salesByPaymentMethodMap = {};
-    orders.forEach(order => {
-        const method = order.paymentMethod || 'Cash';
-        if (!salesByPaymentMethodMap[method]) {
-            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
-        }
-        salesByPaymentMethodMap[method].total += order.totalAmount || 0;
-        salesByPaymentMethodMap[method].count += 1;
-    });
-    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
-        method,
-        total: data.total,
-        count: data.count,
-        percentage: totalSales > 0 ? ((data.total / totalSales) * 100).toFixed(1) : 0
-    }));
-
-    // Get transaction list with detailed batch information (same as main business report)
     const salesList = await Promise.all(
         orders
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 100)
             .map(async (order) => {
-                // Fetch batch details for each item in the order
-                const itemsWithBatchDetails = await Promise.all(
-                    (order.items || []).map(async (item) => {
-                        const costing = await getItemCosting(item);
-                        const costPrice = costing.effectiveCostPrice;
-                        const batchSalePrice = costing.sellingPrice;
-                        const batchNumber = costing.batchNumber || item.batchNumber || 'N/A';
-                        const batchDiscount = costing.discountAmount;
-                        const batchDiscountType = costing.discountType;
-                        
-                        // Calculate totals for this item
-                        const itemCostTotal = costPrice * (item.quantity || 0);
-                        const itemSaleTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                        const itemProfit = itemSaleTotal - itemCostTotal;
-                        const itemMargin = itemSaleTotal > 0 ? ((itemProfit / itemSaleTotal) * 100).toFixed(2) : 0;
-                        
-                        return {
-                            productName: item.name,
-                            productId: item.productId || item.product,
-                            quantity: item.quantity || 0,
-                            // Prices
-                            costPrice: costPrice,
-                            basePurchasePrice: costing.basePurchasePrice,
-                            purchaseDiscount: costing.discountAmount,
-                            purchaseTax: costing.taxAmount,
-                            effectiveCostPrice: costing.effectiveCostPrice,
-                            costing,
-                            batchSalePrice: batchSalePrice,
-                            unitPrice: item.unitPrice || 0,
-                            originalPrice: item.originalPrice || 0,
-                            // Totals
-                            lineTotal: item.lineTotal || 0,
-                            itemTotal: item.itemTotal || 0,
-                            itemCostTotal: itemCostTotal,
-                            itemSaleTotal: itemSaleTotal,
-                            itemProfit: itemProfit,
-                            itemMargin: itemMargin,
-                            // Tax
-                            taxAmount: item.taxAmount || 0,
-                            taxPercent: item.taxPercent || 0,
-                            taxType: item.taxType || 'percentage',
-                            // Discount
-                            discountAmount: item.discountAmount || 0,
-                            discountPercent: item.discountPercent || 0,
-                            discountType: item.discountType || 'percentage',
-                            // Batch info
-                            batchId: item.batchId,
-                            batchNumber: batchNumber,
-                            batchDiscount: batchDiscount,
-                            batchDiscountType: batchDiscountType,
-                            // Other
-                            portionType: item.portionType || 'full',
-                            customInput: item.customInput || false
-                        };
-                    })
-                );
-                
-                // Calculate order-level totals by summing all items
-                const totalCostPrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
-                const totalSalePrice = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemSaleTotal, 0);
-                const totalItemCosts = itemsWithBatchDetails.reduce((sum, item) => sum + item.itemCostTotal, 0);
-                
-                // Calculate margin and profit from summed values
-                const orderProfit = totalSalePrice - totalCostPrice;
-                const orderMargin = totalSalePrice > 0 ? ((orderProfit / totalSalePrice) * 100).toFixed(2) : 0;
-                
                 const orderReturns = returnsByOrder.get(String(order._id)) || [];
                 const returns = orderReturns.map(productReturn => ({
                     id: productReturn._id,
@@ -521,50 +401,97 @@ export const generateSalesReportData = async (filters = {}) => {
                         returnReason: returnedItem.returnReason
                     }))
                 }));
-                const returnRefunds = returns.reduce((sum, productReturn) => sum + productReturn.totalRefundAmount, 0);
-                const returnedQuantity = returns.reduce((sum, productReturn) => sum + productReturn.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
-                const orderReturnedCOGS = returns.reduce((sum, productReturn) => sum + productReturn.items.reduce((itemSum, returnedItem) => {
-                    const soldItem = itemsWithBatchDetails.find(item => String(item.batchId) === String(returnedItem.batchId) && item.productName === returnedItem.productName);
-                    return itemSum + (soldItem?.costPrice || 0) * returnedItem.quantity;
-                }, 0), 0);
-                const grossSales = order.totalAmount || 0;
-                const orderNetSales = grossSales - returnRefunds;
-                const orderNetCOGS = totalCostPrice - orderReturnedCOGS;
-                const orderNetProfit = orderNetSales - orderNetCOGS;
 
-                // Calculate total discounts and taxes from items
-                const totalItemDiscounts = itemsWithBatchDetails.reduce((sum, item) => sum + item.discountAmount, 0);
-                const totalItemTaxes = itemsWithBatchDetails.reduce((sum, item) => sum + item.taxAmount, 0);
-                
+                const itemsWithDetails = await Promise.all((order.items || []).map(async (item) => {
+                    const itemQty = Number(item.quantity || 0);
+                    const productId = item.productId || item.product;
+                    const rawCosting = await getItemCosting(item);
+                    const costing = rawCosting || {};
+                    const costPerUnit = Number(costing.effectiveCostPrice ?? costing.costPrice ?? 0);
+                    const itemSoldValue = Number(item.soldValue ?? item.itemTotal ?? ((item.unitPrice || 0) * itemQty));
+                    const returnedQty = (orderReturns || []).reduce((sum, productReturn) => {
+                        const matched = (productReturn.items || []).filter(returnedItem => {
+                            const sameProduct = String(returnedItem.productId) === String(productId);
+                            const sameBatch = !returnedItem.batchId || !item.batchId || String(returnedItem.batchId) === String(item.batchId);
+                            return sameProduct && sameBatch;
+                        });
+                        return sum + matched.reduce((qtySum, returnedItem) => qtySum + Number(returnedItem.quantity || 0), 0);
+                    }, 0);
+                    const netQty = Math.max(0, itemQty - returnedQty);
+                    const soldValue = itemQty > 0 ? (itemSoldValue / itemQty) * netQty : 0;
+                    const totalCost = costPerUnit * itemQty;
+                    const netCost = costPerUnit * netQty;
+                    const itemProfit = soldValue - netCost;
+                    const itemMargin = soldValue > 0 ? (itemProfit / soldValue) * 100 : 0;
+
+                    return {
+                        productName: item.name,
+                        productId,
+                        batchId: item.batchId,
+                        batchNumber: costing.batchNumber || item.batchNumber || 'N/A',
+                        quantity: itemQty,
+                        returnedQuantity: returnedQty,
+                        netQuantity: netQty,
+                        unitPrice: Number(item.unitPrice || 0),
+                        originalPrice: Number(item.originalPrice || 0),
+                        soldValue: itemSoldValue,
+                        itemTotal: itemSoldValue,
+                        itemSaleTotal: itemSoldValue,
+                        costPrice: costPerUnit,
+                        effectiveCostPrice: costPerUnit,
+                        basePurchasePrice: Number(costing.basePurchasePrice || 0),
+                        purchaseDiscount: Number(costing.discountAmount || 0),
+                        purchaseTax: Number(costing.taxAmount || 0),
+                        itemCostTotal: totalCost,
+                        netCost,
+                        netSoldValue: soldValue,
+                        itemProfit,
+                        itemMargin,
+                        taxAmount: Number(item.taxAmount || 0),
+                        taxPercent: Number(item.taxPercent || 0),
+                        taxType: item.taxType || 'percentage',
+                        discountAmount: Number(item.discountAmount || 0),
+                        discountPercent: Number(item.discountPercent || 0),
+                        discountType: item.discountType || 'percentage',
+                        portionType: item.portionType || 'full',
+                        customInput: !!item.customInput,
+                        costing
+                    };
+                }));
+
+                const totalCostPrice = itemsWithDetails.reduce((sum, item) => sum + (item.itemCostTotal || 0), 0);
+                const totalSalePrice = itemsWithDetails.reduce((sum, item) => sum + (item.itemTotal || 0), 0);
+                const returnedQuantity = itemsWithDetails.reduce((sum, item) => sum + (item.returnedQuantity || 0), 0);
+                const totalReturnRefunds = returns.reduce((sum, productReturn) => sum + (productReturn.totalRefundAmount || 0), 0);
+                const returnedCOGS = itemsWithDetails.reduce((sum, item) => sum + (item.netCost > 0 ? (item.itemCostTotal - item.netCost) : 0), 0);
+                const netCOGS = totalCostPrice - returnedCOGS;
+                const netSales = (order.totalAmount || 0) - totalReturnRefunds;
+                const netProfit = netSales - netCOGS;
+                const netMargin = netSales > 0 ? (netProfit / netSales) * 100 : 0;
+
                 return {
                     id: order._id,
                     orderNumber: order.orderNumber,
-                    // Order totals
                     amount: order.totalAmount || 0,
                     subtotal: order.subtotal || 0,
                     discountAmount: order.discountAmount || 0,
                     discountType: order.discountType || 'percentage',
                     totalTaxAmount: order.totalTaxAmount || 0,
-                    // Calculated totals from items
-                    totalCostPrice: totalCostPrice,
-                    totalSalePrice: totalSalePrice,
-                    totalItemCosts: totalItemCosts,
-                    totalItemDiscounts: totalItemDiscounts,
-                    totalItemTaxes: totalItemTaxes,
-                    // Profit and margin calculations
-                    orderProfit: orderProfit,
-                    orderMargin: orderMargin,
-                    profitMargin: order.totalAmount > 0 ? ((orderProfit / order.totalAmount) * 100).toFixed(2) : 0,
-                    grossSales,
+                    totalCostPrice,
+                    totalSalePrice,
+                    totalItemDiscounts: itemsWithDetails.reduce((sum, item) => sum + (item.discountAmount || 0), 0),
+                    totalItemTaxes: itemsWithDetails.reduce((sum, item) => sum + (item.taxAmount || 0), 0),
+                    orderProfit: netProfit,
+                    orderMargin: netMargin,
+                    grossSales: order.totalAmount || 0,
                     returns,
                     returnedQuantity,
-                    returnRefunds,
-                    returnedCOGS: orderReturnedCOGS,
-                    netSales: orderNetSales,
-                    netCOGS: orderNetCOGS,
-                    netProfit: orderNetProfit,
-                    netMargin: orderNetSales > 0 ? Number(((orderNetProfit / orderNetSales) * 100).toFixed(2)) : 0,
-                    // Customer and order info
+                    returnRefunds: totalReturnRefunds,
+                    returnedCOGS,
+                    netSales,
+                    netCOGS,
+                    netProfit,
+                    netMargin,
                     paymentMethod: order.paymentMethod,
                     customerName: customerById.get(String(order.customerId)) || order.customerName || 'Walk-in',
                     customerType: order.customerType,
@@ -575,24 +502,57 @@ export const generateSalesReportData = async (filters = {}) => {
                     note: order.note || '',
                     isPosOrder: order.isPosOrder || false,
                     status: order.status || 'completed',
-                    // Items with all details
-                    items: itemsWithBatchDetails,
+                    items: itemsWithDetails,
                     date: order.createdAt
                 };
             })
     );
 
-    // Pagination
-    const skip = (page - 1) * limit;
-    const paginatedSales = salesList.slice(skip, skip + limit);
-    const total = salesList.length;
+    const totalSales = salesList.reduce((sum, order) => sum + (order.amount || 0), 0);
+    const totalDiscount = salesList.reduce((sum, order) => sum + (order.discountAmount || 0), 0);
+    const totalCostOfGoodsSold = salesList.reduce((sum, order) => sum + (order.totalCostPrice || 0), 0);
+    const totalReturnRefunds = salesList.reduce((sum, order) => sum + (order.returnRefunds || 0), 0);
+    const totalReturnedQuantity = salesList.reduce((sum, order) => sum + (order.returnedQuantity || 0), 0);
+    const returnedCOGS = salesList.reduce((sum, order) => sum + (order.returnedCOGS || 0), 0);
+    const netSales = totalSales - totalReturnRefunds;
+    const netCOGS = totalCostOfGoodsSold - returnedCOGS;
+    const netProfit = netSales - netCOGS;
+    const grossProfit = totalSales - totalCostOfGoodsSold;
+    const totalReturnCount = salesList.reduce((sum, order) => sum + (order.returns?.length || 0), 0);
+    const salesCount = salesList.length;
+    const retailSales = salesList
+        .filter(order => order.orderType === 'retail' || order.customerType === 'regular')
+        .reduce((sum, order) => sum + (order.amount || 0), 0);
+    const wholesaleSales = salesList
+        .filter(order => order.orderType === 'wholesale' || order.customerType === 'wholesale')
+        .reduce((sum, order) => sum + (order.amount || 0), 0);
+    const avgOrderValue = salesCount > 0 ? totalSales / salesCount : 0;
+    const grossMarginPercentage = totalSales > 0 ? Number(((grossProfit / totalSales) * 100).toFixed(1)) : 0;
+    const netMarginPercentage = netSales > 0 ? Number(((netProfit / netSales) * 100).toFixed(1)) : 0;
+
+    const salesByPaymentMethodMap = {};
+    salesList.forEach(order => {
+        const method = order.paymentMethod || 'Cash';
+        if (!salesByPaymentMethodMap[method]) {
+            salesByPaymentMethodMap[method] = { total: 0, count: 0 };
+        }
+        salesByPaymentMethodMap[method].total += Number(order.amount || 0);
+        salesByPaymentMethodMap[method].count += 1;
+    });
+
+    const salesByPaymentMethod = Object.entries(salesByPaymentMethodMap).map(([method, data]) => ({
+        method,
+        total: data.total,
+        count: data.count,
+        percentage: totalSales > 0 ? Number(((data.total / totalSales) * 100).toFixed(1)) : 0
+    }));
 
     return {
-        data: paginatedSales,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        data: salesList,
+        total: salesList.length,
+        page: 1,
+        limit: salesList.length || 0,
+        totalPages: 1,
         summary: {
             totalSales,
             totalDiscount,
@@ -606,12 +566,12 @@ export const generateSalesReportData = async (filters = {}) => {
             netCOGS,
             netProfit,
             netMarginPercentage,
-            returnCount,
+            returnCount: totalReturnCount,
             salesCount,
             retailSales,
             wholesaleSales,
             avgOrderValue,
-            salesMargin
+            salesMargin: netProfit
         },
         breakdowns: {
             salesByPaymentMethod

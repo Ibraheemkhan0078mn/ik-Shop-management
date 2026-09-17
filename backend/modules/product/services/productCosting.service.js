@@ -1,5 +1,10 @@
 import { findOneBatchService } from "../../productPurchases/services/batch.crud.js";
 
+const toNumber = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 const getProductCostingByBatch = async (productId, batchId) => {
     const emptyCosting = {
         productId,
@@ -22,32 +27,22 @@ const getProductCostingByBatch = async (productId, batchId) => {
     const batch = await findOneBatchService({ _id: batchId, product: productId }, { populate: "product" });
     if (!batch) return emptyCosting;
 
-    const basePurchasePrice = Number(batch.purchasePrice) || 0;
-    const discountValue = Number(batch.discount?.amount) || 0;
-    const discountType = batch.discount?.type || "percentage";
-    const discountAmount = discountType === "percentage"
-        ? (basePurchasePrice * discountValue) / 100
-        : discountValue;
-    const priceAfterDiscount = Math.max(0, basePurchasePrice - discountAmount);
-    const taxValue = Number(batch.gst) || 0;
-    const taxType = batch.gstType || "percentage";
-    const taxAmount = taxType === "percentage"
-        ? (priceAfterDiscount * taxValue) / 100
-        : taxValue;
+    const directCost = toNumber(batch.perUnitCosting) || toNumber(batch.costPrice) || toNumber(batch.purchasePrice) || 0;
+    const sellingPrice = toNumber(batch.defaultSellingPrice) || toNumber(batch.sellingPrice) || 0;
 
     return {
         productId,
         batchId,
         batchNumber: batch.batchNumber || null,
-        sellingPrice: Number(batch.sellingPrice) || 0,
-        basePurchasePrice,
-        discountValue,
-        discountType,
-        discountAmount,
-        taxValue,
-        taxType,
-        taxAmount,
-        effectiveCostPrice: priceAfterDiscount + taxAmount,
+        sellingPrice,
+        basePurchasePrice: directCost,
+        discountValue: 0,
+        discountType: "percentage",
+        discountAmount: 0,
+        taxValue: 0,
+        taxType: "percentage",
+        taxAmount: 0,
+        effectiveCostPrice: directCost,
         found: true,
     };
 };
