@@ -299,7 +299,7 @@ function BatchRow({ batch, isSelected, selectable, expired, expiringSoon, onSele
         {batch.batchNumber}
       </span>
 
-      <Field label={text.colPrice} value={`Rs ${batch.sellingPrice}`} />
+      <Field label={text.colPrice} value={`Rs ${batch.defaultSellingPrice ?? batch.sellingPrice ?? 0}`} />
       <Field label={text.colStock} value={`${batch.quantity} units`} valueClassName={outOfStock ? "text-(--accent)" : "text-ink"} />
       <Field
         label={text.colExpires}

@@ -20,12 +20,12 @@ const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%
 
 function CostingDetails({ item }) {
     const quantity = Number(item.quantity) || 0;
-    const unitCosting = Number(item.costPrice || 0);
+    const unitCosting = Number(item.costPrice || item.baseCostPrice || 0);
     const totalLoss = Number(item.totalLoss ?? (quantity * unitCosting));
 
     return (
-        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--ink)]">
-            <p className="font-semibold text-[var(--accent-2)]">Calculation</p>
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--ink)]">
+            <p className="font-semibold text-[var(--accent-2)]">Loss Formula</p>
             <p className="mt-1">
                 Per item costing: <strong>{money(unitCosting)}</strong> × Quantity: <strong>{quantity}</strong> = <strong>{money(totalLoss)}</strong>
             </p>
@@ -187,27 +187,8 @@ export default function WastageDetail() {
                                         <td className="px-3 py-2 text-right font-semibold text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</td>
                                     </tr>
                                     <tr>
-                                        <td colSpan="8" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                    <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Loss Formula</p>
-                                                    <div className="text-xs space-y-1">
-                                                        <div className="flex justify-between gap-4">
-                                                            <span style={{ color: "var(--ink)" }}>Per item costing:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{money(item.costPrice || 0)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between gap-4">
-                                                            <span style={{ color: "var(--ink)" }}>Quantity:</span>
-                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>{item.quantity || 0}</span>
-                                                        </div>
-                                                        <div className="flex justify-between gap-4 font-semibold">
-                                                            <span style={{ color: "var(--ink)" }}>Loss:</span>
-                                                            <span className="font-mono text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <CostingDetails item={item} />
-                                            </div>
+                                        <td colSpan="8" className="px-2 sm:px-3 py-3" style={{ background: "var(--surface-muted)" }}>
+                                            <CostingDetails item={item} />
                                         </td>
                                     </tr>
                                 </React.Fragment>
