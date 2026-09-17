@@ -22,7 +22,10 @@ const orderItemSchema = new mongoose.Schema({
     discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
     maxDiscountPercent: { type: Number, default: 0 },
     discountLimitType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
-    itemTotal: { type: Number, required: true, min: 0 },  // final total including tax and discount
+    itemTotal: { type: Number, required: true, min: 0 },  // final total including tax and discount before order-level share
+    soldValue: { type: Number, default: 0 }, // final sold value after the item receives its share of order discount
+    orderDiscountShare: { type: Number, default: 0 }, // amount deducted from the item due to the overall order discount
+    orderDiscountSharePercent: { type: Number, default: 0 }, // equivalent percentage of the item total represented by its order-share discount
     customInput: { type: Boolean, default: false },  // boolean flag to identify if price was custom input or default
 });
 
@@ -38,6 +41,7 @@ const orderSchema = new mongoose.Schema(
         discountAmount: { type: Number, default: 0 },
         discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
         orderDiscountValue: { type: Number, default: 0 }, // Original discount input (e.g., 10 for 10% or 100 for Rs 100)
+        orderDiscountPercentEquivalent: { type: Number, default: 0 }, // Equivalent percentage of the fixed discount relative to the subtotal
         orderDiscountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" }, // How discount was entered
         totalTaxAmount: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true, default: 0 },

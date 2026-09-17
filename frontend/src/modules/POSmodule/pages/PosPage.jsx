@@ -63,6 +63,9 @@ const buildOrderItemsFromCart = (cart) =>
     maxDiscountPercent: cartItem.maxDiscountPercent || 0,
     discountLimitType: cartItem.discountLimitType || "percentage",
     itemTotal: cartItem.itemTotal || (cartItem.unitPrice * cartItem.qty),
+    soldValue: cartItem.soldValue ?? (cartItem.itemTotal || (cartItem.unitPrice * cartItem.qty)),
+    orderDiscountShare: cartItem.orderDiscountShare || 0,
+    orderDiscountSharePercent: cartItem.orderDiscountSharePercent || 0,
     customInput: cartItem.customInput || false,  // boolean flag to identify custom input
   }));
 
@@ -725,6 +728,7 @@ export default function PosPage() {
       orderDiscount,
       orderDiscountType,
       orderDiscountAmount,
+      orderDiscountPercentEquivalent,
       paymentMethod,
       paymentMethodId,
       paymentMethodName,
@@ -740,6 +744,7 @@ export default function PosPage() {
     try {
       const { data: orderNumberData } = await api.get("/orders/generate-number");
       const discountAmount = orderDiscountAmount || Math.max(0, Number(orderDiscount) || 0);
+      const discountPercentEquivalent = Number(orderDiscountPercentEquivalent || 0);
 
       // Apply per-item discounts from payment modal
       const updatedCartItems = cartItems.map((item, index) => {
@@ -796,6 +801,18 @@ export default function PosPage() {
       const billSubtotal = updatedCartItems.reduce((sum, item) => sum + (Number(item.itemTotal) || 0), 0);
       
       const totalTaxAmount = updatedCartItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0) * (Number(item.qty) || 0), 0);
+      const itemsWithOrderDiscountShare = updatedCartItems.map((item) => {
+        const itemTotal = Number(item.itemTotal || 0);
+        const itemOrderDiscountShare = billSubtotal > 0 && discountAmount > 0
+          ? (discountAmount * itemTotal) / billSubtotal
+          : 0;
+        return {
+          ...item,
+          orderDiscountShare: itemOrderDiscountShare,
+          orderDiscountSharePercent: itemTotal > 0 ? (itemOrderDiscountShare / itemTotal) * 100 : 0,
+          soldValue: Math.max(0, itemTotal - itemOrderDiscountShare),
+        };
+      });
       const totalAmount = Math.max(0, billSubtotal - discountAmount);  // billSubtotal already includes item taxes
 
       const orderPayload = {
@@ -804,11 +821,12 @@ export default function PosPage() {
         subtotal: billSubtotal,
         discountAmount,
         discountType: orderDiscountType || 'percentage',
-        orderDiscountValue: orderDiscount || 0, // Original input value (e.g., 10 for 10%)
+        orderDiscountValue: orderDiscount || 0, // Original input value (e.g., 10 for 10% or 100 for Rs 100)
+        orderDiscountPercentEquivalent: discountPercentEquivalent,
         orderDiscountType: orderDiscountType || 'percentage', // How it was entered
         totalTaxAmount,
         totalAmount,
-        items: buildOrderItemsFromCart(updatedCartItems),
+        items: buildOrderItemsFromCart(itemsWithOrderDiscountShare),
         customerName: paymentMethod === "credit" ? "" : customerName,
         customerType,
         customerId: customerType === "regular" ? selectedCustomerId : null,

@@ -266,7 +266,16 @@ export default function OrderDetailsPage() {
                                                         <p className="text-xs text-(--muted) line-through">Rs {item.originalPrice.toLocaleString()}</p>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-3 text-right text-(--ink)">Rs {lineTotal.toLocaleString()}</td>
+                                                <td className="px-3 py-3 text-right text-(--ink)">
+                                                    <div className="inline-block text-right">
+                                                        <div className="font-semibold">Rs {lineTotal.toLocaleString()}</div>
+                                                        {Number(item.soldValue ?? 0) > 0 && Number(item.soldValue) !== Number(lineTotal) && (
+                                                            <div className="mt-1 text-[10px] text-(--muted) leading-tight">
+                                                                sold (Rs {Number(item.soldValue).toLocaleString()})
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="px-3 py-3 text-right">
                                                     {item.discountPercent > 0 && (
                                                         <div className="text-red-600">

@@ -383,6 +383,24 @@ export default function PosPaymentModal({
     }
     
     const totalDiscount = orderDiscountAmount + itemDiscountTotal;
+    const orderDiscountPercentEquivalent = orderDiscountType === 'percentage'
+        ? discountAmt
+        : billSubtotal > 0
+            ? (orderDiscountAmount / billSubtotal) * 100
+            : 0;
+    const discountedItemsWithOrderShare = discountedCartItems.map((item) => {
+        const itemTotal = Number(item.itemTotal || 0);
+        const orderDiscountShare = billSubtotal > 0 && orderDiscountAmount > 0
+            ? (orderDiscountAmount * itemTotal) / billSubtotal
+            : 0;
+        const soldValue = Math.max(0, itemTotal - orderDiscountShare);
+        return {
+            ...item,
+            orderDiscountShare,
+            orderDiscountSharePercent: itemTotal > 0 ? (orderDiscountShare / itemTotal) * 100 : 0,
+            soldValue,
+        };
+    });
     const total = Math.max(0, billSubtotal - orderDiscountAmount);  // billSubtotal already includes item taxes
     const hybridQarza = total - (Number(hybridCash) || 0);
     const hybridValid = Math.abs((Number(hybridCash) || 0) + hybridQarza - total) < 0.01 && !!hybridQarzaAccountId;
@@ -468,6 +486,7 @@ export default function PosPaymentModal({
             orderDiscount: discountAmt,
             orderDiscountType: orderDiscountType,
             orderDiscountAmount: orderDiscountAmount,
+            orderDiscountPercentEquivalent: orderDiscountPercentEquivalent,
             paymentMethod: activeTab,
             paymentMethodId: selectedPaymentMethodId,
             paymentMethodName: selectedPaymentMethodId ? paymentMethodsData?.find(pm => pm._id === selectedPaymentMethodId)?.name || "" : "",
@@ -592,12 +611,21 @@ export default function PosPaymentModal({
                                             <option value="percentage">%</option>
                                             <option value="fixed">Rs</option>
                                         </select>
-                                        <Input
-                                            type="number" min={0} placeholder={orderDiscountType === 'percentage' ? '0%' : 'Rs 0'}
-                                            value={orderDiscount}
-                                            onChange={(e) => setOrderDiscount(e.target.value)}
-                                            onWheel={e => e.target.blur()}
-                                        />
+                                        <div className="relative flex-1">
+                                            <Input
+                                                type="number" min={0} placeholder={orderDiscountType === 'percentage' ? '0%' : 'Rs 0'}
+                                                value={orderDiscount}
+                                                onChange={(e) => setOrderDiscount(e.target.value)}
+                                                onWheel={e => e.target.blur()}
+                                                className="pr-16"
+                                            />
+                                            {Number(orderDiscount || 0) > 0 && (
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                    style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--accent-2)' }}>
+                                                    {orderDiscountPercentEquivalent.toFixed(2)}%
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </FormField>
 
@@ -912,7 +940,7 @@ export default function PosPaymentModal({
                                 <p className="text-sm text-[var(--muted)] text-center py-8">{labels.noItems || "No items in cart"}</p>
                             ) : (
                                 <div className="space-y-3">
-                                    {discountedCartItems.map((item, index) => (
+                                    {discountedItemsWithOrderShare.map((item, index) => (
                                         <div key={index} className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--border)" }}>
                                             {/* Item header - always visible */}
                                             <div
@@ -939,11 +967,19 @@ export default function PosPaymentModal({
                                                         {item.discountAmount > 0 && (
                                                             <span style={{ color: "var(--accent)" }}> (After discount: Rs {(item.priceAfterDiscount || 0).toFixed(2)})</span>
                                                         )}
+                                                        {item.orderDiscountShare > 0 && (
+                                                            <span style={{ color: "var(--accent)" }}> • Share: Rs {(item.orderDiscountShare || 0).toFixed(2)}</span>
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <p className="text-sm font-bold" style={{ color: "var(--accent-2)" }}>
                                                         Rs {(item.itemTotal || 0).toFixed(2)}
+                                                        {item.orderDiscountShare > 0 && (
+                                                            <span className="text-[10px] font-medium opacity-80 ml-1">
+                                                                (sold: Rs {(item.soldValue || 0).toFixed(2)})
+                                                            </span>
+                                                        )}
                                                     </p>
                                                     {expandedCalculation[index] ? <ChevronUp size={16} style={{ color: "var(--muted)" }} /> : <ChevronDown size={16} style={{ color: "var(--muted)" }} />}
                                                 </div>
@@ -968,6 +1004,7 @@ export default function PosPaymentModal({
                                                                 -Rs {(item.discountAmount / item.qty).toFixed(2)} → Rs {(item.priceAfterDiscount / item.qty).toFixed(2)}
                                                             </span>
                                                         </div>
+
                                                         
                                                         {/* Row 3: Tax */}
                                                         <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(22, 163, 74, 0.05)" }}>
@@ -986,6 +1023,17 @@ export default function PosPaymentModal({
                                                             </span>
                                                             <span className="font-mono font-bold text-sm" style={{ color: "var(--accent-2)" }}>Rs {(item.itemTotal || 0).toFixed(2)}</span>
                                                         </div>
+
+                                                        {item.orderDiscountShare > 0 && (
+                                                            <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(239, 68, 68, 0.05)" }}>
+                                                                <span style={{ color: "var(--ink)" }}>
+                                                                    5. Overall Discount Share: {item.orderDiscountSharePercent.toFixed(2)}%
+                                                                </span>
+                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                    -Rs {(item.orderDiscountShare || 0).toFixed(2)} → Rs {(item.soldValue || 0).toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {/* Discount Input Section */}
@@ -1069,7 +1117,7 @@ export default function PosPaymentModal({
                             {/* Order-level discount only */}
                             {orderDiscountAmount > 0 && (
                                 <div className="flex justify-between items-center text-red-600">
-                                    <span>{labels.orderDiscount || "Discount"}{orderDiscountType === 'percentage' ? ` (${discountAmt}%)` : ''}:</span>
+                                    <span>{labels.orderDiscount || "Discount"}{orderDiscountType === 'percentage' ? ` (${Number(discountAmt || 0).toFixed(2)}%)` : ` (${Number(orderDiscountPercentEquivalent || 0).toFixed(2)}%)`}:</span>
                                     <span className="font-medium">-Rs {orderDiscountAmount.toLocaleString()}</span>
                                 </div>
                             )}

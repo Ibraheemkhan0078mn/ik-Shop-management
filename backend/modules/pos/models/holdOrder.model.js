@@ -26,6 +26,7 @@ const holdOrderSchema = new mongoose.Schema(
         subtotal: { type: Number, required: true, default: 0 },
         discountAmount: { type: Number, default: 0 },
         orderDiscountValue: { type: Number, default: 0 }, // Original discount input value
+        orderDiscountPercentEquivalent: { type: Number, default: 0 }, // Equivalent percentage of the fixed discount relative to the subtotal
         orderDiscountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" }, // How discount was entered
         totalAmount: { type: Number, required: true, default: 0 },
         customerName: { type: String, default: "" },

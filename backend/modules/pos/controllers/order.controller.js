@@ -244,6 +244,9 @@ export const addOrder = asyncHandler(async (req, res, next) => {
             maxDiscountPercent: item.maxDiscountPercent || 0,
             discountLimitType: item.discountLimitType || "percentage",
             itemTotal: itemTotal,
+            soldValue: Number(item.soldValue ?? itemTotal ?? 0),
+            orderDiscountShare: Number(item.orderDiscountShare || 0),
+            orderDiscountSharePercent: Number(item.orderDiscountSharePercent || 0),
             allowCustomPrice: item.allowCustomPrice || false,
         };
     });
@@ -256,10 +259,15 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     
     // Recalculate order discount based on the new subtotal
     let recalculatedOrderDiscount = 0;
+    let recalculatedOrderDiscountPercentEquivalent = 0;
     if (validatedData.orderDiscountType === 'percentage' && validatedData.orderDiscountValue > 0) {
         recalculatedOrderDiscount = (recalculatedSubtotal * validatedData.orderDiscountValue) / 100;
+        recalculatedOrderDiscountPercentEquivalent = Number(validatedData.orderDiscountValue || 0);
     } else if (validatedData.orderDiscountType === 'fixed' && validatedData.orderDiscountValue > 0) {
         recalculatedOrderDiscount = Math.min(validatedData.orderDiscountValue, recalculatedSubtotal);
+        recalculatedOrderDiscountPercentEquivalent = recalculatedSubtotal > 0
+            ? (recalculatedOrderDiscount / recalculatedSubtotal) * 100
+            : 0;
     }
     
     const recalculatedTotal = Math.max(0, recalculatedSubtotal - recalculatedOrderDiscount);
@@ -268,6 +276,7 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     validatedData.subtotal = recalculatedSubtotal;
     validatedData.totalTaxAmount = recalculatedTotalTax;
     validatedData.discountAmount = recalculatedOrderDiscount;
+    validatedData.orderDiscountPercentEquivalent = recalculatedOrderDiscountPercentEquivalent;
     validatedData.totalAmount = recalculatedTotal;
     validatedData.remainingAmount = recalculatedTotal; // Initially unpaid
 
