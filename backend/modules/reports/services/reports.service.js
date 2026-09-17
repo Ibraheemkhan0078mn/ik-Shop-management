@@ -662,10 +662,6 @@ export const getPurchaseReport = async (filters = {}) => {
         matchQuery.supplier = supplierId;
     }
 
-    if (paymentStatus && paymentStatus !== "all") {
-        matchQuery.paymentStatus = paymentStatus;
-    }
-
     if (deliveryStatus && deliveryStatus !== "all") {
         matchQuery.status = deliveryStatus === "received" ? "delivered" : deliveryStatus;
     }
@@ -699,6 +695,16 @@ export const getPurchaseReport = async (filters = {}) => {
         countPurchaseService(matchQuery)
     ]);
 
+    const paymentStatusByPurchase = new Map();
+    await Promise.all(data.map(async (purchase) => {
+        const transactions = await getTransactions({ sourceType: "purchase", sourceId: purchase._id });
+        const paidAmount = transactions.reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
+        paymentStatusByPurchase.set(String(purchase._id), {
+            paidAmount,
+            paymentStatus: paidAmount >= (purchase.totalAmount || 0) ? "full" : paidAmount > 0 ? "partial" : "pending",
+        });
+    }));
+
     // Fetch purchase returns for each purchase
     const { findPurchaseReturnService } = await import("../../purchaseReturn/services/purchaseReturn.crud.js");
     const purchaseIds = data.map(p => p._id);
@@ -727,26 +733,32 @@ export const getPurchaseReport = async (filters = {}) => {
     // Attach purchase returns to data
     const enrichedData = data.map(purchase => {
         const plainPurchase = purchase.toObject ? purchase.toObject() : purchase;
+        const payment = paymentStatusByPurchase.get(String(purchase._id)) || { paidAmount: 0, paymentStatus: "pending" };
         return {
             ...plainPurchase,
+            ...payment,
             purchaseReturns: purchaseReturnsMap.get(purchase._id.toString()) || []
         };
     });
 
+    const filteredData = paymentStatus && paymentStatus !== "all"
+        ? enrichedData.filter((purchase) => purchase.paymentStatus === paymentStatus)
+        : enrichedData;
+
     // Calculate totals and KPIs from the data
-    const totalPurchases = data.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
-    const totalPaid = data.reduce((sum, purchase) => sum + (purchase.paymentStatus === "full" ? (purchase.totalAmount || 0) : 0), 0);
-    const totalDue = data.reduce((sum, purchase) => {
+    const totalPurchases = filteredData.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
+    const totalPaid = filteredData.reduce((sum, purchase) => sum + purchase.paidAmount, 0);
+    const totalDue = filteredData.reduce((sum, purchase) => {
         if (purchase.paymentStatus !== "full") {
             return sum + ((purchase.totalAmount || 0) - (purchase.paidAmount || 0));
         }
         return sum;
     }, 0);
-    const totalDeliveredCount = data.filter(p => p.status === "delivered").length;
-    const totalRejectedCount = data.filter(p => p.status === "rejected").length;
+    const totalDeliveredCount = filteredData.filter(p => p.status === "delivered").length;
+    const totalRejectedCount = filteredData.filter(p => p.status === "rejected").length;
 
     // Calculate total purchase returns from enriched data
-    const totalPurchaseReturns = enrichedData.reduce((sum, purchase) => {
+    const totalPurchaseReturns = filteredData.reduce((sum, purchase) => {
         const purchaseReturns = purchase.purchaseReturns || [];
         return sum + purchaseReturns.reduce((retSum, ret) => retSum + (ret.totalRefundAmount || 0), 0);
     }, 0);
@@ -755,12 +767,12 @@ export const getPurchaseReport = async (filters = {}) => {
     const netPurchases = Math.max(0, totalPurchases - totalPurchaseReturns);
     
     // Get unique suppliers
-    const uniqueSuppliers = [...new Set(data.map(p => p.supplier?.toString()).filter(Boolean))];
+    const uniqueSuppliers = [...new Set(filteredData.map(p => p.supplier?.toString()).filter(Boolean))];
     const totalSuppliers = uniqueSuppliers.length;
 
     // Get supplier-wise breakdown
     const supplierMap = {};
-    data.forEach(purchase => {
+    filteredData.forEach(purchase => {
         const supplierId = purchase.supplier?.toString();
         if (!supplierId) return;
         
@@ -776,16 +788,16 @@ export const getPurchaseReport = async (filters = {}) => {
         }
         
         supplierMap[supplierId].totalAmount += purchase.totalAmount || 0;
-        supplierMap[supplierId].paidAmount += purchase.paymentStatus === "full" ? (purchase.totalAmount || 0) : (purchase.paidAmount || 0);
-        supplierMap[supplierId].dueAmount += purchase.paymentStatus !== "full" ? ((purchase.totalAmount || 0) - (purchase.paidAmount || 0)) : 0;
+        supplierMap[supplierId].paidAmount += purchase.paidAmount || 0;
+        supplierMap[supplierId].dueAmount += Math.max(0, (purchase.totalAmount || 0) - (purchase.paidAmount || 0));
         supplierMap[supplierId].billsCount += 1;
     });
 
     const supplierBreakdown = Object.values(supplierMap).sort((a, b) => b.totalAmount - a.totalAmount);
 
     return {
-        data: enrichedData,
-        total,
+        data: filteredData,
+        total: paymentStatus && paymentStatus !== "all" ? filteredData.length : total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),

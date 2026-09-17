@@ -1,7 +1,8 @@
 export default {
-    preset: undefined,
     testEnvironment: 'node',
-    transform: {},
+    transform: {
+        '^.+\\.js$': ['babel-jest', { configFile: './babel.config.cjs' }],
+    },
     moduleNameMapper: {},
     testMatch: ['**/*.test.js'],
     collectCoverageFrom: [

@@ -1,21 +1,14 @@
-import { 
-    findByIdPurchaseService, 
-    updatePurchaseService 
-} from "./purchase.crud.js";
+import { findByIdPurchaseService } from "./purchase.crud.js";
 import { 
     findByIdQarzaAccountService, 
     updateQarzaAccountService 
 } from "../../qarza/services/qarzaAccount.crud.js";
-import { 
-    createQarzaPaymentService 
-} from "../../qarza/services/qarzaPayment.crud.js";
+import { createQarzaPaymentService } from "../../qarza/services/qarzaPayment.crud.js";
 import { 
     findByIdPaymentMethodService 
 } from "../../settings/services/paymentMethod.crud.js";
 import { 
     createPurchaseTransaction,
-    getTransactions,
-    deleteTransaction
 } from "../../transactions/services/transaction.service.js";
 import { recalculatePurchasePaidAmount } from "./purchase.service.js";
 
@@ -86,40 +79,3 @@ export const createPurchasePayment = async (paymentData) => {
     return transactions;
 };
 
-export const getPurchasePayments = async (purchaseId) => {
-    return await getTransactions({ sourceType: 'purchase', sourceId: purchaseId });
-};
-
-export const deletePurchasePayment = async (paymentId) => {
-    // Get the transaction to delete
-    const transactions = await getTransactions({ _id: paymentId });
-    if (!transactions || transactions.length === 0) {
-        throw new Error("Payment not found");
-    }
-
-    const transaction = transactions[0];
-    const purchase = await findByIdPurchaseService(transaction.sourceId);
-    if (!purchase) {
-        throw new Error("Purchase not found");
-    }
-
-    // Reverse the credit account balance change if this was a credit payment
-    if (transaction.creditAccount && (transaction.method === 'credit' || transaction.method === 'hybrid')) {
-        const creditAccount = await findByIdQarzaAccountService(transaction.creditAccount);
-        if (creditAccount) {
-            const creditAmount = transaction.creditAmount || transaction.amount;
-            // Reverse the balance change (decrease since we're reversing a cashin)
-            await updateQarzaAccountService(creditAccount._id, {
-                balance: creditAccount.balance - creditAmount
-            });
-        }
-    }
-
-    // Delete the transaction
-    await deleteTransaction(paymentId);
-
-    // Recalculate and update purchase paidAmount from all transactions
-    const paymentStatus = await recalculatePurchasePaidAmount(purchase._id);
-
-    return { message: "Payment deleted successfully", recalculatedStatus: paymentStatus.paymentStatus };
-};

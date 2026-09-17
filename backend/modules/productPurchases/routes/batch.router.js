@@ -15,13 +15,13 @@ const router = Router();
 router.use(protect);
 
 router.get("/generate-number", generateBatchNumberData);
+router.get("/by-id/:id", getBatchByIdData);
+router.get("/stock/:id", getBatchStockData);
 router.post("/", authorize("admin"), createBatchData);
 router.put("/:id", authorize("admin"), updateBatchData);
 router.delete("/:id", authorize("admin"), deleteBatchData);
 router.get("/:productId", getBatchesData);
 router.get("/:productId/getBatchesById", getBatchesData);
-router.get("/by-id/:id", getBatchByIdData);
-router.get("/stock/:id", getBatchStockData);
 
 
 export default router;

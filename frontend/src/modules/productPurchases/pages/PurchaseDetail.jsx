@@ -193,15 +193,16 @@ export default function PurchaseDetail() {
                             </thead>
                             <tbody>
                                 {purchase?.items?.map((item, index) => {
-                                    const price = item.costPrice || item.price || item.perItemPrice || 0;
+                                    const batch = item.batch || {};
+                                    const price = batch.costPrice || item.costPrice || item.price || item.perItemPrice || 0;
                                     const quantity = item.quantity || 0;
                                     const baseTotal = quantity * price;
-                                    const discountAmount = item.discountType === 'percentage'
-                                        ? baseTotal * (item.discount || 0) / 100
-                                        : (item.discount || 0);
-                                    const taxAmount = item.taxType === 'percentage'
-                                        ? (baseTotal - discountAmount) * (item.tax || 0) / 100
-                                        : (item.tax || 0);
+                                    const discountType = batch.discountEntryType || item.discountType || 'percentage';
+                                    const discount = batch.discountEntryValue ?? item.discount ?? 0;
+                                    const taxType = batch.taxEntryType || item.taxType || 'percentage';
+                                    const tax = batch.taxEntryValue ?? item.tax ?? 0;
+                                    const discountAmount = discountType === 'percentage' ? baseTotal * discount / 100 : discount;
+                                    const taxAmount = taxType === 'percentage' ? (baseTotal - discountAmount) * tax / 100 : tax;
                                     const subtotal = baseTotal - discountAmount + taxAmount;
 
                                     const isExpanded = expandedItems[index];
@@ -218,10 +219,10 @@ export default function PurchaseDetail() {
                                                 <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
                                                 <td className="px-3 py-2 text-right text-[var(--ink)]">{price.toLocaleString()}</td>
                                                 <td className="px-3 py-2 text-right text-red-600">
-                                                    {item.discountType === 'percentage' ? `${item.discount || 0}%` : `Rs ${(item.discount || 0).toLocaleString()}`}
+                                                    {discountType === 'percentage' ? `${discount}%` : `Rs ${Number(discount).toLocaleString()}`}
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-green-700">
-                                                    {item.taxType === 'percentage' ? `${item.tax || 0}%` : `Rs ${(item.tax || 0).toLocaleString()}`}
+                                                    {taxType === 'percentage' ? `${tax}%` : `Rs ${Number(tax).toLocaleString()}`}
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">{subtotal.toLocaleString()}</td>
                                                 <td className="px-3 py-2 text-center">

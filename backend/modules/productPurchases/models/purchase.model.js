@@ -16,76 +16,9 @@ const purchaseItemSchema = new mongoose.Schema({
         required: true,
         default: 0,
     },
-    price: {
-        type: Number,
-        required: true,
-        default: 0,
-    },
-    costPrice: {
-        type: Number,
-        required: true,
-        default: 0,
-    },
-    perUnitCosting: {
-        type: Number,
-        default: 0,
-        min: 0,
-    },
-    totalCosting: {
-        type: Number,
-        default: 0,
-        min: 0,
-    },
-    discount: {
-        type: Number,
-        default: 0,
-    },
-    discountType: {
-        type: String,
-        enum: ["percentage", "fixed"],
-        default: "percentage",
-    },
-    discountInputType: {
-        type: String,
-        enum: ["percentage", "fixed"],
-        default: "percentage",
-    },
-    discountInputValue: { type: Number, default: 0 },
-    discountScope: {
-        type: String,
-        enum: ["entire", "perUnit"],
-        default: "entire",
-    },
-    tax: {
-        type: Number,
-        default: 0,
-    },
-    taxType: {
-        type: String,
-        enum: ["percentage", "fixed"],
-        default: "percentage",
-    },
-    taxInputType: {
-        type: String,
-        enum: ["percentage", "fixed"],
-        default: "percentage",
-    },
-    taxInputValue: { type: Number, default: 0 },
-    taxScope: {
-        type: String,
-        enum: ["entire", "perUnit"],
-        default: "entire",
-    },
-    mfgDate: {
-        type: Date,
-    },
-    expiryDate: {
-        type: Date,
-    },
-});
+}, { _id: false });
 
-const purchaseSchema = new mongoose.Schema(
-    {
+const purchaseSchema = new mongoose.Schema({
         supplier: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Suppliers",
@@ -105,28 +38,6 @@ const purchaseSchema = new mongoose.Schema(
             required: true,
             default: 0,
         },
-        discount: {
-            type: Number,
-            default: 0,
-        },
-        discountType: {
-            type: String,
-            enum: ["percentage", "fixed"],
-            default: "percentage",
-        },
-        gst: {
-            type: Number,
-            default: 0,
-        },
-        gstType: {
-            type: String,
-            enum: ["percentage", "fixed"],
-            default: "percentage",
-        },
-        shippingCost: {
-            type: Number,
-            default: 0,
-        },
         totalAmount: {
             type: Number,
             required: true,
@@ -140,18 +51,9 @@ const purchaseSchema = new mongoose.Schema(
             enum: ["ordered", "delivered", "rejected"],
             default: "ordered",
         },
-        paymentStatus: {
-            type: String,
-            enum: ["pending", "partial", "full"],
-            default: "pending",
-        },
-        paidAmount: {
-            type: Number,
-            default: 0,
-        },
         // Sync Fields
         createdTimeForSync: { type: Date, default: Date.now },
-        updateTimeForSync: { type: Date, default: Date.now },
+        updatedTimeForSync: { type: Date, default: Date.now },
         // Soft Delete Fields
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null },

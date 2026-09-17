@@ -26,13 +26,14 @@ const emptyItem = () => ({
 const getScopeMultiplier = (quantity, scope) => scope === "perUnit" ? Number(quantity || 0) : 1;
 
 const calculateItemDiscountAmount = (quantity, pricePerUnit, discount, discountType, discountScope = "entire") => {
-    const baseTotal = Number(quantity || 0) * Number(pricePerUnit || 0);
+    const unitPrice = Number(pricePerUnit || 0);
     const discountValue = Number(discount || 0);
     if (!discountValue) return 0;
-    const discountAmount = discountType === "fixed"
-        ? discountValue * getScopeMultiplier(quantity, discountScope)
-        : (baseTotal * discountValue) / 100;
-    return Math.min(baseTotal, discountAmount);
+    const quantityValue = Number(quantity || 0);
+    const unitDiscountAmount = discountType === "fixed"
+        ? (discountScope === "perUnit" ? discountValue : (quantityValue > 0 ? discountValue / quantityValue : 0))
+        : (unitPrice * discountValue) / 100;
+    return Math.min(unitPrice, Math.max(0, unitDiscountAmount)) * quantityValue;
 };
 
 const calculateItemTotalPrice = (quantity, costPrice) => {
@@ -59,12 +60,22 @@ const calculateItemFinalSubtotal = (quantity, costPrice, discount, discountType,
 };
 
 const calculateItemTaxAmount = (quantity, pricePerUnit, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
-    const baseTotal = Number(quantity || 0) * Number(pricePerUnit || 0);
-    const discountAmount = calculateItemDiscountAmount(quantity, pricePerUnit, discount, discountType, discountScope);
-    const afterDiscount = Math.max(0, baseTotal - discountAmount);
+    const unitPrice = Number(pricePerUnit || 0);
+    const quantityValue = Number(quantity || 0);
+    const discountValue = Number(discount || 0);
     const taxValue = Number(tax || 0);
     if (!taxValue) return 0;
-    return taxType === "fixed" ? taxValue * getScopeMultiplier(quantity, taxScope) : (afterDiscount * taxValue) / 100;
+
+    const unitDiscountAmount = discountType === "fixed"
+        ? (discountScope === "perUnit" ? discountValue : (quantityValue > 0 ? discountValue / quantityValue : 0))
+        : (unitPrice * discountValue) / 100;
+    const discountedUnitPrice = Math.max(0, unitPrice - Math.min(unitPrice, Math.max(0, unitDiscountAmount)));
+
+    const unitTaxAmount = taxType === "fixed"
+        ? (taxScope === "perUnit" ? taxValue : (quantityValue > 0 ? taxValue / quantityValue : 0))
+        : (discountedUnitPrice * taxValue) / 100;
+
+    return unitTaxAmount * quantityValue;
 };
 
 const calculateItemLineTotal = (quantity, pricePerUnit, discount, discountType, tax, taxType, discountScope = "entire", taxScope = "entire") => {
@@ -95,12 +106,32 @@ const convertItemRatesToPercentages = (item) => {
 
 const calculateItemCosting = (item) => {
     const quantity = Number(item.quantity) || 0;
-    const baseTotal = calculateItemTotalPrice(quantity, item.costPrice);
-    const discountAmount = calculateItemDiscountAmount(quantity, item.costPrice, item.discount, item.discountType, item.discountScope);
+    const unitPrice = Number(item.costPrice ?? item.price ?? 0);
+    const discountValue = Number(item.discount || 0);
+    const discountType = item.discountType ?? "percentage";
+    const taxValue = Number(item.tax || 0);
+    const taxType = item.taxType ?? "percentage";
+    const discountScope = item.discountScope ?? "entire";
+    const taxScope = item.taxScope ?? "entire";
+
+    const discountAmountPerUnit = discountType === "fixed"
+        ? (discountScope === "perUnit" ? discountValue : (quantity > 0 ? discountValue / quantity : 0))
+        : (unitPrice * discountValue) / 100;
+
+    const discountedUnitPrice = Math.max(0, unitPrice - Math.min(unitPrice, Math.max(0, discountAmountPerUnit)));
+
+    const taxAmountPerUnit = taxType === "fixed"
+        ? (taxScope === "perUnit" ? taxValue : (quantity > 0 ? taxValue / quantity : 0))
+        : (discountedUnitPrice * taxValue) / 100;
+
+    const perUnitCosting = discountedUnitPrice + taxAmountPerUnit;
+    const totalCosting = perUnitCosting * quantity;
+    const baseTotal = quantity * unitPrice;
+    const discountAmount = calculateItemDiscountAmount(quantity, unitPrice, item.discount, discountType, discountScope);
     const afterDiscount = Math.max(0, baseTotal - discountAmount);
-    const taxAmount = calculateItemTaxAmount(quantity, item.costPrice, item.discount, item.discountType, item.tax, item.taxType, item.discountScope, item.taxScope);
-    const totalCosting = afterDiscount + taxAmount;
-    return { baseTotal, discountAmount, afterDiscount, taxAmount, totalCosting, perUnitCosting: quantity > 0 ? totalCosting / quantity : 0 };
+    const taxAmount = calculateItemTaxAmount(quantity, unitPrice, item.discount, discountType, item.tax, taxType, discountScope, taxScope);
+
+    return { baseTotal, discountAmount, afterDiscount, taxAmount, totalCosting, perUnitCosting };
 };
 
 const emptyBill = () => ({
@@ -619,18 +650,18 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setItemForm(p => ({
             ...p,
             batchNumber: selectedBatch.batchNumber ?? p.batchNumber,
-            costPrice: editingIndex === null && selectedBatch.purchasePrice != null ? String(selectedBatch.purchasePrice) : p.costPrice,
-            perItemPrice: editingIndex === null && selectedBatch.sellingPrice != null ? String(selectedBatch.sellingPrice) : p.perItemPrice,
+            costPrice: editingIndex === null && selectedBatch.costPrice != null ? String(selectedBatch.costPrice) : p.costPrice,
+            perItemPrice: editingIndex === null && selectedBatch.defaultSellingPrice != null ? String(selectedBatch.defaultSellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(selectedBatch.mfgDate),
             expiryDate: toInputDate(selectedBatch.expiryDate),
-            discountType: editingIndex === null && selectedBatch.discount?.inputType ? selectedBatch.discount.inputType : p.discountType,
-            discountInputType: editingIndex === null && selectedBatch.discount?.inputType ? selectedBatch.discount.inputType : p.discountInputType,
-            discountInputValue: editingIndex === null ? String(selectedBatch.discount?.inputValue ?? selectedBatch.discount?.amount ?? 0) : p.discountInputValue,
-            discount: editingIndex === null ? String(selectedBatch.discount?.inputValue ?? selectedBatch.discount?.amount ?? 0) : p.discount,
-            taxType: editingIndex === null && selectedBatch.gstInputType ? selectedBatch.gstInputType : p.taxType,
-            taxInputType: editingIndex === null && selectedBatch.gstInputType ? selectedBatch.gstInputType : p.taxInputType,
-            taxInputValue: editingIndex === null ? String(selectedBatch.gstInputValue ?? selectedBatch.gst ?? 0) : p.taxInputValue,
-            tax: editingIndex === null ? String(selectedBatch.gstInputValue ?? selectedBatch.gst ?? 0) : p.tax,
+            discountType: editingIndex === null ? selectedBatch.discountEntryType || "percentage" : p.discountType,
+            discountInputType: editingIndex === null ? selectedBatch.discountEntryType || "percentage" : p.discountInputType,
+            discountInputValue: editingIndex === null ? String(selectedBatch.discountEntryValue ?? 0) : p.discountInputValue,
+            discount: editingIndex === null ? String(selectedBatch.discountEntryValue ?? 0) : p.discount,
+            taxType: editingIndex === null ? selectedBatch.taxEntryType || "percentage" : p.taxType,
+            taxInputType: editingIndex === null ? selectedBatch.taxEntryType || "percentage" : p.taxInputType,
+            taxInputValue: editingIndex === null ? String(selectedBatch.taxEntryValue ?? 0) : p.taxInputValue,
+            tax: editingIndex === null ? String(selectedBatch.taxEntryValue ?? 0) : p.tax,
         }));
     }, [selectedBatch, isExistingMode, editingIndex]);
 
@@ -781,18 +812,18 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
         setItemForm(p => ({
             ...p, batchMode: "existing", batchSelection: val,
             batchNumber: b.batchNumber ?? p.batchNumber,
-            costPrice: b.purchasePrice != null ? String(b.purchasePrice) : p.costPrice,
-            perItemPrice: b.sellingPrice != null ? String(b.sellingPrice) : p.perItemPrice,
+            costPrice: b.costPrice != null ? String(b.costPrice) : p.costPrice,
+            perItemPrice: b.defaultSellingPrice != null ? String(b.defaultSellingPrice) : p.perItemPrice,
             mfgDate: toInputDate(b.mfgDate),
             expiryDate: toInputDate(b.expiryDate),
-            discount: String(b.discount?.amount ?? 0),
-            discountType: b.discount?.inputType || "percentage",
-            discountInputType: b.discount?.inputType || "percentage",
-            discountInputValue: String(b.discount?.inputValue ?? b.discount?.amount ?? 0),
-            tax: String(b.gstInputValue ?? b.gst ?? 0),
-            taxType: b.gstInputType || "percentage",
-            taxInputType: b.gstInputType || "percentage",
-            taxInputValue: String(b.gstInputValue ?? b.gst ?? 0),
+            discount: String(b.discountEntryValue ?? 0),
+            discountType: b.discountEntryType || "percentage",
+            discountInputType: b.discountEntryType || "percentage",
+            discountInputValue: String(b.discountEntryValue ?? 0),
+            tax: String(b.taxEntryValue ?? 0),
+            taxType: b.taxEntryType || "percentage",
+            taxInputType: b.taxEntryType || "percentage",
+            taxInputValue: String(b.taxEntryValue ?? 0),
             discountScope: "entire",
             taxScope: "entire",
         }));
@@ -828,16 +859,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             batchSelection: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
             batchId: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
             batchMetadataEdited: Boolean(isExistingMode && selectedBatchUsage?.editable && (
-                String(itemForm.costPrice) !== String(selectedBatch?.purchasePrice ?? "") ||
-                String(itemForm.perItemPrice) !== String(selectedBatch?.sellingPrice ?? "") ||
+                String(itemForm.costPrice) !== String(selectedBatch?.costPrice ?? "") ||
+                String(itemForm.perItemPrice) !== String(selectedBatch?.defaultSellingPrice ?? "") ||
                 itemForm.mfgDate !== toInputDate(selectedBatch?.mfgDate) ||
                 itemForm.expiryDate !== toInputDate(selectedBatch?.expiryDate) ||
-                String(itemForm.discount) !== String(selectedBatch?.discount?.inputValue ?? selectedBatch?.discount?.amount ?? 0) ||
-                itemForm.discountType !== (selectedBatch?.discount?.inputType || "percentage") ||
-                itemForm.discountScope !== (selectedBatch?.discount?.scope || "entire") ||
-                String(itemForm.tax) !== String(selectedBatch?.gstInputValue ?? selectedBatch?.gst ?? 0) ||
-                itemForm.taxType !== (selectedBatch?.gstInputType || "percentage") ||
-                itemForm.taxScope !== (selectedBatch?.gstScope || "entire")
+                String(itemForm.discount) !== String(selectedBatch?.discountEntryValue ?? 0) ||
+                itemForm.discountType !== (selectedBatch?.discountEntryType || "percentage") ||
+                itemForm.discountScope !== (selectedBatch?.discountScope || "entire") ||
+                String(itemForm.tax) !== String(selectedBatch?.taxEntryValue ?? 0) ||
+                itemForm.taxType !== (selectedBatch?.taxEntryType || "percentage") ||
+                itemForm.taxScope !== (selectedBatch?.taxScope || "entire")
             )),
             discount: Number(itemForm.discount) || 0, discountType: itemForm.discountType, discountScope: itemForm.discountScope,
             discountInputType: itemForm.discountType, discountInputValue: Number(itemForm.discount) || 0,

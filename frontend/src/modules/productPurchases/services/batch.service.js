@@ -29,7 +29,7 @@ export const batchApi = baseApi.injectEndpoints({
 
         // Single batch
         getBatchById: build.query({
-            query: (id) => ({ url: `/batches/${id}` }),
+            query: (id) => ({ url: `/batches/by-id/${id}` }),
             transformResponse: (raw) => raw.data || raw,
             providesTags: (result, error, id) => [{ type: "Batch", id }],
         }),

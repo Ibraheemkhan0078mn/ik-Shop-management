@@ -12,16 +12,12 @@ const batchSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
-        supplier: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Suppliers",
-        },
         quantity: {
             type: Number,
             required: true,
             min: 0,
         },
-        purchasePrice: {
+        costPrice: {
             type: Number,
             required: true,
             min: 0,
@@ -37,7 +33,7 @@ const batchSchema = new mongoose.Schema(
             default: 0,
             min: 0,
         },
-        sellingPrice: {
+        defaultSellingPrice: {
             type: Number,
             required: true,
             min: 0,
@@ -51,60 +47,48 @@ const batchSchema = new mongoose.Schema(
         created: { type: Date, default: Date.now },
         updated: { type: Date },
         isActive: { type: Boolean, default: true },
-        discount: {
-            amount: {
-                type: Number,
-                default: 0
-            },
-            type: {
-                type: String,
-                enum: ["percentage", "fixed"],
-                default: "percentage",
-            },
-            inputType: {
-                type: String,
-                enum: ["percentage", "fixed"],
-                default: "percentage",
-            },
-            inputValue: { type: Number, default: 0 },
-            scope: {
-                type: String,
-                enum: ["entire", "perUnit"],
-                default: "entire",
-            },
-        },
-        gst: {
+        discountInPercentage: {
             type: Number,
             default: 0,
         },
-        gstType: {
+        discountEntryType: {
             type: String,
             enum: ["percentage", "fixed"],
             default: "percentage",
         },
-        gstInputType: {
-            type: String,
-            enum: ["percentage", "fixed"],
-            default: "percentage",
+        discountEntryValue: {
+            type: Number,
+            default: 0,
         },
-        gstInputValue: { type: Number, default: 0 },
-        gstScope: {
+        discountScope: {
             type: String,
             enum: ["entire", "perUnit"],
             default: "entire",
         },
-        gstDiscount: {
+        taxInPercentage: {
             type: Number,
             default: 0,
         },
-        // Sync Fields
+        taxEntryType: {
+            type: String,
+            enum: ["percentage", "fixed"],
+            default: "percentage",
+        },
+        taxEntryValue: {
+            type: Number,
+            default: 0,
+        },
+        taxScope: {
+            type: String,
+            enum: ["entire", "perUnit"],
+            default: "entire",
+        },
         createdTimeForSync: { type: Date, default: Date.now },
-        updateTimeForSync: { type: Date, default: Date.now },
-        // Soft Delete Fields
+        updatedTimeForSync: { type: Date, default: Date.now },
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date, default: null }
     },
-    { timestamps: true },
+    { timestamps: { createdAt: "created", updatedAt: "updated" } },
 );
 
 export default batchSchema;
