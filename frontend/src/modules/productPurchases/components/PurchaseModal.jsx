@@ -539,20 +539,44 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     // prefill update
     useEffect(() => {
         if (!isUpdate || !existingPurchase) return;
-        setAddedItems((existingPurchase.items ?? []).map(it => ({
-            item: it.product?._id ?? it.product ?? "", 
-            name: it.product?.name ?? "",
-            quantity: it.quantity ?? 0, unit: it.unit ?? "",
-            pricePerUnit: it.price ?? 0, costPrice: it.costPrice ?? 0,
-            totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, it.costPrice ?? 0, it.discount ?? 0, it.discountType ?? "percentage", it.tax ?? 0, it.taxType ?? "percentage", it.discountScope ?? "entire", it.taxScope ?? "entire"),
-            mfgDate: toInputDate(it.mfgDate), expiryDate: toInputDate(it.expiryDate),
-            batchNumber: it.batchNumber ?? it.batch?.batchNumber ?? "", batchMode: (it.batchId ?? it.batch?._id) ? "existing" : "new",
-            batchSelection: it.batchId ?? it.batch?._id ?? "", batchId: it.batchId ?? it.batch?._id ?? "",
-            discount: it.discount ?? 0, discountType: it.discountType ?? "percentage", discountScope: it.discountScope ?? "entire",
-            discountInputType: it.discountInputType ?? it.discountType ?? "percentage", discountInputValue: it.discountInputValue ?? it.discount ?? 0,
-            tax: it.tax ?? 0, taxType: it.taxType ?? "percentage", taxScope: it.taxScope ?? "entire",
-            taxInputType: it.taxInputType ?? it.taxType ?? "percentage", taxInputValue: it.taxInputValue ?? it.tax ?? 0,
-        })));
+        setAddedItems((existingPurchase.items ?? []).map((it) => {
+            const batch = it.batch || {};
+            const batchId = it.batchId ?? batch._id ?? "";
+            const costPrice = batch.costPrice ?? it.costPrice ?? it.price ?? 0;
+            const sellingPrice = batch.defaultSellingPrice ?? it.price ?? it.perItemPrice ?? 0;
+            const discountValue = batch.discountEntryValue ?? it.discount ?? 0;
+            const discountType = batch.discountEntryType ?? it.discountType ?? "percentage";
+            const discountScope = batch.discountScope ?? it.discountScope ?? "entire";
+            const taxValue = batch.taxEntryValue ?? it.tax ?? 0;
+            const taxType = batch.taxEntryType ?? it.taxType ?? "percentage";
+            const taxScope = batch.taxScope ?? it.taxScope ?? "entire";
+
+            return {
+                item: it.product?._id ?? it.product ?? "",
+                name: it.product?.name ?? "",
+                quantity: it.quantity ?? 0,
+                unit: it.unit ?? "",
+                pricePerUnit: sellingPrice,
+                costPrice,
+                totalPurchasePrice: calculateItemLineTotal(it.quantity ?? 0, costPrice, discountValue, discountType, taxValue, taxType, discountScope, taxScope),
+                mfgDate: toInputDate(batch.mfgDate ?? it.mfgDate),
+                expiryDate: toInputDate(batch.expiryDate ?? it.expiryDate),
+                batchNumber: batch.batchNumber ?? it.batchNumber ?? "",
+                batchMode: batchId ? "existing" : "new",
+                batchSelection: batchId,
+                batchId,
+                discount: discountValue,
+                discountType,
+                discountScope,
+                discountInputType: discountType,
+                discountInputValue: discountValue,
+                tax: taxValue,
+                taxType,
+                taxScope,
+                taxInputType: taxType,
+                taxInputValue: taxValue,
+            };
+        }));
         setBill({
             supplier: existingPurchase.supplier?._id ?? existingPurchase.supplier ?? "",
             supplierName: existingPurchase.supplier?.name ?? "",
@@ -752,8 +776,12 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     const itemFormDiscountAmount = itemFormCosting.discountAmount;
     const itemFormAfterDiscount = itemFormCosting.afterDiscount;
     const itemFormTaxAmount = itemFormCosting.taxAmount;
-    const itemFormDiscountPercentage = itemFormBaseTotal > 0 ? (itemFormDiscountAmount / itemFormBaseTotal) * 100 : 0;
-    const itemFormTaxPercentage = itemFormAfterDiscount > 0 ? (itemFormTaxAmount / itemFormAfterDiscount) * 100 : 0;
+    const itemFormDiscountPercentage = itemForm.discountType === "percentage"
+        ? (Number(itemForm.discount || 0) || 0)
+        : itemFormBaseTotal > 0 ? (itemFormDiscountAmount / itemFormBaseTotal) * 100 : 0;
+    const itemFormTaxPercentage = itemForm.taxType === "percentage"
+        ? (Number(itemForm.tax || 0) || 0)
+        : itemFormAfterDiscount > 0 ? (itemFormTaxAmount / itemFormAfterDiscount) * 100 : 0;
     const itemFormFinalTotal = itemFormCosting.totalCosting;
 
     // frequent items
@@ -824,8 +852,8 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             taxType: b.taxEntryType || "percentage",
             taxInputType: b.taxEntryType || "percentage",
             taxInputValue: String(b.taxEntryValue ?? 0),
-            discountScope: "entire",
-            taxScope: "entire",
+            discountScope: b.discountScope || "entire",
+            taxScope: b.taxScope || "entire",
         }));
     };
 
@@ -858,7 +886,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
             batchNumber: batchNo, batchMode: itemForm.batchMode,
             batchSelection: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
             batchId: itemForm.batchMode === "existing" ? itemForm.batchSelection : "",
-            batchMetadataEdited: Boolean(isExistingMode && selectedBatchUsage?.editable && (
+            batchMetadataEdited: Boolean(itemForm.batchSelection && (
                 String(itemForm.costPrice) !== String(selectedBatch?.costPrice ?? "") ||
                 String(itemForm.perItemPrice) !== String(selectedBatch?.defaultSellingPrice ?? "") ||
                 itemForm.mfgDate !== toInputDate(selectedBatch?.mfgDate) ||
@@ -888,17 +916,26 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
     };
 
     const handleEditItem = (it, idx) => {
-        const hasExistingBatch = it.batchId && it.batchMode === "existing";
+        const hasExistingBatch = Boolean(it.batchId && it.batchMode === "existing");
+        const batchSource = it.batch || {};
+        const selectedCostPrice = batchSource.costPrice ?? it.costPrice ?? it.pricePerUnit ?? 0;
+        const selectedSalePrice = batchSource.defaultSellingPrice ?? it.pricePerUnit ?? 0;
+        const selectedDiscount = batchSource.discountEntryValue ?? it.discount ?? 0;
+        const selectedDiscountType = batchSource.discountEntryType ?? it.discountType ?? "percentage";
+        const selectedDiscountScope = batchSource.discountScope ?? it.discountScope ?? "entire";
+        const selectedTax = batchSource.taxEntryValue ?? it.tax ?? 0;
+        const selectedTaxType = batchSource.taxEntryType ?? it.taxType ?? "percentage";
+        const selectedTaxScope = batchSource.taxScope ?? it.taxScope ?? "entire";
         setItemForm({
             item: it.item, name: it.name, quantity: it.quantity, unit: it.unit,
-            perItemPrice: it.pricePerUnit, costPrice: it.costPrice || "",
+            perItemPrice: selectedSalePrice, costPrice: selectedCostPrice || "",
             mfgDate: it.mfgDate, expiryDate: it.expiryDate,
             batchNumber: it.batchNumber, batchMode: hasExistingBatch ? "existing" : "new",
             batchSelection: hasExistingBatch ? it.batchId : "",
-            discount: it.discount, discountType: it.discountType,
-            discountInputType: it.discountInputType || it.discountType, discountInputValue: it.discountInputValue ?? it.discount,
-            discountScope: it.discountScope || "entire",
-            tax: it.tax, taxType: it.taxType, taxInputType: it.taxInputType || it.taxType, taxInputValue: it.taxInputValue ?? it.tax, taxScope: it.taxScope || "entire",
+            discount: selectedDiscount, discountType: selectedDiscountType,
+            discountInputType: selectedDiscountType, discountInputValue: selectedDiscount,
+            discountScope: selectedDiscountScope,
+            tax: selectedTax, taxType: selectedTaxType, taxInputType: selectedTaxType, taxInputValue: selectedTax, taxScope: selectedTaxScope,
         });
         setEditingIndex(idx);
     };
@@ -1119,7 +1156,7 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                         })()}
                                     </Field>
                                 </div>
-                                <div className="grid grid-cols-1 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field><Label>{labels.costPrice || "Cost Price"} *</Label>
                                         <Inp 
                                             name="costPrice" 
@@ -1133,11 +1170,27 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                             style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
                                         />
                                     </Field>
+                                    <Field><Label>Default Sale Price</Label>
+                                        <Inp 
+                                            name="perItemPrice" 
+                                            type="number" 
+                                            placeholder="0.00" 
+                                            value={itemForm.perItemPrice} 
+                                            onChange={handleItemChange}
+                                            min="0"
+                                            onWheel={e => e.target.blur()}
+                                            readOnly={isBatchMetadataLocked}
+                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
+                                        />
+                                    </Field>
                                 </div>
 
                                 <div className="space-y-4">
-                                    <Field>
-                                        <Label>{labels.discount}</Label>
+                                    <div className="rounded-2xl border p-3" style={{ background: "rgba(59,130,246,0.04)", borderColor: "rgba(59,130,246,0.18)" }}>
+                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>{labels.discount}</span>
+                                            <span className="text-[11px] font-semibold" style={{ color: "var(--accent-2)" }}>{itemFormDiscountPercentage.toFixed(2)}%</span>
+                                        </div>
                                         <div className="flex gap-3 mb-2 text-xs" style={{ color: "var(--muted)" }}>
                                             {["percentage", "fixed"].map(type => (
                                                 <label key={type} className="flex items-center gap-1.5 cursor-pointer">
@@ -1153,13 +1206,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                 <option value="perUnit">Per unit</option>
                                             </Sel>
                                         </div>
-                                        <p className="text-[11px] mt-1.5" style={{ color: "var(--muted)" }}>
-                                            {itemForm.discountType === "fixed" ? `Amount: Rs ${itemFormDiscountAmount.toFixed(2)} | Equivalent: ${itemFormDiscountPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormDiscountAmount.toFixed(2)}`}
+                                        <p className="mt-2 text-[11px]" style={{ color: "var(--muted)" }}>
+                                            {itemForm.discountType === "fixed" ? `Amount: Rs ${itemFormDiscountAmount.toFixed(2)} • Equivalent: ${itemFormDiscountPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormDiscountAmount.toFixed(2)} • Rate: ${itemFormDiscountPercentage.toFixed(2)}%`}
                                         </p>
-                                    </Field>
+                                    </div>
 
-                                    <Field>
-                                        <Label>{labels.taxPercent || "Tax"}</Label>
+                                    <div className="rounded-2xl border p-3" style={{ background: "rgba(16,185,129,0.04)", borderColor: "rgba(16,185,129,0.18)" }}>
+                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>{labels.taxPercent || "Tax"}</span>
+                                            <span className="text-[11px] font-semibold" style={{ color: "var(--accent-2)" }}>{itemFormTaxPercentage.toFixed(2)}%</span>
+                                        </div>
                                         <div className="flex gap-3 mb-2 text-xs" style={{ color: "var(--muted)" }}>
                                             {["percentage", "fixed"].map(type => (
                                                 <label key={type} className="flex items-center gap-1.5 cursor-pointer">
@@ -1175,10 +1231,10 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                                 <option value="perUnit">Per unit</option>
                                             </Sel>
                                         </div>
-                                        <p className="text-[11px] mt-1.5" style={{ color: "var(--muted)" }}>
-                                            {itemForm.taxType === "fixed" ? `Amount: Rs ${itemFormTaxAmount.toFixed(2)} | Equivalent: ${itemFormTaxPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormTaxAmount.toFixed(2)}`}
+                                        <p className="mt-2 text-[11px]" style={{ color: "var(--muted)" }}>
+                                            {itemForm.taxType === "fixed" ? `Amount: Rs ${itemFormTaxAmount.toFixed(2)} • Equivalent: ${itemFormTaxPercentage.toFixed(2)}%` : `Amount: Rs ${itemFormTaxAmount.toFixed(2)} • Rate: ${itemFormTaxPercentage.toFixed(2)}%`}
                                         </p>
-                                    </Field>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1204,30 +1260,40 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                                     </Field>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4">
-                                    <Field><Label>Declare Sale Price</Label>
-                                        <Inp 
-                                            name="perItemPrice" 
-                                            type="number" 
-                                            placeholder="0.00" 
-                                            value={itemForm.perItemPrice} 
-                                            onChange={handleItemChange}
-                                            min="0"
-                                            onWheel={e => e.target.blur()}
-                                            readOnly={isBatchMetadataLocked}
-                                            style={isBatchMetadataLocked ? { background: "var(--surface-muted)", cursor: "not-allowed", color: "var(--muted)" } : {}}
-                                        />
-                                    </Field>
-                                </div>
-
-                                <div className="p-3 rounded-xl text-xs space-y-1.5" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
-                                    <p className="font-semibold mb-2" style={{ color: "var(--ink)" }}>Item calculation summary</p>
-                                    <div className="flex justify-between"><span>Base total</span><span>Rs {itemFormBaseTotal.toFixed(2)}</span></div>
-                                    <div className="flex justify-between"><span>Discount</span><span>Rs {itemFormDiscountAmount.toFixed(2)} ({itemFormDiscountPercentage.toFixed(2)}%)</span></div>
-                                    <div className="flex justify-between"><span>After discount</span><span>Rs {itemFormAfterDiscount.toFixed(2)}</span></div>
-                                    <div className="flex justify-between"><span>Tax</span><span>Rs {itemFormTaxAmount.toFixed(2)} ({itemFormTaxPercentage.toFixed(2)}%)</span></div>
-                                    <div className="flex justify-between"><span>Per-unit costing</span><span>Rs {itemFormCosting.perUnitCosting.toFixed(2)}</span></div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)", color: "var(--accent-2)" }}><span>Final item total</span><span>Rs {itemFormFinalTotal.toFixed(2)}</span></div>
+                                <div className="p-3 rounded-2xl" style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Item calculation summary</p>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(148,163,184,0.08)" }}>
+                                            <span style={{ color: "var(--ink)" }}>Cost price</span>
+                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {Number(itemForm.costPrice || 0).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(239,68,68,0.05)" }}>
+                                            <span style={{ color: "var(--ink)" }}>Discount</span>
+                                            <span className="font-mono text-right" style={{ color: "#dc2626" }}>
+                                                -Rs {itemFormDiscountAmount.toFixed(2)}<br />
+                                                <span style={{ color: "var(--muted)" }}>({itemFormDiscountPercentage.toFixed(2)}%)</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(59,130,246,0.05)" }}>
+                                            <span style={{ color: "var(--ink)" }}>After discount</span>
+                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {itemFormAfterDiscount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(16,185,129,0.05)" }}>
+                                            <span style={{ color: "var(--ink)" }}>Tax</span>
+                                            <span className="font-mono text-right" style={{ color: "#16a34a" }}>
+                                                +Rs {itemFormTaxAmount.toFixed(2)}<br />
+                                                <span style={{ color: "var(--muted)" }}>({itemFormTaxPercentage.toFixed(2)}%)</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(168,85,247,0.06)" }}>
+                                            <span style={{ color: "var(--ink)" }}>Per-unit costing</span>
+                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {itemFormCosting.perUnitCosting.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 font-semibold" style={{ background: "rgba(15,118,110,0.08)", borderTop: "1px solid var(--border)" }}>
+                                            <span style={{ color: "var(--accent-2)" }}>Final item total</span>
+                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {itemFormFinalTotal.toFixed(2)}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {!isUpdate && bill.supplier && frequentItems.length > 0 && (
@@ -1476,131 +1542,16 @@ function PurchaseModalInner({ mode = "create", purchaseId, onClose, onSuccess })
                         </div>
                     </Card>
 
-                    {/* row 3: summary */}
-                    <Card title={labels.summary} icon={DollarSign}>
-                        <div className="flex items-center justify-between mb-4">
-                            <Btn 
-                                variant="secondary" 
-                                size="sm" 
-                                onClick={handleRecalculate}
-                                disabled={isRecalculating || addedItems.length === 0}
-                            >
-                                {isRecalculating ? "Recalculating..." : "Recalculate Totals"}
-                            </Btn>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Subtotal Card */}
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.subtotal}</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Items Subtotal:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>Subtotal:</span>
-                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Bill Discount Card - commented out */}
-                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.discount} ({labels.billDetails})</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Discount:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(bill.discount).toFixed(2)} {bill.discountType === "fixed" ? labels.fixed : labels.percentage}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Discount Amount:</span>
-                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {calc.billDiscount.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>After Discount:</span>
-                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div> */}
-
-                            {/* Bill Tax Card - commented out */}
-                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.taxGst} ({labels.billDetails})</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>After Discount Value:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Tax:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{Number(bill.gst).toFixed(2)} {bill.gstType === "fixed" ? labels.fixed : labels.percentage}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
-                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calc.billTax.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>After Tax:</span>
-                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.afterBillTax.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div> */}
-
-                            {/* Shipping Card - commented out */}
-                            {/* <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>{labels.shipping}</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>After Tax Value:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillTax.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
-                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {calc.shipping.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>After Shipping:</span>
-                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div> */}
-                        </div>
-
-                        {/* Final Total Card - commented out (purchase level discount, tax, shipping) */}
-                        {/* <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>{labels.total}</p>
-                            <div className="text-xs space-y-1">
-                                <div className="flex justify-between">
-                                    <span style={{ color: "var(--ink)" }}>After Bill Discount:</span>
-                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.afterBillDiscount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: "var(--ink)" }}>Tax Amount:</span>
-                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.billTax.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: "var(--ink)" }}>Shipping Cost:</span>
-                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calc.shipping.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <span style={{ color: "var(--accent-2)" }}>Grand Total:</span>
-                                    <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {calc.total.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div> */}
-
-                        {/* Simple Total Card (items subtotal only) */}
-                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>{labels.total}</p>
-                            <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                <span style={{ color: "var(--accent-2)" }}>Total:</span>
-                                <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {calc.subtotalAfterItems.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </Card>
                     {/* row 4: create purchase */}
-                    <Btn variant="primary" className="w-full" onClick={handleSubmit} disabled={isSubmitting}>
-                        {isSubmitting ? (isUpdate ? labels.updating : labels.submitting) : (isUpdate ? labels.updateBill : labels.submitBill)}
+                    <Btn variant="primary" className="w-full !h-14 text-base font-bold" onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? (isUpdate ? labels.updating : labels.submitting) : (
+                            <span className="flex items-center justify-center gap-2">
+                                <span>{isUpdate ? labels.updateBill : labels.submitBill}</span>
+                                <span className="rounded-full px-2.5 py-1 text-xs" style={{ background: "rgba(255,255,255,0.15)" }}>
+                                    Rs {calc.subtotalAfterItems.toFixed(2)}
+                                </span>
+                            </span>
+                        )}
                     </Btn>
                 </div>
             </div>

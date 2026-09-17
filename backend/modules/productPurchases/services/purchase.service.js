@@ -64,14 +64,23 @@ const ensureBatchNumber = async (requested, isNewBatch = false) => {
 
 const upsertBatch = async (item, purchaseId, supplier, ProductModel) => {
     const batchNumber = await ensureBatchNumber(item.batchNumber, item.isNewBatch);
-    let batch = await findOneBatchService({ batchNumber, product: item.product });
+    let batch = item.batch ? await findByIdBatchService(item.batch) : null;
+
+    if (!batch && item.batchNumber) {
+        batch = await findOneBatchService({ batchNumber, product: item.product });
+    }
+
     const batchData = getBatchData({ ...item, batchNumber }, purchaseId, supplier);
+
     if (!batch) {
         batch = await createBatchService(batchData);
         await updateDocs({ model: ProductModel, filter: { _id: item.product }, data: { $push: { batches: batch._id } } });
     } else if (item.batchMetadataEdited || item.isNewBatch || item.batchNumber) {
-        await updateBatchService(batch._id, batchData);
-        batch = await findByIdBatchService(batch._id);
+        const shouldUpdateThisBatch = !batch.originPurchaseId || String(batch.originPurchaseId) === String(purchaseId) || String(item.batch) === String(batch._id);
+        if (shouldUpdateThisBatch) {
+            await updateBatchService(batch._id, batchData);
+            batch = await findByIdBatchService(batch._id);
+        }
     }
     return batch;
 };
