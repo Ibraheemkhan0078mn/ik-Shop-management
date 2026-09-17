@@ -75,6 +75,19 @@ const productReturnSchema = new mongoose.Schema(
         notes: {
             type: String,
         },
+        totalRefundAmount: {
+            type: Number,
+            default: 0,
+        },
+        refundedAmount: {
+            type: Number,
+            default: 0,
+        },
+        refundStatus: {
+            type: String,
+            enum: ["pending", "partial", "fully_refunded", "rejected"],
+            default: "pending",
+        },
         // Sync Fields
         createdTimeForSync: { type: Date, default: Date.now },
         updateTimeForSync: { type: Date, default: Date.now },

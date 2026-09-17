@@ -130,8 +130,9 @@ const getAllProductReturns = async (filters = {}) => {
         populate: ["referenceOrderId", "items.productId"]
     });
     const total = await countProductReturnService(query);
+    const normalizedReturns = await Promise.all(productReturns.map((productReturn) => normalizeProductReturnTotals(productReturn)));
     return {
-        data: productReturns,
+        data: normalizedReturns,
         page: parseInt(page),
         limit: parseInt(limit),
         total,
@@ -160,8 +161,9 @@ const getPaginatedProductReturns = async (filters = {}) => {
         populate: ["referenceOrderId", "items.productId"]
     });
     const total = await countProductReturnService(query);
+    const normalizedReturns = await Promise.all(productReturns.map((productReturn) => normalizeProductReturnTotals(productReturn)));
     return {
-        data: productReturns,
+        data: normalizedReturns,
         page: parseInt(page),
         limit: parseInt(limit),
         total,
@@ -169,10 +171,45 @@ const getPaginatedProductReturns = async (filters = {}) => {
     };
 };
 
+const getItemRefundAmount = (item) => {
+    if (!item) return 0;
+    const directRefundAmount = Number(item.refundAmount ?? 0);
+    if (Number.isFinite(directRefundAmount) && directRefundAmount >= 0) {
+        return directRefundAmount;
+    }
+    return calculateReturnItemTotals(item).refundAmount;
+};
+
+const normalizeProductReturnTotals = async (productReturn) => {
+    if (!productReturn) return null;
+
+    const items = Array.isArray(productReturn.items) ? productReturn.items : [];
+    const calculatedRefundAmount = items.reduce((sum, item) => sum + getItemRefundAmount(item), 0);
+    const refundStatus = await calculateProductReturnRefundStatus(productReturn._id, calculatedRefundAmount);
+    const normalized = {
+        totalRefundAmount: calculatedRefundAmount,
+        refundedAmount: refundStatus.totalRefunded,
+        refundStatus: refundStatus.refundStatus,
+    };
+
+    const existingTotal = Number(productReturn.totalRefundAmount ?? 0);
+    const needsUpdate = existingTotal !== calculatedRefundAmount || Number(productReturn.refundedAmount ?? 0) !== refundStatus.totalRefunded || (productReturn.refundStatus || 'pending') !== refundStatus.refundStatus;
+
+    if (needsUpdate) {
+        await updateProductReturnService(productReturn._id, normalized);
+    }
+
+    return {
+        ...(productReturn.toObject ? productReturn.toObject() : productReturn),
+        ...normalized,
+    };
+};
+
 const getProductReturnById = async (id) => {
-    return await findByIdProductReturnService(id, { 
+    const productReturn = await findByIdProductReturnService(id, { 
         populate: ["referenceOrderId", "items.productId", "customerId"]
     });
+    return await normalizeProductReturnTotals(productReturn);
 };
 
 const updateProductReturn = async (id, updateData) => {

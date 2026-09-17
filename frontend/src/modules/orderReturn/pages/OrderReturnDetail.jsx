@@ -31,8 +31,15 @@ export default function OrderReturnDetail() {
     const payments = paymentsData || [];
 
     // Calculate payment status
-    const totalRefundAmount = orderReturn?.totalRefundAmount || 0;
-    const refundedAmount = orderReturn?.refundedAmount || 0;
+    const itemBasedTotalRefundAmount = Array.isArray(orderReturn?.items)
+        ? orderReturn.items.reduce((sum, item) => sum + Number(item?.refundAmount || 0), 0)
+        : 0;
+    const totalRefundAmount = Number(orderReturn?.totalRefundAmount ?? 0) > 0 || itemBasedTotalRefundAmount === 0
+        ? Number(orderReturn?.totalRefundAmount ?? 0)
+        : itemBasedTotalRefundAmount;
+    const refundedAmount = Number(orderReturn?.refundedAmount ?? 0) > 0 || (payments?.reduce((sum, payment) => sum + Number(payment?.amount || payment?.creditAmount || payment?.cashAmount || 0), 0) || 0) === 0
+        ? Number(orderReturn?.refundedAmount ?? 0)
+        : (payments?.reduce((sum, payment) => sum + Number(payment?.amount || payment?.creditAmount || payment?.cashAmount || 0), 0) || 0);
     const remainingAmount = totalRefundAmount - refundedAmount;
     const refundStatus = orderReturn?.refundStatus || 'pending';
 
