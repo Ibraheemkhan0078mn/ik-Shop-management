@@ -253,7 +253,7 @@ export default function PurchaseDetail() {
                                                 </td>
                                                 <td className="px-3 py-2 text-[var(--ink)]">{item.category || item.product?.category || "—"}</td>
                                                 <td className="px-3 py-2 text-right text-[var(--ink)]">{calc.quantity}</td>
-                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{Number(calc.costPrice).toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{Number(calc.unitCosting).toLocaleString()}</td>
                                                 <td className="px-3 py-2 text-right text-red-600">
                                                     {displayDiscountText}
                                                 </td>

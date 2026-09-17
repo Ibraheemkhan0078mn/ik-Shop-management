@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, EyeOff, RefreshCw, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
-import { useGetPurchaseReturnPaymentsQuery, useRecalculatePurchaseReturnMutation } from "../services/purchaseReturn.service.js";
+import { useGetPurchaseReturnPaymentsQuery } from "../services/purchaseReturn.service.js";
 import PurchaseReturnDetailPdfTemplate from "../components/PurchaseReturnDetailPdfTemplate.jsx";
-import PurchaseReturnPaymentModal from "../components/PurchaseReturnPaymentModal.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
-import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 
 const STATUS_STYLE = {
     draft: { background: "rgba(107,114,128,0.1)", color: "#6b7280", text: "Draft" },
@@ -21,7 +19,6 @@ export default function PurchaseReturnDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [showPdfModal, setShowPdfModal] = useState(false);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [expandedItems, setExpandedItems] = useState({});
     const [expandedPayments, setExpandedPayments] = useState({});
     const [purchaseReturn, setPurchaseReturn] = useState(null);
@@ -31,9 +28,8 @@ export default function PurchaseReturnDetail() {
     const language = settings?.language || "en";
     const labels = getPurchaseReturnLabels(language);
 
-    // Transaction/Refund hooks
-    const { data: paymentsData, refetch: refetchPayments } = useGetPurchaseReturnPaymentsQuery(id);
-    const [recalculatePurchaseReturn] = useRecalculatePurchaseReturnMutation();
+    // Transaction records only
+    const { data: paymentsData } = useGetPurchaseReturnPaymentsQuery(id);
 
     const payments = paymentsData?.data || paymentsData || [];
 
@@ -42,28 +38,6 @@ export default function PurchaseReturnDetail() {
     const refundedAmount = purchaseReturn?.refundedAmount || 0;
     const remainingAmount = totalRefundAmount - refundedAmount;
     const refundStatus = purchaseReturn?.refundStatus || 'pending';
-
-
-    const handleRecalculate = async () => {
-        try {
-            await recalculatePurchaseReturn(id).unwrap();
-            showSuccess("Purchase return recalculated successfully");
-            refetchPayments();
-            // Refetch purchase return to get updated refunded amount
-            const result = await getPurchaseReturnByIdApi(id);
-            setPurchaseReturn(result.data);
-        } catch (error) {
-            showError(error?.data?.message || "Failed to recalculate");
-        }
-    };
-
-    const handlePaymentSuccess = async () => {
-        setShowPaymentModal(false);
-        refetchPayments();
-        // Refetch purchase return to get updated refunded amount
-        const result = await getPurchaseReturnByIdApi(id);
-        setPurchaseReturn(result.data);
-    };
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -115,14 +89,6 @@ export default function PurchaseReturnDetail() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleRecalculate}
-                                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] rounded-lg transition-all"
-                                title="Recalculate Refund"
-                            >
-                                <RefreshCw size={15} />
-                                Recalculate
-                            </button>
                             <button
                                 onClick={() => setShowPdfModal(true)}
                                 className="flex items-center gap-2 px-4 py-2 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all shadow-sm"
@@ -247,56 +213,17 @@ export default function PurchaseReturnDetail() {
                                             {isExpanded && (
                                                 <tr>
                                                     <td colSpan="7" className="px-4 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                            {/* Panel 1: Costing & Total — mirrors CRUD form */}
-                                                            <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Costing &amp; Total</p>
-                                                                <div className="text-xs space-y-1">
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Cost Price:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {rawPrice.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Less Discount ({discountType}):</span>
-                                                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {discountAmount.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
-                                                                        <span>Original: {discountType === 'fixed' ? `Rs ${Number(discountValue).toFixed(2)}` : `${Number(discountValue).toFixed(2)}%`}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Plus Tax ({taxType}):</span>
-                                                                        <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {taxAmount.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
-                                                                        <span>Original: {taxType === 'fixed' ? `Rs ${Number(taxValue).toFixed(2)}` : `${Number(taxValue).toFixed(2)}%`}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Per-Unit Costing:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {unitCosting.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Total (Costing × Qty):</span>
-                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {itemTotal.toFixed(2)}</span>
-                                                                    </div>
+                                                        <div className="rounded-lg p-3" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                            <div className="text-xs space-y-2">
+                                                                <div className="flex justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(148,163,184,0.08)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>Per-unit costing</span>
+                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {unitCosting.toFixed(2)}</span>
                                                                 </div>
-                                                            </div>
-
-                                                            {/* Panel 2: Refund Calculation — mirrors CRUD form */}
-                                                            <div className="p-3 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                                                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Refund Calculation</p>
-                                                                <div className="text-xs space-y-1">
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Total:</span>
-                                                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {itemTotal.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span style={{ color: "var(--ink)" }}>Less Cut:</span>
-                                                                        <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {cutAmount.toFixed(2)}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between font-bold text-sm pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                        <span style={{ color: "var(--accent-2)" }}>Refund:</span>
-                                                                        <span className="font-mono text-base" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
-                                                                    </div>
+                                                                <div className="flex justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(15,118,110,0.08)" }}>
+                                                                    <span style={{ color: "var(--ink)" }}>Formula</span>
+                                                                    <span className="font-mono text-right" style={{ color: "var(--ink)" }}>
+                                                                        {unitCosting.toFixed(2)} × {quantity} - {cutAmount.toFixed(2)} = {refundAmount.toFixed(2)}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -309,116 +236,14 @@ export default function PurchaseReturnDetail() {
                             </tbody>
                         </table>
 
-                        {/* Refund KPI row */}
-                        <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refund Amount</p>
-                                <p className="text-2xl font-bold text-red-600">Rs {totalRefundAmount.toLocaleString()}</p>
+                        <div className="mb-6 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Grand total refunds</span>
+                                <span className="text-xl font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {Number(totalRefundAmount || 0).toFixed(2)}</span>
                             </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refunded</p>
-                                <p className="text-2xl font-bold text-blue-600">Rs {refundedAmount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Remaining</p>
-                                <p className="text-2xl font-bold text-orange-600">Rs {remainingAmount.toLocaleString()}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Refund Status</p>
-                                <p className="text-2xl font-bold text-[var(--ink)] capitalize">{refundStatus}</p>
-                            </div>
-                        </div>
-
-                        {/* Summary Section */}
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
-                                Summary
-                            </h3>
-                        </div>
-                        
-                        {/* Calculate summary values using stored costing (matches CRUD form) */}
-                        {(() => {
-                            const items = purchaseReturn?.items || [];
-
-                            // Per-item: use costing.totalCostingAmount × qty, else rawPrice × qty
-                            const totalCostingAmount = items.reduce((sum, it) => {
-                                const rawPrice = Number(it.costPrice || it.purchasePrice) || 0;
-                                const unitCosting = (it.costing && typeof it.costing.totalCostingAmount === 'number')
-                                    ? it.costing.totalCostingAmount : rawPrice;
-                                return sum + (unitCosting * (Number(it.quantity) || 0));
-                            }, 0);
-
-                            const totalDiscountAmount = items.reduce((sum, it) => sum + (Number(it.costing?.purchasedDiscountAmount) || 0), 0);
-                            const totalTaxAmount = items.reduce((sum, it) => sum + (Number(it.costing?.purchasedTaxAmount) || 0), 0);
-                            const totalCutAmount = items.reduce((sum, it) => sum + (Number(it.cut) || 0), 0);
-                            const computedRefund = totalCostingAmount - totalCutAmount;
-
-                            return (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Costing Breakdown */}
-                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Costing Breakdown</p>
-                                        <div className="text-xs space-y-1">
-                                            <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Total Discount:</span>
-                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalDiscountAmount.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Total Tax:</span>
-                                                <span className="font-mono" style={{ color: "#16a34a" }}>+Rs {totalTaxAmount.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                <span style={{ color: "var(--accent-2)" }}>Total Costing:</span>
-                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalCostingAmount.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Cut Amount */}
-                                    <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Cut Amount</p>
-                                        <div className="text-xs space-y-1">
-                                            <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Total Cut:</span>
-                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalCutAmount.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                <span style={{ color: "#dc2626" }}>Less Cut:</span>
-                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalCutAmount.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Final Refund */}
-                                    <div className="p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Computed Refund</p>
-                                        <div className="text-xs space-y-1">
-                                            <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Total Costing:</span>
-                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalCostingAmount.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span style={{ color: "var(--ink)" }}>Less Cut:</span>
-                                                <span className="font-mono" style={{ color: "#dc2626" }}>-Rs {totalCutAmount.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between font-bold text-sm pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                                <span style={{ color: "var(--accent-2)" }}>Refund:</span>
-                                                <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {computedRefund.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        {/* Final Total Card */}
-                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.25)" }}>
-                            <p className="text-xs font-semibold mb-2" style={{ color: "#dc2626" }}>Total Refund Amount</p>
-                            <div className="text-xs space-y-1">
-                                <div className="flex justify-between">
-                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Final Refund:</span>
-                                    <span className="text-lg font-bold font-mono text-red-600">Rs {(purchaseReturn?.totalRefundAmount ?? purchaseReturn?.totalAmount ?? 0).toLocaleString()}</span>
-                                </div>
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Total cuts</span>
+                                <span className="text-xl font-bold font-mono" style={{ color: "#dc2626" }}>Rs {Number((purchaseReturn?.items || []).reduce((sum, it) => sum + (Number(it.cut) || 0), 0)).toFixed(2)}</span>
                             </div>
                         </div>
 
@@ -427,17 +252,8 @@ export default function PurchaseReturnDetail() {
                         {/* Refunds/Transactions */}
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
-                                Refunds ({payments.length})
+                                Transactions ({payments.length})
                             </h3>
-                            {purchaseReturn?.status === 'approved' && remainingAmount > 0 && (
-                                <button
-                                    onClick={() => setShowPaymentModal(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[var(--accent-2)] text-white rounded-lg hover:bg-[var(--accent-2)]/90 transition-all"
-                                >
-                                    <Plus size={15} />
-                                    Record Refund
-                                </button>
-                            )}
                         </div>
 
                         {payments.length > 0 ? (
@@ -579,13 +395,6 @@ export default function PurchaseReturnDetail() {
                 >
                     <PurchaseReturnDetailPdfTemplate purchaseReturn={purchaseReturn} labels={labels} />
                 </PdfModal>
-            )}
-            {showPaymentModal && (
-                <PurchaseReturnPaymentModal
-                    purchaseReturn={purchaseReturn}
-                    onClose={() => setShowPaymentModal(false)}
-                    onSuccess={handlePaymentSuccess}
-                />
             )}
         </>
     );

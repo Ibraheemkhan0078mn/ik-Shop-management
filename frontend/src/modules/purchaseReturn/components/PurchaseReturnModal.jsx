@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { X, Search, Pencil, Calendar, Lock, Unlock, Eye, EyeOff } from "lucide-react";
+import { X, Search, Pencil, Calendar, Lock, Unlock } from "lucide-react";
 import { showError, showSuccess } from "../../../shared/utilities/toastHelpers.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
@@ -196,7 +196,6 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     const [filteredPurchases, setFilteredPurchases] = useState([]);
     const [purchaseReturnNumber, setPurchaseReturnNumber] = useState("");
     const [isPurchaseReturnNumberLocked, setIsPurchaseReturnNumberLocked] = useState(true);
-    const [expandedCalculation, setExpandedCalculation] = useState({});
     const [batchStocks, setBatchStocks] = useState({});
     const [returnSummary, setReturnSummary] = useState(null);
     const [batchCosting, setBatchCosting] = useState({});
@@ -511,52 +510,48 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
     };
 
     const calculateUnitCostAfterTaxAndDiscount = (item) => {
-        const batchId = item.batch?._id || item.batch;
-        const costingData = batchCosting[batchId];
+        const batchSource = item.batch || {};
+        const costPrice = Number(batchSource.costPrice ?? item.costPrice ?? item.price ?? item.purchasePrice ?? 0);
+        const discountValue = Number(batchSource.discountEntryValue ?? item.discount ?? item.costing?.purchasedDiscount ?? 0);
+        const discountType = batchSource.discountEntryType ?? item.discountType ?? item.costing?.purchaseDiscountType ?? 'percentage';
+        const taxValue = Number(batchSource.taxEntryValue ?? item.tax ?? item.costing?.purchasedTax ?? 0);
+        const taxType = batchSource.taxEntryType ?? item.taxType ?? item.costing?.purchasedTaxType ?? 'percentage';
+        const batchPerUnitValue = Number(batchSource.perUnitCosting ?? item.costing?.totalCostingAmount ?? item.unitCosting ?? 0);
 
-        // Use costing service data if available
-        if (costingData && costingData.found) {
+        if (batchPerUnitValue > 0) {
+            const unitDiscount = discountType === 'fixed' ? discountValue : costPrice * (discountValue / 100);
+            const unitTax = taxType === 'fixed' ? taxValue : (Math.max(0, costPrice - unitDiscount) * taxValue) / 100;
             return {
-                unitCosting: costingData.effectiveCostPrice,
-                discountAmount: costingData.discountAmount,
-                taxAmount: costingData.taxAmount
+                unitCosting: batchPerUnitValue,
+                discountAmount: unitDiscount,
+                taxAmount: unitTax,
             };
         }
 
-        // Fallback to manual calculation if costing data not available
-        const costPrice = Number(item.costPrice || item.price) || 0;
-        const quantity = 1; // Per unit
-
-        // Calculate discount amount per unit
+        const quantity = 1;
         let discountAmount = 0;
-        if (purchaseData?.discountType && purchaseData?.discount) {
-            const discount = Number(purchaseData.discount) || 0;
-            if (purchaseData.discountType === 'percentage') {
-                discountAmount = (costPrice * quantity * discount) / 100;
-            } else if (purchaseData.discountType === 'fixed') {
-                const totalQuantity = purchaseData.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                const discountPerItem = discount / totalQuantity;
-                discountAmount = discountPerItem * quantity;
+        if (discountValue) {
+            if (discountType === 'percentage') {
+                discountAmount = (costPrice * quantity * discountValue) / 100;
+            } else {
+                discountAmount = discountValue;
             }
         }
 
-        // Calculate tax amount per unit (on after-discount price)
         const afterDiscount = costPrice - discountAmount;
         let taxAmount = 0;
-        if (purchaseData?.gstType && purchaseData?.gst) {
-            const tax = Number(purchaseData.gst) || 0;
-            if (purchaseData.gstType === 'percentage') {
-                taxAmount = (afterDiscount * tax) / 100;
-            } else if (purchaseData.gstType === 'fixed') {
-                taxAmount = tax;
+        if (taxValue) {
+            if (taxType === 'percentage') {
+                taxAmount = (afterDiscount * taxValue) / 100;
+            } else {
+                taxAmount = taxValue;
             }
         }
 
-        // Return cost after tax and discount along with breakdown
         return {
             unitCosting: costPrice - discountAmount + taxAmount,
             discountAmount,
-            taxAmount
+            taxAmount,
         };
     };
 
@@ -723,7 +718,7 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                     batch: batchId,
                     batchNumber: item.batch?.batchNumber || "",
                     quantity: details.returnQuantity,
-                    purchasePrice: item.costPrice || item.price,
+                    purchasePrice: Number(item.batch?.costPrice ?? item.costPrice ?? item.price ?? costing.unitCosting ?? costing.totalCostingAmount ?? 0),
                     returnReason: details.returnReason,
                     condition: details.condition,
                     cut: details.cut,
@@ -1006,7 +1001,8 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                 />
                                                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-6 gap-2 text-sm">
                                                     <div>
-                                                        <span className="font-semibold" style={{ color: "var(--ink)" }}>{item.product?.name || "—"}</span>
+                                                        <span className="font-semibold block" style={{ color: "var(--ink)" }}>{item.product?.name || "—"}</span>
+                                                        <span className="text-[11px]" style={{ color: "var(--muted)" }}>Batch: {item.batch?.batchNumber || "—"}</span>
                                                     </div>
                                                     <div style={{ color: "var(--muted)" }}>
                                                         {labels.items}: {item.quantity}
@@ -1069,100 +1065,33 @@ export default function PurchaseReturnModal({ mode = "create", purchaseReturnId,
                                                     </div>
                                                     <Field className="mt-3">
                                                         {(() => {
-                                                            const calculation = getReturnCalculationBreakdown(item, details);
-                                                            const discountTotal = calculation.itemDiscount + calculation.invoiceDiscount;
-                                                            const taxTotal = calculation.itemTax + calculation.invoiceTax;
+                                                            const batchSource = item.batch || {};
+                                                            const unitCost = Number(batchSource.perUnitCosting ?? item.costing?.totalCostingAmount ?? calculateUnitCostAfterTaxAndDiscount(item).unitCosting ?? 0);
+                                                            const quantity = Number(details.returnQuantity) || 0;
+                                                            const cut = Number(details.cut) || 0;
+                                                            const refund = unitCost * quantity - cut;
+                                                            const batchLabel = item.batch?.batchNumber || "—";
 
                                                             return (
-                                                                <>
-                                                                    <Label>{labels.refundPreview}</Label>
-                                                                    <div className="rounded-xl px-4 py-3 space-y-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                        <div className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
-                                                                            {calculation.returnQuantity} item(s) returned
+                                                                <div className="rounded-2xl p-3" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                                                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                                                                        Batch: {batchLabel}
+                                                                    </div>
+                                                                    <div className="text-xs space-y-2">
+                                                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(148,163,184,0.08)" }}>
+                                                                            <span style={{ color: "var(--ink)" }}>Per-unit costing</span>
+                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {unitCost.toFixed(2)}</span>
                                                                         </div>
-                                                                        <div className="flex justify-between text-sm">
-                                                                            <span style={{ color: "var(--ink)" }}>Original value</span>
-                                                                            <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {calculation.baseTotal.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between text-sm">
-                                                                            <span style={{ color: "var(--ink)" }}>Discount already given</span>
-                                                                            <span className="font-mono text-red-600">- Rs {discountTotal.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between text-sm">
-                                                                            <span style={{ color: "var(--ink)" }}>Tax already added</span>
-                                                                            <span className="font-mono text-green-700">+ Rs {taxTotal.toFixed(2)}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between text-sm">
-                                                                            <span style={{ color: "var(--ink)" }}>Your share of shipping</span>
-                                                                            <span className="font-mono text-green-700">+ Rs {calculation.shipping.toFixed(2)}</span>
-                                                                        </div>
-                                                                        {calculation.cut > 0 && (
-                                                                            <div className="flex justify-between text-sm">
-                                                                                <span style={{ color: "var(--ink)" }}>Cut from refund</span>
-                                                                                <span className="font-mono text-red-600">- Rs {calculation.cut.toFixed(2)}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="flex justify-between pt-2 text-sm font-bold" style={{ borderTop: "1px solid var(--border)" }}>
-                                                                            <span style={{ color: "var(--ink)" }}>You will get back</span>
-                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {calculation.refund.toFixed(2)}</span>
+                                                                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(15,118,110,0.08)" }}>
+                                                                            <span style={{ color: "var(--ink)" }}>Formula</span>
+                                                                            <span className="font-mono text-right" style={{ color: "var(--ink)" }}>
+                                                                                {unitCost.toFixed(2)} × {quantity} - {cut.toFixed(2)} = {refund.toFixed(2)}
+                                                                            </span>
                                                                         </div>
                                                                     </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="inline-flex items-center gap-1 text-xs font-semibold"
-                                                                        style={{ color: "var(--accent-2)" }}
-                                                                        onClick={() => setExpandedCalculation(prev => ({ ...prev, [batchId]: !prev[batchId] }))}
-                                                                    >
-                                                                        {expandedCalculation[batchId] ? <EyeOff size={14} /> : <Eye size={14} />}
-                                                                        {expandedCalculation[batchId] ? "Hide full calculation" : "See how this was calculated"}
-                                                                    </button>
-                                                                </>
+                                                                </div>
                                                             );
                                                         })()}
-                                                        {expandedCalculation[batchId] && (
-                                                            <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                                                                <div className="text-xs space-y-1.5">
-                                                                    {(() => {
-                                                                        const calculation = getReturnCalculationBreakdown(item, details);
-                                                                        const inputLabel = (value, type) => `${type === "fixed" ? "fixed Rs" : "percentage"} ${Number(value).toFixed(2)}${type === "fixed" ? "" : "%"}`;
-                                                                        const itemAllocation = (fullAmount, appliedAmount) => `This item's full amount Rs ${fullAmount.toFixed(2)} ÷ ${calculation.originalQuantity} item(s) = Rs ${(fullAmount / calculation.originalQuantity).toFixed(2)} per unit × ${calculation.returnQuantity} returned = Rs ${appliedAmount.toFixed(2)}`;
-                                                                        const invoiceAllocation = (allocatedAmount, invoiceTotal, appliedAmount) => {
-                                                                            const itemShare = calculation.invoiceBaseTotal > 0
-                                                                                ? (calculation.originalInvoiceItemNetTotal / calculation.invoiceBaseTotal) * 100
-                                                                                : 0;
-                                                                            const perUnitShare = allocatedAmount / calculation.originalQuantity;
-                                                                            return `Invoice total Rs ${invoiceTotal.toFixed(2)} × this item's ${itemShare.toFixed(2)}% share = Rs ${allocatedAmount.toFixed(2)}; ÷ ${calculation.originalQuantity} item(s) = Rs ${perUnitShare.toFixed(2)} per unit × ${calculation.returnQuantity} returned = Rs ${appliedAmount.toFixed(2)}`;
-                                                                        };
-                                                                        const row = (number, label, explanation, amount, result, tone) => (
-                                                                            <div className="flex justify-between items-center gap-3 py-2 px-2 rounded" style={{ background: tone }}>
-                                                                                <div style={{ color: "var(--ink)" }}>
-                                                                                    <div className="font-semibold">{number}. {label}</div>
-                                                                                    <div className="text-[11px]" style={{ color: "var(--muted)" }}>{explanation}</div>
-                                                                                </div>
-                                                                                <span className="font-mono font-semibold whitespace-nowrap" style={{ color: "var(--accent-2)" }}>
-                                                                                    {amount} → Rs {result.toFixed(2)}
-                                                                                </span>
-                                                                            </div>
-                                                                        );
-
-                                                                        return (
-                                                                            <div className="space-y-1.5">
-                                                                                <div className="pb-1 text-[11px]" style={{ color: "var(--muted)" }}>
-                                                                                    Backend formula for {calculation.returnQuantity} returned item(s). Amounts below are scaled from the original purchase quantity.
-                                                                                </div>
-                                                                                {row("1", "Original value", `${calculation.returnQuantity} × Rs ${calculation.costPrice.toFixed(2)} cost price`, `Rs ${calculation.baseTotal.toFixed(2)}`, calculation.baseTotal, "rgba(15,118,110,0.08)")}
-                                                                                {row("2", "Item-level discount", `Original: ${inputLabel(calculation.itemDiscountValue, calculation.itemDiscountType)}. ${itemAllocation(calculation.originalItemDiscount, calculation.itemDiscount)}.`, `-Rs ${calculation.itemDiscount.toFixed(2)}`, calculation.afterItemDiscount, "rgba(220,38,38,0.06)")}
-                                                                                {row("2.5", "Purchase invoice-level discount", `Original: ${inputLabel(calculation.invoiceDiscountValue, calculation.invoiceDiscountType)} on the invoice. ${invoiceAllocation(calculation.originalInvoiceDiscount, calculation.invoiceTotalDiscountAmount, calculation.invoiceDiscount)}.`, `-Rs ${calculation.invoiceDiscount.toFixed(2)}`, calculation.afterInvoiceDiscount, "rgba(220,38,38,0.06)")}
-                                                                                {row("3", "Item-level tax", `Original: ${inputLabel(calculation.itemTaxValue, calculation.itemTaxType)}. ${itemAllocation(calculation.originalItemTax, calculation.itemTax)}.`, `+Rs ${calculation.itemTax.toFixed(2)}`, calculation.afterItemTax, "rgba(22,163,74,0.06)")}
-                                                                                {row("3.5", "Purchase invoice-level tax", `Original: ${inputLabel(calculation.invoiceTaxValue, calculation.invoiceTaxType)} on the invoice. ${invoiceAllocation(calculation.originalInvoiceTax, calculation.invoiceTotalTaxAmount, calculation.invoiceTax)}.`, `+Rs ${calculation.invoiceTax.toFixed(2)}`, calculation.afterInvoiceTax, "rgba(22,163,74,0.06)")}
-                                                                                {row("5", "Shipping", `Original invoice shipping: Rs ${calculation.invoiceShippingCost.toFixed(2)}. ${invoiceAllocation(calculation.originalShipping, calculation.invoiceShippingCost, calculation.shipping)}.`, `+Rs ${calculation.shipping.toFixed(2)}`, calculation.beforeCut, "rgba(22,163,74,0.06)")}
-                                                                                {row("6", "Cut and final refund", `Cut entered for this return: Rs ${calculation.cut.toFixed(2)}. Subtracted after all purchase calculations.`, `-Rs ${calculation.cut.toFixed(2)}`, calculation.refund, "rgba(220,38,38,0.08)")}
-                                                                            </div>
-                                                                        );
-                                                                    })()}
-                                                                </div>
-                                                            </div>
-                                                        )}
                                                     </Field>
                                                 </div>
                                             )}

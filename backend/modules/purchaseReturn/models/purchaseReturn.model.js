@@ -44,7 +44,7 @@ const purchaseReturnItemSchema = new mongoose.Schema({
     },
     purchasePrice: {
         type: Number,
-        required: true
+        default: 0
     },
     returnReason: {
         type: String,

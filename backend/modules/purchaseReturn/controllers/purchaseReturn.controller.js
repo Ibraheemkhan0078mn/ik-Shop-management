@@ -28,6 +28,13 @@ import {
     recalculatePurchaseReturnRefundAmount
 } from "../services/purchaseReturn.service.js";
 
+const resolveBatchRefundUnitCost = async (batchId, fallbackPrice = 0) => {
+    if (!batchId) return Number(fallbackPrice) || 0;
+    const batch = await findByIdBatchService(batchId);
+    if (!batch) return Number(fallbackPrice) || 0;
+    return Number(batch.perUnitCosting ?? batch.costPrice ?? fallbackPrice) || 0;
+};
+
 const normalizePurchaseReturnItems = async (items = []) => {
     if (!Array.isArray(items)) return [];
 
@@ -35,8 +42,10 @@ const normalizePurchaseReturnItems = async (items = []) => {
 
     for (const item of items) {
         const batch = item.batch ? await findByIdBatchService(item.batch) : null;
+        const batchCost = Number(batch?.perUnitCosting ?? batch?.costPrice ?? item.purchasePrice ?? item.costPrice ?? item.price ?? 0);
         normalizedItems.push({
             ...item,
+            purchasePrice: Number(item.purchasePrice ?? batchCost ?? 0),
             batchNumber: item.batchNumber?.trim() || batch?.batchNumber || "",
         });
     }
@@ -298,34 +307,12 @@ export const createPurchaseReturnData = asyncHandler(async (req, res) => {
         let refund;
 
         if (item.costing && typeof item.costing.finalTotal === 'number') {
-            // Use the new total-based calculation stored by the CRUD form
             refund = item.costing.finalTotal - (Number(item.cut) || 0);
         } else if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
-            // Legacy path: use per-unit costing
-            const unitCost = item.costing.totalCostingAmount;
-            refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
+            refund = (Number(item.quantity) * item.costing.totalCostingAmount) - (Number(item.cut) || 0);
         } else {
-            // Fallback: derive from purchase-level discount
-            let discountedPrice = Number(item.purchasePrice) || 0;
-            if (purchase.discountType && purchase.discount) {
-                const discount = Number(purchase.discount) || 0;
-                if (purchase.discountType === 'percentage') {
-                    discountedPrice = discountedPrice - (discountedPrice * (discount / 100));
-                } else if (purchase.discountType === 'fixed') {
-                    const totalPurchaseQuantity = purchase.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
-                    discountedPrice = discountedPrice - (discount / totalPurchaseQuantity);
-                }
-            }
-            // Apply tax (fallback path)
-            if (purchase.gstType && purchase.gst) {
-                const tax = Number(purchase.gst) || 0;
-                if (purchase.gstType === 'percentage') {
-                    discountedPrice = discountedPrice + (discountedPrice * (tax / 100));
-                } else if (purchase.gstType === 'fixed') {
-                    discountedPrice = discountedPrice + tax;
-                }
-            }
-            refund = (Number(item.quantity) * discountedPrice) - (Number(item.cut) || 0);
+            const unitCost = await resolveBatchRefundUnitCost(item.batch, Number(item.purchasePrice) || 0);
+            refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
         }
 
         totalRefundAmount += refund;
@@ -429,10 +416,11 @@ export const updatePurchaseReturnData = asyncHandler(async (req, res) => {
     for (const item of itemsToProcess) {
         let refund;
         if (item.costing && typeof item.costing.finalTotal === 'number') {
-            // Use the new total-based calculation stored by the CRUD form
             refund = item.costing.finalTotal - (Number(item.cut) || 0);
+        } else if (item.costing && typeof item.costing.totalCostingAmount === 'number') {
+            refund = (Number(item.quantity) * Number(item.costing.totalCostingAmount || 0)) - (Number(item.cut) || 0);
         } else {
-            const unitCost = resolveUnitCostForUpdate(item, originalPurchase);
+            const unitCost = await resolveBatchRefundUnitCost(item.batch, Number(item.purchasePrice) || 0);
             refund = (Number(item.quantity) * unitCost) - (Number(item.cut) || 0);
         }
         totalRefundAmount += refund;
