@@ -41,8 +41,6 @@ const styles = {
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 
 export default function OrderDetailsPdfTemplate({ order = {}, payments = [], labels = {}, showCustomerKPI = false, qarzaSummary = null }) {
-    const totalPaid = Number(order?.paid ?? 0);
-    const remainingAmount = Number(order?.remainingAmount ?? 0);
     const date = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "-";
     const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
     const cashIn = Number(qarzaSummary?.cashIn ?? 0);
@@ -51,11 +49,6 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
     const toGive = Math.max(overall, 0);
     const toReceive = Math.max(-overall, 0);
     const items = order?.items || [];
-    const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const totalItemDiscount = items.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0);
-    const totalItemTax = items.reduce((sum, item) => sum + Number(item.taxAmount || 0), 0);
-    const totalLineTotal = items.reduce((sum, item) => sum + (Number(item.unitPrice || 0) * Number(item.quantity || 0)), 0);
-    const totalItemFinal = items.reduce((sum, item) => sum + Number(item.itemTotal || 0), 0);
     const formatPercent = (value) => `${value || 0}%`;
 
     return (
@@ -76,25 +69,43 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
             </div>
 
             <table style={styles.table}><thead><tr style={{ backgroundColor: "#111827", color: "#ffffff" }}>
-                <th style={styles.headerCell}>#</th><th style={styles.headerCell}>Item &amp; Description</th><th style={styles.rightHeaderCell}>Qty</th><th style={styles.rightHeaderCell}>Unit Price</th><th style={styles.rightHeaderCell}>Disc</th><th style={styles.rightHeaderCell}>Tax</th><th style={styles.rightHeaderCell}>Total</th>
+                <th style={styles.headerCell}>#</th><th style={styles.headerCell}>Product Name</th><th style={styles.headerCell}>Batch No</th><th style={styles.rightHeaderCell}>Unit Price</th><th style={styles.rightHeaderCell}>Item Discount</th><th style={styles.rightHeaderCell}>Item Tax</th><th style={styles.rightHeaderCell}>Overall Discount Share</th><th style={styles.rightHeaderCell}>Sold Value Per Unit</th><th style={styles.rightHeaderCell}>Quantity</th><th style={styles.rightHeaderCell}>Subtotal</th>
             </tr></thead><tbody>
                 {items.map((item, index) => {
                     const quantity = Number(item.quantity || 0);
                     const lineTotal = Number(item.unitPrice || 0) * quantity;
-                    const itemTax = Number(item.taxAmount || 0); // taxAmount is already the total tax
+                    const itemTax = Number(item.taxAmount || 0);
                     const itemDiscount = Number(item.discountAmount || 0);
                     const finalTotal = lineTotal - itemDiscount + itemTax;
+                    const soldValuePerUnit = item.soldValue ? (item.soldValue / quantity) : Number(item.unitPrice || 0);
+                    
+                    // Calculate overall discount share for this item
+                    const overallDiscountAmount = Number(order?.discountAmount || 0);
+                    const totalItems = items.length || 1;
+                    const overallDiscountShare = overallDiscountAmount / totalItems;
+
                     return <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={styles.cell}>{index + 1}</td><td style={styles.cell}>{item.name || "-"}{item.portionType && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}> ({item.portionType})</span>}</td><td style={styles.rightCell}>{quantity}</td><td style={styles.rightCell}>{formatNumber(item.unitPrice)}</td>
-                        <td style={{ ...styles.rightCell, color: "#dc2626" }}>{item.discountType === "fixed" ? formatNumber(item.discountPercent) : formatPercent(item.discountPercent)}<span style={styles.smallMuted}>-{formatNumber(itemDiscount)}</span></td><td style={{ ...styles.rightCell, color: "#15803d" }}>{item.taxType === "fixed" ? formatNumber(item.taxPercent) : formatPercent(item.taxPercent)}<span style={styles.smallMuted}>+{formatNumber(itemTax)}</span></td><td style={{ ...styles.rightCell, fontWeight: 600 }}>{formatNumber(finalTotal)}</td>
+                        <td style={styles.cell}>{index + 1}</td>
+                        <td style={styles.cell}>{item.name || "-"}{item.portionType && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}> ({item.portionType})</span>}</td>
+                        <td style={styles.cell}>{item.batchNumber || "-"}</td>
+                        <td style={styles.rightCell}>{formatNumber(item.unitPrice)}</td>
+                        <td style={{ ...styles.rightCell, color: "#dc2626" }}>{item.discountType === "fixed" ? formatNumber(item.discountPercent) : formatPercent(item.discountPercent)}<span style={styles.smallMuted}>-{formatNumber(itemDiscount)}</span></td>
+                        <td style={{ ...styles.rightCell, color: "#15803d" }}>{item.taxType === "fixed" ? formatNumber(item.taxPercent) : formatPercent(item.taxPercent)}<span style={styles.smallMuted}>+{formatNumber(itemTax)}</span></td>
+                        <td style={{ ...styles.rightCell, color: "#f59e0b" }}>{overallDiscountAmount > 0 ? <span>-{formatNumber(overallDiscountShare)}</span> : "-"}</td>
+                        <td style={{ ...styles.rightCell, fontWeight: 600 }}>{formatNumber(soldValuePerUnit)}</td>
+                        <td style={styles.rightCell}>{quantity}</td>
+                        <td style={{ ...styles.rightCell, fontWeight: 600 }}>{formatNumber(finalTotal)}</td>
                     </tr>;
                 })}
-                <tr style={{ backgroundColor: "#f3f4f6", fontWeight: 700 }}><td style={styles.cell} colSpan={2}>Sub Total</td><td style={styles.rightCell}>{totalQty}</td><td style={styles.rightCell}>{formatNumber(totalLineTotal)}</td><td style={styles.rightCell}>{formatNumber(totalItemDiscount)}</td><td style={styles.rightCell}>{formatNumber(totalItemTax)}</td><td style={styles.rightCell}>{formatNumber(totalItemFinal)}</td></tr>
             </tbody></table>
 
-            <div style={styles.summaryRow}>
-                <div style={styles.summaryBox}><p style={styles.summaryHeading}>Payment Summary:</p><div style={styles.summaryLine}><span>Total Amount</span><span>{formatNumber(order?.totalAmount)}</span></div><div style={styles.summaryLine}><span>Total Paid</span><span>{formatNumber(totalPaid)}</span></div><div style={styles.totalLine}><span>Remaining Balance</span><span>{formatNumber(remainingAmount)}</span></div></div>
-                <div style={styles.totalsBox}><div style={styles.totalsLine}><span>Subtotal</span><span>{formatNumber(order?.subtotal)}</span></div>{order?.discountAmount > 0 && <div style={{ ...styles.totalsLine, color: "#dc2626" }}><span>Discount{order?.orderDiscountValue && order?.orderDiscountType === "percentage" ? ` (${order.orderDiscountValue}%)` : ""}</span><span>-{formatNumber(order?.discountAmount)}</span></div>}<div style={{ ...styles.totalsLine, color: "#15803d" }}><span>Tax</span><span>+{formatNumber(order?.totalTaxAmount)}</span></div><div style={{ ...styles.totalsLine, borderBottom: 0, fontWeight: 700 }}><span>Total Amount</span><span>{formatNumber(order?.totalAmount)}</span></div></div>
+            <div style={{ marginTop: "1.5rem", marginBottom: "1.5rem" }}>
+                <div style={{ border: "1px solid #d1d5db", borderRadius: "0.5rem", overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.5rem", backgroundColor: "#111827" }}>
+                        <span style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ffffff" }}>Grand Total</span>
+                        <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ffffff" }}>Rs {formatNumber(order?.totalAmount)}</span>
+                    </div>
+                </div>
             </div>
 
             {payments.length > 0 && <div style={styles.section}><h3 style={styles.sectionHeading}>Payment Transactions</h3><table style={{ ...styles.table, marginBottom: 0 }}><thead><tr style={{ backgroundColor: "#f3f4f6" }}>

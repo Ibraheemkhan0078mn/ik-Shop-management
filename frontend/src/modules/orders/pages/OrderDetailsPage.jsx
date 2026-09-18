@@ -40,10 +40,6 @@ export default function OrderDetailsPage() {
     const time = orderDate ? orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
     const customerName = order?.customerData?.name || order?.customerName || "Walk-in Customer";
     const totalQty = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
-    const totalItemDiscount = (order?.items || []).reduce((sum, it) => sum + (it.discountAmount || 0), 0);
-    const totalItemTax = (order?.items || []).reduce((sum, it) => sum + (it.taxAmount || 0), 0);
-    const totalLineTotal = (order?.items || []).reduce((sum, it) => sum + ((it.unitPrice || 0) * (it.quantity || 0)), 0);
-    const totalItemFinal = (order?.items || []).reduce((sum, it) => sum + (it.itemTotal || 0), 0);
 
     const handleRecalculate = async () => {
         try {
@@ -224,21 +220,29 @@ export default function OrderDetailsPage() {
                                 <thead>
                                     <tr className="text-white" style={{ background: "var(--accent-2)" }}>
                                         <th className="px-3 py-2.5 text-left font-semibold">#</th>
-                                        <th className="px-3 py-2.5 text-left font-semibold">Item Description</th>
-                                        <th className="px-3 py-2.5 text-center font-semibold">Qty</th>
+                                        <th className="px-3 py-2.5 text-left font-semibold">Product Name</th>
+                                        <th className="px-3 py-2.5 text-left font-semibold">Batch No</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">Unit Price</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">Line Total</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">Discount</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">Tax</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">Final Total</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">Item Discount</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">Item Tax</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">Overall Discount Share</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">Sold Value Per Unit</th>
+                                        <th className="px-3 py-2.5 text-center font-semibold">Quantity</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">Subtotal</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(order?.items || []).map((item, index) => {
                                         const lineTotal = (item.unitPrice || 0) * (item.quantity || 0);
-                                        const itemTax = item.taxAmount || 0; // taxAmount is already the total tax
+                                        const itemTax = item.taxAmount || 0;
                                         const itemDiscount = item.discountAmount || 0;
                                         const finalTotal = item.itemTotal || (lineTotal - itemDiscount + itemTax);
+                                        const soldValuePerUnit = item.soldValue ? (item.soldValue / (item.quantity || 1)) : item.unitPrice || 0;
+                                        
+                                        // Calculate overall discount share for this item
+                                        const overallDiscountAmount = order?.discountAmount || 0;
+                                        const totalItems = order?.items?.length || 1;
+                                        const overallDiscountShare = overallDiscountAmount / totalItems;
 
                                         return (
                                             <tr key={index} className="border-b border-(--border) hover:bg-(--surface-muted) transition-colors">
@@ -250,31 +254,20 @@ export default function OrderDetailsPage() {
                                                             {item.portionType && item.portionType !== "full" && (
                                                                 <span className="capitalize">Portion: {item.portionType}</span>
                                                             )}
-                                                            {item.batchNumber && (
-                                                                <span>Batch: {item.batchNumber}</span>
-                                                            )}
                                                             {item.customInput && (
                                                                 <span className="text-orange-600 font-semibold">Custom Price</span>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-3 text-center font-semibold text-(--ink)">{item.quantity || 0}</td>
+                                                <td className="px-3 py-3 text-(--muted) font-mono text-xs">
+                                                    {item.batchNumber || "—"}
+                                                </td>
                                                 <td className="px-3 py-3 text-right text-(--ink)">
                                                     Rs {(item.unitPrice || 0).toLocaleString()}
                                                     {item.originalPrice && item.originalPrice !== item.unitPrice && (
                                                         <p className="text-xs text-(--muted) line-through">Rs {item.originalPrice.toLocaleString()}</p>
                                                     )}
-                                                </td>
-                                                <td className="px-3 py-3 text-right text-(--ink)">
-                                                    <div className="inline-block text-right">
-                                                        <div className="font-semibold">Rs {lineTotal.toLocaleString()}</div>
-                                                        {Number(item.soldValue ?? 0) > 0 && Number(item.soldValue) !== Number(lineTotal) && (
-                                                            <div className="mt-1 text-[10px] text-(--muted) leading-tight">
-                                                                sold (Rs {Number(item.soldValue).toLocaleString()})
-                                                            </div>
-                                                        )}
-                                                    </div>
                                                 </td>
                                                 <td className="px-3 py-3 text-right">
                                                     {item.discountPercent > 0 && (
@@ -298,80 +291,36 @@ export default function OrderDetailsPage() {
                                                     )}
                                                     {!item.taxPercent && <span className="text-(--muted)">—</span>}
                                                 </td>
+                                                <td className="px-3 py-3 text-right">
+                                                    {overallDiscountAmount > 0 ? (
+                                                        <div className="text-orange-600">
+                                                            <p className="font-semibold">-Rs {overallDiscountShare.toLocaleString()}</p>
+                                                            {order?.orderDiscountValue && order?.orderDiscountType === "percentage" && (
+                                                                <p className="text-xs text-(--muted)">{order.orderDiscountValue}% of total</p>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-(--muted)">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3 text-right text-(--accent-2)">
+                                                    Rs {soldValuePerUnit.toLocaleString()}
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-semibold text-(--ink)">{item.quantity || 0}</td>
                                                 <td className="px-3 py-3 text-right font-bold text-(--accent-2)">Rs {finalTotal.toLocaleString()}</td>
                                             </tr>
                                         );
                                     })}
                                 </tbody>
-                                <tfoot>
-                                    <tr className="font-bold" style={{ background: "var(--surface-muted)" }}>
-                                        <td className="px-3 py-3 text-(--ink)" colSpan={2}>Subtotal</td>
-                                        <td className="px-3 py-3 text-center text-(--ink)">{totalQty}</td>
-                                        <td className="px-3 py-3"></td>
-                                        <td className="px-3 py-3 text-right text-(--ink)">Rs {totalLineTotal.toLocaleString()}</td>
-                                        <td className="px-3 py-3 text-right text-red-600">-Rs {totalItemDiscount.toLocaleString()}</td>
-                                        <td className="px-3 py-3 text-right text-green-700">+Rs {totalItemTax.toLocaleString()}</td>
-                                        <td className="px-3 py-3 text-right text-(--accent-2)">Rs {totalItemFinal.toLocaleString()}</td>
-                                    </tr>
-                                </tfoot>
                             </table>
                         </div>
 
-                        {/* Amount Breakdown - Full Width */}
+                        {/* Grand Total */}
                         <div className="mb-6">
                             <div className="border border-(--border) rounded-lg overflow-hidden">
-                                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--accent-2)" }}>
-                                    <DollarSign size={14} className="text-white" />
-                                    <p className="text-xs font-bold text-white uppercase tracking-wide">Amount Breakdown</p>
-                                </div>
-                                <div className="p-4">
-                                    <div className="flex justify-between items-center py-2 text-sm">
-                                        <span className="text-(--muted)">Subtotal (Items)</span>
-                                        <span className="font-semibold text-(--ink)">Rs {(order?.subtotal ?? 0).toLocaleString()}</span>
-                                    </div>
-                                    {order?.discountAmount > 0 && (
-                                        <div className="flex justify-between items-center py-2 text-sm text-red-600">
-                                            <span className="font-semibold">
-                                                Order Discount
-                                                {order?.orderDiscountValue && order?.orderDiscountType === "percentage" 
-                                                    ? ` (${order.orderDiscountValue}%)` 
-                                                    : ""
-                                                }
-                                            </span>
-                                            <span className="font-semibold">-Rs {(order?.discountAmount ?? 0).toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    <div className="border-t-2 border-(--border) pt-3 mt-3">
-                                        <div className="flex justify-between items-center py-2">
-                                            <span className="font-bold text-lg text-(--ink)">Grand Total</span>
-                                            <span className="font-bold text-lg text-(--accent-2)">Rs {(order?.totalAmount ?? 0).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 text-sm">
-                                            <span className="text-(--muted)">Total Paid</span>
-                                            <span className="font-semibold text-green-600">Rs {totalPaid.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 border-t border-(--border) pt-2">
-                                            <span className="font-bold text-lg text-(--ink)">Balance Due</span>
-                                            <div className="flex items-center gap-3">
-                                                <span className={`font-bold text-lg ${remainingAmount > 0 ? "text-red-600" : "text-green-600"}`}>
-                                                    Rs {remainingAmount.toLocaleString()}
-                                                </span>
-                                                {remainingAmount === 0 ? (
-                                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">PAID IN FULL</span>
-                                                ) : remainingAmount < (order?.totalAmount ?? 0) ? (
-                                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">PARTIALLY PAID</span>
-                                                ) : (
-                                                    <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">UNPAID</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {order?.staffCommission > 0 && (
-                                        <div className="flex justify-between items-center py-2 text-sm border-t border-(--border) pt-2 mt-2">
-                                            <span className="text-(--muted)">Staff Commission</span>
-                                            <span className="font-semibold text-purple-600">Rs {order.staffCommission.toLocaleString()}</span>
-                                        </div>
-                                    )}
+                                <div className="flex items-center justify-between px-6 py-4" style={{ background: "var(--accent-2)" }}>
+                                    <span className="text-sm font-bold text-white uppercase tracking-wide">Grand Total</span>
+                                    <span className="text-2xl font-bold text-white">Rs {(order?.totalAmount ?? 0).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

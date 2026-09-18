@@ -37,8 +37,6 @@ const OrderReturnList = () => {
         { key: "customerName", label: labels.customer, hideBelow: "md" },
         { key: "items", label: labels.items, align: "center", hideBelow: "sm" },
         { key: "refund", label: labels.refund, align: "right" },
-        { key: "paid", label: "Paid", align: "right" },
-        { key: "remaining", label: "Remaining", align: "right" },
         { key: "refundStatus", label: labels.refundStatus || "Refund Status", align: "center" },
         { key: "status", label: labels.status, align: "center" },
         { key: "date", label: labels.date, hideBelow: "md" },
@@ -361,12 +359,6 @@ function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onD
                 <td className="px-4 py-3 text-right font-semibold text-primary">
                     Rs {(returnItem.totalRefundAmount || 0).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-semibold text-green-600">
-                    Rs {(returnItem.refundedAmount || 0).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-right font-semibold text-orange-600">
-                    Rs {((returnItem.totalRefundAmount || 0) - (returnItem.refundedAmount || 0)).toLocaleString()}
-                </td>
                 <td className="px-4 py-3 text-center">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${refundStatusStyle[returnItem.refundStatus] || refundStatusStyle.pending}`}>
                         {getRefundStatusLabel(returnItem.refundStatus)}
@@ -397,7 +389,7 @@ function ReturnRow({ returnItem, isExpanded, onToggleExpand, onView, onEdit, onD
             {/* Expandable item details row */}
             {isExpanded && items.length > 0 && (
                 <tr className="bg-(--surface-muted)">
-                    <td colSpan="11" className="px-4 py-3">
+                    <td colSpan="9" className="px-4 py-3">
                         <div className="flex flex-wrap gap-2 text-sm">
                             {items.map((item, idx) => {
                                 const itemName = item.name || item.product?.name || item.productName || String(item.product);

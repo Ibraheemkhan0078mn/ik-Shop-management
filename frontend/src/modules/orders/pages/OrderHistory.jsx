@@ -562,9 +562,7 @@ export default function OrderHistory() {
                                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-(--muted)">Customer</th>
                                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-(--muted) hidden sm:table-cell">Date & Time</th>
                                         <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-(--muted) hidden md:table-cell">Items</th>
-                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Paid</th>
-                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Remaining</th>
-                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Total</th>
+                                        <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-(--muted)">Grand Total</th>
                                         <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider text-(--muted)">Actions</th>
                                     </tr>
                                 </thead>
@@ -667,16 +665,6 @@ function OrderRow({ order, index, isExpanded, onToggleExpand, navigate, setRetur
                     )}
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold text-green-600 whitespace-nowrap">
-                        Rs {(order.paidAmount ?? order.paid ?? 0).toLocaleString()}
-                    </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold text-orange-600 whitespace-nowrap">
-                        Rs {(order.remainingAmount ?? 0).toLocaleString()}
-                    </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
                     <span className="font-bold text-(--accent-2) whitespace-nowrap">
                         Rs {(order.totalAmount || 0).toLocaleString()}
                     </span>
@@ -712,7 +700,7 @@ function OrderRow({ order, index, isExpanded, onToggleExpand, navigate, setRetur
             {/* Expandable item details row */}
             {isExpanded && items.length > 0 && (
                 <tr className="bg-(--surface-muted)">
-                    <td colSpan="8" className="px-5 py-3">
+                    <td colSpan="6" className="px-5 py-3">
                         <div className="flex flex-wrap gap-2 text-sm">
                             {items.map((item, idx) => {
                                 const itemName = item.name || item.product?.name || item.productName || String(item.product);
