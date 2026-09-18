@@ -171,7 +171,7 @@ export default function MainBusinessKPIReport() {
                     <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
                         <KpiCard label="Net Sales Profit" value={currency(analysis.salesProfit)} sub={`Sales after returns: ${currency(analysis.netSales)}`} icon={ShoppingCart} color={COLORS.sales} />
                         <KpiCard label="Net Purchases" value={currency(netPurchases)} sub={`Purchases ${currency(totalPurchases)} - returns ${currency(totalPurchaseReturns)}`} icon={Package} color={COLORS.purchases} />
-                        <KpiCard label="Current Stock" value={number(inventoryKpi.currentStock)} sub={`Value ${currency(inventoryKpi.stockValue)}`} icon={Package} color={COLORS.inventory} />
+                        <KpiCard label="Total Quantity" value={number(inventoryKpi.totalQuantity)} sub={`Value ${currency(inventoryKpi.totalStockValue)}`} icon={Package} color={COLORS.inventory} />
                         <KpiCard label="Staff Payments" value={currency(analysis.totalStaffPayments)} sub="Paid salaries and advances" icon={Users} color={COLORS.staff} />
                         <KpiCard label="Total Expenses" value={currency(analysis.totalExpenses)} sub={analysis.topExpense ? `Top: ${analysis.topExpense.name} (${currency(analysis.topExpense.amount)})` : "No expenses"} icon={DollarSign} color={COLORS.expenses} />
                         <KpiCard label="Total Wastage" value={currency(analysis.totalWastage)} sub="Cost of wasted stock" icon={AlertCircle} color={COLORS.inventory} />
@@ -201,16 +201,12 @@ export default function MainBusinessKPIReport() {
 
                     <div className="flex flex-wrap gap-3 sm:gap-4">
                         <MetricSection title="Inventory" icon={Package} color={COLORS.inventory}>
-                            <KpiCard label="Products" value={number(inventoryKpi.totalProducts)} icon={Package} color={COLORS.inventory} />
-                            <KpiCard label="Current Stock" value={number(inventoryKpi.currentStock)} icon={Package} color={COLORS.inventory} />
-                            <KpiCard label="Stock Value" value={currency(inventoryKpi.stockValue)} icon={DollarSign} color={COLORS.analysis} />
-                            <KpiCard label="Purchased Qty" value={number(inventoryKpi.purchasedQuantity)} icon={Package} color={COLORS.inventory} />
-                            <KpiCard label="Purchase Returns" value={number(inventoryKpi.purchaseReturnQuantity)} icon={RefreshCw} color={COLORS.expenses} />
-                            <KpiCard label="Orders" value={number(inventoryKpi.orderQuantity)} icon={ShoppingCart} color={COLORS.sales} />
-                            <KpiCard label="Wastage Qty" value={number(inventoryKpi.wastageQuantity)} icon={AlertCircle} color={COLORS.expenses} />
-                            <KpiCard label="Sales Revenue" value={currency(inventoryKpi.totalRevenue)} icon={DollarSign} color={COLORS.analysis} />
+                            <KpiCard label="Total Products" value={number(inventoryKpi.totalProducts)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Total Batches" value={number(inventoryKpi.totalBatches)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Total Quantity" value={number(inventoryKpi.totalQuantity)} icon={Package} color={COLORS.inventory} />
+                            <KpiCard label="Total Stock Value" value={currency(inventoryKpi.totalStockValue)} icon={DollarSign} color={COLORS.analysis} />
                         </MetricSection>
-                        <MetricSection title="Customers" icon={Users} color={COLORS.customers}>
+                        {/* <MetricSection title="Customers" icon={Users} color={COLORS.customers}>
                             <KpiCard label="Customers" value={number(customerKpi.totalCustomers)} icon={Users} color={COLORS.customers} />
                             <KpiCard label="Total Sales" value={currency(customerKpi.totalSales)} icon={DollarSign} color={COLORS.sales} />
                             <KpiCard label="Average Order" value={currency(customerKpi.avgOrderValue)} icon={ShoppingCart} color={COLORS.sales} />
@@ -225,7 +221,7 @@ export default function MainBusinessKPIReport() {
                             <KpiCard label="Purchase Amount" value={currency(supplierKpi.totalPurchaseAmount)} icon={DollarSign} color={COLORS.purchases} />
                             <KpiCard label="Unpaid Amount" value={currency(supplierKpi.totalUnpaid)} icon={AlertCircle} color={COLORS.expenses} />
                             <KpiCard label="Purchase Returns" value={currency(supplierKpi.totalReturns)} icon={RefreshCw} color={COLORS.expenses} />
-                        </MetricSection>
+                        </MetricSection> */}
                         <MetricSection title="Expenses" icon={DollarSign} color={COLORS.expenses}>
                             <KpiCard label="Total Expenses" value={currency(expenseKpi.totalExpenses)} sub={`${number(expenseKpi.expenseCount)} transactions`} icon={DollarSign} color={COLORS.expenses} />
                             <KpiCard label="Expense Average" value={currency(expenseKpi.averageExpense)} icon={DollarSign} color={COLORS.expenses} />

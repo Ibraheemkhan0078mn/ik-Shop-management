@@ -3849,34 +3849,93 @@ export const getInventoryReportData = async (filters = {}) => {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.max(1, Number(filters.limit) || 20);
     const context = await getInventoryContext(filters);
-    const stats = context.products.map(product => getInventoryProductStats(product, context));
-    const sortBy = filters.sortBy || "name";
-    const sortField = { highest_sales: "totalRevenue", lowest_sales: "totalRevenue", most_returned: "orderReturnQuantity", stock_level: "currentStock" }[sortBy];
-    stats.sort((a, b) => sortField
-        ? (Number(a[sortField] || 0) - Number(b[sortField] || 0)) * (sortBy === "lowest_sales" ? 1 : -1)
-        : String(a.name || "").localeCompare(String(b.name || "")));
+    
+    // Calculate detailed product stats with batch information
+    const stats = context.products.map(product => {
+        const productId = product._id.toString();
+        const productBatches = context.batches.filter(batch => batch.product?.toString() === productId);
+        
+        // Calculate stock value per batch using perUnitCosting, fallback to costPrice if not available
+        const batchDetails = productBatches.map(batch => {
+            const quantity = Number(batch.quantity) || 0;
+            const perUnitCosting = Number(batch.perUnitCosting) || Number(batch.costPrice) || 0;
+            const batchValue = quantity * perUnitCosting;
+            
+            return {
+                batchNo: batch.batchNumber || batch._id?.toString() || 'N/A',
+                quantity: quantity,
+                perUnitCosting: perUnitCosting,
+                batchValue: batchValue
+            };
+        });
+        
+        // Calculate total stock and value for this product
+        const totalQuantity = batchDetails.reduce((sum, batch) => sum + batch.quantity, 0);
+        const totalStockValue = batchDetails.reduce((sum, batch) => sum + batch.batchValue, 0);
+        
+        return {
+            productId: product._id,
+            productName: product.name || 'N/A',
+            productCode: product.productCode || product.hotKeySku || product.barcode || 'N/A',
+            totalBatches: productBatches.length,
+            currentStock: totalQuantity,
+            totalStockValue: totalStockValue,
+            batches: batchDetails
+        };
+    });
+    
+    // Sort by product name
+    stats.sort((a, b) => String(a.productName || "").localeCompare(String(b.productName || "")));
+    
     const start = (page - 1) * limit;
     return { data: stats.slice(start, start + limit), total: stats.length, page, limit, totalPages: Math.max(1, Math.ceil(stats.length / limit)) };
 };
 
 export const getInventoryKPIReport = async (filters = {}) => {
     const context = await getInventoryContext(filters);
-    const stats = context.products.map(product => getInventoryProductStats(product, context));
+    
+    // Calculate detailed product stats with batch information (same logic as getInventoryReportData)
+    const stats = context.products.map(product => {
+        const productId = product._id.toString();
+        const productBatches = context.batches.filter(batch => batch.product?.toString() === productId);
+        
+        // Calculate stock value per batch using perUnitCosting, fallback to costPrice if not available
+        const batchDetails = productBatches.map(batch => {
+            const quantity = Number(batch.quantity) || 0;
+            const perUnitCosting = Number(batch.perUnitCosting) || Number(batch.costPrice) || 0;
+            const batchValue = quantity * perUnitCosting;
+            
+            return {
+                batchNo: batch.batchNumber || batch._id?.toString() || 'N/A',
+                quantity: quantity,
+                perUnitCosting: perUnitCosting,
+                batchValue: batchValue
+            };
+        });
+        
+        // Calculate total stock and value for this product
+        const totalQuantity = batchDetails.reduce((sum, batch) => sum + batch.quantity, 0);
+        const totalStockValue = batchDetails.reduce((sum, batch) => sum + batch.batchValue, 0);
+        
+        return {
+            productId: product._id,
+            productName: product.name || 'N/A',
+            productCode: product.productCode || product.hotKeySku || product.barcode || 'N/A',
+            totalBatches: productBatches.length,
+            currentStock: totalQuantity,
+            totalStockValue: totalStockValue,
+            batches: batchDetails
+        };
+    });
+    
+    // Calculate total batches by summing batches for each product
+    const totalBatches = stats.reduce((sum, item) => sum + item.totalBatches, 0);
+    
     return {
         totalProducts: stats.length,
-        currentStock: stats.reduce((sum, item) => sum + item.currentStock, 0),
-        stockValue: stats.reduce((sum, item) => sum + item.stockValue, 0),
-        purchasedQuantity: stats.reduce((sum, item) => sum + item.totalPurchased, 0),
-        purchaseFrequency: stats.reduce((sum, item) => sum + item.purchaseFrequency, 0),
-        purchaseReturnQuantity: stats.reduce((sum, item) => sum + item.purchaseReturnQuantity, 0),
-        purchaseReturnFrequency: stats.reduce((sum, item) => sum + item.purchaseReturnFrequency, 0),
-        orderQuantity: stats.reduce((sum, item) => sum + item.orderQuantity, 0),
-        orderFrequency: stats.reduce((sum, item) => sum + item.orderFrequency, 0),
-        orderReturnQuantity: stats.reduce((sum, item) => sum + item.orderReturnQuantity, 0),
-        orderReturnFrequency: stats.reduce((sum, item) => sum + item.orderReturnFrequency, 0),
-        wastageQuantity: stats.reduce((sum, item) => sum + item.wastageQuantity, 0),
-        wastageFrequency: stats.reduce((sum, item) => sum + item.wastageFrequency, 0),
-        totalRevenue: stats.reduce((sum, item) => sum + item.totalRevenue, 0),
+        totalBatches: totalBatches,
+        totalQuantity: stats.reduce((sum, item) => sum + item.currentStock, 0),
+        totalStockValue: stats.reduce((sum, item) => sum + item.totalStockValue, 0),
     };
 };
 

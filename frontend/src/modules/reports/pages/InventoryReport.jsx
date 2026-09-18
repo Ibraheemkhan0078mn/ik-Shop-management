@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Filter, Package, RefreshCw, Search, TrendingUp, RotateCcw, Trash2, Receipt, DollarSign } from "lucide-react";
+import { Filter, Package, RefreshCw, Search, DollarSign } from "lucide-react";
 import { useGetCategoriesQuery } from "../../productsModule/services/category.service.js";
 import { useGetInventoryKPIReportQuery, useGetInventoryReportQuery } from "../services/reports.service.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -43,13 +43,11 @@ export default function InventoryReport() {
     const [toDate, setToDate] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [productName, setProductName] = useState("");
-    const [productCode, setProductCode] = useState("");
-    const [tag, setTag] = useState("");
     const [page, setPage] = useState(1);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const limit = 20;
     const periodDates = useMemo(() => getDatesFromPeriod(period), [period]);
-    const filters = useMemo(() => ({ fromDate: period === "custom" ? fromDate : dateValue(periodDates.from), toDate: period === "custom" ? toDate : dateValue(periodDates.to), categoryId, productName, productCode, tag, page, limit }), [period, fromDate, toDate, periodDates, categoryId, productName, productCode, tag, page]);
+    const filters = useMemo(() => ({ fromDate: period === "custom" ? fromDate : dateValue(periodDates.from), toDate: period === "custom" ? toDate : dateValue(periodDates.to), categoryId, productName, page, limit }), [period, fromDate, toDate, periodDates, categoryId, productName, page]);
     const kpiFilters = useMemo(() => ({ ...filters, page: undefined, limit: undefined }), [filters]);
     const { data: rowsResponse, isLoading: rowsLoading, isFetching: rowsFetching, refetch: refetchRows } = useGetInventoryReportQuery(filters);
     const { data: kpiResponse, isLoading: kpiLoading, isFetching: kpiFetching, refetch: refetchKpi } = useGetInventoryKPIReportQuery(kpiFilters);
@@ -60,14 +58,15 @@ export default function InventoryReport() {
     const totalPages = Math.max(1, rowsResponse?.totalPages || Math.ceil(total / limit));
     const loading = rowsLoading || rowsFetching || kpiLoading || kpiFetching;
 
-    useEffect(() => setPage(1), [period, fromDate, toDate, categoryId, productName, productCode, tag]);
+    useEffect(() => setPage(1), [period, fromDate, toDate, categoryId, productName]);
     const refresh = () => { refetchRows(); refetchKpi(); };
     const reportData = { data: rows, summary };
-    const tagOptions = ["dead_stock", "low_stock", "fast_selling", "overstock", "expired", "near_expiry", "high_return"];
     const columns = [
-        ["Product", product => <div className="flex items-center gap-2 min-w-[180px]"><img src={toImageUrl(product.image) || ""} alt="" className="w-9 h-9 rounded-lg object-cover" style={{ background: 'var(--surface-muted)' }} onError={e => { e.currentTarget.style.display = "none" }} /><span className="font-medium">{product.name || "—"}</span></div>],
-        ["Code", product => product.productCode || product.hotKeySku || product.barcode || "—"],
-        ["Current Stock", product => product.currentStock], ["Avg. Cost", product => `Rs ${Number(product.averageCostPrice || 0).toLocaleString()}`], ["Stock Value", product => `Rs ${Number(product.stockValue || 0).toLocaleString()}`], ["Purchased Qty", product => product.totalPurchased], ["Purchase Frequency", product => product.purchaseFrequency], ["Purchase Return Qty", product => product.purchaseReturnQuantity], ["Purchase Return Frequency", product => product.purchaseReturnFrequency], ["Order Qty", product => product.orderQuantity], ["Order Frequency", product => product.orderFrequency], ["Order Return Qty", product => product.orderReturnQuantity], ["Order Return Frequency", product => product.orderReturnFrequency], ["Wastage Qty", product => product.wastageQuantity], ["Wastage Frequency", product => product.wastageFrequency], ["Revenue", product => `Rs ${Number(product.totalRevenue || 0).toLocaleString()}`],
+        ["Product Name", product => product.productName || "—"],
+        ["Product Code", product => product.productCode || "—"],
+        ["Total Batches", product => product.totalBatches || 0],
+        ["Current Stock", product => product.currentStock || 0],
+        ["Total Stock Value", product => `Rs ${Number(product.totalStockValue || 0).toLocaleString()}`],
     ];
 
     return (
@@ -108,10 +107,6 @@ export default function InventoryReport() {
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }} />
                         <input value={productName} onChange={e => setProductName(e.target.value)} placeholder={labels.searchByName} className="w-full pl-10 pr-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }} />
                     </div>
-                    <input value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={labels.searchByCode} className="px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }} />
-                    <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2" style={{ borderColor: 'var(--border)', background: 'var(--app-bg)', color: 'var(--ink)' }}>
-                        <option value="">{labels.allTags}</option>{tagOptions.map(value => <option key={value} value={value}>{value}</option>)}
-                    </select>
                 </div>
             </div>
 
@@ -122,14 +117,10 @@ export default function InventoryReport() {
             ) : (
                 <>
                     <div className="flex flex-wrap gap-3 mb-6">
-                        <KpiCard label="Products" value={summary.totalProducts} icon={Package} color="#3b82f6" />
-                        <KpiCard label="Current Stock" value={summary.currentStock} icon={Package} color="#0ea5e9" />
-                        <KpiCard label="Stock Value" value={summary.stockValue} icon={DollarSign} color="#14b8a6" money />
-                        <KpiCard label="Purchased" value={summary.purchasedQuantity} icon={Receipt} color="#6366f1" />
-                        <KpiCard label="Purchase Returns" value={summary.purchaseReturnQuantity} icon={RotateCcw} color="#06b6d4" />
-                        <KpiCard label="Orders" value={summary.orderQuantity} icon={TrendingUp} color="#10b981" />
-                        <KpiCard label="Wastage" value={summary.wastageQuantity} icon={Trash2} color="#dc2626" />
-                        <KpiCard label="Revenue" value={summary.totalRevenue} icon={DollarSign} color="#f59e0b" money />
+                        <KpiCard label="Total Products" value={summary.totalProducts} icon={Package} color="#3b82f6" />
+                        <KpiCard label="Total Batches" value={summary.totalBatches} icon={Package} color="#0ea5e9" />
+                        <KpiCard label="Total Quantity" value={summary.totalQuantity} icon={Package} color="#14b8a6" />
+                        <KpiCard label="Total Stock Value" value={summary.totalStockValue} icon={DollarSign} color="#6366f1" money />
                     </div>
 
                     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>

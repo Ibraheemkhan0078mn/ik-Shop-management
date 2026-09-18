@@ -20,7 +20,7 @@ function BreakdownItem({ label, value, count, percentage, color }) {
             </div>
             <div className="text-right shrink-0 pl-3">
                 <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--ink)' }}>Rs {value?.toLocaleString() || 0}</p>
-                <p className="text-xs" style={{ color }}>{percentage}%</p>
+                {/* <p className="text-xs" style={{ color }}>{percentage}%</p> */}
             </div>
         </div>
     );
