@@ -265,7 +265,7 @@ export default function PurchaseReturnPage() {
                                         <th className="px-4 py-3 font-semibold">{labels.purchaseInvoice}</th>
                                         <th className="px-4 py-3 font-semibold">{labels.supplier}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
-                                        <th className="px-4 py-3 font-semibold text-right">{labels.refund}</th>
+                                        <th className="px-4 py-3 font-semibold text-right">{labels.grandTotal || "Grand Total"}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
                                         <th className="px-4 py-3 font-semibold">{labels.date}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
@@ -354,12 +354,8 @@ function PurchaseReturnRow({ purchaseReturn, isExpanded, onToggleExpand, onEdit,
                         </button>
                     )}
                 </td>
-                <td className="px-4 py-3 text-right">
-                    <div className="text-xs">
-                        <div className="font-semibold tabular-nums text-primary">Rs {totalRefundAmount.toLocaleString()}</div>
-                        <div className="text-[10px] text-green-600">Paid: Rs {refundedAmount.toLocaleString()}</div>
-                        <div className="text-[10px] text-orange-600">Rem: Rs {remainingAmount.toLocaleString()}</div>
-                    </div>
+                <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
+                    Rs {totalRefundAmount.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold capitalize ${statusClass}`}>
@@ -487,7 +483,7 @@ function PurchaseReturnApprovalModal({ onClose, onApprove, onDelete }) {
                                         <th className="px-4 py-3 font-semibold">{labels.purchaseInvoice}</th>
                                         <th className="px-4 py-3 font-semibold">{labels.supplier}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
-                                        <th className="px-4 py-3 font-semibold text-right">{labels.refund}</th>
+                                        <th className="px-4 py-3 font-semibold text-right">{labels.grandTotal || "Grand Total"}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.status}</th>
                                         <th className="px-4 py-3 font-semibold">{labels.date}</th>
                                         <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>

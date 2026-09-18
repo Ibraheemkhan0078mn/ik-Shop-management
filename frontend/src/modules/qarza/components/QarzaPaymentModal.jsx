@@ -7,7 +7,25 @@ import { useCreateQarzaPayment, useUpdateQarzaPayment } from "../services/qarza.
 import { usePaymentMethods } from "../../settings/services/paymentMethod.service.js";
 import PaymentMethodModal from "../../settings/components/PaymentMethodModal.jsx";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
+const toDateInputValue = (value) => {
+    if (!value) return today();
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return today();
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
 
 const emptyForm = () => ({ amount: "", type: "cashin", date: today(), notes: "", paymentMethod: "" });
 
@@ -64,7 +82,7 @@ export default function QarzaPaymentModal({ mode = "create", qarzaAccountId, pay
         setForm({
             amount: payment.amount ?? "",
             type:   payment.creditType ?? payment.type ?? "cashin",
-            date:   payment.transactionDate ? new Date(payment.transactionDate).toISOString().split("T")[0] : (payment.date ? new Date(payment.date).toISOString().split("T")[0] : today()),
+            date:   payment.transactionDate ? toDateInputValue(payment.transactionDate) : (payment.date ? toDateInputValue(payment.date) : today()),
             notes:  payment.notes  ?? "",
             paymentMethod: payment.paymentMethodName ?? payment.paymentMethod?.name ?? "",
         });

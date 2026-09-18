@@ -536,6 +536,18 @@ export const qarzaAccountDelete = async (req, res) => {
     }
 };
 
+const parseLocalDateValue = (value) => {
+    if (!value) return new Date();
+
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
 export const createQarzaPayment = async (req, res) => {
     try {
         const { qarzaAccountId, amount, type, date, notes, orderId, orderNumber, source, paymentMethod } = req.body;
@@ -551,7 +563,7 @@ export const createQarzaPayment = async (req, res) => {
         const creditType = type === 'cashin' ? 'cashin' : 'cashout';
 
         // Handle date - use provided date or current date
-        const transactionDate = date ? new Date(date) : new Date();
+        const transactionDate = parseLocalDateValue(date);
         if (isNaN(transactionDate.getTime())) {
             return res.json({ success: false, msg: "Invalid date provided" });
         }
@@ -610,7 +622,7 @@ export const updateQarzaPayment = async (req, res) => {
         const creditType = type === 'cashin' ? 'cashin' : 'cashout';
 
         // Handle date - use provided date or keep existing
-        const transactionDate = date ? new Date(date) : undefined;
+        const transactionDate = date ? parseLocalDateValue(date) : undefined;
         if (date && isNaN(transactionDate.getTime())) {
             return res.json({ success: false, msg: "Invalid date provided" });
         }

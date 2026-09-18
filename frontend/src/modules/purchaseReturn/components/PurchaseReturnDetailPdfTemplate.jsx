@@ -1,10 +1,34 @@
 import React from "react";
 
+const parseLocalDateValue = (value) => {
+    if (!value) return null;
+
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatPdfDate = (value) => {
+    const parsed = parseLocalDateValue(value);
+    if (!parsed) return "—";
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
 export default function PurchaseReturnDetailPdfTemplate({ purchaseReturn = {}, payments = [], labels = {} }) {
-    const date = new Date(purchaseReturn?.returnDate ?? purchaseReturn?.createdAt).toLocaleDateString();
+    const date = formatPdfDate(purchaseReturn?.returnDate ?? purchaseReturn?.createdAt);
 
     const totalQty = (purchaseReturn?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
     const totalRefunded = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalCuts = (purchaseReturn?.items || []).reduce((sum, it) => sum + (Number(it.cut) || 0), 0);
+    const totalRefundAmount = purchaseReturn?.totalRefundAmount || 0;
 
     return (
         <div style={{ padding: '2.5rem', backgroundColor: '#ffffff', minHeight: '100vh', color: '#1f2937', fontFamily: 'Arial, sans-serif' }}>
@@ -53,66 +77,61 @@ export default function PurchaseReturnDetailPdfTemplate({ purchaseReturn = {}, p
                 <thead>
                     <tr style={{ backgroundColor: '#111827', color: '#ffffff' }}>
                         <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>#</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Item &amp; Description</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Item</th>
                         <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Qty</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Cost Price</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Subtotal</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Unit Costing</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Cut Amount</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Refund Amount</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {(purchaseReturn?.items || []).map((item, index) => (
-                        <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                            <td style={{ padding: '0.5rem 0.75rem' }}>{index + 1}</td>
-                            <td style={{ padding: '0.5rem 0.75rem' }}>
-                                {item.productName || item.product?.name || "—"}
-                                {item.variant && <span style={{ fontSize: '0.75rem', color: '#6b7280' }}> ({item.variant})</span>}
-                            </td>
-                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{item.quantity || 0}</td>
-                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{(item.costPrice || 0).toLocaleString()}</td>
-                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>
-                                {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}
-                            </td>
-                        </tr>
-                    ))}
+                    {(purchaseReturn?.items || []).map((item, index) => {
+                        const rawPrice = Number(item.costPrice || item.purchasePrice) || 0;
+                        const quantity = Number(item.quantity) || 0;
+                        const cutAmount = Number(item.cut) || 0;
+
+                        // Use stored costing if available (set by CRUD form)
+                        const costing = item.costing;
+                        const unitCosting = (costing && typeof costing.totalCostingAmount === 'number')
+                            ? costing.totalCostingAmount
+                            : rawPrice;
+                        const itemTotal = unitCosting * quantity;
+                        const refundAmount = itemTotal - cutAmount;
+
+                        return (
+                            <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>{index + 1}</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                    {item.productName || item.product?.name || "—"}
+                                    {item.batchNumber && <span style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Batch: {item.batchNumber}</span>}
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{quantity}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>Rs {unitCosting.toFixed(2)}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#dc2626' }}>Rs {cutAmount.toFixed(2)}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600', color: '#111827' }}>Rs {refundAmount.toFixed(2)}</td>
+                            </tr>
+                        );
+                    })}
                     <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
                         <td style={{ padding: '0.5rem 0.75rem' }} colSpan={2}>Sub Total</td>
                         <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{totalQty}</td>
                         <td style={{ padding: '0.5rem 0.75rem' }}></td>
-                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#dc2626' }}>{(purchaseReturn?.totalAmount ?? 0).toLocaleString()}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#dc2626' }}>Rs {totalCuts.toFixed(2)}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#111827' }}>Rs {totalRefundAmount.toFixed(2)}</td>
                     </tr>
                 </tbody>
             </table>
 
             {/* Refund Summary */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ border: '1px solid #d1d5db', padding: '0.75rem', fontSize: '0.875rem', minWidth: '16.25rem' }}>
-                    <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Refund Summary:</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
-                        <span>Return Amount</span>
-                        <span>{(purchaseReturn?.totalAmount ?? 0).toLocaleString()}</span>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1rem', backgroundColor: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.25)', fontSize: '0.875rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.75rem' }}>
+                        <span style={{ fontWeight: '600' }}>Grand total refunds</span>
+                        <span style={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#111827' }}>Rs {totalRefundAmount.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
-                        <span>Total Refunded</span>
-                        <span>{totalRefunded.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontWeight: 'bold', borderTop: '1px solid #d1d5db', marginTop: '0.25rem', paddingTop: '0.25rem' }}>
-                        <span>Pending Refund</span>
-                        <span>{((purchaseReturn?.totalAmount ?? 0) - totalRefunded).toLocaleString()}</span>
-                    </div>
-                </div>
-
-                <div style={{ border: '1px solid #d1d5db', minWidth: '16.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e5e7eb' }}>
-                        <span>Items</span>
-                        <span>{purchaseReturn?.items?.length || 0}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e5e7eb' }}>
-                        <span>Total Quantity</span>
-                        <span>{totalQty}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem', fontWeight: 'bold', color: '#dc2626' }}>
-                        <span>Total Amount</span>
-                        <span>{(purchaseReturn?.totalAmount ?? 0).toLocaleString()}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                        <span style={{ fontWeight: '600' }}>Total cuts</span>
+                        <span style={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#dc2626' }}>Rs {totalCuts.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
@@ -125,16 +144,20 @@ export default function PurchaseReturnDetailPdfTemplate({ purchaseReturn = {}, p
                             <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #d1d5db' }}>Date</th>
                             <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #d1d5db' }}>Method</th>
                             <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600', borderBottom: '1px solid #d1d5db' }}>Amount</th>
-                            <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #d1d5db' }}>Credit Account</th>
+                            <th style={{ padding: '0.5rem 0.75rem', textAlign: 'center', fontWeight: '600', borderBottom: '1px solid #d1d5db' }}>Notes</th>
                         </tr>
                     </thead>
                     <tbody>
                         {payments.map((payment, index) => (
                             <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                <td style={{ padding: '0.5rem 0.75rem' }}>{new Date(payment.paymentDate).toLocaleDateString()}</td>
-                                <td style={{ padding: '0.5rem 0.75rem', textTransform: 'capitalize' }}>{payment.paymentMethod || "—"}</td>
-                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>{(payment.amount || 0).toLocaleString()}</td>
-                                <td style={{ padding: '0.5rem 0.75rem' }}>{payment.creditAccount?.name || "—"}</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>{formatPdfDate(payment.transactionDate || payment.paymentDate || payment.date)}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textTransform: 'capitalize' }}>
+                                    {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
+                                     payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
+                                     payment.method || "—"}
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>Rs {(payment.amount || 0).toLocaleString()}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>{payment.notes || "—"}</td>
                             </tr>
                         ))}
                     </tbody>

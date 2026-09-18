@@ -293,12 +293,9 @@ export default function ProductPurchasePage() {
                                     <th className="px-4 py-3 font-semibold">{labels.invoice}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.supplier || "Supplier"}</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.items}</th>
-                                    <th className="px-4 py-3 font-semibold text-right">{labels.total}</th>
-                                    <th className="px-4 py-3 font-semibold text-right">{labels.paid || "Paid"}</th>
-                                    <th className="px-4 py-3 font-semibold text-right">{labels.remaining || "Remaining"}</th>
+                                    <th className="px-4 py-3 font-semibold text-right">{labels.grandTotal || "Grand Total"}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.date}</th>
                                     <th className="px-4 py-3 font-semibold">{labels.status}</th>
-                                    <th className="px-4 py-3 font-semibold">{labels.payment}</th>
                                     <th className="px-4 py-3 font-semibold text-center">{labels.actions}</th>
                                 </tr>
                             </thead>
@@ -339,12 +336,6 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
     const dateStr = purchase?.date ?? purchase?.createdAt ?? "";
     const date = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
     const status = purchase?.status ?? 'ordered';
-    const paymentStatus = purchase?.paymentStatus ?? 'pending';
-    
-    // Calculate paid and remaining from purchase data
-    const totalAmount = purchase?.totalAmount ?? 0;
-    const paidAmount = purchase?.paidAmount ?? 0;
-    const remainingAmount = totalAmount - paidAmount;
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -355,29 +346,11 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
         }
     };
 
-    const getPaymentStatusColor = (status) => {
-        switch (status) {
-            case 'pending': return 'bg-gray-100 text-gray-800 border-gray-300';
-            case 'partial': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'full': return 'bg-green-100 text-green-800 border-green-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
-
     const getStatusLabel = (status) => {
         switch (status) {
             case 'ordered': return labels.ordered;
             case 'delivered': return labels.delivered;
             case 'rejected': return labels.rejected;
-            default: return status;
-        }
-    };
-
-    const getPaymentStatusLabel = (status) => {
-        switch (status) {
-            case 'pending': return labels.paymentPending;
-            case 'partial': return labels.paymentPartial;
-            case 'full': return labels.paymentFull;
             default: return status;
         }
     };
@@ -426,21 +399,10 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
                 <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">
                     Rs {(purchase?.totalAmount ?? 0).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-semibold tabular-nums text-green-600">
-                    Rs {paidAmount.toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-right font-semibold tabular-nums text-orange-600">
-                    Rs {remainingAmount.toLocaleString()}
-                </td>
                 <td className="px-4 py-3 text-ink-muted">{date}</td>
                 <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}>
                         {getStatusLabel(status)}
-                    </span>
-                </td>
-                <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(paymentStatus)}`}>
-                        {getPaymentStatusLabel(paymentStatus)}
                     </span>
                 </td>
                 <td className="px-4 py-3">
@@ -504,7 +466,7 @@ function PurchaseRow({ purchase, isExpanded, onToggleExpand, onEdit, onDelete, o
             {/* Expandable item details row */}
             {isExpanded && items.length > 0 && (
                 <tr className="bg-(--surface-muted)">
-                    <td colSpan="9" className="px-4 py-3">
+                    <td colSpan="7" className="px-4 py-3">
                         <div className="flex flex-wrap gap-2 text-sm">
                             {items.map((item, idx) => {
                                 const itemName = item.name || item.product?.name || item.productName || String(item.product);

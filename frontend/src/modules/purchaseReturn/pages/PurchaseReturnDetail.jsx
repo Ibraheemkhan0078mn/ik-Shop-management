@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
 import { getPurchaseReturnLabels } from "../labels/purchaseReturnLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getPurchaseReturnByIdApi } from "../api/purchaseReturnApi.js";
@@ -154,11 +154,11 @@ export default function PurchaseReturnDetail() {
                             <thead>
                                 <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
                                     <th className="px-3 py-2 text-left font-semibold text-white">#</th>
-                                    <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
-                                    <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-white">Item</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Unit Costing</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Cut Amount</th>
                                     <th className="px-3 py-2 text-right font-semibold text-white">Refund Amount</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
                                     <th className="px-3 py-2 text-center font-semibold text-white">Details</th>
                                 </tr>
                             </thead>
@@ -191,13 +191,11 @@ export default function PurchaseReturnDetail() {
                                                 <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
                                                 <td className="px-3 py-2 text-[var(--ink)]">
                                                     {item.productName || item.product?.name || "—"}
-                                                    {item.product?.productCode && <span className="text-xs text-[var(--muted)] block">{item.product.productCode}</span>}
-                                                    {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
                                                 </td>
-                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
                                                 <td className="px-3 py-2 text-right text-[var(--ink)] font-mono">Rs {unitCosting.toFixed(2)}</td>
                                                 <td className="px-3 py-2 text-right text-red-600">Rs {cutAmount.toFixed(2)}</td>
                                                 <td className="px-3 py-2 text-right font-semibold" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right text-[var(--ink)]">{quantity}</td>
                                                 <td className="px-3 py-2 text-center">
                                                     <button
                                                         onClick={() => setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }))}
@@ -205,7 +203,6 @@ export default function PurchaseReturnDetail() {
                                                         style={{ background: isExpanded ? "var(--accent)" : "var(--surface-muted)", color: isExpanded ? "#fff" : "var(--muted)" }}
                                                         title={isExpanded ? "Hide calculations" : "Show calculations"}
                                                     >
-                                                        {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                                                         {isExpanded ? "Hide" : "Details"}
                                                     </button>
                                                 </td>
@@ -213,18 +210,39 @@ export default function PurchaseReturnDetail() {
                                             {isExpanded && (
                                                 <tr>
                                                     <td colSpan="7" className="px-4 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                        <div className="rounded-lg p-3" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                            <div className="text-xs space-y-2">
-                                                                <div className="flex justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(148,163,184,0.08)" }}>
-                                                                    <span style={{ color: "var(--ink)" }}>Per-unit costing</span>
-                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {unitCosting.toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between gap-3 rounded-xl px-2 py-1.5" style={{ background: "rgba(15,118,110,0.08)" }}>
-                                                                    <span style={{ color: "var(--ink)" }}>Formula</span>
-                                                                    <span className="font-mono text-right" style={{ color: "var(--ink)" }}>
-                                                                        {unitCosting.toFixed(2)} × {quantity} - {cutAmount.toFixed(2)} = {refundAmount.toFixed(2)}
-                                                                    </span>
-                                                                </div>
+                                                        <div className="text-xs space-y-1.5">
+                                                            {/* Row 1: Unit Costing */}
+                                                            <div className="flex justify-between items-center py-1">
+                                                                <span style={{ color: "var(--ink)" }}>1. Unit Costing:</span>
+                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>Rs {unitCosting.toFixed(2)}</span>
+                                                            </div>
+                                                            
+                                                            {/* Row 2: Multiply by Quantity */}
+                                                            <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.05)" }}>
+                                                                <span style={{ color: "var(--ink)" }}>
+                                                                    2. Multiply: ×{quantity} items
+                                                                </span>
+                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                    Rs {itemTotal.toFixed(2)}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Row 3: Cut Amount */}
+                                                            <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(220, 38, 38, 0.05)" }}>
+                                                                <span style={{ color: "var(--ink)" }}>
+                                                                    3. Cut Amount: Rs {cutAmount.toFixed(2)}
+                                                                </span>
+                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>
+                                                                    -Rs {cutAmount.toFixed(2)} → Rs {(itemTotal - cutAmount).toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            {/* Row 4: Final Refund */}
+                                                            <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
+                                                                <span style={{ color: "var(--ink)" }}>
+                                                                    4. Final Refund Amount
+                                                                </span>
+                                                                <span className="font-mono font-bold text-sm" style={{ color: "var(--accent-2)" }}>Rs {refundAmount.toFixed(2)}</span>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -305,51 +323,46 @@ export default function PurchaseReturnDetail() {
                                                     {isPaymentExpanded && (
                                                         <tr>
                                                             <td colSpan="5" className="px-2 sm:px-3 py-4" style={{ background: "var(--surface-muted)" }}>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Details</p>
-                                                                        <div className="text-xs space-y-1">
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Refund ID:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment._id || "—"}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Transaction Date:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{new Date(payment.transactionDate || payment.paymentDate).toLocaleString()}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Payment Method:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.method || "—"}</span>
-                                                                            </div>
-                                                                            {payment.creditAccount && (
-                                                                                <div className="flex justify-between">
-                                                                                    <span style={{ color: "var(--ink)" }}>Credit Account:</span>
-                                                                                    <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.creditAccount.name || "—"}</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
+                                                                <div className="text-xs space-y-1.5">
+                                                                    {/* Row 1: Refund ID */}
+                                                                    <div className="flex justify-between items-center py-1">
+                                                                        <span style={{ color: "var(--ink)" }}>Refund ID:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>{payment._id || "—"}</span>
                                                                     </div>
-                                                                    <div className="p-3 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                                                        <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Amount Information</p>
-                                                                        <div className="text-xs space-y-1">
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Amount:</span>
-                                                                                <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>Rs {(payment.amount || 0).toLocaleString()}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Cash Amount:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(payment.cashAmount || 0).toLocaleString()}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Credit Amount:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {(payment.creditAmount || 0).toLocaleString()}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span style={{ color: "var(--ink)" }}>Notes:</span>
-                                                                                <span className="font-mono" style={{ color: "var(--ink)" }}>{payment.notes || "—"}</span>
-                                                                            </div>
-                                                                        </div>
+                                                            
+                                                                    {/* Row 2: Transaction Date */}
+                                                                    <div className="flex justify-between items-center py-1">
+                                                                        <span style={{ color: "var(--ink)" }}>Transaction Date:</span>
+                                                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>{new Date(payment.transactionDate || payment.paymentDate).toLocaleString()}</span>
                                                                     </div>
+                                                            
+                                                                    {/* Row 3: Payment Method */}
+                                                                    <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.05)" }}>
+                                                                        <span style={{ color: "var(--ink)" }}>Payment Method:</span>
+                                                                        <span className="font-mono font-semibold" style={{ color: "var(--accent-2)" }}>{payment.method || "—"}</span>
+                                                                    </div>
+
+                                                                    {/* Row 4: Amount */}
+                                                                    <div className="flex justify-between items-center py-1 px-2 rounded" style={{ background: "rgba(15, 118, 110, 0.08)" }}>
+                                                                        <span style={{ color: "var(--ink)" }}>Amount:</span>
+                                                                        <span className="font-mono font-bold text-sm" style={{ color: "var(--accent-2)" }}>Rs {(payment.amount || 0).toLocaleString()}</span>
+                                                                    </div>
+
+                                                                    {/* Row 5: Notes */}
+                                                                    {payment.notes && (
+                                                                        <div className="flex justify-between items-center py-1">
+                                                                            <span style={{ color: "var(--ink)" }}>Notes:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>{payment.notes}</span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Row 6: Credit Account */}
+                                                                    {payment.creditAccount && (
+                                                                        <div className="flex justify-between items-center py-1">
+                                                                            <span style={{ color: "var(--ink)" }}>Credit Account:</span>
+                                                                            <span className="font-mono" style={{ color: "var(--accent-2)" }}>{payment.creditAccount.name || "—"}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </tr>

@@ -1,38 +1,80 @@
 import React from "react";
 
-export default function PurchaseDetailPdfTemplate({ purchase = {}, payments = [], labels = {}, company = {} }) {
-    const date = new Date(purchase?.purchaseDate ?? purchase?.date ?? purchase?.createdAt).toLocaleDateString();
+const parseLocalDateValue = (value) => {
+    if (!value) return null;
 
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatPdfDate = (value) => {
+    const parsed = parseLocalDateValue(value);
+    if (!parsed) return "—";
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
+export default function PurchaseDetailPdfTemplate({ purchase = {}, payments = [], labels = {}, company = {} }) {
+    const getItemCalculation = (item) => {
+        const batch = item.batch || {};
+        const quantity = Number(item.quantity || 0);
+        const costPrice = Number(batch.costPrice ?? item.costPrice ?? item.price ?? item.perItemPrice ?? 0);
+        const discountType = batch.discountEntryType ?? item.discountEntryType ?? item.discountType ?? "percentage";
+        const discountValue = Number(batch.discountEntryValue ?? batch.discountInPercentage ?? item.discountEntryValue ?? item.discount ?? 0);
+        const discountScope = batch.discountScope ?? item.discountScope ?? "entire";
+        const taxType = batch.taxEntryType ?? item.taxEntryType ?? item.taxType ?? "percentage";
+        const taxValue = Number(batch.taxEntryValue ?? batch.taxInPercentage ?? item.taxEntryValue ?? item.tax ?? 0);
+        const taxScope = batch.taxScope ?? item.taxScope ?? "entire";
+
+        const discountAmountPerUnit = discountType === "percentage"
+            ? costPrice * (discountValue / 100)
+            : (discountScope === "perUnit" ? discountValue : discountValue / Math.max(1, quantity || 1));
+        const discountedUnitPrice = Math.max(0, costPrice - discountAmountPerUnit);
+        const taxAmountPerUnit = taxType === "percentage"
+            ? discountedUnitPrice * (taxValue / 100)
+            : (taxScope === "perUnit" ? taxValue : taxValue / Math.max(1, quantity || 1));
+        const unitCosting = discountedUnitPrice + taxAmountPerUnit;
+        const subtotal = unitCosting * quantity;
+        const discountPercentEquivalent = discountType === "fixed" && costPrice > 0 ? (discountAmountPerUnit / costPrice) * 100 : discountValue;
+        const taxPercentEquivalent = taxType === "fixed" && discountedUnitPrice > 0 ? (taxAmountPerUnit / discountedUnitPrice) * 100 : taxValue;
+
+        return {
+            quantity,
+            costPrice,
+            discountType,
+            discountValue,
+            discountScope,
+            discountAmountPerUnit,
+            discountedUnitPrice,
+            taxType,
+            taxValue,
+            taxScope,
+            taxAmountPerUnit,
+            unitCosting,
+            subtotal,
+            discountPercentEquivalent,
+            taxPercentEquivalent,
+        };
+    };
+
+    const date = formatPdfDate(purchase?.purchaseDate ?? purchase?.date ?? purchase?.createdAt);
     const totalPaid = payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
     const remainingAmount = (purchase?.totalAmount ?? 0) - totalPaid;
 
-    const subtotalAfterItems = (purchase?.items || []).reduce((sum, it) => {
-        const price = it.costPrice || it.price || it.perItemPrice || 0;
-        const quantity = it.quantity || 0;
-        const baseTotal = quantity * price;
-        const discountAmount = it.discountType === "percentage" ? (baseTotal * (it.discount || 0)) / 100 : (it.discount || 0);
-        const afterDiscount = baseTotal - discountAmount;
-        const taxAmount = it.taxType === "percentage" ? (afterDiscount * (it.tax || 0)) / 100 : (it.tax || 0);
-        return sum + (afterDiscount + taxAmount);
-    }, 0);
+    const itemCalculations = (purchase?.items || []).map((item) => ({ item, calc: getItemCalculation(item) }));
+    const subtotalAfterItems = itemCalculations.reduce((sum, { calc }) => sum + calc.subtotal, 0);
+    const totalQty = itemCalculations.reduce((sum, { calc }) => sum + calc.quantity, 0);
+    const totalDiscount = itemCalculations.reduce((sum, { calc }) => sum + (calc.discountAmountPerUnit * calc.quantity), 0);
+    const totalItemTax = itemCalculations.reduce((sum, { calc }) => sum + (calc.taxAmountPerUnit * calc.quantity), 0);
 
-    const totalQty = (purchase?.items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
-    const totalDiscount = (purchase?.items || []).reduce((sum, it) => {
-        const price = it.costPrice || it.price || it.perItemPrice || 0;
-        const quantity = it.quantity || 0;
-        const baseTotal = quantity * price;
-        return sum + (it.discountType === "percentage" ? (baseTotal * (it.discount || 0)) / 100 : (it.discount || 0));
-    }, 0);
-    const totalItemTax = (purchase?.items || []).reduce((sum, it) => {
-        const price = it.costPrice || it.price || it.perItemPrice || 0;
-        const quantity = it.quantity || 0;
-        const baseTotal = quantity * price;
-        const discountAmount = it.discountType === "percentage" ? (baseTotal * (it.discount || 0)) / 100 : (it.discount || 0);
-        const afterDiscount = baseTotal - discountAmount;
-        return sum + (it.taxType === "percentage" ? (afterDiscount * (it.tax || 0)) / 100 : (it.tax || 0));
-    }, 0);
-
-    // Bill-level discount, tax (GST) and shipping — applied on top of the items subtotal
     const billDiscount = purchase?.discountType === "percentage"
         ? (subtotalAfterItems * (purchase?.discount || 0)) / 100
         : (purchase?.discount || 0);
@@ -82,49 +124,50 @@ export default function PurchaseDetailPdfTemplate({ purchase = {}, payments = []
                 <thead>
                     <tr style={{ backgroundColor: '#111827', color: '#ffffff' }}>
                         <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>#</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Item &amp; Description</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Category</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Qty</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Price</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>Item</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Cost Price</th>
                         <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Disc</th>
                         <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Tax</th>
-                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Net Amount</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Final Unit</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Qty</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {(purchase?.items || []).map((item, index) => {
-                        const price = item.costPrice || item.price || item.perItemPrice || 0;
-                        const quantity = item.quantity || 0;
-                        const baseTotal = quantity * price;
-                        const discountAmount = item.discountType === "percentage" ? (baseTotal * (item.discount || 0)) / 100 : (item.discount || 0);
-                        const taxAmount = item.taxType === "percentage" ? ((baseTotal - discountAmount) * (item.tax || 0)) / 100 : (item.tax || 0);
-                        const netAmount = baseTotal - discountAmount + taxAmount;
+                    {itemCalculations.map(({ item, calc }, index) => {
+                        const displayDiscount = item.batch?.discountEntryType ?? item.discountEntryType ?? item.discountType ?? "percentage";
+                        const displayDiscountValue = Number(item.batch?.discountEntryValue ?? item.batch?.discountInPercentage ?? item.discountEntryValue ?? item.discount ?? 0);
+                        const displayTax = item.batch?.taxEntryType ?? item.taxEntryType ?? item.taxType ?? "percentage";
+                        const displayTaxValue = Number(item.batch?.taxEntryValue ?? item.batch?.taxInPercentage ?? item.taxEntryValue ?? item.tax ?? 0);
+                        const displayDiscountText = displayDiscount === "fixed" ? `${calc.discountPercentEquivalent.toFixed(2)}%` : `${displayDiscountValue.toFixed(2)}%`;
+                        const displayTaxText = displayTax === "fixed" ? `${calc.taxPercentEquivalent.toFixed(2)}%` : `${displayTaxValue.toFixed(2)}%`;
 
                         return (
                             <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                 <td style={{ padding: '0.5rem 0.75rem' }}>{index + 1}</td>
                                 <td style={{ padding: '0.5rem 0.75rem' }}>{item.name || item.product?.name || item.productName || "—"}</td>
-                                <td style={{ padding: '0.5rem 0.75rem' }}>{item.category || item.product?.category || "—"}</td>
-                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{quantity}</td>
-                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{price.toLocaleString()}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{calc.costPrice.toLocaleString()}</td>
                                 <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#dc2626' }}>
-                                    {formatDiscount(item.discount, item.discountType)}
-                                    <span style={{ display: 'block', fontSize: '0.625rem', color: '#9ca3af' }}>-{discountAmount.toLocaleString()}</span>
+                                    {displayDiscountText}
+                                    <span style={{ display: 'block', fontSize: '0.625rem', color: '#9ca3af' }}>-{calc.discountAmountPerUnit.toFixed(2)}/unit</span>
                                 </td>
                                 <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#15803d' }}>
-                                    {formatTax(item.tax, item.taxType)}
-                                    <span style={{ display: 'block', fontSize: '0.625rem', color: '#9ca3af' }}>+{taxAmount.toLocaleString()}</span>
+                                    {displayTaxText}
+                                    <span style={{ display: 'block', fontSize: '0.625rem', color: '#9ca3af' }}>+{calc.taxAmountPerUnit.toFixed(2)}/unit</span>
                                 </td>
-                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>{netAmount.toLocaleString()}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{calc.unitCosting.toFixed(2)}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{calc.quantity}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: '600' }}>{calc.subtotal.toLocaleString()}</td>
                             </tr>
                         );
                     })}
                     <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
-                        <td style={{ padding: '0.5rem 0.75rem' }} colSpan={3}>Sub Total</td>
-                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{totalQty}</td>
+                        <td style={{ padding: '0.5rem 0.75rem' }} colSpan={2}>Sub Total</td>
                         <td style={{ padding: '0.5rem 0.75rem' }}></td>
                         <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{totalDiscount.toLocaleString()}</td>
                         <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{totalItemTax.toLocaleString()}</td>
+                        <td style={{ padding: '0.5rem 0.75rem' }}></td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{totalQty}</td>
                         <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{subtotalAfterItems.toLocaleString()}</td>
                     </tr>
                 </tbody>
@@ -190,7 +233,7 @@ export default function PurchaseDetailPdfTemplate({ purchase = {}, payments = []
                         <tbody>
                             {payments.map((payment, index) => (
                                 <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                    <td style={{ padding: '0.5rem 0.75rem' }}>{new Date(payment.transactionDate || payment.paymentDate).toLocaleDateString()}</td>
+                                    <td style={{ padding: '0.5rem 0.75rem' }}>{formatPdfDate(payment.transactionDate || payment.paymentDate || payment.date)}</td>
                                     <td style={{ padding: '0.5rem 0.75rem', textTransform: 'capitalize' }}>
                                         {payment.method === 'cash' ? (payment.paymentMethodName || 'Cash') :
                                          payment.method === 'credit' ? `Credit (${payment.creditAccount?.name || 'Account'})` :
