@@ -239,10 +239,9 @@ export default function OrderDetailsPage() {
                                         const finalTotal = item.itemTotal || (lineTotal - itemDiscount + itemTax);
                                         const soldValuePerUnit = item.soldValue ? (item.soldValue / (item.quantity || 1)) : item.unitPrice || 0;
                                         
-                                        // Calculate overall discount share for this item
+                                        // Use the stored proportional discount share from the item (not equal split)
                                         const overallDiscountAmount = order?.discountAmount || 0;
-                                        const totalItems = order?.items?.length || 1;
-                                        const overallDiscountShare = overallDiscountAmount / totalItems;
+                                        const overallDiscountShare = item.orderDiscountShare || 0;
 
                                         return (
                                             <tr key={index} className="border-b border-(--border) hover:bg-(--surface-muted) transition-colors">
@@ -295,8 +294,8 @@ export default function OrderDetailsPage() {
                                                     {overallDiscountAmount > 0 ? (
                                                         <div className="text-orange-600">
                                                             <p className="font-semibold">-Rs {overallDiscountShare.toLocaleString()}</p>
-                                                            {order?.orderDiscountValue && order?.orderDiscountType === "percentage" && (
-                                                                <p className="text-xs text-(--muted)">{order.orderDiscountValue}% of total</p>
+                                                            {item.orderDiscountSharePercent > 0 && (
+                                                                <p className="text-xs text-(--muted)">{item.orderDiscountSharePercent.toFixed(1)}% of item</p>
                                                             )}
                                                         </div>
                                                     ) : (

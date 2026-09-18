@@ -205,6 +205,21 @@ export const totalOrderRecalculation = async (orderId) => {
     const orderDiscount = Number(order.discountAmount) || 0;
     const calculatedTotalAmount = Math.round((calculatedSubtotal - orderDiscount) * 100) / 100;
 
+    // Recalculate each item's orderDiscountShare proportionally based on its share in subtotal
+    recalculatedItems.forEach((item) => {
+        if (calculatedSubtotal > 0 && orderDiscount > 0) {
+            item.orderDiscountShare = Math.round(((orderDiscount * item.itemTotal) / calculatedSubtotal) * 100) / 100;
+            item.orderDiscountSharePercent = item.itemTotal > 0
+                ? Math.round(((item.orderDiscountShare / item.itemTotal) * 100) * 100) / 100
+                : 0;
+            item.soldValue = Math.round(Math.max(0, item.itemTotal - item.orderDiscountShare) * 100) / 100;
+        } else {
+            item.orderDiscountShare = 0;
+            item.orderDiscountSharePercent = 0;
+            item.soldValue = item.itemTotal;
+        }
+    });
+
     // Recalculate payment status with the new total
     const paymentStatus = await calculateOrderPaymentStatus(orderId, calculatedTotalAmount);
 

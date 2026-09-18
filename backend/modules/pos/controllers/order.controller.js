@@ -271,7 +271,22 @@ export const addOrder = asyncHandler(async (req, res, next) => {
     }
     
     const recalculatedTotal = Math.max(0, recalculatedSubtotal - recalculatedOrderDiscount);
-    
+
+    // Recalculate each item's orderDiscountShare proportionally based on its share in subtotal
+    normalizedItems.forEach((item) => {
+        if (recalculatedSubtotal > 0 && recalculatedOrderDiscount > 0) {
+            item.orderDiscountShare = (recalculatedOrderDiscount * item.itemTotal) / recalculatedSubtotal;
+            item.orderDiscountSharePercent = item.itemTotal > 0
+                ? (item.orderDiscountShare / item.itemTotal) * 100
+                : 0;
+            item.soldValue = Math.max(0, item.itemTotal - item.orderDiscountShare);
+        } else {
+            item.orderDiscountShare = 0;
+            item.orderDiscountSharePercent = 0;
+            item.soldValue = item.itemTotal;
+        }
+    });
+
     // Override with recalculated values
     validatedData.subtotal = recalculatedSubtotal;
     validatedData.totalTaxAmount = recalculatedTotalTax;

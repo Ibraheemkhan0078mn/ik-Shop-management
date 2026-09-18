@@ -79,10 +79,9 @@ export default function OrderDetailsPdfTemplate({ order = {}, payments = [], lab
                     const finalTotal = lineTotal - itemDiscount + itemTax;
                     const soldValuePerUnit = item.soldValue ? (item.soldValue / quantity) : Number(item.unitPrice || 0);
                     
-                    // Calculate overall discount share for this item
+                    // Use the stored proportional discount share from the item (not equal split)
                     const overallDiscountAmount = Number(order?.discountAmount || 0);
-                    const totalItems = items.length || 1;
-                    const overallDiscountShare = overallDiscountAmount / totalItems;
+                    const overallDiscountShare = Number(item.orderDiscountShare || 0);
 
                     return <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
                         <td style={styles.cell}>{index + 1}</td>
