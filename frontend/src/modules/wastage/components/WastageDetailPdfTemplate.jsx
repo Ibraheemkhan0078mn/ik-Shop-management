@@ -94,56 +94,51 @@ export default function WastageDetailPdfTemplate({ wastage = {}, labels = {} }) 
                 <table style={{ width: '100%', border: '1px solid #e5e7eb' }}>
                     <thead style={{ backgroundColor: '#f3f4f6' }}>
                         <tr>
-                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Product</th>
-                            <th style={{ padding: '0.5rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Qty</th>
-                            <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Cost Price</th>
-                            <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Loss Amount</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>#</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Product Name</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Batch No</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Quantity</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Per Unit Costing</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Calculation</th>
+                            <th style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Wastage Reason</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {wastage?.items?.map((item, index) => (
-                            <React.Fragment key={index}>
-                                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                    <td style={{ padding: '0.75rem 1rem' }}>
-                                        <p style={{ fontWeight: '500', color: '#111827', margin: 0 }}>{item.product?.name || item.productName || "—"}</p>
-                                        {item.product?._id && <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>ID: {item.product._id}</p>}
-                                        {item.batchNumber && <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>Batch: {item.batchNumber}</p>}
+                        {wastage?.items?.map((item, index) => {
+                            const quantity = Number(item.quantity) || 0;
+                            const costPrice = Number(item.costPrice || 0);
+                            const totalLoss = quantity * costPrice;
+                            return (
+                                <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                    <td style={{ padding: '0.75rem 1rem', color: '#111827' }}>{index + 1}</td>
+                                    <td style={{ padding: '0.75rem 1rem', fontWeight: '500', color: '#111827' }}>
+                                        {item.product?.name || item.productName || "—"}
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#111827' }}>{item.quantity || 0}</td>
-                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#111827' }}>Rs {(item.costPrice || 0).toLocaleString()}</td>
-                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>Rs {((item.quantity || 0) * (item.costPrice || 0)).toLocaleString()}</td>
-                                </tr>
-                                <tr style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
-                                    <td colSpan="4" style={{ padding: '1rem' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                                            <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
-                                                <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4b5563', marginBottom: '0.5rem', margin: 0 }}>Item Details</p>
-                                                <div style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: '#374151' }}>Product ID:</span>
-                                                        <span style={{ fontFamily: 'monospace', color: '#111827' }}>{item.product?._id || item.productId || "—"}</span>
-                                                    </div>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: '#374151' }}>Product Name:</span>
-                                                        <span style={{ fontFamily: 'monospace', color: '#111827' }}>{item.product?.name || item.productName || "—"}</span>
-                                                    </div>
-                                                    {item.batchNumber && (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                            <span style={{ color: '#374151' }}>Batch Number:</span>
-                                                            <span style={{ fontFamily: 'monospace', color: '#111827' }}>{item.batchNumber}</span>
-                                                        </div>
-                                                    )}
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: '#374151' }}>Quantity:</span>
-                                                        <span style={{ fontFamily: 'monospace', color: '#111827' }}>{item.quantity || 0}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#6b7280' }}>
+                                        {item.batchNumber || "—"}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#111827' }}>
+                                        {quantity}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#6b7280' }}>
+                                        Rs {(costPrice).toLocaleString()}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>
+                                        Rs {totalLoss.toLocaleString()}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', color: '#6b7280', textTransform: 'capitalize' }}>
+                                        {item.reason?.replace(/_/g, " ") || "—"}
                                     </td>
                                 </tr>
-                            </React.Fragment>
-                        ))}
+                            );
+                        })}
+                        <tr style={{ backgroundColor: '#f9fafb', fontWeight: '600' }}>
+                            <td colSpan="5" style={{ padding: '0.75rem 1rem', color: '#111827' }}>Total Loss</td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#dc2626' }}>
+                                Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}
+                            </td>
+                            <td></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>

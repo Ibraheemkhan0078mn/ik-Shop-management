@@ -87,6 +87,15 @@ export const getWastage = asyncHandler(async (req, res, next) => {
 export const createWastage = asyncHandler(async (req, res, next) => {
     const validatedData = req.body || {};
 
+    // Clean up ObjectId fields - convert empty strings to null
+    if (validatedData.items && Array.isArray(validatedData.items)) {
+        validatedData.items = validatedData.items.map(item => ({
+            ...item,
+            batch: item.batch && item.batch !== "" ? item.batch : null,
+            purchase: item.purchase && item.purchase !== "" ? item.purchase : null,
+        }));
+    }
+
     // Auto-calculate item-level totalLoss and document-level totals
     let totalQuantity = 0;
     let totalLossAmount = 0;
@@ -129,6 +138,10 @@ export const createWastage = asyncHandler(async (req, res, next) => {
 export const updateWastage = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
 
+    if (!id || typeof id !== 'string') {
+        return next(new ErrorResponse(`Invalid wastage ID: ${id}`, 400));
+    }
+
     let wastage = await getWastageByIdService(id);
     if (!wastage) {
         return next(new ErrorResponse("Wastage record not found", 404));
@@ -140,6 +153,15 @@ export const updateWastage = asyncHandler(async (req, res, next) => {
     }
 
     const validatedData = req.body || {};
+
+    // Clean up ObjectId fields - convert empty strings to null
+    if (validatedData.items && Array.isArray(validatedData.items)) {
+        validatedData.items = validatedData.items.map(item => ({
+            ...item,
+            batch: item.batch && item.batch !== "" ? item.batch : null,
+            purchase: item.purchase && item.purchase !== "" ? item.purchase : null,
+        }));
+    }
 
     // Recalculate totals if items were updated
     if (validatedData.items && validatedData.items.length > 0) {

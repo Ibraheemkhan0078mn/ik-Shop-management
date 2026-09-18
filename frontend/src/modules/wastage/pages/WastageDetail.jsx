@@ -16,22 +16,6 @@ const STATUS_STYLE = {
 };
 
 const money = value => `Rs ${Number(value || 0).toLocaleString()}`;
-const rate = (value, type) => `${Number(value || 0)}${type === "percentage" ? "%" : " Rs"}`;
-
-function CostingDetails({ item }) {
-    const quantity = Number(item.quantity) || 0;
-    const unitCosting = Number(item.costPrice || item.baseCostPrice || 0);
-    const totalLoss = Number(item.totalLoss ?? (quantity * unitCosting));
-
-    return (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--ink)]">
-            <p className="font-semibold text-[var(--accent-2)]">Loss Formula</p>
-            <p className="mt-1">
-                Per item costing: <strong>{money(unitCosting)}</strong> × Quantity: <strong>{quantity}</strong> = <strong>{money(totalLoss)}</strong>
-            </p>
-        </div>
-    );
-}
 
 export default function WastageDetail() {
     const navigate = useNavigate();
@@ -160,42 +144,47 @@ export default function WastageDetail() {
                         <thead>
                             <tr className="text-[var(--ink)]" style={{ background: "var(--accent-2)" }}>
                                 <th className="px-3 py-2 text-left font-semibold text-white">#</th>
-                                <th className="px-3 py-2 text-left font-semibold text-white">Item &amp; Description</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Qty</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Base Cost</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Discount</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Tax</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Effective Cost</th>
-                                <th className="px-3 py-2 text-right font-semibold text-white">Loss Amount</th>
+                                <th className="px-3 py-2 text-left font-semibold text-white">Product Name</th>
+                                <th className="px-3 py-2 text-left font-semibold text-white">Batch No</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Quantity</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Per Unit Costing</th>
+                                <th className="px-3 py-2 text-right font-semibold text-white">Calculation</th>
+                                <th className="px-3 py-2 text-left font-semibold text-white">Wastage Reason</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {wastage?.items?.map((item, index) => (
-                                <React.Fragment key={index}>
-                                    <tr className="border-b border-[var(--border)]">
-                                        <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
-                                        <td className="px-3 py-2 text-[var(--ink)]">
-                                            {item.product?.name || item.productName || "—"}
-                                            {item.product?._id && <span className="text-xs text-[var(--muted)] block">ID: {item.product._id}</span>}
-                                            {item.batchNumber && <span className="text-xs text-[var(--muted)] block">Batch: {item.batchNumber}</span>}
-                                        </td>
-                                        <td className="px-3 py-2 text-right text-[var(--ink)]">{item.quantity || 0}</td>
-                                        <td className="px-3 py-2 text-right text-[var(--ink)]">{money(item.baseCostPrice || item.costPrice)}</td>
-                                        <td className="px-3 py-2 text-right text-red-600">{rate(item.discountValue, item.discountType)}<span className="block text-xs">-{money(item.discountAmount)}</span></td>
-                                        <td className="px-3 py-2 text-right text-green-700">{rate(item.taxValue, item.taxType)}<span className="block text-xs">+{money(item.taxAmount)}</span></td>
-                                        <td className="px-3 py-2 text-right font-semibold text-[var(--accent-2)]">{money(item.costPrice)}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-red-600">{money(item.totalLoss ?? ((item.quantity || 0) * (item.costPrice || 0)))}</td>
-                                    </tr>
-                                    <tr>
-                                        <td colSpan="8" className="px-2 sm:px-3 py-3" style={{ background: "var(--surface-muted)" }}>
-                                            <CostingDetails item={item} />
-                                        </td>
-                                    </tr>
-                                </React.Fragment>
-                            ))}
+                            {wastage?.items?.map((item, index) => {
+                                const quantity = Number(item.quantity) || 0;
+                                const costPrice = Number(item.costPrice || 0);
+                                const totalLoss = quantity * costPrice;
+                                return (
+                                <tr key={index} className="border-b border-[var(--border)]">
+                                    <td className="px-3 py-2 text-[var(--ink)]">{index + 1}</td>
+                                    <td className="px-3 py-2 text-[var(--ink)] font-medium">
+                                        {item.product?.name || item.productName || "—"}
+                                    </td>
+                                    <td className="px-3 py-2 text-[var(--muted)] font-mono text-xs">
+                                        {item.batchNumber || "—"}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-[var(--ink)] tabular-nums">
+                                        {quantity}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-[var(--muted)] tabular-nums">
+                                        {money(costPrice)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-[var(--accent-2)] font-semibold tabular-nums">
+                                        {money(totalLoss)}
+                                    </td>
+                                    <td className="px-3 py-2 text-[var(--muted)] capitalize">
+                                        {item.reason?.replace(/_/g, " ") || "—"}
+                                    </td>
+                                </tr>
+                            );
+                            })}
                             <tr className="font-semibold" style={{ background: "var(--surface-muted)" }}>
-                                <td className="px-3 py-2 text-[var(--ink)]" colSpan={4}>Total Loss</td>
+                                <td className="px-3 py-2 text-[var(--ink)]" colSpan={5}>Total Loss</td>
                                 <td className="px-3 py-2 text-right font-bold text-red-600">Rs {(wastage?.totalLossAmount ?? 0).toLocaleString()}</td>
+                                <td></td>
                             </tr>
                         </tbody>
                     </table>

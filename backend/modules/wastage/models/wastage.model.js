@@ -15,7 +15,7 @@ const wastageSchema = new mongoose.Schema({
     // Items
     items: [{
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Products', required: true },
-        batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batches' },
+        batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batches', default: null },
         batchNumber: { type: String },
         reason: { type: String },                                      // Which batch was wasted (important for pharmacy)
         expiryDate: { type: Date },                                            // Batch expiry (for expired reason)
@@ -28,7 +28,7 @@ const wastageSchema = new mongoose.Schema({
         taxValue: { type: Number, default: 0 },
         taxType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
         taxAmount: { type: Number, default: 0 },
-        purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchases' },
+        purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchases', default: null },
         invoiceDiscountValue: { type: Number, default: 0 },
         invoiceDiscountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
         invoiceDiscountAmount: { type: Number, default: 0 },
