@@ -409,20 +409,25 @@ export const generateSalesReportData = async (filters = {}) => {
                     const costing = rawCosting || {};
                     const costPerUnit = Number(costing.effectiveCostPrice ?? costing.costPrice ?? 0);
                     const itemSoldValue = Number(item.soldValue ?? item.itemTotal ?? ((item.unitPrice || 0) * itemQty));
+                    const matchesReturnItem = (returnedItem) => {
+                        const sameProduct = productId
+                            ? String(returnedItem.productId) === String(productId)
+                            : String(returnedItem.productName || '').toLowerCase() === String(item.name || item.productName || '').toLowerCase();
+                        const sameBatch = !returnedItem.batchId || !item.batchId || String(returnedItem.batchId) === String(item.batchId);
+                        return sameProduct && sameBatch;
+                    };
                     const returnedQty = (orderReturns || []).reduce((sum, productReturn) => {
-                        const matched = (productReturn.items || []).filter(returnedItem => {
-                            const sameProduct = String(returnedItem.productId) === String(productId);
-                            const sameBatch = !returnedItem.batchId || !item.batchId || String(returnedItem.batchId) === String(item.batchId);
-                            return sameProduct && sameBatch;
-                        });
+                        const matched = (productReturn.items || []).filter(matchesReturnItem);
                         return sum + matched.reduce((qtySum, returnedItem) => qtySum + Number(returnedItem.quantity || 0), 0);
                     }, 0);
                     const netQty = Math.max(0, itemQty - returnedQty);
                     const soldValue = itemQty > 0 ? (itemSoldValue / itemQty) * netQty : 0;
                     const totalCost = costPerUnit * itemQty;
                     const netCost = costPerUnit * netQty;
-                    const itemProfit = soldValue - netCost;
-                    const itemMargin = soldValue > 0 ? (itemProfit / soldValue) * 100 : 0;
+                    const soldValuePerUnit = itemQty > 0 ? itemSoldValue / itemQty : 0;
+                    const perUnitProfit = soldValuePerUnit - costPerUnit;
+                    const itemProfit = perUnitProfit * netQty;
+                    const itemMargin = soldValuePerUnit > 0 ? (perUnitProfit / soldValuePerUnit) * 100 : 0;
 
                     return {
                         productName: item.name,
@@ -430,13 +435,14 @@ export const generateSalesReportData = async (filters = {}) => {
                         batchId: item.batchId,
                         batchNumber: costing.batchNumber || item.batchNumber || 'N/A',
                         quantity: itemQty,
+                        soldQuantity: netQty,
                         returnedQuantity: returnedQty,
                         netQuantity: netQty,
                         unitPrice: Number(item.unitPrice || 0),
                         originalPrice: Number(item.originalPrice || 0),
                         soldValue: itemSoldValue,
-                        itemTotal: itemSoldValue,
-                        itemSaleTotal: itemSoldValue,
+                        itemTotal: soldValue,
+                        itemSaleTotal: soldValue,
                         costPrice: costPerUnit,
                         effectiveCostPrice: costPerUnit,
                         basePurchasePrice: Number(costing.basePurchasePrice || 0),
@@ -463,7 +469,7 @@ export const generateSalesReportData = async (filters = {}) => {
                 const totalSalePrice = itemsWithDetails.reduce((sum, item) => sum + (item.itemTotal || 0), 0);
                 const returnedQuantity = itemsWithDetails.reduce((sum, item) => sum + (item.returnedQuantity || 0), 0);
                 const totalReturnRefunds = returns.reduce((sum, productReturn) => sum + (productReturn.totalRefundAmount || 0), 0);
-                const returnedCOGS = itemsWithDetails.reduce((sum, item) => sum + (item.netCost > 0 ? (item.itemCostTotal - item.netCost) : 0), 0);
+                const returnedCOGS = itemsWithDetails.reduce((sum, item) => sum + (item.costPrice * item.returnedQuantity), 0);
                 const netCOGS = totalCostPrice - returnedCOGS;
                 const netSales = (order.totalAmount || 0) - totalReturnRefunds;
                 const netProfit = netSales - netCOGS;

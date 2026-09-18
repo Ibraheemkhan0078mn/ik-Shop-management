@@ -73,80 +73,45 @@ function formatMoney(value) {
 }
 
 function ProfitCalculation({ transaction }) {
-    const returnedQuantity = transaction.returnedQuantity || 0;
-    const returnRefunds = transaction.returnRefunds || 0;
-    const returnedCOGS = transaction.returnedCOGS || 0;
-    const netSales = transaction.netSales ?? transaction.amount ?? 0;
-    const netCOGS = transaction.netCOGS ?? transaction.totalCostPrice ?? 0;
-    const netProfit = transaction.netProfit ?? 0;
+    const totalQuantity = transaction.items?.reduce((sum, item) => sum + (Number(item.netQuantity ?? item.soldQuantity ?? item.quantity ?? 0)), 0) || 0;
+    const totalCosting = transaction.items?.reduce((sum, item) => {
+        const soldQty = Number(item.netQuantity ?? item.soldQuantity ?? item.quantity ?? 0);
+        const costPerUnit = Number(item.costPrice ?? item.effectiveCostPrice ?? 0);
+        return sum + (costPerUnit * soldQty);
+    }, 0) || 0;
+    const totalSoldValue = transaction.items?.reduce((sum, item) => {
+        const soldQty = Number(item.netQuantity ?? item.soldQuantity ?? item.quantity ?? 0);
+        const itemSoldValue = Number(item.soldValue ?? item.itemTotal ?? ((item.unitPrice || 0) * soldQty));
+        const soldValuePerUnit = soldQty > 0 ? itemSoldValue / soldQty : 0;
+        return sum + (soldValuePerUnit * soldQty);
+    }, 0) || 0;
+    const totalProfit = totalSoldValue - totalCosting;
+    const profitPercentage = totalSoldValue > 0 ? ((totalProfit / totalSoldValue) * 100).toFixed(2) : 0;
 
     return (
         <div className="rounded border p-3" style={{ background: 'var(--app-bg)', borderColor: 'var(--border)' }}>
             <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Profit Calculation</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                <div>
-                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>1. Cost of sold items</p>
-                    {transaction.items?.map((item, index) => (
-                        <div key={index} className="mt-1">
-                            <p style={{ color: 'var(--muted)' }}>
-                                {item.productName || 'Product'}: {formatMoney(item.costPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemCostTotal)}</strong>
-                            </p>
-                            <p className="ml-2" style={{ color: '#8b5cf6' }}>
-                                Cost breakdown: Base {formatMoney(item.basePurchasePrice)} - Discount {formatMoney(item.purchaseDiscount)} + Tax {formatMoney(item.purchaseTax)} = {formatMoney(item.effectiveCostPrice)}/unit
-                            </p>
-                        </div>
-                    ))}
-                    <p className="mt-1 pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
-                        <strong style={{ color: 'var(--ink)' }}>Total COGS: {formatMoney(transaction.totalCostPrice)}</strong>
-                    </p>
+            <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>Total quantity after return</p>
+                    <p className="font-bold tabular-nums" style={{ color: 'var(--accent-2)' }}>{totalQuantity} units</p>
                 </div>
-                <div>
-                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>2. Gross sales</p>
-                    {transaction.items?.map((item, index) => (
-                        <p key={index} className="mt-1" style={{ color: 'var(--muted)' }}>
-                            {item.productName || 'Product'}: {formatMoney(item.unitPrice)} x {item.quantity || 0} = <strong style={{ color: 'var(--ink)' }}>{formatMoney(item.itemTotal || item.itemSaleTotal)}</strong>
+                <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>Total costing according to net quantity</p>
+                    <p className="font-bold tabular-nums" style={{ color: 'var(--muted)' }}>{formatMoney(totalCosting)}</p>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>Total sold value according to quantity</p>
+                    <p className="font-bold tabular-nums" style={{ color: 'var(--accent-2)' }}>{formatMoney(totalSoldValue)}</p>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>Total costing and sold profit</p>
+                    <div className="text-right">
+                        <p className="font-bold tabular-nums" style={{ color: totalProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                            {formatMoney(totalProfit)} ({profitPercentage}%)
                         </p>
-                    ))}
-                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
-                        Sale price after item discounts and tax = <strong style={{ color: 'var(--ink)' }}>{formatMoney(transaction.grossSales)}</strong>
-                    </p>
-                    {(transaction.discountAmount || 0) > 0 && (
-                        <p className="mt-1" style={{ color: '#f59e0b' }}>Order discount included: {formatMoney(transaction.discountAmount)}</p>
-                    )}
+                    </div>
                 </div>
-                <div>
-                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>3. Remove returned sale</p>
-                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
-                        {formatMoney(transaction.grossSales)} - {formatMoney(returnRefunds)} refund = <strong style={{ color: 'var(--ink)' }}>{formatMoney(netSales)} net sales</strong>
-                    </p>
-                    <p className="mt-1" style={{ color: '#dc2626' }}>Returned quantity: {returnedQuantity}</p>
-                    {transaction.returns && transaction.returns.length > 0 && (
-                        <div className="mt-1">
-                            {transaction.returns.map((ret, idx) => (
-                                <div key={idx} className="ml-2" style={{ color: '#8b5cf6' }}>
-                                    <p>Return #{ret.returnNumber}: {formatMoney(ret.totalRefundAmount)}</p>
-                                    {ret.items && ret.items.map((retItem, i) => (
-                                        <p key={i} className="ml-2">
-                                            {retItem.productName}: {retItem.quantity} units = {formatMoney(retItem.refundAmount)}
-                                        </p>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div>
-                    <p className="font-semibold" style={{ color: 'var(--ink)' }}>4. Remove returned stock cost</p>
-                    <p className="mt-1" style={{ color: 'var(--muted)' }}>
-                        {formatMoney(transaction.totalCostPrice)} - {formatMoney(returnedCOGS)} returned cost = <strong style={{ color: 'var(--ink)' }}>{formatMoney(netCOGS)} net COGS</strong>
-                    </p>
-                </div>
-            </div>
-            <div className="mt-3 pt-3 border-t flex flex-wrap items-center justify-between gap-2" style={{ borderColor: 'var(--border)' }}>
-                <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Net sales - Net COGS = Net profit</span>
-                <span className="text-base font-bold tabular-nums" style={{ color: netProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                    {formatMoney(netSales)} - {formatMoney(netCOGS)} = {formatMoney(netProfit)} ({transaction.netMargin ?? 0}%)
-                </span>
             </div>
         </div>
     );
@@ -216,104 +181,120 @@ function TransactionTable({ transactions, type, labels }) {
                                                     <table className="w-full text-sm">
                                                         <thead style={{ background: 'var(--app-bg)' }}>
                                                             <tr>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Product</th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Qty</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Purchase Cost</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale/Unit</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale Discount</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sale Tax</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Item Total</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Profit</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>#</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Product Name</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch No</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Unit Price</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Item Discount</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Item Tax</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Overall Discount Share</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Sold Value Per Unit</th>
+                                                                <th className="px-3 py-2 text-center text-xs font-semibold" style={{ color: 'var(--muted)' }}>Quantity</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost Per Unit</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Profit Per Unit</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Total Profit</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                                                            {transaction.items.map((item, itemIdx) => (
-                                                                <tr key={itemIdx}>
-                                                                    <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
-                                                                        <div>{item.productName}</div>
-                                                                        {item.portionType !== 'full' && (
-                                                                            <div className="text-xs capitalize" style={{ color: 'var(--muted)' }}>({item.portionType})</div>
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>{item.batchNumber || 'N/A'}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>
-                                                                        <div className="space-y-0.5">
-                                                                            <div>Rs {(item.effectiveCostPrice ?? item.costPrice ?? 0).toLocaleString()}</div>
-                                                                            <div className="text-xs" style={{ color: 'var(--muted)' }}>
-                                                                                Original: {item.basePurchasePrice?.toLocaleString() || 0}
-                                                                                {item.costing?.discountAmount > 0 && (
-                                                                                    <div style={{ color: '#f59e0b' }}>
-                                                                                        -Disc: {item.costing.discountType === 'percentage' 
-                                                                                            ? `${item.costing.discountValue}% (Rs ${item.costing.discountAmount.toLocaleString()})`
-                                                                                            : `Rs ${item.costing.discountAmount.toLocaleString()}`
-                                                                                        }
-                                                                                    </div>
-                                                                                )}
-                                                                                {item.costing?.taxAmount > 0 && (
-                                                                                    <div style={{ color: '#8b5cf6' }}>
-                                                                                        +Tax: {item.costing.taxType === 'percentage'
-                                                                                            ? `${item.costing.taxValue}% (Rs ${item.costing.taxAmount.toLocaleString()})`
-                                                                                            : `Rs ${item.costing.taxAmount.toLocaleString()}`
-                                                                                        }
-                                                                                    </div>
-                                                                                )}
+                                                            {transaction.items.map((item, itemIdx) => {
+                                                                const itemQty = Number(item.quantity || 0);
+                                                                const soldQty = Number(item.netQuantity ?? item.soldQuantity ?? item.quantity ?? 0);
+                                                                const returnedQty = Number(item.returnedQuantity || 0);
+                                                                const itemSoldValue = Number(item.soldValue ?? item.itemTotal ?? ((item.unitPrice || 0) * itemQty));
+                                                                const soldValuePerUnit = itemQty > 0 ? itemSoldValue / itemQty : 0;
+                                                                const costPerUnit = Number(item.costPrice ?? item.effectiveCostPrice ?? 0);
+                                                                const profitPerUnit = soldValuePerUnit - costPerUnit;
+                                                                const totalProfit = profitPerUnit * soldQty;
+                                                                const itemDiscount = item.discountAmount || 0;
+                                                                const itemTax = item.taxAmount || 0;
+                                                                const finalTotal = item.itemTotal || ((item.unitPrice || 0) * itemQty - itemDiscount + itemTax);
+                                                                
+                                                                // Calculate overall discount share for this item
+                                                                const overallDiscountAmount = transaction.discountAmount || 0;
+                                                                const totalItems = transaction.items?.length || 1;
+                                                                const overallDiscountShare = overallDiscountAmount / totalItems;
+
+                                                                return (
+                                                                    <tr key={itemIdx}>
+                                                                        <td className="px-3 py-2 text-[var(--ink)] font-medium">{itemIdx + 1}</td>
+                                                                        <td className="px-3 py-2">
+                                                                            <div>
+                                                                                <p className="font-semibold text-[var(--ink)]">{item.productName || "—"}</p>
+                                                                                <div className="flex gap-3 mt-1 text-xs text-[var(--muted)]">
+                                                                                    {item.portionType && item.portionType !== "full" && (
+                                                                                        <span className="capitalize">Portion: {item.portionType}</span>
+                                                                                    )}
+                                                                                    {item.customInput && (
+                                                                                        <span className="text-orange-600 font-semibold">Custom Price</span>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>
-                                                                        Rs {item.unitPrice?.toLocaleString() || 0}
-                                                                        <div className="text-xs mt-0.5" style={{ color: 'var(--accent-2)' }}>
-                                                                            (Total: {item.itemSaleTotal?.toLocaleString()})
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums text-xs" style={{ color: '#f59e0b' }}>
-                                                                        {item.discountAmount > 0 ? (
-                                                                            <>
-                                                                                <div>Rs {item.discountAmount.toLocaleString()}</div>
-                                                                                <div className="mt-0.5">({item.discountType === "fixed" ? `Rs ${item.discountPercent}` : `${item.discountPercent}%`})</div>
-                                                                            </>
-                                                                        ) : '-'}
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums text-xs" style={{ color: '#8b5cf6' }}>
-                                                                        {item.taxAmount > 0 ? (
-                                                                            <>
-                                                                                <div>Rs {item.taxAmount.toLocaleString()}</div>
-                                                                                <div className="mt-0.5">({item.taxType === "fixed" ? `Rs ${item.taxPercent}` : `${item.taxPercent}%`})</div>
-                                                                            </>
-                                                                        ) : '-'}
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>
-                                                                        Rs {item.itemTotal?.toLocaleString() || 0}
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: item.itemProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                                                                        Rs {item.itemProfit?.toLocaleString() || 0}
-                                                                        <div className="text-xs mt-0.5">({item.itemMargin}%)</div>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-[var(--muted)] font-mono text-xs">
+                                                                            {item.batchNumber || "—"}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right text-[var(--ink)]">
+                                                                            Rs {(item.unitPrice || 0).toLocaleString()}
+                                                                            {item.originalPrice && item.originalPrice !== item.unitPrice && (
+                                                                                <p className="text-xs text-[var(--muted)] line-through">Rs {item.originalPrice.toLocaleString()}</p>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right">
+                                                                            {item.discountPercent > 0 && (
+                                                                                <div className="text-red-600">
+                                                                                    <p className="font-semibold">
+                                                                                        {item.discountType === "fixed" ? `Rs ${item.discountPercent}` : `${item.discountPercent}%`}
+                                                                                    </p>
+                                                                                    <p className="text-xs">-Rs {itemDiscount.toLocaleString()}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {!item.discountPercent && <span className="text-[var(--muted)]">—</span>}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right">
+                                                                            {item.taxPercent > 0 && (
+                                                                                <div className="text-green-700">
+                                                                                    <p className="font-semibold">
+                                                                                        {item.taxType === "fixed" ? `Rs ${item.taxPercent}` : `${item.taxPercent}%`}
+                                                                                    </p>
+                                                                                    <p className="text-xs">+Rs {itemTax.toLocaleString()}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {!item.taxPercent && <span className="text-[var(--muted)]">—</span>}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right">
+                                                                            {overallDiscountAmount > 0 ? (
+                                                                                <div className="text-orange-600">
+                                                                                    <p className="font-semibold">-Rs {overallDiscountShare.toLocaleString()}</p>
+                                                                                    {transaction.orderDiscountValue && transaction.orderDiscountType === "percentage" && (
+                                                                                        <p className="text-xs text-[var(--muted)]">{transaction.orderDiscountValue}% of total</p>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="text-[var(--muted)]">—</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right text-[var(--accent-2)]">
+                                                                            Rs {soldValuePerUnit.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-center font-semibold text-[var(--ink)]">
+                                                                            {soldQty || 0}
+                                                                            {returnedQty > 0 && <div className="text-xs" style={{ color: '#dc2626' }}>Returned {returnedQty}</div>}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right text-[var(--muted)]">
+                                                                            Rs {costPerUnit.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right font-semibold" style={{ color: profitPerUnit >= 0 ? '#10b981' : '#dc2626' }}>
+                                                                            Rs {profitPerUnit.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="px-3 py-2 text-right font-bold" style={{ color: totalProfit >= 0 ? '#10b981' : '#dc2626' }}>
+                                                                            Rs {totalProfit.toLocaleString()}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
-                                                        <tfoot style={{ background: 'var(--surface-muted)', borderTop: '2px solid var(--border)' }}>
-                                                            <tr className="font-semibold">
-                                                                <td colSpan="3" className="px-3 py-2 text-right" style={{ color: 'var(--ink)' }}>Order Totals:</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {transaction.totalCostPrice?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {transaction.totalSalePrice?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#f59e0b' }}>Rs {transaction.totalItemDiscounts?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#8b5cf6' }}>Rs {transaction.totalItemTaxes?.toLocaleString() || 0}</td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--accent-2)' }}>
-                                                                    Rs {transaction.netSales?.toLocaleString() || transaction.amount?.toLocaleString() || 0}
-                                                                    <div className="text-xs mt-0.5" style={{ color: '#dc2626' }}>Returned: {transaction.returnedQuantity || 0}</div>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right tabular-nums" style={{ color: transaction.netProfit >= 0 ? '#10b981' : '#dc2626' }}>
-                                                                    Rs {transaction.netProfit?.toLocaleString() || 0}
-                                                                    <div className="text-xs mt-0.5">Net ({transaction.netMargin ?? transaction.orderMargin ?? 0}%)</div>
-                                                                </td>
-                                                            </tr>
-                                                        </tfoot>
                                                     </table>
                                                 </div>
-                                                <ProfitCalculation transaction={transaction} />
                                                 {transaction.returns?.length > 0 && (
                                                     <div className="mt-3 rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                                                         <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide" style={{ background: 'var(--app-bg)', color: 'var(--muted)' }}>
@@ -327,7 +308,7 @@ function TransactionTable({ transactions, type, labels }) {
                                                                         <span className="font-semibold" style={{ color: '#dc2626' }}>Rs {returnDocument.totalRefundAmount?.toLocaleString() || 0}</span>
                                                                     </div>
                                                                     <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                                                                        {formatDate(returnDocument.returnDate)} · {returnDocument.returnStatus} · {returnDocument.refundStatus}
+                                                                        {returnDocument.returnDate ? new Date(returnDocument.returnDate).toLocaleDateString() : '—'} · {returnDocument.returnStatus} · {returnDocument.refundStatus}
                                                                     </div>
                                                                     {returnDocument.items?.length > 0 && (
                                                                         <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
@@ -339,6 +320,7 @@ function TransactionTable({ transactions, type, labels }) {
                                                         </div>
                                                     </div>
                                                 )}
+                                                <ProfitCalculation transaction={transaction} />
                                                 {transaction.note && (
                                                     <div className="mt-2 p-2 rounded" style={{ background: 'var(--app-bg)' }}>
                                                         <p className="text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>Note:</p>
