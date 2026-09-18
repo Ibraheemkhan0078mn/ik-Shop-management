@@ -66,6 +66,9 @@ export const reportsLabels = {
     isRejected: "Is Rejected",
     topSupplier: "Top Supplier",
     purchaseDetails: "Purchase Details",
+    grandPurchaseTotal: "Grand Purchase Total",
+    grandReturnTotal: "Grand Return Total",
+    net: "Net",
     
     // Inventory Report
     inventoryReport: "Inventory Report",
@@ -358,6 +361,9 @@ export const reportsLabels = {
     isRejected: "مسترد ہے",
     topSupplier: "بہترین سپلائر",
     purchaseDetails: "خریداری کی تفصیلات",
+    grandPurchaseTotal: "کل خریداری کا مجموعہ",
+    grandReturnTotal: "کل واپسی کا مجموعہ",
+    net: "نیٹ",
     
     // Inventory Report
     inventoryReport: "انوینٹری رپورٹ",
@@ -650,6 +656,9 @@ export const reportsLabels = {
     isRejected: "مسترد ہے / Is Rejected",
     topSupplier: "بہترین سپلائر / Top Supplier",
     purchaseDetails: "خریداری کی تفصیلات / Purchase Details",
+    grandPurchaseTotal: "کل خریداری کا مجموعہ / Grand Purchase Total",
+    grandReturnTotal: "کل واپسی کا مجموعہ / Grand Return Total",
+    net: "نیٹ / Net",
     
     // Inventory Report
     inventoryReport: "انوینٹری رپورٹ / Inventory Report",

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { RefreshCw, ChevronDown, DollarSign, Package, Calendar, TrendingUp, AlertCircle } from "lucide-react";
+import { RefreshCw, DollarSign, Package, Calendar, TrendingUp, AlertCircle } from "lucide-react";
 import { useGetPurchaseReportQuery } from "../services/reports.service.js";
 import { showError } from "../../../shared/utilities/toastHelpers.js";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
@@ -8,10 +8,15 @@ import { useSettings } from "../../settings/hooks/useSettings.js";
 import { getReportsLabels } from "../labels/reportsLabels.js";
 
 // ---------- Transaction table renderer ----------
-function renderPurchaseTransactionRow(transaction, formatDate, onExpandPurchase) {
+function renderPurchaseTransactionRow(transaction, formatDate, onExpandPurchase, labels) {
+    const totalPurchaseAmount = transaction.totalAmount || 0;
+    const totalReturnAmount = transaction.purchaseReturns ? transaction.purchaseReturns.reduce((sum, ret) => sum + (ret.totalRefundAmount || 0), 0) : 0;
+    const netAmount = totalPurchaseAmount - totalReturnAmount;
+
     return (
         <>
             <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>
+                {/* Commented out expand button - client will expand purchase details manually
                 <button
                     onClick={() => onExpandPurchase && onExpandPurchase(transaction)}
                     className="text-left hover:underline flex items-center gap-1"
@@ -19,20 +24,22 @@ function renderPurchaseTransactionRow(transaction, formatDate, onExpandPurchase)
                     {transaction.invoiceNumber}
                     <ChevronDown size={14} style={{ color: 'var(--muted)' }} />
                 </button>
+                */}
+                {transaction.invoiceNumber}
             </td>
             <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--ink)' }}>{transaction.supplier?.name || 'Unknown'}</td>
             <td className="px-4 py-2.5 text-sm capitalize" style={{ color: 'var(--muted)' }}>{transaction.status || 'pending'}</td>
-            <td className="px-4 py-2.5 text-sm capitalize" style={{ color: 'var(--muted)' }}>{transaction.paymentStatus || 'unpaid'}</td>
-            <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {transaction.totalAmount?.toLocaleString() || 0}</td>
-            <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: transaction.paidAmount > 0 ? '#10b981' : '#dc2626' }}>Rs {transaction.paidAmount?.toLocaleString() || 0}</td>
-            <td className="px-4 py-2.5 text-sm text-right tabular-nums font-semibold" style={{ color: '#dc2626' }}>Rs {((transaction.totalAmount || 0) - (transaction.paidAmount || 0)).toLocaleString() || 0}</td>
+            <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: 'var(--ink)' }}>Rs {totalPurchaseAmount.toLocaleString()}</td>
+            <td className="px-4 py-2.5 text-sm text-right tabular-nums" style={{ color: '#f59e0b' }}>Rs {totalReturnAmount.toLocaleString()}</td>
+            <td className="px-4 py-2.5 text-sm text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>Rs {netAmount.toLocaleString()}</td>
             <td className="px-4 py-2.5 text-sm text-right" style={{ color: 'var(--muted)' }}>{formatDate(transaction.date || transaction.createdAt)}</td>
         </>
     );
 }
 
-function PurchaseTransactionTable({ purchases = [] }) {
-    const [expandedPurchaseId, setExpandedPurchaseId] = useState(null);
+function PurchaseTransactionTable({ purchases = [], labels = {} }) {
+    // Commented out expand functionality - client will expand purchase details manually
+    // const [expandedPurchaseId, setExpandedPurchaseId] = useState(null);
 
     if (!purchases || purchases.length === 0) {
         return <p className="text-sm py-6 text-center" style={{ color: 'var(--muted)' }}>No purchase records in this period</p>;
@@ -50,9 +57,10 @@ function PurchaseTransactionTable({ purchases = [] }) {
         }
     };
 
-    const handleExpandPurchase = (purchase) => {
-        setExpandedPurchaseId(expandedPurchaseId === purchase._id ? null : purchase._id);
-    };
+    // Commented out expand handler - client will expand purchase details manually
+    // const handleExpandPurchase = (purchase) => {
+    //     setExpandedPurchaseId(expandedPurchaseId === purchase._id ? null : purchase._id);
+    // };
 
     const displayPurchases = purchases.slice(0, 50);
 
@@ -62,14 +70,13 @@ function PurchaseTransactionTable({ purchases = [] }) {
                 <table className="w-full" role="table" aria-label="purchase transactions">
                     <thead style={{ background: 'var(--surface-muted)' }}>
                         <tr>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Invoice</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Supplier</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Status</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Payment</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Total Amount</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Paid</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Due</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Date</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.invoiceNo}</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.supplier}</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.deliveryStatus}</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.grandPurchaseTotal}</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.grandReturnTotal}</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.net}</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{labels.date}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -78,11 +85,12 @@ function PurchaseTransactionTable({ purchases = [] }) {
                                 <tr className="transition-colors" style={{ background: 'transparent' }}
                                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                                    {renderPurchaseTransactionRow(purchase, formatDate, handleExpandPurchase)}
+                                    {renderPurchaseTransactionRow(purchase, formatDate, null, labels)}
                                 </tr>
+                                {/* Commented out expanded purchase details - client will expand purchase details manually
                                 {expandedPurchaseId === purchase._id && purchase.items && (
                                     <tr style={{ background: 'var(--surface-muted)' }}>
-                                        <td colSpan="8" className="px-4 py-4">
+                                        <td colSpan="7" className="px-4 py-4">
                                             <div className="space-y-3">
                                                 <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: 'var(--border)' }}>
                                                     <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Purchase Details</p>
@@ -97,18 +105,44 @@ function PurchaseTransactionTable({ purchases = [] }) {
                                                     <table className="w-full text-sm">
                                                         <thead style={{ background: 'var(--app-bg)' }}>
                                                             <tr>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Product</th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Batch</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>#</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Item</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost Price</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Disc</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Tax</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Final Unit</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Qty</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Returned</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Cost/Unit</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Discount</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Tax</th>
                                                                 <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Total</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                                                             {purchase.items.map((item, itemIdx) => {
+                                                                const batch = item.batch || {};
+                                                                const quantity = Number(item.quantity || 0);
+                                                                const costPrice = Number(batch.costPrice ?? item.costPrice ?? item.price ?? item.perItemPrice ?? 0);
+                                                                const discountType = batch.discountEntryType ?? item.discountEntryType ?? item.discountType ?? "percentage";
+                                                                const discountValue = Number(batch.discountEntryValue ?? batch.discountInPercentage ?? item.discountEntryValue ?? item.discount ?? 0);
+                                                                const discountScope = batch.discountScope ?? item.discountScope ?? "entire";
+                                                                const taxType = batch.taxEntryType ?? item.taxEntryType ?? item.taxType ?? "percentage";
+                                                                const taxValue = Number(batch.taxEntryValue ?? batch.taxInPercentage ?? item.taxEntryValue ?? item.tax ?? 0);
+                                                                const taxScope = batch.taxScope ?? item.taxScope ?? "entire";
+
+                                                                const discountAmountPerUnit = discountType === "percentage"
+                                                                    ? costPrice * (discountValue / 100)
+                                                                    : (discountScope === "perUnit" ? discountValue : discountValue / Math.max(1, quantity || 1));
+                                                                const discountedUnitPrice = Math.max(0, costPrice - discountAmountPerUnit);
+                                                                const taxAmountPerUnit = taxType === "percentage"
+                                                                    ? discountedUnitPrice * (taxValue / 100)
+                                                                    : (taxScope === "perUnit" ? taxValue : taxValue / Math.max(1, quantity || 1));
+                                                                const unitCosting = discountedUnitPrice + taxAmountPerUnit;
+                                                                const subtotal = unitCosting * quantity;
+                                                                const discountPercentEquivalent = discountType === "fixed" && costPrice > 0 ? (discountAmountPerUnit / costPrice) * 100 : discountValue;
+                                                                const taxPercentEquivalent = taxType === "fixed" && discountedUnitPrice > 0 ? (taxAmountPerUnit / discountedUnitPrice) * 100 : taxValue;
+
+                                                                const displayDiscountText = discountType === "fixed" ? `${discountPercentEquivalent.toFixed(2)}%` : `${discountValue.toFixed(2)}%`;
+                                                                const displayTaxText = taxType === "fixed" ? `${taxPercentEquivalent.toFixed(2)}%` : `${taxValue.toFixed(2)}%`;
+
                                                                 const batchId = item.batch?._id || item.batch;
                                                                 const returnedQty = purchase.purchaseReturns?.reduce((sum, ret) => {
                                                                     const retItem = ret.items?.find(i =>
@@ -120,16 +154,17 @@ function PurchaseTransactionTable({ purchases = [] }) {
 
                                                                 return (
                                                                 <tr key={itemIdx}>
+                                                                    <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>{itemIdx + 1}</td>
                                                                     <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
                                                                         <div>{item.product?.name || item.productName || 'N/A'}</div>
                                                                     </td>
-                                                                    <td className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>{item.batch?.batchNumber || item.batchNumber || 'N/A'}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{item.quantity}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{costPrice.toLocaleString()}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#dc2626' }}>{displayDiscountText}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#10b981' }}>{displayTaxText}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{unitCosting.toLocaleString()}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--ink)' }}>{quantity}</td>
                                                                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: returnedQty > 0 ? '#dc2626' : 'var(--muted)' }}>{returnedQty}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--muted)' }}>Rs {item.costPrice?.toLocaleString() || 0}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#10b981' }}>{item.discountType === 'fixed' ? `Rs ${(item.discountAmount || item.discount || 0).toLocaleString()}` : `${(item.discount || 0).toLocaleString()}%`}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: '#f59e0b' }}>{item.taxType === 'fixed' ? `Rs ${(item.taxAmount || item.tax || 0).toLocaleString()}` : `${(item.tax || 0).toLocaleString()}%`}</td>
-                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>Rs {((item.costPrice || 0) * (item.quantity || 0) - (item.discount || 0) + (item.tax || 0)).toLocaleString() || 0}</td>
+                                                                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--accent-2)' }}>{subtotal.toLocaleString()}</td>
                                                                 </tr>
                                                                 );
                                                             })}
@@ -137,30 +172,30 @@ function PurchaseTransactionTable({ purchases = [] }) {
                                                     </table>
                                                     {purchase.purchaseReturns && purchase.purchaseReturns.length > 0 && (
                                                         <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                                                            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Purchase Returns ({purchase.purchaseReturns.length})</p>
-                                                            <div className="space-y-2">
-                                                                {purchase.purchaseReturns.map((ret, retIdx) => (
-                                                                    <div key={retIdx} className="text-xs p-2 rounded" style={{ background: 'var(--app-bg)', borderColor: 'var(--border)', border: '1px solid' }}>
-                                                                        <div className="flex items-center justify-between mb-1">
-                                                                            <span style={{ color: 'var(--ink)' }}><strong>{ret.purchaseReturnNumber}</strong></span>
-                                                                            <span style={{ color: 'var(--muted)' }}>{new Date(ret.createdAt).toLocaleDateString()}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between gap-4">
-                                                                            <span style={{ color: 'var(--muted)' }}>Items: <strong style={{ color: 'var(--ink)' }}>{ret.items?.length || 0}</strong></span>
-                                                                            <span style={{ color: 'var(--muted)' }}>Refund: <strong style={{ color: 'var(--accent-2)' }}>Rs {ret.totalRefundAmount?.toLocaleString() || 0}</strong></span>
-                                                                            <span style={{ color: 'var(--muted)' }}>Status: <strong style={{ color: 'var(--ink)' }}>{ret.status}</strong></span>
-                                                                        </div>
-                                                                        {ret.items && ret.items.length > 0 && (
-                                                                            <div className="mt-2 pl-2 border-l-2" style={{ borderColor: 'var(--accent-2)' }}>
-                                                                                {ret.items.map((retItem, retItemIdx) => (
-                                                                                    <div key={retItemIdx} className="text-xs py-1" style={{ color: 'var(--muted)' }}>
-                                                                                        {retItem.product?.name || retItem.productName || 'Unknown'} - Qty: {retItem.quantity}
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
+                                                            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Return Details</p>
+                                                            <div className="rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                                                                <table className="w-full text-xs">
+                                                                    <thead style={{ background: 'var(--app-bg)' }}>
+                                                                        <tr>
+                                                                            <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Return #</th>
+                                                                            <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--muted)' }}>Date</th>
+                                                                            <th className="px-2 py-1.5 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Items</th>
+                                                                            <th className="px-2 py-1.5 text-right text-xs font-semibold" style={{ color: 'var(--muted)' }}>Refund</th>
+                                                                            <th className="px-2 py-1.5 text-center text-xs font-semibold" style={{ color: 'var(--muted)' }}>Status</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                                                                        {purchase.purchaseReturns.map((ret, retIdx) => (
+                                                                            <tr key={retIdx}>
+                                                                                <td className="px-2 py-1.5" style={{ color: 'var(--ink)' }}>{ret.purchaseReturnNumber || ret.returnNumber || '—'}</td>
+                                                                                <td className="px-2 py-1.5" style={{ color: 'var(--muted)' }}>{new Date(ret.createdAt).toLocaleDateString()}</td>
+                                                                                <td className="px-2 py-1.5 text-right" style={{ color: 'var(--ink)' }}>{ret.items?.length || 0}</td>
+                                                                                <td className="px-2 py-1.5 text-right" style={{ color: 'var(--accent-2)' }}>Rs {ret.totalRefundAmount?.toLocaleString() || 0}</td>
+                                                                                <td className="px-2 py-1.5 text-center" style={{ color: 'var(--muted)' }}>{ret.status || '—'}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
                                                             </div>
                                                         </div>
                                                     )}
@@ -169,6 +204,7 @@ function PurchaseTransactionTable({ purchases = [] }) {
                                         </td>
                                     </tr>
                                 )}
+                                */}
                             </React.Fragment>
                         ))}
                     </tbody>
@@ -456,7 +492,7 @@ export default function PurchaseKPIReport() {
                     {/* Purchase Transactions */}
                     <div>
                         <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--ink)' }}>Purchase Transactions</h2>
-                        <PurchaseTransactionTable purchases={purchases} />
+                        <PurchaseTransactionTable purchases={purchases} labels={labels} />
                     </div>
                 </div>
             )}
