@@ -311,17 +311,14 @@ export default function OrderDetailsPage() {
                                         );
                                     })}
                                 </tbody>
+                                <tfoot>
+                                    <tr className="border-t-2 border-(--border) font-bold" style={{ background: "var(--accent-2)" }}>
+                                        <td colSpan="8" className="px-3 py-3 text-right text-white">Grand Total</td>
+                                        <td className="px-3 py-3 text-center text-white">{totalQty}</td>
+                                        <td className="px-3 py-3 text-right text-white">Rs {(order?.totalAmount ?? 0).toLocaleString()}</td>
+                                    </tr>
+                                </tfoot>
                             </table>
-                        </div>
-
-                        {/* Grand Total */}
-                        <div className="mb-6">
-                            <div className="border border-(--border) rounded-lg overflow-hidden">
-                                <div className="flex items-center justify-between px-6 py-4" style={{ background: "var(--accent-2)" }}>
-                                    <span className="text-sm font-bold text-white uppercase tracking-wide">Grand Total</span>
-                                    <span className="text-2xl font-bold text-white">Rs {(order?.totalAmount ?? 0).toLocaleString()}</span>
-                                </div>
-                            </div>
                         </div>
 
                         {/* Order Notes (if any) */}

@@ -167,28 +167,6 @@ export default function OrderReturnDetail() {
                             </p>
                         )}
 
-                        {/* Payment KPI row */}
-                        <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refund</p>
-                                <p className="text-2xl font-bold text-[var(--accent-2)]">Rs {totalRefundAmount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Total Refunded</p>
-                                <p className="text-2xl font-bold text-blue-600">Rs {refundedAmount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Remaining</p>
-                                <p className="text-2xl font-bold text-orange-600">Rs {remainingAmount.toLocaleString()}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] mb-1">Refund Status</p>
-                                <p className="text-2xl font-bold text-[var(--ink)] capitalize">{refundStatus}</p>
-                            </div>
-                        </div>
-
-                        <div className="h-px bg-[var(--border)] my-7" />
-
                         {/* Items Table - Invoice style */}
                         <table className="w-full border-collapse mb-4 text-sm">
                             <thead>
@@ -315,66 +293,16 @@ export default function OrderReturnDetail() {
                                     );
                                 })}
                             </tbody>
+                            <tfoot>
+                                <tr className="border-t-2 border-[var(--border)] font-bold" style={{ background: "var(--accent-2)" }}>
+                                    <td colSpan="2" className="px-3 py-3 text-right text-white">Grand Total</td>
+                                    <td className="px-3 py-3 text-right text-white">{orderReturn?.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || 0}</td>
+                                    <td colSpan="2" className="px-3 py-3" />
+                                    <td className="px-3 py-3 text-right text-white">Rs {totalRefundAmount.toLocaleString()}</td>
+                                    <td className="px-3 py-3" />
+                                </tr>
+                            </tfoot>
                         </table>
-
-                        {/* Summary Section */}
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
-                                Summary
-                            </h3>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Total Refund Amount</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Items Count:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>{orderReturn?.items?.length || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>Total Refund:</span>
-                                        <span className="font-mono" style={{ color: "var(--accent-2)" }}>Rs {totalRefundAmount.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>Refund Status</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Refunded Amount:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {refundedAmount.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span style={{ color: "var(--ink)" }}>Remaining Amount:</span>
-                                        <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {remainingAmount.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-                                        <span style={{ color: "var(--accent-2)" }}>Status:</span>
-                                        <span className="font-mono capitalize" style={{ color: "var(--accent-2)" }}>{refundStatus}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Final Total Card */}
-                        <div className="mt-4 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                            <p className="text-xs font-semibold mb-2" style={{ color: "var(--accent-2)" }}>Total</p>
-                            <div className="text-xs space-y-1">
-                                <div className="flex justify-between">
-                                    <span style={{ color: "var(--ink)" }}>Total Refund Amount:</span>
-                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {totalRefundAmount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: "var(--ink)" }}>Refunded Amount:</span>
-                                    <span className="font-mono" style={{ color: "var(--ink)" }}>Rs {refundedAmount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-lg pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                    <span style={{ color: "var(--accent-2)" }}>Remaining to Refund:</span>
-                                    <span className="font-mono text-xl" style={{ color: "var(--accent-2)" }}>Rs {remainingAmount.toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
 
                         <div className="h-px bg-[var(--border)] my-10" />
 

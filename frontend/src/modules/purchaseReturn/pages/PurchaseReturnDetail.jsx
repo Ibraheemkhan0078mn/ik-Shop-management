@@ -38,6 +38,7 @@ export default function PurchaseReturnDetail() {
     const refundedAmount = purchaseReturn?.refundedAmount || 0;
     const remainingAmount = totalRefundAmount - refundedAmount;
     const refundStatus = purchaseReturn?.refundStatus || 'pending';
+    const totalQuantity = (purchaseReturn?.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -252,18 +253,15 @@ export default function PurchaseReturnDetail() {
                                     );
                                 })}
                             </tbody>
+                            <tfoot>
+                                <tr className="border-t-2 border-[var(--border)] font-bold" style={{ background: "var(--accent-2)" }}>
+                                    <td colSpan="2" className="px-3 py-3 text-right text-white">Grand Total</td>
+                                    <td colSpan="3" className="px-3 py-3" />
+                                    <td className="px-3 py-3 text-right text-white">{totalQuantity}</td>
+                                    <td className="px-3 py-3 text-center text-white">Rs {Number(totalRefundAmount || 0).toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
                         </table>
-
-                        <div className="mb-6 p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Grand total refunds</span>
-                                <span className="text-xl font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {Number(totalRefundAmount || 0).toFixed(2)}</span>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between gap-3">
-                                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Total cuts</span>
-                                <span className="text-xl font-bold font-mono" style={{ color: "#dc2626" }}>Rs {Number((purchaseReturn?.items || []).reduce((sum, it) => sum + (Number(it.cut) || 0), 0)).toFixed(2)}</span>
-                            </div>
-                        </div>
 
                         <div className="h-px bg-[var(--border)] my-10" />
 

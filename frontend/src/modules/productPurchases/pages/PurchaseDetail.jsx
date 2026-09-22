@@ -59,6 +59,7 @@ export default function PurchaseDetail() {
     const paymentStatusText = paymentStatus.paymentStatus || 'pending';
     const totalCash = paymentStatus.totalCash || 0;
     const totalCredit = paymentStatus.totalCredit || 0;
+    const totalQuantity = (purchase?.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     const getItemCalculation = (item) => {
         const batch = item.batch || {};
@@ -316,19 +317,15 @@ export default function PurchaseDetail() {
                                     );
                                 })}
                             </tbody>
+                            <tfoot>
+                                <tr className="border-t-2 border-[var(--border)] font-bold" style={{ background: "var(--accent-2)" }}>
+                                    <td colSpan="6" className="px-3 py-3 text-right text-white">Grand Total</td>
+                                    <td className="px-3 py-3 text-right text-white">{totalQuantity}</td>
+                                    <td className="px-3 py-3 text-right text-white">Rs {(purchase?.totalAmount || 0).toLocaleString()}</td>
+                                    <td className="px-3 py-3" />
+                                </tr>
+                            </tfoot>
                         </table>
-
-                        <div className="mt-6 mb-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--ink)]">Summary</h3>
-                            </div>
-                            <div className="p-4 rounded-lg" style={{ background: "rgba(15,118,110,0.08)", border: "1px solid rgba(15,118,110,0.25)" }}>
-                                <div className="flex items-center justify-between gap-4">
-                                    <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Grand Total</span>
-                                    <span className="text-2xl font-bold font-mono" style={{ color: "var(--accent-2)" }}>Rs {(purchase?.totalAmount || 0).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
 
                         <div className="h-px bg-[var(--border)] my-10" />
 
