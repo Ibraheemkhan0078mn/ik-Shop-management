@@ -1,5 +1,5 @@
 import { useContext, useState, useMemo, useEffect } from "react";
-import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X, Upload, Users } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, User as UserIcon, Shield, X, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -139,45 +139,6 @@ export default function UserManagement() {
 
             return { ...prev, permissions: nextPermissions };
         });
-    };
-
-    const handleRoleSelect = (role) => {
-        let rolePermissions = [];
-
-        if (appPermissions) {
-            if (role === "admin") {
-                console.log("The role is admin. ")
-                rolePermissions = appPermissions;
-            } else if (role === "manager") {
-                // Manager permissions - most permissions except user management
-                rolePermissions = appPermissions.filter(perm =>
-                    !perm.startsWith("users.") || perm === "users.view"
-                );
-            } else {
-                // Staff permissions - limited permissions
-                rolePermissions = [
-                    "pos.view",
-                    "pos.orders.create",
-                    "pos.orders.view",
-                    "products.view",
-                    "categories.view",
-                    "subcategories.view",
-                    "customers.view",
-                    "customers.create",
-                    "customers.update",
-                    "customers.details",
-                    "customers.payment",
-                    "suppliers.view",
-                    "suppliers.details",
-                ];
-            }
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            role,
-            permissions: rolePermissions
-        }));
     };
 
     const handleUserRoleSelect = (userRole) => {
@@ -600,7 +561,6 @@ export default function UserManagement() {
                     <table className="w-full">
                         <thead className="sticky top-0 z-10" style={{ background: "var(--surface-muted)" }}>
                             <tr className="text-xs font-semibold uppercase tracking-wider text-(--muted)">
-                                <th className="px-4 py-3 text-left">{labels.photo || "Photo"}</th>
                                 <th className="px-4 py-3 text-left">{labels.name}</th>
                                 <th className="px-4 py-3 text-left">{labels.email}</th>
                                 {/* <th className="px-4 py-3 text-left">{labels.phone}</th> */}
@@ -617,27 +577,6 @@ export default function UserManagement() {
                                         className={`border-b transition-all ${isCurrentUser ? 'bg-(--accent-2)/5' : 'hover:bg-(--surface-muted)'}`}
                                         style={{ borderColor: "var(--border)" }}
                                     >
-                                        <td className="px-4 py-3">
-                                            <div className="w-10 h-10 rounded-lg overflow-hidden" style={{ background: "var(--surface-muted)" }}>
-                                                {user.photo ? (
-                                                    <img
-                                                        src={toImageUrl(user.photo)}
-                                                        alt={user.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display = "none";
-                                                            e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-xs font-semibold text-primary">${user.name?.charAt(0) || "U"}</span></div>`;
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <span className="text-xs font-semibold text-primary">
-                                                            {user.name?.charAt(0) || "U"}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 {user.photo ? (
@@ -720,43 +659,22 @@ export default function UserManagement() {
                                 className={`p-4 rounded-2xl border ${isCurrentUser ? 'bg-(--accent-2)/5 border-(--accent-2)' : 'bg-(--surface)'}`}
                                 style={{ borderColor: isCurrentUser ? 'var(--accent-2)' : 'var(--border)' }}
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0" style={{ background: "var(--surface-muted)" }}>
-                                        {user.photo ? (
-                                            <img
-                                                src={toImageUrl(user.photo)}
-                                                alt={user.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.style.display = "none";
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${user.name?.charAt(0) || "U"}</span></div>`;
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <span className="text-sm font-semibold text-primary">
-                                                    {user.name?.charAt(0) || "U"}
-                                                </span>
-                                            </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-(--ink) truncate">{user.name}</p>
+                                        {isCurrentUser && (
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-2) text-white">
+                                                {labels.you}
+                                            </span>
                                         )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-semibold text-(--ink) truncate">{user.name}</p>
-                                            {isCurrentUser && (
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-2) text-white">
-                                                    {labels.you}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-(--muted) truncate">{user.email}</p>
-                                        <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
-                                                user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
-                                                    'bg-gray-500/10 text-gray-600'
-                                            }`}>
-                                            {labels[user.role] || user.role}
-                                        </span>
-                                    </div>
+                                    <p className="text-sm text-(--muted) truncate">{user.email}</p>
+                                    <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mt-1 ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-600' :
+                                            user.role === 'manager' ? 'bg-blue-500/10 text-blue-600' :
+                                                'bg-gray-500/10 text-gray-600'
+                                        }`}>
+                                        {labels[user.role] || user.role}
+                                    </span>
                                 </div>
                                 <div className="flex gap-2 mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
                                     <PermissionGuard
