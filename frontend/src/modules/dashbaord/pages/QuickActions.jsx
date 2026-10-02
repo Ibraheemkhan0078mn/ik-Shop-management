@@ -28,6 +28,7 @@ import {
 import { getDashboardLabels } from '../labels/dashboardLabels.js';
 import { useSettings } from '../../settings/hooks/useSettings.js';
 import PermissionGuard from '../../../shared/components/PermissionGuard.jsx';
+import { usePermissionGuard } from '../../../shared/hooks/usePermissionGuard.js';
 
 const STORAGE_KEY = "quickActions_visibility_v1";
 const ORDER_KEY = "quickActions_order_v1";
@@ -36,42 +37,43 @@ const QuickActions = () => {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getDashboardLabels(language);
+    const { hasPermission } = usePermissionGuard();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
     const dragIdRef = useRef(null);
 
     const ALL_LINKS = [
-        { id: "dashboard", title: labels.dashboard, subtitle: "Overview & stats", url: "/dashboard", icon: BarChart3, color: "#0f766e", important: true },
-        { id: "analytics", title: labels.analytics, subtitle: "Trends & insights", url: "/dashboard/analytics", icon: TrendingUp, color: "#0f766e", important: false },
-        { id: "products", title: labels.addProducts, subtitle: "Manage inventory", url: "/products", icon: Package, color: "#a855f7", important: true },
-        { id: "categories", title: labels.categories, subtitle: "Organize products", url: "/products/categories", icon: Boxes, color: "#a855f7", important: false },
-        { id: "sub-categories", title: labels.subCategories, subtitle: "Group categories", url: "/products/sub-categories", icon: Boxes, color: "#a855f7", important: false },
-        { id: "purchases", title: labels.addPurchases, subtitle: "Record purchases", url: "/purchases", icon: CreditCard, color: "#2563eb", important: true },
-        { id: "suppliers", title: labels.suppliers, subtitle: "Manage suppliers", url: "/suppliers", icon: Truck, color: "#2563eb", important: false },
-        { id: "purchase-returns", title: labels.purchaseReturns, subtitle: "Return to supplier", url: "/purchase-returns", icon: RotateCcw, color: "#b45309", important: false },
-        { id: "product-return", title: labels.productReturns, subtitle: "Customer returns", url: "/product-return", icon: RotateCcw, color: "#b45309", important: false },
-        { id: "customers", title: labels.customers, subtitle: "Manage customers", url: "/customers", icon: Users, color: "#0891b2", important: true },
-        { id: "wastage", title: labels.wastage, subtitle: "Track wastage", url: "/wastage", icon: Package, color: "#dc2626", important: false },
-        { id: "qarza", title: labels.qarzaAccounts, subtitle: "Credit accounts", url: "/qarzaAccount", icon: Wallet, color: "#b45309", important: false },
-        { id: "expenses", title: labels.expenses, subtitle: "Track spending", url: "/expenses", icon: DollarSign, important: true, color: "#dc2626" },
-        { id: "pos", title: labels.pos, subtitle: "Create new sales", url: "/pos", icon: ShoppingCart, color: "#2563eb", important: true },
-        { id: "order-history", title: labels.orderHistory, subtitle: "Past orders", url: "/order-history", icon: ClipboardList, color: "#0891b2", important: false },
-        { id: "settings", title: labels.settings, subtitle: "App preferences", url: "/settings/generals", icon: Settings, color: "#6d5d52", important: false },
-        { id: "reports", title: labels.reports, subtitle: "All reports", url: "/reports", icon: BarChart3, color: "#0f766e", important: true },
-        { id: "report-inventory", title: labels.inventoryReport, subtitle: "Stock levels", url: "/reports/giant-inventory", icon: Package, color: "#a855f7", important: false },
-        { id: "report-staff", title: labels.staffReport, subtitle: "Staff performance", url: "/reports/staff", icon: Users, color: "#0891b2", important: false },
-        { id: "report-credits", title: labels.creditsDebits, subtitle: "Credit & debit", url: "/reports/credits-debits", icon: Wallet, color: "#b45309", important: false },
-        { id: "report-expenses", title: labels.expenseKpi, subtitle: "Expense KPIs", url: "/reports/expenses", icon: DollarSign, color: "#dc2626", important: false },
-        { id: "report-sales", title: labels.salesKpi, subtitle: "Sales KPIs", url: "/reports/sales", icon: TrendingUp, color: "#0f766e", important: false },
-        { id: "report-purchases", title: labels.purchaseKpi, subtitle: "Purchase KPIs", url: "/reports/purchases", icon: CreditCard, color: "#2563eb", important: false },
-        { id: "report-suppliers", title: labels.supplierKpi, subtitle: "Supplier KPIs", url: "/reports/suppliers", icon: Truck, color: "#2563eb", important: false },
-        { id: "report-customers", title: labels.customerKpi, subtitle: "Customer KPIs", url: "/reports/customers", icon: Users, color: "#0891b2", important: false },
-        { id: "staff", title: labels.staff, subtitle: "Manage staff", url: "/staff", icon: UserCog, color: "#6d5d52", important: true },
-        { id: "staff-create", title: labels.addStaff, subtitle: "Add new staff", url: "/staff/create", icon: UserPlus, color: "#6d5d52", important: false },
-        { id: "staff-attendance", title: labels.attendance, subtitle: "Mark attendance", url: "/staff/attendance", icon: CalendarCheck, color: "#0f766e", important: false },
-        { id: "profile", title: labels.profile, subtitle: "Your account", url: "/profile", icon: Users, color: "#0891b2", important: false },
-        { id: "users", title: labels.appUsers, subtitle: "App users", url: "/users", icon: Settings, color: "#6d5d52", important: true },
+        { id: "dashboard", title: labels.dashboard, subtitle: "Overview & stats", url: "/dashboard", icon: BarChart3, color: "#0f766e", important: true, permission: null },
+        { id: "analytics", title: labels.analytics, subtitle: "Trends & insights", url: "/dashboard/analytics", icon: TrendingUp, color: "#0f766e", important: false, permission: null },
+        { id: "products", title: labels.addProducts, subtitle: "Manage inventory", url: "/products", icon: Package, color: "#a855f7", important: true, permission: "products.view" },
+        { id: "categories", title: labels.categories, subtitle: "Organize products", url: "/products/categories", icon: Boxes, color: "#a855f7", important: false, permission: "categories.view" },
+        { id: "sub-categories", title: labels.subCategories, subtitle: "Group categories", url: "/products/sub-categories", icon: Boxes, color: "#a855f7", important: false, permission: "categories.view" },
+        { id: "purchases", title: labels.addPurchases, subtitle: "Record purchases", url: "/purchases", icon: CreditCard, color: "#2563eb", important: true, permission: "purchases.view" },
+        { id: "suppliers", title: labels.suppliers, subtitle: "Manage suppliers", url: "/suppliers", icon: Truck, color: "#2563eb", important: false, permission: "suppliers.view" },
+        { id: "purchase-returns", title: labels.purchaseReturns, subtitle: "Return to supplier", url: "/purchase-returns", icon: RotateCcw, color: "#b45309", important: false, permission: "purchaseReturns.view" },
+        { id: "product-return", title: labels.productReturns, subtitle: "Customer returns", url: "/product-return", icon: RotateCcw, color: "#b45309", important: false, permission: "productReturns.view" },
+        { id: "customers", title: labels.customers, subtitle: "Manage customers", url: "/customers", icon: Users, color: "#0891b2", important: true, permission: "customers.view" },
+        { id: "wastage", title: labels.wastage, subtitle: "Track wastage", url: "/wastage", icon: Package, color: "#dc2626", important: false, permission: "wastage.view" },
+        { id: "qarza", title: labels.qarzaAccounts, subtitle: "Credit accounts", url: "/qarzaAccount", icon: Wallet, color: "#b45309", important: false, permission: "creditsAndDebitsAccounts.view" },
+        { id: "expenses", title: labels.expenses, subtitle: "Track spending", url: "/expenses", icon: DollarSign, important: true, color: "#dc2626", permission: "expenses.view" },
+        { id: "pos", title: labels.pos, subtitle: "Create new sales", url: "/pos", icon: ShoppingCart, color: "#2563eb", important: true, permission: "pos.view" },
+        { id: "order-history", title: labels.orderHistory, subtitle: "Past orders", url: "/order-history", icon: ClipboardList, color: "#0891b2", important: false, permission: "orders.view" },
+        { id: "settings", title: labels.settings, subtitle: "App preferences", url: "/settings/generals", icon: Settings, color: "#6d5d52", important: false, permission: "settings.view" },
+        { id: "reports", title: labels.reports, subtitle: "All reports", url: "/reports", icon: BarChart3, color: "#0f766e", important: true, permission: null },
+        { id: "report-inventory", title: labels.inventoryReport, subtitle: "Stock levels", url: "/reports/giant-inventory", icon: Package, color: "#a855f7", important: false, permission: "products.view" },
+        { id: "report-staff", title: labels.staffReport, subtitle: "Staff performance", url: "/reports/staff", icon: Users, color: "#0891b2", important: false, permission: "staff.view" },
+        { id: "report-credits", title: labels.creditsDebits, subtitle: "Credit & debit", url: "/reports/credits-debits", icon: Wallet, color: "#b45309", important: false, permission: "creditsAndDebitsAccounts.view" },
+        { id: "report-expenses", title: labels.expenseKpi, subtitle: "Expense KPIs", url: "/reports/expenses", icon: DollarSign, color: "#dc2626", important: false, permission: "expenses.view" },
+        { id: "report-sales", title: labels.salesKpi, subtitle: "Sales KPIs", url: "/reports/sales", icon: TrendingUp, color: "#0f766e", important: false, permission: "pos.view" },
+        { id: "report-purchases", title: labels.purchaseKpi, subtitle: "Purchase KPIs", url: "/reports/purchases", icon: CreditCard, color: "#2563eb", important: false, permission: "purchases.view" },
+        { id: "report-suppliers", title: labels.supplierKpi, subtitle: "Supplier KPIs", url: "/reports/suppliers", icon: Truck, color: "#2563eb", important: false, permission: "suppliers.view" },
+        { id: "report-customers", title: labels.customerKpi, subtitle: "Customer KPIs", url: "/reports/customers", icon: Users, color: "#0891b2", important: false, permission: "customers.view" },
+        { id: "staff", title: labels.staff, subtitle: "Manage staff", url: "/staff", icon: UserCog, color: "#6d5d52", important: true, permission: "staff.view" },
+        { id: "staff-create", title: labels.addStaff, subtitle: "Add new staff", url: "/staff/create", icon: UserPlus, color: "#6d5d52", important: false, permission: "staff.create" },
+        { id: "staff-attendance", title: labels.attendance, subtitle: "Mark attendance", url: "/staff/attendance", icon: CalendarCheck, color: "#0f766e", important: false, permission: "staff.attendance" },
+        { id: "profile", title: labels.profile, subtitle: "Your account", url: "/profile", icon: Users, color: "#0891b2", important: false, permission: null },
+        { id: "users", title: labels.appUsers, subtitle: "App users", url: "/users", icon: Settings, color: "#6d5d52", important: true, permission: "users.view" },
     ];
 
     const LINKS_BY_ID = ALL_LINKS.reduce((acc, l) => ({ ...acc, [l.id]: l }), {});
@@ -146,7 +148,9 @@ const QuickActions = () => {
         const matchesSearch = item.title
             .toLowerCase()
             .includes(searchQuery.toLowerCase());
-        return matchesSearch && (isEditMode || visibility[item.id]);
+        const isVisible = isEditMode || visibility[item.id];
+        const hasRequiredPermission = !item.permission || hasPermission(item.permission);
+        return matchesSearch && isVisible && hasRequiredPermission;
     });
 
     return (
