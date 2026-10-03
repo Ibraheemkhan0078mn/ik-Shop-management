@@ -27,6 +27,7 @@ const PERMISSION_MAP = {
   reports:         (_p, role) => role === "admin",
   users:           (_p, role) => role === "admin",
   orders:          p => hasPermission(p, "orders.view") || hasPermission(p, "pos.orders.view"),
+  orderReturn:     p => hasPermission(p, "orderReturns.view"),
 };
 
 export default function Sidebar() {

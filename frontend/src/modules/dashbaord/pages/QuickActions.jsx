@@ -37,15 +37,15 @@ const QuickActions = () => {
     const { settings } = useSettings();
     const language = settings?.language || "en";
     const labels = getDashboardLabels(language);
-    const { hasPermission } = usePermissionGuard();
+    const { user, hasPermission } = usePermissionGuard();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
     const dragIdRef = useRef(null);
 
     const ALL_LINKS = [
-        { id: "dashboard", title: labels.dashboard, subtitle: "Overview & stats", url: "/dashboard", icon: BarChart3, color: "#0f766e", important: true, permission: null },
-        { id: "analytics", title: labels.analytics, subtitle: "Trends & insights", url: "/dashboard/analytics", icon: TrendingUp, color: "#0f766e", important: false, permission: null },
+        { id: "dashboard", title: labels.dashboard, subtitle: "Overview & stats", url: "/dashboard", icon: BarChart3, color: "#0f766e", important: true, permission: null, adminOnly: true },
+        { id: "analytics", title: labels.analytics, subtitle: "Trends & insights", url: "/dashboard/analytics", icon: TrendingUp, color: "#0f766e", important: false, permission: null, adminOnly: true },
         { id: "products", title: labels.addProducts, subtitle: "Manage inventory", url: "/products", icon: Package, color: "#a855f7", important: true, permission: "products.view" },
         { id: "categories", title: labels.categories, subtitle: "Organize products", url: "/products/categories", icon: Boxes, color: "#a855f7", important: false, permission: "categories.view" },
         { id: "sub-categories", title: labels.subCategories, subtitle: "Group categories", url: "/products/sub-categories", icon: Boxes, color: "#a855f7", important: false, permission: "categories.view" },
@@ -60,15 +60,15 @@ const QuickActions = () => {
         { id: "pos", title: labels.pos, subtitle: "Create new sales", url: "/pos", icon: ShoppingCart, color: "#2563eb", important: true, permission: "pos.view" },
         { id: "order-history", title: labels.orderHistory, subtitle: "Past orders", url: "/order-history", icon: ClipboardList, color: "#0891b2", important: false, permission: "orders.view" },
         { id: "settings", title: labels.settings, subtitle: "App preferences", url: "/settings/generals", icon: Settings, color: "#6d5d52", important: false, permission: "settings.view" },
-        { id: "reports", title: labels.reports, subtitle: "All reports", url: "/reports", icon: BarChart3, color: "#0f766e", important: true, permission: null },
-        { id: "report-inventory", title: labels.inventoryReport, subtitle: "Stock levels", url: "/reports/giant-inventory", icon: Package, color: "#a855f7", important: false, permission: "products.view" },
-        { id: "report-staff", title: labels.staffReport, subtitle: "Staff performance", url: "/reports/staff", icon: Users, color: "#0891b2", important: false, permission: "staff.view" },
-        { id: "report-credits", title: labels.creditsDebits, subtitle: "Credit & debit", url: "/reports/credits-debits", icon: Wallet, color: "#b45309", important: false, permission: "creditsAndDebitsAccounts.view" },
-        { id: "report-expenses", title: labels.expenseKpi, subtitle: "Expense KPIs", url: "/reports/expenses", icon: DollarSign, color: "#dc2626", important: false, permission: "expenses.view" },
-        { id: "report-sales", title: labels.salesKpi, subtitle: "Sales KPIs", url: "/reports/sales", icon: TrendingUp, color: "#0f766e", important: false, permission: "pos.view" },
-        { id: "report-purchases", title: labels.purchaseKpi, subtitle: "Purchase KPIs", url: "/reports/purchases", icon: CreditCard, color: "#2563eb", important: false, permission: "purchases.view" },
-        { id: "report-suppliers", title: labels.supplierKpi, subtitle: "Supplier KPIs", url: "/reports/suppliers", icon: Truck, color: "#2563eb", important: false, permission: "suppliers.view" },
-        { id: "report-customers", title: labels.customerKpi, subtitle: "Customer KPIs", url: "/reports/customers", icon: Users, color: "#0891b2", important: false, permission: "customers.view" },
+        { id: "reports", title: labels.reports, subtitle: "All reports", url: "/reports", icon: BarChart3, color: "#0f766e", important: true, permission: null, adminOnly: true },
+        { id: "report-inventory", title: labels.inventoryReport, subtitle: "Stock levels", url: "/reports/giant-inventory", icon: Package, color: "#a855f7", important: false, permission: "products.view", adminOnly: true },
+        { id: "report-staff", title: labels.staffReport, subtitle: "Staff performance", url: "/reports/staff", icon: Users, color: "#0891b2", important: false, permission: "staff.view", adminOnly: true },
+        { id: "report-credits", title: labels.creditsDebits, subtitle: "Credit & debit", url: "/reports/credits-debits", icon: Wallet, color: "#b45309", important: false, permission: "creditsAndDebitsAccounts.view", adminOnly: true },
+        { id: "report-expenses", title: labels.expenseKpi, subtitle: "Expense KPIs", url: "/reports/expenses", icon: DollarSign, color: "#dc2626", important: false, permission: "expenses.view", adminOnly: true },
+        { id: "report-sales", title: labels.salesKpi, subtitle: "Sales KPIs", url: "/reports/sales", icon: TrendingUp, color: "#0f766e", important: false, permission: "pos.view", adminOnly: true },
+        { id: "report-purchases", title: labels.purchaseKpi, subtitle: "Purchase KPIs", url: "/reports/purchases", icon: CreditCard, color: "#2563eb", important: false, permission: "purchases.view", adminOnly: true },
+        { id: "report-suppliers", title: labels.supplierKpi, subtitle: "Supplier KPIs", url: "/reports/suppliers", icon: Truck, color: "#2563eb", important: false, permission: "suppliers.view", adminOnly: true },
+        { id: "report-customers", title: labels.customerKpi, subtitle: "Customer KPIs", url: "/reports/customers", icon: Users, color: "#0891b2", important: false, permission: "customers.view", adminOnly: true },
         { id: "staff", title: labels.staff, subtitle: "Manage staff", url: "/staff", icon: UserCog, color: "#6d5d52", important: true, permission: "staff.view" },
         { id: "staff-create", title: labels.addStaff, subtitle: "Add new staff", url: "/staff/create", icon: UserPlus, color: "#6d5d52", important: false, permission: "staff.create" },
         { id: "staff-attendance", title: labels.attendance, subtitle: "Mark attendance", url: "/staff/attendance", icon: CalendarCheck, color: "#0f766e", important: false, permission: "staff.attendance" },
@@ -150,7 +150,8 @@ const QuickActions = () => {
             .includes(searchQuery.toLowerCase());
         const isVisible = isEditMode || visibility[item.id];
         const hasRequiredPermission = !item.permission || hasPermission(item.permission);
-        return matchesSearch && isVisible && hasRequiredPermission;
+        const hasRequiredRole = !item.adminOnly || user?.role === "admin";
+        return matchesSearch && isVisible && hasRequiredPermission && hasRequiredRole;
     });
 
     return (
@@ -380,5 +381,4 @@ const QuickActions = () => {
 };
 
 export default QuickActions;
-
 

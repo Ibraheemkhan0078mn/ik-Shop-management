@@ -60,7 +60,7 @@ function AppRoutes() {
             <Route path="/" element={<AuthPage />} />
 
             {/* Dashboard Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
             <Route path="/dashboard/analytics" element={<ProtectedRoute adminOnly><Analytics /></ProtectedRoute>} />
             <Route path="/quick-list" element={<ProtectedRoute><QuickActions /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
@@ -80,8 +80,8 @@ function AppRoutes() {
             <Route path="/suppliers/:id" element={<ProtectedRoute><SupplierDetail /></ProtectedRoute>} />
             <Route path="/purchase-returns" element={<ProtectedRoute><PurchaseReturnPage /></ProtectedRoute>} />
             <Route path="/purchase-returns/:id" element={<ProtectedRoute><PurchaseReturnDetail /></ProtectedRoute>} />
-            <Route path="/product-return" element={<ProtectedRoute><ProductReturnList /></ProtectedRoute>} />
-            <Route path="/order-returns/:id" element={<ProtectedRoute><OrderReturnDetail /></ProtectedRoute>} />
+            <Route path="/product-return" element={<ProtectedRoute permission="orderReturns.view"><ProductReturnList /></ProtectedRoute>} />
+            <Route path="/order-returns/:id" element={<ProtectedRoute permission="orderReturns.view"><OrderReturnDetail /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute permission="customers.view"><CustomerPage /></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
@@ -132,6 +132,4 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
-
-
 
