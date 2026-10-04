@@ -345,7 +345,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     let onlineSaveSuccess = false;
     if (isOnlineConnected) {
         try {
-            await onlineUserCreateService(userData);
+            await onlineUserCreateService({ ...userData, _id: user._id });
             onlineSaveSuccess = true;
             console.log("✅ User saved to ONLINE DB:", user._id);
         } catch (onlineError) {

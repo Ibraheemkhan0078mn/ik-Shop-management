@@ -53,21 +53,16 @@ export default function AllExpense() {
                             <PermissionGuard 
                                 execute={() => setModal("create")} 
                                 permission="expenses.create" 
-                                isConfirmation={false}
+                                isConfirmation={true}
+                                confirmAuthorizedAction={true}
                             >
                                 <div>
                                     <ScreenTabButton lucideIcon={Plus} text={labels.addExpense} />
                                 </div>
                             </PermissionGuard>
-                            <PermissionGuard 
-                                execute={() => setCatModal(true)} 
-                                permission="expenses.category.create" 
-                                isConfirmation={false}
-                            >
-                                <div>
-                                    <ScreenTabButton lucideIcon={Tag} text={labels.category} />
-                                </div>
-                            </PermissionGuard>
+                            <div onClick={() => setCatModal(true)}>
+                                <ScreenTabButton lucideIcon={Tag} text={labels.category} />
+                            </div>
                         </>
                     }
                 />
@@ -145,13 +140,13 @@ function ExpenseRow({ expense: exp, onEdit, onDelete }) {
 
             <td className="px-4 py-3">
                 <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                    <PermissionGuard execute={() => onEdit?.()} permission="expenses.update" isConfirmation={true}>
+                    <PermissionGuard execute={() => onEdit?.()} permission="expenses.update" isConfirmation={true} confirmAuthorizedAction={true}>
                         <button
                             className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-primary hover:bg-primary-hover/80">
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                     </PermissionGuard>
-                    <PermissionGuard execute={() => onDelete?.()} permission="expenses.delete" isConfirmation={true}>
+                    <PermissionGuard execute={() => onDelete?.()} permission="expenses.delete" isConfirmation={true} confirmAuthorizedAction={true}>
                         <button
                             className="w-7 h-7 flex items-center justify-center rounded-lg transition text-ink-muted hover:text-red-500 hover:bg-red-50">
                             <Trash2 className="w-3.5 h-3.5" />

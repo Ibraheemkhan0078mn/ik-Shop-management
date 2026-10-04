@@ -7,7 +7,8 @@ const PermissionGuard = ({
     children,
     execute,
     permission,
-    isConfirmation = false
+    isConfirmation = false,
+    confirmAuthorizedAction = false
 }) => {
     const { user, isLoading, isAdmin, hasPermission } = usePermissionGuard();
     const [popup, setPopup] = useState(null);
@@ -48,8 +49,9 @@ const PermissionGuard = ({
             return;
         }
 
+        if (confirmAuthorizedAction) return runOrConfirm();
         execute?.();
-    }, [user, isLoading, isAdmin, permission, hasPermission, execute, runOrConfirm]);
+    }, [user, isLoading, isAdmin, permission, hasPermission, execute, runOrConfirm, confirmAuthorizedAction]);
 
     const GuardPopup = () => {
         if (!popup) return null;
