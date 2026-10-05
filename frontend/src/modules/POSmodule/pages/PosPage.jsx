@@ -11,7 +11,7 @@ import {
   useDeleteHoldOrder,
   useUpdateHoldOrder
 } from "../services/holdOrders.service.js";
-import { useProducts } from "../../productsModule/services/product.service.js";
+import { usePosProducts } from "../../productsModule/services/product.service.js";
 import { useGetBrandsQuery } from "../../productsModule/services/brand.service.js";
 import { getPosLabels } from "../labels/posLabels.js";
 import { useSettings } from "../../settings/hooks/useSettings.js";
@@ -70,7 +70,7 @@ const buildOrderItemsFromCart = (cart) =>
   }));
 
 // ─── Product Card ────────────────────────────────────────────────────────────────
-const ProductCard = ({ product, onAddToCart, onPreviewBatches }) => {
+const ProductCard = ({ product, onAddToCart, onPreviewBatches, className = "" }) => {
   const imageUrl = toImageUrl(product.image);
 
   const getInitials = (name) => {
@@ -89,16 +89,16 @@ const ProductCard = ({ product, onAddToCart, onPreviewBatches }) => {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onAddToCart()}
-      className={`rounded-xl overflow-hidden border transition-all duration-200 ${
+      className={`flex flex-col rounded-xl overflow-hidden border transition-all duration-200 ${
         inStock
           ? "border-[var(--border)] hover:border-[var(--accent-2)] hover:shadow-md cursor-pointer active:scale-[0.98]"
           : "border-[var(--border)] opacity-60 cursor-not-allowed"
-      }`}
+      } ${className}`}
       style={{ background: "var(--surface)" }}
     >
       {/* Image */}
       <div
-        className="w-full aspect-square flex items-center justify-center min-w-0"
+        className="w-full flex-1 min-h-0 flex items-center justify-center min-w-0"
         style={{ background: "linear-gradient(135deg, var(--surface-muted), var(--app-bg))" }}
       >
         {imageUrl ? (
@@ -245,7 +245,6 @@ export default function PosPage() {
   const heldOrders = heldOrdersResponse?.data || heldOrdersResponse || [];
 
   const { data: qarzaAccounts, refetch: refetchQarzaAccounts } = useQarzaAccounts();
-  const { refetch: refetchProducts } = useProducts();
 
   // ── Filter Handlers ───────────────────────────────────────────────────────
   const handleFiltersChange = useCallback((newFilters) => {
@@ -883,7 +882,6 @@ export default function PosPage() {
 
       clearCart();
       toggleModal("payment");
-      refetchProducts();
     } catch (err) {
       console.error("Checkout error:", err);
       const errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || "Failed to create order.";
@@ -948,18 +946,19 @@ export default function PosPage() {
         {/* Product Grid */}
         <div className="flex-1 overflow-hidden bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)]">
           <PaginatedList
-            rtkQuery={useProducts}
-            limit={20}
+            rtkQuery={usePosProducts}
+            limit={10}
             dataKey="data"
             wrapperClassName="h-full"
             className="p-3"
             queryArgs={{ ...activeFilters }}
             renderItems={(products) => (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+              <div className="flex h-full flex-wrap content-start gap-2 overflow-hidden">
                 {products.filter(product => product.isActive !== false).map((product) => (
                   <ProductCard
                     key={product._id}
                     product={product}
+                    className="h-[calc((100%_-_0.5rem)_/_2)] w-[calc((100%_-_2rem)_/_5)] shrink-0"
                     onAddToCart={() => handleProductClick(product)}
                     onPreviewBatches={handlePreviewBatches}
                   />
@@ -1735,6 +1734,3 @@ export default function PosPage() {
 //     </div>
 //   );
 // }
-
-
-

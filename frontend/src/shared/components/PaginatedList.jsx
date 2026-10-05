@@ -44,7 +44,8 @@ export const usePaginatedFetch = ({ rtkQuery, limit = 20, dataKey = null, queryA
         total,
         totalPages,
         currentPage,
-        isLoading: isLoading || isFetching,
+        isLoading,
+        isFetching,
         goToPage,
         resetWithFilter,
         refetch,
@@ -77,7 +78,7 @@ const PaginatedList = forwardRef(({
     wrapperClassName = "",
     queryArgs = {},
 }, ref) => {
-    const { data, total, totalPages, currentPage, isLoading, goToPage, resetWithFilter, refetch } =
+    const { data, total, totalPages, currentPage, isLoading, isFetching, goToPage, resetWithFilter, refetch } =
         usePaginatedFetch({ rtkQuery, limit, dataKey, queryArgs, filter })
 
     // Expose refetch method to parent via ref
@@ -122,7 +123,7 @@ const PaginatedList = forwardRef(({
                 totalPages={totalPages}
                 total={total}
                 limit={limit}
-                isLoading={isLoading}
+                isFetching={isFetching}
                 onGoToPage={goToPage}
             />
         </div>
@@ -135,7 +136,7 @@ PaginatedList.displayName = "PaginatedList"
 // ─────────────────────────────────────────────────────────────────
 //  PaginationBar
 // ─────────────────────────────────────────────────────────────────
-const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoToPage }) => {
+const PaginationBar = ({ currentPage, totalPages, total, limit, isFetching, onGoToPage }) => {
     const [inputVal, setInputVal] = useState(String(currentPage))
 
     // Keep input in sync when page changes externally (filter reset etc.)
@@ -190,7 +191,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
                 <button
                     data-testid="pagination-prev"
                     onClick={() => onGoToPage(currentPage - 1)}
-                    disabled={currentPage <= 1 || isLoading}
+                    disabled={currentPage <= 1 || isFetching}
                     className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-(--border) bg-(--surface) text-(--muted) hover:border-(--accent-2) hover:text-(--accent-2) disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
                 >
                     <ChevronLeft size={15} />
@@ -205,7 +206,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
                         onChange={handleInputChange}
                         onBlur={commitInput}
                         onKeyDown={handleKeyDown}
-                        disabled={isLoading}
+                        disabled={isFetching}
                         className="w-12 h-8 text-center text-sm font-black text-(--ink) bg-(--surface-muted) border-2 border-(--border) rounded-lg outline-none focus:border-(--accent-2) transition-all duration-150 disabled:opacity-50"
                     />
                     <span className="text-[11px] font-black text-(--muted) uppercase tracking-widest">/</span>
@@ -216,7 +217,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
                 <button
                     data-testid="pagination-next"
                     onClick={() => onGoToPage(currentPage + 1)}
-                    disabled={currentPage >= totalPages || isLoading}
+                    disabled={currentPage >= totalPages || isFetching}
                     className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-(--border) bg-(--surface) text-(--muted) hover:border-(--accent-2) hover:text-(--accent-2) disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 active:scale-95"
                 >
                     <ChevronRight size={15} />
@@ -225,7 +226,7 @@ const PaginationBar = ({ currentPage, totalPages, total, limit, isLoading, onGoT
 
             {/* Right: loading indicator */}
             <div className="w-20 flex justify-end">
-                {isLoading
+                {isFetching
                     ? <div className="w-4 h-4 border-2 border-(--accent-2) border-t-(--accent-2) rounded-full animate-spin" />
                     : <span className="text-[11px] font-black text-(--muted)/50 uppercase tracking-widest">
                         pg {currentPage}

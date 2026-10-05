@@ -7,6 +7,7 @@ import {
     deleteProductData,
     deleteProductWithBatchesData,
     getPaginationProductData,
+    getPosPaginationProductData,
     searchProductsData,
     getSubCategoriesData,
     createSubCategoryData,
@@ -31,6 +32,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/", getProductsData);
+router.get("/pos-pagination", getPosPaginationProductData);
 router.get("/pagination", getPaginationProductData);
 router.get("/search", searchProductsData);
 router.get("/check-code/:productCode", checkProductCode);

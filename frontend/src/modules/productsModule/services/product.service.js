@@ -27,6 +27,14 @@ export const productApi = baseApi.injectEndpoints({
             providesTags: ["Product"],
         }),
 
+        getPosProducts: build.query({
+            query: ({ page = 1, limit = 20, ...filters } = {}) => ({
+                url: "/products/pos-pagination",
+                params: { page, limit, ...filters },
+            }),
+            providesTags: ["Product"],
+        }),
+
         // Single product
         getProductById: build.query({
             query: (id) => ({ url: `/products/${id}` }),
@@ -105,6 +113,7 @@ export const productApi = baseApi.injectEndpoints({
 
 export const {
     useGetProductsQuery: useProducts,
+    useGetPosProductsQuery: usePosProducts,
     useGetProductByIdQuery: useProduct,
     useCreateProductMutation: useCreateProduct,
     useUpdateProductMutation: useUpdateProduct,

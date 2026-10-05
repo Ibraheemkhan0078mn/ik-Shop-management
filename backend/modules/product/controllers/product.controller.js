@@ -2,7 +2,7 @@
 import asyncHandler from "express-async-handler";
 import ErrorResponse from "../../../common/utils/ErrorResponse.js";
 import {
-    getProducts, getPaginationProduct, getProductById,
+    getProducts, getPaginationProduct, getPosPaginationProduct, getProductById,
     createProduct, updateProduct, deleteProduct, deleteProductWithBatches, checkProductCodeAvailability,
     generateProductCode, searchProducts,
 } from "../services/product.service.js";
@@ -28,6 +28,11 @@ export const getProductsData = asyncHandler(async (req, res) => {
 export const getPaginationProductData = asyncHandler(async (req, res) => {
     const result = await getPaginationProduct(req.query);
     res.status(200).json({ success: true, message: "Products retrieved successfully", ...result });
+});
+
+export const getPosPaginationProductData = asyncHandler(async (req, res) => {
+    const result = await getPosPaginationProduct(req.query);
+    res.status(200).json({ success: true, message: "POS products retrieved successfully", ...result });
 });
 
 export const searchProductsData = asyncHandler(async (req, res) => {

@@ -134,13 +134,9 @@ const getProducts = async () => {
     return attachBatchSellingPrice(products);
 };
 
-const getPaginationProduct = async (filters = {}) => {
+const getPaginationProduct = async (filters = {}, { includeBatchData = true } = {}) => {
     const { page = 1, limit = 20, ...filterParams } = filters;
     const skip = (page - 1) * limit;
-
-    // Debug: Log incoming filter parameters
-    console.log('=== Product Pagination Filters ===');
-    console.log('Incoming filterParams:', JSON.stringify(filterParams, null, 2));
 
     // Build MongoDB query from filter parameters
     const query = {};
@@ -157,21 +153,18 @@ const getPaginationProduct = async (filters = {}) => {
     const categoryNames = normalizeToArray(filterParams.categoryName);
     if (categoryNames) {
         query.categoryName = categoryNames.length === 1 ? categoryNames[0] : { $in: categoryNames };
-        console.log('Category filter applied:', query.categoryName);
     }
 
     // Subcategory filter (multiple selection)
     const subCategoryNames = normalizeToArray(filterParams.subCategoryName);
     if (subCategoryNames) {
         query.subCategoryName = subCategoryNames.length === 1 ? subCategoryNames[0] : { $in: subCategoryNames };
-        console.log('Subcategory filter applied:', query.subCategoryName);
     }
 
     // Brand filter (multiple selection)
     const brandNames = normalizeToArray(filterParams.brandName);
     if (brandNames) {
         query.brandName = brandNames.length === 1 ? brandNames[0] : { $in: brandNames };
-        console.log('Brand filter applied:', query.brandName);
     }
 
     // Price range filter
@@ -227,19 +220,16 @@ const getPaginationProduct = async (filters = {}) => {
         query.barcode = barcodeRegex;
     }
 
-    // Debug: Log the final MongoDB query
-    console.log('Final MongoDB query:', JSON.stringify(query, null, 2));
-    console.log('=== End Product Pagination Filters ===\n');
-
-    const products = await findProductService(query, {
-        sort: { createdAt: -1 },
-        skip: skip,
-        limit: parseInt(limit),
-        populate: ["batches"]
-    });
-
-    const total = await countProductService(query);
-    const data = await attachBatchSellingPrice(products);
+    const [products, total] = await Promise.all([
+        findProductService(query, {
+            sort: { createdAt: -1 },
+            skip,
+            limit: parseInt(limit),
+            ...(includeBatchData ? { populate: ["batches"] } : {})
+        }),
+        countProductService(query)
+    ]);
+    const data = includeBatchData ? await attachBatchSellingPrice(products) : products;
 
     return {
         data,
@@ -249,6 +239,9 @@ const getPaginationProduct = async (filters = {}) => {
         totalPages: Math.ceil(total / limit),
     };
 };
+
+const getPosPaginationProduct = (filters = {}) =>
+    getPaginationProduct(filters, { includeBatchData: false });
 
 const getProductById = async (id) => {
     return await findByIdProductService(id, {
@@ -403,6 +396,7 @@ const generateProductCode = async () => {
 export {
     getProducts,
     getPaginationProduct,
+    getPosPaginationProduct,
     getProductById,
     createProduct,
     updateProduct,
