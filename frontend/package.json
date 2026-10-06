@@ -1,7 +1,7 @@
 {
   "name": "SSI-SOFT",
   "private": true,
-  "version": "1.0.50",
+  "version": "1.0.51",
   "type": "module",
   "author": "IK",
   "scripts": {
@@ -20,6 +20,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@undecaf/zbar-wasm": "^0.11.0",
     "axios": "^1.10.0",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.0",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.8.3",

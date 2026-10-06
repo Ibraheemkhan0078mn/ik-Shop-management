@@ -13,6 +13,7 @@ import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import { toast } from "sonner";
 import { CategoryService } from "../api/categoriesApi.js";
 import { BrandService } from "../api/brandsApi.js";
+import { optimizeImage } from "../../../shared/services/imageOptimizer.js";
 
 const IMAGE_BASE = "http://localhost:5001/uploads";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -256,6 +257,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [errors, setErrors] = useState({});
   const [banner, setBanner] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isImageOptimizing, setIsImageOptimizing] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showTax, setShowTax] = useState(false);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
@@ -263,6 +265,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   const [showSubCategoryDialog, setShowSubCategoryDialog] = useState(false);
   const [showBrandDialog, setShowBrandDialog] = useState(false);
   const fileInputRef = useRef(null);
+  const imageOptimizationRequestRef = useRef(0);
 
   useEffect(() => {
     if (!isCreate && productData) {
@@ -282,12 +285,23 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
     if (isCreate && open) {
       setForm(EMPTY_FORM);
       setImagePreview(null);
+      setIsImageOptimizing(false);
       setErrors({});
       setBanner(null);
       setShowMore(false);
       setShowTax(false); // Reset tax toggle when creating new product
     }
   }, [isCreate, open]);
+
+  useEffect(() => {
+    if (!open) {
+      imageOptimizationRequestRef.current += 1;
+      setIsImageOptimizing(false);
+    }
+    return () => {
+      imageOptimizationRequestRef.current += 1;
+    };
+  }, [open]);
 
   useEffect(() => {
     return () => {
@@ -362,7 +376,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   }, [updateField]);
 
   const handleImageChange = useCallback(
-    (file) => {
+    async (file) => {
       if (!file) return;
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
         setErrors((prev) => ({ ...prev, image: labels.onlyPngJpg }));
@@ -372,10 +386,33 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
         setErrors((prev) => ({ ...prev, image: labels.maxFileSize }));
         return;
       }
-      updateField("image", file);
+      const requestId = ++imageOptimizationRequestRef.current;
+      const previousImage = form.image;
       setImagePreview(URL.createObjectURL(file));
+      setIsImageOptimizing(true);
+      setErrors((prev) => ({ ...prev, image: undefined }));
+
+      try {
+        const optimizedImage = await optimizeImage(file);
+        if (requestId !== imageOptimizationRequestRef.current) return;
+        updateField("image", optimizedImage);
+        setImagePreview(URL.createObjectURL(optimizedImage));
+      } catch (error) {
+        if (requestId !== imageOptimizationRequestRef.current) return;
+        const previousPreview = previousImage instanceof File
+          ? URL.createObjectURL(previousImage)
+          : previousImage
+            ? (previousImage.startsWith("http") ? previousImage : `${IMAGE_BASE}/${previousImage}`)
+            : null;
+        setImagePreview(previousPreview);
+        const message = error?.message || "Unable to optimize the selected image";
+        setErrors((prev) => ({ ...prev, image: message }));
+        showError(message);
+      } finally {
+        if (requestId === imageOptimizationRequestRef.current) setIsImageOptimizing(false);
+      }
     },
-    [updateField, labels]
+    [updateField, labels, form.image]
   );
 
   const unitOptions = useMemo(() => UNITS.map((u) => ({ label: u.label, value: u.value })), [UNITS]);
@@ -419,6 +456,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
   }, [form, showMore, labels]);
 
   const onSubmit = useCallback(async () => {
+    if (isImageOptimizing) return showError("Please wait for image optimization to finish");
     if (!validateForm()) return;
     const payload = new FormData();
     const exclude = ["batches", "createdAt", "updatedAt", "__v", "_id", "id", "batchSellingPrice"];
@@ -455,7 +493,7 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
       showError(msg);
       setBanner(`❌ ${msg}`);
     }
-  }, [form, isCreate, productData, createProduct, updateProduct, onClose, validateForm, showTax]);
+  }, [form, isCreate, productData, createProduct, updateProduct, onClose, validateForm, showTax, isImageOptimizing]);
 
   if (!open) return null;
 
@@ -556,14 +594,21 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
                     <p className="text-sm font-medium text-[var(--ink)]">
                       {imagePreview ? labels.changeImage : labels.clickOrDrag}
                     </p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{labels.pngJpgWebp} (optional)</p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">
+                      {labels.pngJpgWebp} (optional)
+                      {isImageOptimizing && <span className="ml-2">Optimizing image…</span>}
+                    </p>
                   </div>
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     className="hidden"
-                    onChange={(e) => handleImageChange(e.target.files?.[0])}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      handleImageChange(file);
+                    }}
                   />
                 </div>
                 {errors.image && <p className="mt-1 text-xs text-red-500">{errors.image}</p>}
@@ -838,11 +883,11 @@ export default function ProductCRUDModal({ mode = "create", productId = null, op
             >
               <button
                 type="button"
-                disabled={isSaving}
+                disabled={isSaving || isImageOptimizing}
                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm bg-[var(--accent-2)] text-white hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
               >
                 <Check className="h-4 w-4" />
-                {isSaving ? labels.saving : isCreate ? labels.saveProduct : labels.updateProduct}
+                {isImageOptimizing ? "Optimizing image..." : isSaving ? labels.saving : isCreate ? labels.saveProduct : labels.updateProduct}
               </button>
             </PermissionGuard>
           </div>
@@ -1436,7 +1481,6 @@ function ToggleField({ label, name, value, onChange }) {
 //     </div>
 //   );
 // }
-
 
 
 
