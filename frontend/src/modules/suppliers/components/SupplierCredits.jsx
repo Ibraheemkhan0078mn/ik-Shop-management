@@ -5,7 +5,7 @@ import { useUpdateSupplier } from "../services/suppliers.service.js";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import QarzaPaymentModal from "../../qarza/components/QarzaPaymentModal.jsx";
 import PaginatedList from "../../../shared/components/PaginatedList.jsx";
-import ConfirmDialog from "../../../shared/components/ConfirmationDialog.jsx";
+import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
 import PdfModal from "../../../shared/components/PdfModal.jsx";
 import SupplierTransactionsPdfTemplate from "./SupplierTransactionsPdfTemplate.jsx";
 
@@ -17,6 +17,8 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
     const [sortOrder, setSortOrder] = useState("asc");
     const [showTransactionsPdf, setShowTransactionsPdf] = useState(false);
     const [pdfTransactions, setPdfTransactions] = useState([]);
+    const [transactionPassword, setTransactionPassword] = useState("");
+    const [purchaseActionsUnlocked, setPurchaseActionsUnlocked] = useState(false);
 
     const { data: summary } = useSupplierPaymentsSummary(qarzaAccountId);
     const accountExists = summary?.accountExists !== false;
@@ -48,6 +50,16 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
         } catch (e) {
             showError(e?.data?.message ?? "Delete failed");
         }
+    };
+
+    const handleUnlockPurchaseActions = (event) => {
+        event.preventDefault();
+        if (transactionPassword !== "Afrasiab") {
+            showError("Incorrect password");
+            return;
+        }
+        setPurchaseActionsUnlocked(true);
+        setTransactionPassword("");
     };
 
     const handleRecalculateBalance = async () => {
@@ -144,7 +156,33 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                 <div className="card p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-[var(--ink)]">Payment History</h3>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            {!purchaseActionsUnlocked ? (
+                                <form onSubmit={handleUnlockPurchaseActions} className="flex gap-2">
+                                    <input
+                                        type="password"
+                                        value={transactionPassword}
+                                        onChange={(event) => setTransactionPassword(event.target.value)}
+                                        placeholder="Password to unlock purchase actions"
+                                        aria-label="Password to unlock purchase transaction actions"
+                                        className="min-w-48 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm hover:bg-[var(--surface-muted)]"
+                                    >
+                                        Unlock
+                                    </button>
+                                </form>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setPurchaseActionsUnlocked(false)}
+                                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm hover:bg-[var(--surface-muted)]"
+                                >
+                                    Lock purchase actions
+                                </button>
+                            )}
                             <select
                                 value={transactionSource}
                                 onChange={(e) => setTransactionSource(e.target.value)}
@@ -234,21 +272,35 @@ export default function SupplierCredits({ supplier, qarzaAccountId, onSupplierUp
                                                                 {new Date(item.transactionDate || item.date).toLocaleDateString()}
                                                             </td>
                                                             <td className="px-4 py-3 text-center">
-                                                                {item.sourceType === 'qarza' && (
+                                                                {(item.sourceType === "qarza" ||
+                                                                    (purchaseActionsUnlocked && ["purchase", "purchaseReturn"].includes(item.sourceType))) && (
                                                                     <>
-                                                                        <button
-                                                                            onClick={() => setModal({ mode: "update", payment: item })}
-                                                                            className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                                        <PermissionGuard
+                                                                            execute={() => setModal({ mode: "update", payment: item })}
+                                                                            permission="creditsAndDebitsAccounts.payment.update"
+                                                                            isConfirmation
+                                                                            confirmAuthorizedAction
                                                                         >
-                                                                            <Edit size={14} />
-                                                                        </button>
-                                                                        <ConfirmDialog message="Delete this payment?" onConfirm={() => handleDelete(item._id)}>
+                                                                            <button
+                                                                                className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                                                aria-label="Edit transaction"
+                                                                            >
+                                                                                <Edit size={14} />
+                                                                            </button>
+                                                                        </PermissionGuard>
+                                                                        <PermissionGuard
+                                                                            execute={() => handleDelete(item._id)}
+                                                                            permission="creditsAndDebitsAccounts.payment.delete"
+                                                                            isConfirmation
+                                                                            confirmAuthorizedAction
+                                                                        >
                                                                             <button
                                                                                 className="p-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] hover:border-red-400 hover:text-red-500 ml-2"
+                                                                                aria-label="Delete transaction"
                                                                             >
                                                                                 <Trash2 size={14} />
                                                                             </button>
-                                                                        </ConfirmDialog>
+                                                                        </PermissionGuard>
                                                                     </>
                                                                 )}
                                                             </td>

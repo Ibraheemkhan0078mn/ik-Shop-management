@@ -5,6 +5,7 @@ import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.j
 import { onlineDocsUploadSyncInsert } from "./insertSync.js";
 import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 import { imageFullSync } from "./imageFullSync.js";
+import { optimizeImagesForSync } from "./imageOptimizer.js";
 import { cleanupStaleOnlineChangeTracks } from "./cleanupStaleChangeTracks.js";
 import { updateUserSyncTime } from "./updateUserSyncTime.js";
 
@@ -81,6 +82,9 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         await onlineDocsUploadSyncUpdate(modelArray, syncType, loggedInUserData)
         await downloadOnlineSync(modelArray, syncType, loggedInUserData)
 
+
+        // Optimize local images before imageFullSync uploads them to Cloudinary.
+        await optimizeImagesForSync()
 
         // NEW: Comprehensive image sync
         await imageFullSync(modelArray, loggedInUserData)
