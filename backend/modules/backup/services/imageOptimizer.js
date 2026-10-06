@@ -1,13 +1,29 @@
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
+import { createRequire } from "module";
+import { initializeImageMagick, ImageMagick, DitherMethod, MagickFormat, QuantizeSettings } from "@imagemagick/magick-wasm";
 import { uploadDir } from "../../../common/services/uploadDirectory.js";
 
 const MAX_IMAGE_SIZE = 200 * 1024;
 const MAX_DIMENSION = 1600;
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const QUALITY_LEVELS = [82, 72, 62, 52, 42];
+const PNG_COLOR_LEVELS = [256, 192, 128, 64, 32];
 const MIN_DIMENSION = 320;
+const moduleRequire = createRequire(process.argv[1] || path.join(process.cwd(), "index.js"));
+let imageMagickInitialization;
+
+async function initializeImageMagickOnce() {
+    if (!imageMagickInitialization) {
+        imageMagickInitialization = (async () => {
+            const wasmPath = moduleRequire.resolve("@imagemagick/magick-wasm/magick.wasm");
+            const wasm = await fs.promises.readFile(wasmPath);
+            await initializeImageMagick(wasm);
+        })();
+    }
+
+    await imageMagickInitialization;
+}
 
 export async function optimizeImagesForSync(directory = uploadDir) {
     const entries = await fs.promises.readdir(directory, { withFileTypes: true });
@@ -25,45 +41,54 @@ export async function optimizeImagesForSync(directory = uploadDir) {
             continue;
         }
 
-        const metadata = await sharp(imagePath).metadata();
-        if (!metadata.width || !metadata.height || !["jpeg", "png", "webp"].includes(metadata.format)) {
-            throw new Error(`Cannot optimize unsupported image: ${entry.name}`);
-        }
+        await initializeImageMagickOnce();
+        const imageBuffer = await fs.promises.readFile(imagePath);
+        const optimizedBuffer = ImageMagick.read(imageBuffer, (sourceImage) => {
+            sourceImage.autoOrient();
+            const width = sourceImage.width;
+            const height = sourceImage.height;
+            const formatName = String(sourceImage.format).toUpperCase();
+            const outputFormat = {
+                JPEG: MagickFormat.Jpeg,
+                JPG: MagickFormat.Jpeg,
+                PNG: MagickFormat.Png,
+                WEBP: MagickFormat.WebP,
+            }[formatName];
 
-        let scale = Math.min(1, MAX_DIMENSION / Math.max(metadata.width, metadata.height));
-        let optimizedBuffer;
-
-        while (!optimizedBuffer && Math.max(metadata.width, metadata.height) * scale >= MIN_DIMENSION) {
-            for (const quality of QUALITY_LEVELS) {
-                let image = sharp(imagePath)
-                    .rotate()
-                    .resize({
-                        width: Math.max(1, Math.round(metadata.width * scale)),
-                        height: Math.max(1, Math.round(metadata.height * scale)),
-                        fit: "inside",
-                        withoutEnlargement: true,
-                    });
-
-                if (metadata.format === "jpeg") {
-                    image = image.jpeg({ quality, mozjpeg: true });
-                } else if (metadata.format === "webp") {
-                    image = image.webp({ quality });
-                } else {
-                    image = image.png({ palette: true, quality, effort: 10 });
-                }
-
-                const candidate = await image.toBuffer();
-                if (candidate.length < MAX_IMAGE_SIZE) {
-                    optimizedBuffer = candidate;
-                    break;
-                }
+            if (!width || !height || !outputFormat) {
+                throw new Error(`Cannot optimize unsupported image: ${entry.name}`);
             }
 
-            scale *= 0.85;
-        }
+            let scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+            while (Math.max(width, height) * scale >= MIN_DIMENSION) {
+                for (let qualityIndex = 0; qualityIndex < QUALITY_LEVELS.length; qualityIndex++) {
+                    const candidate = sourceImage.clone((image) => {
+                        image.resize(
+                            Math.max(1, Math.round(width * scale)),
+                            Math.max(1, Math.round(height * scale))
+                        );
+                        image.quality = QUALITY_LEVELS[qualityIndex];
+                        if (outputFormat === MagickFormat.Png) {
+                            const quantizeSettings = new QuantizeSettings();
+                            quantizeSettings.colors = PNG_COLOR_LEVELS[qualityIndex];
+                            quantizeSettings.ditherMethod = DitherMethod.FloydSteinberg;
+                            image.quantize(quantizeSettings);
+                        }
+                        return image.write(outputFormat, (data) => Buffer.from(data));
+                    });
+
+                    if (candidate.length < MAX_IMAGE_SIZE) {
+                        return candidate;
+                    }
+                }
+
+                scale *= 0.85;
+            }
+            return null;
+        });
 
         if (!optimizedBuffer) {
-            throw new Error(`Unable to reduce ${entry.name} below 500 KB without excessive resizing`);
+            throw new Error(`Unable to reduce ${entry.name} below 200 KB without excessive resizing`);
         }
 
         const temporaryPath = `${imagePath}.${process.pid}.tmp`;

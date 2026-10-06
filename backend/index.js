@@ -3,10 +3,6 @@ if (!globalThis.crypto) {
     globalThis.crypto = crypto;
 }
 import express from "express";
-import { idempotencyAsMiddleware, StorageAdapterEnum } from "@node-idempotency/express";
-const idempotency = await idempotencyAsMiddleware({
-  storage: { adapter: StorageAdapterEnum.memory },
-});
 
 import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
@@ -25,6 +21,7 @@ dotenv.config({
 import { connectDb } from "./configs/connect.db.js";
 import { connectOnlineDb } from "./configs/onlineConnect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
+import { inFlightRequestMiddleware } from "./common/middlewares/inFlightRequest.middleware.js";
 import { uploadDir } from "./common/services/uploadDirectory.js";
 import { PORT } from "./common/constants/env.js";
 
@@ -70,7 +67,7 @@ app.use(
         }
     ),
 );
-app.use(idempotency);
+app.use(inFlightRequestMiddleware);
 
 
 // Serve uploaded files (product images etc.) from the shared uploads dir.
