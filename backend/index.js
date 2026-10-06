@@ -3,6 +3,11 @@ if (!globalThis.crypto) {
     globalThis.crypto = crypto;
 }
 import express from "express";
+import { idempotencyAsMiddleware, StorageAdapterEnum } from "@node-idempotency/express";
+const idempotency = await idempotencyAsMiddleware({
+  storage: { adapter: StorageAdapterEnum.memory },
+});
+
 import dontenv from "dotenv";
 // import MongoStore from "connect-mongo";
 import session from "express-session";
@@ -65,6 +70,8 @@ app.use(
         }
     ),
 );
+app.use(idempotency);
+
 
 // Serve uploaded files (product images etc.) from the shared uploads dir.
 app.use("/uploads", (req, res, next) => {
