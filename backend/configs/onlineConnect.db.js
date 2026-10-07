@@ -31,6 +31,7 @@ import settingsSchema from "../modules/settings/models/settings.model.js";
 import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import appThemeSchema from "../modules/settings/models/appTheme.model.js";
 import transactionSchema from "../modules/transactions/models/transaction.model.js";
+import { MONGODB_URI } from "../common/constants/env.js";
 
 let OnlineUserModel = null;
 let OnlineUserRoleModel = null;
@@ -75,7 +76,8 @@ export const connectOnlineDb = async () => {
     dns.setServers(['8.8.8.8', '8.8.4.4']);
     
     // Dummy URL - replace with actual online MongoDB connection string
-    const ONLINE_MONGODB_URI = "mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0";
+    const ONLINE_MONGODB_URI = MONGODB_URI
+    console.log(ONLINE_MONGODB_URI)
     
     OnlineConnectionInstance = await mongoose
         .createConnection(ONLINE_MONGODB_URI, { dbName: "Shop-afrasiab-new" })  
