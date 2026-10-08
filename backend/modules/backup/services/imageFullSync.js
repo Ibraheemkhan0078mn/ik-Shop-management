@@ -34,7 +34,7 @@ const MODEL_IMAGE_CONFIG = {
  * 2. Download missing local images from Cloudinary
  * 3. Clean up orphaned images
  */
-export async function imageFullSync(modelArray, loggedInUserData) {
+export async function imageFullSync(modelArray, loggedInUserData, syncType = "required") {
     console.log('\n🖼️  === IMAGE FULL SYNC STARTED ===');
     
     try {
@@ -131,6 +131,29 @@ export async function imageFullSync(modelArray, loggedInUserData) {
                             }
                         } else {
                             allValidImages.add(imageFilename);
+
+                            if (syncType === "all" && config.publicIdField) {
+                                try {
+                                    const cloudinaryImage = await verifyCloudinaryImage(cloudinaryPublicId);
+                                    if (!cloudinaryImage.exists) {
+                                        console.log(`   ⚠️  Cloudinary image missing for ${imageFilename}; re-uploading...`);
+                                        const result = await uploadImageToCloudinary(
+                                            LocalModel,
+                                            doc._id,
+                                            imageFilename,
+                                            config.imageField,
+                                            config.publicIdField
+                                        );
+                                        if (result.success) {
+                                            stats.uploadedToCloudinary++;
+                                        } else {
+                                            stats.errors.push(`Upload failed for ${modelName}:${doc._id} - ${result.error}`);
+                                        }
+                                    }
+                                } catch (error) {
+                                    stats.errors.push(`Cloudinary check failed for ${modelName}:${doc._id} - ${error.message}`);
+                                }
+                            }
                         }
                     }
                     // CASE 3: Has both or just local → Track as valid
@@ -314,6 +337,9 @@ async function verifyCloudinaryImage(publicId) {
         const result = await cloudinary.api.resource(publicId);
         return { exists: true, url: result.secure_url };
     } catch (error) {
-        return { exists: false };
+        if (error?.error?.http_code === 404 || error?.http_code === 404) {
+            return { exists: false };
+        }
+        throw error;
     }
 }

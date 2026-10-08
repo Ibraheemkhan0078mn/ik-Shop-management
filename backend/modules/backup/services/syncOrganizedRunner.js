@@ -87,7 +87,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
         await optimizeImagesForSync()
 
         // NEW: Comprehensive image sync
-        await imageFullSync(modelArray, loggedInUserData)
+        await imageFullSync(modelArray, loggedInUserData, syncType)
 
         // NEW: Cleanup stale online change tracks (7+ days old)
         await cleanupStaleOnlineChangeTracks()
