@@ -1,4 +1,4 @@
-import { connectOnlineDb } from "../../../configs/onlineConnect.db.js";
+import { connectOnlineDb, getOnlineDbInstance } from "../../../configs/onlineConnect.db.js";
 import { connectDb } from "../../../configs/connect.db.js";
 import { docsSyncOrganizer } from "../services/syncOrganizedRunner.js";
 import XLSX from 'xlsx';
@@ -16,9 +16,10 @@ let syncAbortController = null;
 export const getStorageInfo = async (req, res) => {
     try {
         await connectOnlineDb();
-        const mongoose = await import('mongoose');
-        const ONLINE_MONGODB_URI = "mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/?appName=Cluster0";
-        const onlineDb = await mongoose.createConnection(ONLINE_MONGODB_URI, { dbName: "IMS-ONLINE" }).asPromise();
+        const onlineDb = getOnlineDbInstance()?.useDb("IMS-ONLINE");
+        if (!onlineDb) {
+            throw new Error("Online database connection is not ready");
+        }
         
         // Get database stats from MongoDB Atlas
         const stats = await onlineDb.db.stats();

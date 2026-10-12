@@ -592,12 +592,17 @@ export const getSalesReport = async (filters = {}) => {
 
 // Purchase Report
 export const getPurchaseReport = async (filters = {}) => {
-    const { fromDate, toDate, supplierId, paymentStatus, deliveryStatus, isRejected, search, period, page = 1, limit = 20 } = filters;
+    const { fromDate, toDate, supplierId, paymentStatus, deliveryStatus, isRejected, search, period } = filters;
 
     const matchQuery = {};
 
     // Handle period-based date filtering
-    if (period) {
+    if (period === "custom" || !period) {
+        if (fromDate || toDate) {
+            const dateFilter = buildDateFilter(fromDate, toDate);
+            matchQuery.createdAt = dateFilter.createdAt;
+        }
+    } else {
         let dateRange;
         switch (period) {
             case "today":
@@ -612,6 +617,14 @@ export const getPurchaseReport = async (filters = {}) => {
                 dateRange = getMonthRange();
                 matchQuery.createdAt = { $gte: dateRange.startOfMonth, $lte: dateRange.endOfMonth };
                 break;
+            case "3month":
+            case "last3months": {
+                const now = new Date();
+                const startOfPeriod = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+                const endOfPeriod = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                matchQuery.createdAt = { $gte: startOfPeriod, $lte: endOfPeriod };
+                break;
+            }
             case "year":
                 const now = new Date();
                 const startOfYear = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
@@ -619,9 +632,6 @@ export const getPurchaseReport = async (filters = {}) => {
                 matchQuery.createdAt = { $gte: startOfYear, $lte: endOfYear };
                 break;
         }
-    } else if (fromDate || toDate) {
-        const dateFilter = buildDateFilter(fromDate, toDate);
-        matchQuery.createdAt = dateFilter.createdAt;
     }
 
     if (supplierId) {
@@ -645,35 +655,47 @@ export const getPurchaseReport = async (filters = {}) => {
         ];
     }
 
-    const skip = (page - 1) * limit;
+    const data = await findPurchaseService(matchQuery, {
+        populate: [
+            { path: "supplier", select: "name" },
+            { path: "items.product", select: "name productCode" },
+            { path: "items.batch", select: "batchNumber" }
+        ],
+        sort: { createdAt: -1 }
+    });
 
-    const [data, total] = await Promise.all([
-        findPurchaseService(matchQuery, {
-            populate: [
-                { path: "supplier", select: "name" },
-                { path: "items.product", select: "name productCode" },
-                { path: "items.batch", select: "batchNumber" }
-            ],
-            sort: { createdAt: -1 },
-            skip,
-            limit
-        }),
-        countPurchaseService(matchQuery)
-    ]);
+    const purchaseIds = data.map(purchase => purchase._id);
+    const purchaseTransactions = purchaseIds.length > 0
+        ? await findTransactionService({
+            sourceType: "purchase",
+            sourceId: { $in: purchaseIds },
+        })
+        : [];
+    const paidAmountByPurchase = new Map();
+    purchaseTransactions.forEach(transaction => {
+        const purchaseId = transaction.sourceId?.toString();
+        if (!purchaseId) return;
+        paidAmountByPurchase.set(
+            purchaseId,
+            (paidAmountByPurchase.get(purchaseId) || 0) + (transaction.amount || 0),
+        );
+    });
 
-    const paymentStatusByPurchase = new Map();
-    await Promise.all(data.map(async (purchase) => {
-        const transactions = await getTransactions({ sourceType: "purchase", sourceId: purchase._id });
-        const paidAmount = transactions.reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
-        paymentStatusByPurchase.set(String(purchase._id), {
-            paidAmount,
-            paymentStatus: paidAmount >= (purchase.totalAmount || 0) ? "full" : paidAmount > 0 ? "partial" : "pending",
-        });
+    const paymentStatusByPurchase = new Map(data.map(purchase => {
+        const paidAmount = paidAmountByPurchase.get(String(purchase._id)) || 0;
+        return [
+            String(purchase._id),
+            {
+                paidAmount,
+                paymentStatus: paidAmount >= (purchase.totalAmount || 0)
+                    ? "full"
+                    : paidAmount > 0 ? "partial" : "pending",
+            },
+        ];
     }));
 
     // Fetch purchase returns for each purchase
     const { findPurchaseReturnService } = await import("../../purchaseReturn/services/purchaseReturn.crud.js");
-    const purchaseIds = data.map(p => p._id);
     const allReturns = await findPurchaseReturnService({ purchase: { $in: purchaseIds } }, {
         populate: [
             { path: "supplier", select: "name" },
@@ -760,13 +782,14 @@ export const getPurchaseReport = async (filters = {}) => {
     });
 
     const supplierBreakdown = Object.values(supplierMap).sort((a, b) => b.totalAmount - a.totalAmount);
+    const total = filteredData.length;
 
     return {
         data: filteredData,
-        total: paymentStatus && paymentStatus !== "all" ? filteredData.length : total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        total,
+        page: 1,
+        limit: total,
+        totalPages: total === 0 ? 0 : 1,
         summary: {
             totalPurchases,
             totalPaid,

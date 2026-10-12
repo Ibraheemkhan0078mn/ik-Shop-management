@@ -67,66 +67,96 @@ let OnlineTransactionModel = null
 
 // Store the connection instance for export
 let OnlineConnectionInstance = null;
+let OnlineConnectionPromise = null;
 
 export const getOnlineDbInstance = () => OnlineConnectionInstance;
 
 export const connectOnlineDb = async () => {
-   try {
-     console.log("Online connection is running");
-    dns.setServers(['8.8.8.8', '8.8.4.4']);
-    
-    // Dummy URL - replace with actual online MongoDB connection string
-    const ONLINE_MONGODB_URI = MONGODB_URI
-    console.log(ONLINE_MONGODB_URI)
-    
-    OnlineConnectionInstance = await mongoose
-        .createConnection(ONLINE_MONGODB_URI, { dbName: "Shop-afrasiab-new" })  
-        .asPromise();
-
-    if (OnlineConnectionInstance.host) {
-        console.log(`Server is connected to online db host: ${OnlineConnectionInstance.host}`);
+    if (OnlineConnectionInstance?.readyState === 1) {
+        return OnlineConnectionInstance;
     }
 
-    OnlineUserModel = OnlineConnectionInstance.model("Users", userSchema);
-    OnlineUserRoleModel = OnlineConnectionInstance.model("UserRoles", userRoleSchema);
-    OnlineProductModel = OnlineConnectionInstance.model("Products", productSchema);
-    OnlineCategoryModel = OnlineConnectionInstance.model("Categories", categorySchema);
-    OnlineSubCategoryModel = OnlineConnectionInstance.model(
-        "SubCategories",
-        subCategorySchema,
-    );
-    OnlineBrandModel = OnlineConnectionInstance.model("Brands", brandSchema);
-    OnlineBatchModel = OnlineConnectionInstance.model("Batches", batchSchema);
-    OnlineSupplierModel = OnlineConnectionInstance.model("Suppliers", supplierSchema);
-    OnlinePurchaseModel = OnlineConnectionInstance.model("Purchases", purchaseSchema);
-    OnlineOrderModel = OnlineConnectionInstance.model("Orders", orderSchema);
-    OnlineHoldOrderModel = OnlineConnectionInstance.model("HoldOrders", holdOrderSchema);
-    OnlineExpensesModel = OnlineConnectionInstance.model("Expenses", expenseSchema);
-    OnlineExpenseCategoryModel = OnlineConnectionInstance.model("ExpensesCategory", expenseCatagSchema)
-    OnlineActivityLogModel = OnlineConnectionInstance.model("ActivityLogs", activityLogSchema);
-    OnlineChangeTrackModel = OnlineConnectionInstance.model("ChangeTracks", changeTrackSchema);
-    OnlineImageChangeTrackModel = OnlineConnectionInstance.model("ImageChangeTracks", imageChangeTrackSchema)
-    OnlineQarzaAccountModel = OnlineConnectionInstance.model("QarzaAccount", QarzaAccountSchema)
-    OnlineQarzaPaymentModel = OnlineConnectionInstance.model("QarzaPayment", QarzaPaymentSchema)
-    OnlineWastageModel = OnlineConnectionInstance.model("Wastages", wastageSchema)
-    OnlinePurchaseReturnModel = OnlineConnectionInstance.model("PurchaseReturn", purchaseReturnSchema)
-    OnlineProductReturnModel = OnlineConnectionInstance.model("ProductReturn", productReturnSchema)
-    OnlineCustomerModel = OnlineConnectionInstance.model("Customers", customerSchema)
-    OnlineStaffModel = OnlineConnectionInstance.model("Staff", staffSchema)
-    OnlineStaffRoleModel = OnlineConnectionInstance.model("StaffRoles", staffRoleSchema)
-    OnlineStaffSalaryPaymentModel = OnlineConnectionInstance.model("StaffSalaryPayment", staffSalaryPaymentSchema)
-    OnlineStaffSaleBillModel = OnlineConnectionInstance.model("StaffSaleBill", staffSaleBillSchema)
-    OnlineStaffAttendanceModel = OnlineConnectionInstance.model("StaffAttendance", staffAttendanceSchema)
-    OnlineSettingsModel = OnlineConnectionInstance.model("Settings", settingsSchema)
-    OnlinePaymentMethodModel = OnlineConnectionInstance.model("PaymentMethods", paymentMethodSchema)
-    OnlineAppThemeModel = OnlineConnectionInstance.model("AppThemes", appThemeSchema)
-    OnlineTransactionModel = OnlineConnectionInstance.model("Transactions", transactionSchema)
+    if (OnlineConnectionPromise) {
+        try {
+            return await OnlineConnectionPromise;
+        } catch (error) {
+            console.error("Online connection failed:", error.message);
+            return undefined;
+        }
+    }
 
-    // Change stream tracking disabled - using local database tracking instead
-    // startChangeStreamTracking(OnlineConnection)
-   } catch (error) {
-      console.error("Online connection failed:", error.message);
-   }
+    const connectionPromise = (async () => {
+        console.log("Online connection is running");
+        dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+        // Dummy URL - replace with actual online MongoDB connection string
+        const ONLINE_MONGODB_URI = MONGODB_URI
+        console.log(ONLINE_MONGODB_URI)
+
+        OnlineConnectionInstance = await mongoose
+            .createConnection(ONLINE_MONGODB_URI, {
+                dbName: "Shop-afrasiab-new",
+                maxPoolSize: 3,
+            })
+            .asPromise();
+
+        if (OnlineConnectionInstance.host) {
+            console.log(`Server is connected to online db host: ${OnlineConnectionInstance.host}`);
+        }
+
+        OnlineUserModel = OnlineConnectionInstance.model("Users", userSchema);
+        OnlineUserRoleModel = OnlineConnectionInstance.model("UserRoles", userRoleSchema);
+        OnlineProductModel = OnlineConnectionInstance.model("Products", productSchema);
+        OnlineCategoryModel = OnlineConnectionInstance.model("Categories", categorySchema);
+        OnlineSubCategoryModel = OnlineConnectionInstance.model(
+            "SubCategories",
+            subCategorySchema,
+        );
+        OnlineBrandModel = OnlineConnectionInstance.model("Brands", brandSchema);
+        OnlineBatchModel = OnlineConnectionInstance.model("Batches", batchSchema);
+        OnlineSupplierModel = OnlineConnectionInstance.model("Suppliers", supplierSchema);
+        OnlinePurchaseModel = OnlineConnectionInstance.model("Purchases", purchaseSchema);
+        OnlineOrderModel = OnlineConnectionInstance.model("Orders", orderSchema);
+        OnlineHoldOrderModel = OnlineConnectionInstance.model("HoldOrders", holdOrderSchema);
+        OnlineExpensesModel = OnlineConnectionInstance.model("Expenses", expenseSchema);
+        OnlineExpenseCategoryModel = OnlineConnectionInstance.model("ExpensesCategory", expenseCatagSchema)
+        OnlineActivityLogModel = OnlineConnectionInstance.model("ActivityLogs", activityLogSchema);
+        OnlineChangeTrackModel = OnlineConnectionInstance.model("ChangeTracks", changeTrackSchema);
+        OnlineImageChangeTrackModel = OnlineConnectionInstance.model("ImageChangeTracks", imageChangeTrackSchema)
+        OnlineQarzaAccountModel = OnlineConnectionInstance.model("QarzaAccount", QarzaAccountSchema)
+        OnlineQarzaPaymentModel = OnlineConnectionInstance.model("QarzaPayment", QarzaPaymentSchema)
+        OnlineWastageModel = OnlineConnectionInstance.model("Wastages", wastageSchema)
+        OnlinePurchaseReturnModel = OnlineConnectionInstance.model("PurchaseReturn", purchaseReturnSchema)
+        OnlineProductReturnModel = OnlineConnectionInstance.model("ProductReturn", productReturnSchema)
+        OnlineCustomerModel = OnlineConnectionInstance.model("Customers", customerSchema)
+        OnlineStaffModel = OnlineConnectionInstance.model("Staff", staffSchema)
+        OnlineStaffRoleModel = OnlineConnectionInstance.model("StaffRoles", staffRoleSchema)
+        OnlineStaffSalaryPaymentModel = OnlineConnectionInstance.model("StaffSalaryPayment", staffSalaryPaymentSchema)
+        OnlineStaffSaleBillModel = OnlineConnectionInstance.model("StaffSaleBill", staffSaleBillSchema)
+        OnlineStaffAttendanceModel = OnlineConnectionInstance.model("StaffAttendance", staffAttendanceSchema)
+        OnlineSettingsModel = OnlineConnectionInstance.model("Settings", settingsSchema)
+        OnlinePaymentMethodModel = OnlineConnectionInstance.model("PaymentMethods", paymentMethodSchema)
+        OnlineAppThemeModel = OnlineConnectionInstance.model("AppThemes", appThemeSchema)
+        OnlineTransactionModel = OnlineConnectionInstance.model("Transactions", transactionSchema)
+
+        // Change stream tracking disabled - using local database tracking instead
+        // startChangeStreamTracking(OnlineConnection)
+        return OnlineConnectionInstance;
+    })();
+
+    OnlineConnectionPromise = connectionPromise;
+
+    try {
+        return await connectionPromise;
+    } catch (error) {
+        OnlineConnectionInstance = null;
+        console.error("Online connection failed:", error.message);
+        return undefined;
+    } finally {
+        if (OnlineConnectionPromise === connectionPromise) {
+            OnlineConnectionPromise = null;
+        }
+    }
 };
 
 export const getOnlinePurchaseReturnModel = () => OnlinePurchaseReturnModel || null;
