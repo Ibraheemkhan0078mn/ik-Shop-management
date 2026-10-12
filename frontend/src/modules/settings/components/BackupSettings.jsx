@@ -27,8 +27,9 @@ export default function BackupSettings({ settingsData, userId, labels }) {
     const [updateBackupSettings] = useUpdateBackupSettingsMutation();
     const [exportExcel] = useExportExcelMutation();
     const { data: syncStatus } = useGetSyncStatusQuery(undefined, {
-        pollingInterval: 0, // Disable auto-polling
+        pollingInterval: 1000,
     });
+    const syncInProgress = isSyncing || syncAllLoading || syncRequiredLoading || syncStatus?.data?.inProgress === true;
 
     // Update sync interval in settings when changed
     const handleIntervalChange = async (value, unit) => {
@@ -226,23 +227,23 @@ export default function BackupSettings({ settingsData, userId, labels }) {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                             <button
                                 onClick={handleSyncAll}
-                                disabled={isSyncing || syncAllLoading}
+                                disabled={syncInProgress}
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Database size={20} />
                                 <span>{labels.syncAllData}</span>
-                                {(isSyncing || syncAllLoading) && <RefreshCw size={16} className="animate-spin" />}
+                                {syncInProgress && <RefreshCw size={16} className="animate-spin" />}
                             </button>
                             <button
                                 onClick={handleSyncRequired}
-                                disabled={isSyncing || syncRequiredLoading}
+                                disabled={syncInProgress}
                                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--app-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RefreshCw size={20} />
                                 <span>{labels.syncRequiredOnly}</span>
-                                {(isSyncing || syncRequiredLoading) && <RefreshCw size={16} className="animate-spin" />}
+                                {syncInProgress && <RefreshCw size={16} className="animate-spin" />}
                             </button>
-                            {(isSyncing || syncAllLoading || syncRequiredLoading) && (
+                            {syncInProgress && (
                                 <button
                                     onClick={handleStopSync}
                                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-500 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"

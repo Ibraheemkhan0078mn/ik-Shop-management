@@ -285,27 +285,25 @@ async function cleanupOrphanedImages(validImageSet) {
         const allFiles = fs.readdirSync(uploadDir);
         console.log(`   Found ${allFiles.length} files in upload directory`);
 
-        for (const filename of allFiles) {
-            // Skip if this image is referenced in a document
-            if (validImageSet.has(filename)) {
-                continue;
-            }
-
-            // This is an orphaned image - delete it
-            try {
-                const filePath = path.join(uploadDir, filename);
-                const fileStats = fs.statSync(filePath);
-
-                // Only delete files (not directories)
-                if (fileStats.isFile()) {
-                    fs.unlinkSync(filePath);
-                    stats.deleted++;
-                    console.log(`   🗑️  Deleted orphaned: ${filename}`);
-                }
-            } catch (error) {
-                stats.errors.push(`Failed to delete ${filename}: ${error.message}`);
-            }
-        }
+        // Keep local images; sync reference checks can miss valid files.
+        // for (const filename of allFiles) {
+        //     if (validImageSet.has(filename)) {
+        //         continue;
+        //     }
+        // 
+        //     try {
+        //         const filePath = path.join(uploadDir, filename);
+        //         const fileStats = fs.statSync(filePath);
+        //
+        //         if (fileStats.isFile()) {
+        //             fs.unlinkSync(filePath);
+        //             stats.deleted++;
+        //             console.log(`   🗑️  Deleted orphaned: ${filename}`);
+        //         }
+        //     } catch (error) {
+        //         stats.errors.push(`Failed to delete ${filename}: ${error.message}`);
+        //     }
+        // }
 
         console.log(`   ✅ Deleted ${stats.deleted} orphaned images`);
 
