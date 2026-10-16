@@ -18,7 +18,6 @@ dotenv.config({
 // } catch (error) {
     
 // }
-import { connectDb } from "./configs/connect.db.js";
 import { connectOnlineDb } from "./configs/onlineConnect.db.js";
 import errorHandler from "./common/middlewares/error.middleware.js";
 import { inFlightRequestMiddleware } from "./common/middlewares/inFlightRequest.middleware.js";
@@ -113,8 +112,7 @@ app.get("/health", (req, res) => {
 
 app.use(errorHandler);
 
-connectDb();
-connectOnlineDb(); // Online database with change stream tracking enabled
+await connectOnlineDb();
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is listing on ${PORT} `);
 });

@@ -222,7 +222,7 @@ const getPaginationProduct = async (filters = {}, { includeBatchData = true } = 
 
     const [products, total] = await Promise.all([
         findProductService(query, {
-            sort: { createdAt: -1 },
+            sort: { createdTimeForSync: -1 },
             skip,
             limit: parseInt(limit),
             ...(includeBatchData ? { populate: ["batches"] } : {})

@@ -14,3 +14,4 @@ export const SESSION_SECRET = 'ims_secret_key';
 export const MONGO_URI_LOCAL = 'mongodb://localhost:27017/IMS-NEW';
 
 export const MONGODB_URI = 'mongodb+srv://afrasiabkhan0074m_db_user:JfHLd139VvrhUtXw@cluster0.5n3nv1i.mongodb.net';
+// export const MONGODB_URI = 'mongodb+srv://user2:lalakhanyar007m@cluster0.aipfjlf.mongodb.net/shop-testing-system?appName=Cluster0';

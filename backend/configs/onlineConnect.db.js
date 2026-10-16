@@ -27,6 +27,8 @@ import staffRoleSchema from "../modules/staff/models/staffRole.model.js";
 import staffSalaryPaymentSchema from "../modules/staff/models/staffSalaryPayment.model.js";
 import staffSaleBillSchema from "../modules/staff/models/staffSaleBill.model.js";
 import staffAttendanceSchema from "../modules/staff/models/staffAttendance.model.js";
+import staffSalaryChangeSchema from "../modules/staff/models/staffSalaryChange.model.js";
+import staffPercentageChangeSchema from "../modules/staff/models/staffPercentageChange.model.js";
 import settingsSchema from "../modules/settings/models/settings.model.js";
 import paymentMethodSchema from "../modules/settings/models/paymentMethod.model.js";
 import appThemeSchema from "../modules/settings/models/appTheme.model.js";
@@ -59,6 +61,8 @@ let OnlineStaffModel = null;
 let OnlineStaffSalaryPaymentModel = null;
 let OnlineStaffSaleBillModel = null;
 let OnlineStaffAttendanceModel = null;
+let OnlineStaffSalaryChangeModel = null;
+let OnlineStaffPercentageChangeModel = null;
 let OnlineSettingsModel = null;
 let OnlinePaymentMethodModel = null;
 let OnlineAppThemeModel = null;
@@ -134,6 +138,8 @@ export const connectOnlineDb = async () => {
         OnlineStaffSalaryPaymentModel = OnlineConnectionInstance.model("StaffSalaryPayment", staffSalaryPaymentSchema)
         OnlineStaffSaleBillModel = OnlineConnectionInstance.model("StaffSaleBill", staffSaleBillSchema)
         OnlineStaffAttendanceModel = OnlineConnectionInstance.model("StaffAttendance", staffAttendanceSchema)
+        OnlineStaffSalaryChangeModel = OnlineConnectionInstance.model("StaffSalaryChange", staffSalaryChangeSchema)
+        OnlineStaffPercentageChangeModel = OnlineConnectionInstance.model("StaffPercentageChange", staffPercentageChangeSchema)
         OnlineSettingsModel = OnlineConnectionInstance.model("Settings", settingsSchema)
         OnlinePaymentMethodModel = OnlineConnectionInstance.model("PaymentMethods", paymentMethodSchema)
         OnlineAppThemeModel = OnlineConnectionInstance.model("AppThemes", appThemeSchema)
@@ -186,6 +192,8 @@ export const getOnlineStaffRoleModel = () => OnlineStaffRoleModel || null;
 export const getOnlineStaffSalaryPaymentModel = () => OnlineStaffSalaryPaymentModel || null;
 export const getOnlineStaffSaleBillModel = () => OnlineStaffSaleBillModel || null;
 export const getOnlineStaffAttendanceModel = () => OnlineStaffAttendanceModel || null;
+export const getOnlineStaffSalaryChangeModel = () => OnlineStaffSalaryChangeModel || null;
+export const getOnlineStaffPercentageChangeModel = () => OnlineStaffPercentageChangeModel || null;
 export const getOnlineSettingsModel = () => OnlineSettingsModel || null;
 export const getOnlinePaymentMethodModel = () => OnlinePaymentMethodModel || null;
 export const getOnlineAppThemeModel = () => OnlineAppThemeModel || null;
