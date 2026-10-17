@@ -94,7 +94,10 @@ export const syncAll = async (req, res) => {
 
         // Run sync with type "all" - provide default user if req.user is undefined
         const userData = req.user || { role: "admin", permissions: [] };
-        await docsSyncOrganizer("all", userData);
+        const syncResult = await docsSyncOrganizer("all", userData);
+        if (!syncResult.success) {
+            throw new Error(syncResult.msg || "Full sync failed");
+        }
 
         syncInProgress = false;
         syncAbortController = null;
@@ -148,7 +151,10 @@ export const syncRequired = async (req, res) => {
 
         // Run sync with type "required" - provide default user if req.user is undefined
         const userData = req.user || { role: "admin", permissions: [] };
-        await docsSyncOrganizer("required", userData);
+        const syncResult = await docsSyncOrganizer("required", userData);
+        if (!syncResult.success) {
+            throw new Error(syncResult.msg || "Required sync failed");
+        }
 
         syncInProgress = false;
         syncAbortController = null;

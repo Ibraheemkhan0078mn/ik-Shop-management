@@ -1,13 +1,14 @@
 import { getLocalActivityLogModel, getLocalExpenseCategoryModel, getLocalExpensesModel, getLocalQarzaAccountModel, getLocalQarzaPaymentModel, getLocalUserModel, getLocalProductModel, getLocalCategoryModel, getLocalSubCategoryModel, getLocalBatchModel, getLocalSupplierModel, getLocalPurchaseModel, getLocalOrderModel, getLocalHoldOrderModel, getLocalWastageModel, getLocalPurchaseReturnModel, getLocalProductReturnModel, getLocalCustomerModel, getLocalStaffModel, getLocalStaffSalaryPaymentModel, getLocalStaffSaleBillModel, getLocalStaffAttendanceModel, getLocalSettingsModel, getLocalPaymentMethodModel, getLocalAppThemeModel, getLocalBrandModel, getLocalUserRoleModel, getLocalStaffRoleModel, getLocalTransactionModel } from "../../../configs/connect.db.js"
 import { getOnlineActivityLogModel, getOnlineExpenseCategoryModel, getOnlineExpensesModel, getOnlineQarzaAccountModel, getOnlineQarzaPaymentModel, getOnlineUserModel, getOnlineProductModel, getOnlineCategoryModel, getOnlineSubCategoryModel, getOnlineBatchModel, getOnlineSupplierModel, getOnlinePurchaseModel, getOnlineOrderModel, getOnlineHoldOrderModel, getOnlineWastageModel, getOnlinePurchaseReturnModel, getOnlineProductReturnModel, getOnlineCustomerModel, getOnlineStaffModel, getOnlineStaffSalaryPaymentModel, getOnlineStaffSaleBillModel, getOnlineStaffAttendanceModel, getOnlineSettingsModel, getOnlinePaymentMethodModel, getOnlineAppThemeModel, getOnlineBrandModel, getOnlineUserRoleModel, getOnlineStaffRoleModel, getOnlineTransactionModel } from '../../../configs/onlineConnect.db.js'
-import { downloadOnlineSync } from "./downloadOnlineSync.js";
-import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
-import { onlineDocsUploadSyncInsert } from "./insertSync.js";
-import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
+// import { downloadOnlineSync } from "./downloadOnlineSync.js";
+// import { permissionChangedDeletionFromLocal } from "./permissionChangeDeletion.js";
+// import { onlineDocsUploadSyncInsert } from "./insertSync.js";
+// import { onlineDocsUploadSyncUpdate } from "./updateSync.js";
 import { imageFullSync } from "./imageFullSync.js";
 import { optimizeImagesForSync } from "./imageOptimizer.js";
-import { cleanupStaleOnlineChangeTracks } from "./cleanupStaleChangeTracks.js";
-import { updateUserSyncTime } from "./updateUserSyncTime.js";
+// import { cleanupStaleOnlineChangeTracks } from "./cleanupStaleChangeTracks.js";
+// import { updateUserSyncTime } from "./updateUserSyncTime.js";
+import { fullLocalDataSync } from "./fullLocalDataSync.js";
 
 
 
@@ -57,7 +58,7 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
 
         // first delete when have not permission 
-        await permissionChangedDeletionFromLocal(modelArray, loggedInUserData)
+        // await permissionChangedDeletionFromLocal(modelArray, loggedInUserData);
 
 
 
@@ -65,37 +66,33 @@ export async function docsSyncOrganizer(syncType = "required", loggedInUserData)
 
         // then check if someone have not user permission then filter it reduce load on others
         // IDEA: what if i filter the all the modesl here so the load is reduce on other utilities of it.
-        if (loggedInUserData.role != "admin") {
-            modelArray = modelArray.filter(mObject => {
-                if (mObject.syncAlways) return true;
-                // Check if user has any of the required permissions for this model
-                const hasPermission = mObject.permissionString.some(permission => 
+        // Full sync always includes every configured collection, regardless of user permissions.
+
+
+
+        await fullLocalDataSync(modelArray)
+
+        let imageModelArray = modelArray;
+        if (loggedInUserData?.role !== "admin") {
+            imageModelArray = modelArray.filter(mObject =>
+                mObject.syncAlways || mObject.permissionString.some(permission =>
                     loggedInUserData.permissions?.includes(permission)
-                );
-                return hasPermission;
-            })
+                )
+            );
         }
-
-
-
-        await onlineDocsUploadSyncInsert(modelArray, syncType, loggedInUserData)
-        await onlineDocsUploadSyncUpdate(modelArray, syncType, loggedInUserData)
-        await downloadOnlineSync(modelArray, syncType, loggedInUserData)
 
 
         // Optimize local images before imageFullSync uploads them to Cloudinary.
         await optimizeImagesForSync()
 
         // NEW: Comprehensive image sync
-        await imageFullSync(modelArray, loggedInUserData, syncType)
+        await imageFullSync(imageModelArray, loggedInUserData, syncType)
 
         // NEW: Cleanup stale online change tracks (7+ days old)
-        await cleanupStaleOnlineChangeTracks()
+        // await cleanupStaleOnlineChangeTracks();
 
         // Update user's lastSyncTime after successful sync
-        if (loggedInUserData?._id) {
-            await updateUserSyncTime(loggedInUserData._id.toString());
-        }
+        // if (loggedInUserData?._id) await updateUserSyncTime(loggedInUserData._id.toString());
 
         // Keep old functions for backward compatibility
         // await imgDelete(modelArray, loggedInUserData)

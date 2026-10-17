@@ -56,6 +56,7 @@ export const SearchableSelect = ({
     onChange,
     placeholder = "Select...",
     className = "",
+    isMulti = false,
     ...props
 }) => {
     const [open, setOpen] = useState(false);
@@ -66,7 +67,11 @@ export const SearchableSelect = ({
         opt.label.toLowerCase().includes(search.toLowerCase())
     );
 
+    const selectedValues = isMulti && Array.isArray(value) ? value : [];
     const selected = options.find((opt) => opt.value === value);
+    const selectedOptions = isMulti
+        ? options.filter((opt) => selectedValues.includes(opt.value))
+        : [];
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -81,25 +86,42 @@ export const SearchableSelect = ({
     }, []);
 
     return (
-        <div ref={ref} className="relative w-full z-[9999]" {...props}>
+        <div ref={ref} className="relative w-full z-9999" {...props}>
             {/* Selected Box */}
             <div
                 onClick={() => setOpen((prev) => !prev)}
-                className={`w-full px-3 py-2 border rounded-lg cursor-pointer bg-white ${className}`}
+                className={`w-full px-3 py-2 border rounded-lg cursor-pointer ${className}`}
+                style={{
+                    background: "var(--surface)",
+                    borderColor: "var(--border)",
+                    color: selected || selectedOptions.length > 0 ? "var(--ink)" : "var(--muted)",
+                }}
             >
-                {selected ? selected.label : placeholder}
+                {isMulti
+                    ? selectedOptions.length > 0
+                        ? selectedOptions.map((opt) => opt.label).join(", ")
+                        : placeholder
+                    : selected?.label || placeholder}
             </div>
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute z-[9999] w-full bg-white border mt-1 rounded-lg shadow-md">
+                <div
+                    className="absolute z-9999 w-full border mt-1 rounded-lg shadow-md overflow-hidden"
+                    style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--ink)" }}
+                >
                     {/* Search */}
                     <input
                         type="text"
                         placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full px-3 py-2 border-b outline-none"
+                        className="w-full px-3 py-2 border-b outline-none placeholder:text-(--muted)"
+                        style={{
+                            background: "var(--surface-muted)",
+                            borderColor: "var(--border)",
+                            color: "var(--ink)",
+                        }}
                     />
 
                     {/* Options */}
@@ -112,17 +134,24 @@ export const SearchableSelect = ({
                                         key={opt.value}
                                         onClick={() => {
                                             if (isDisabled) return;
-                                            onChange && onChange(opt.value);
-                                            setOpen(false);
+                                            if (isMulti) {
+                                                const nextValues = selectedValues.includes(opt.value)
+                                                    ? selectedValues.filter((value) => value !== opt.value)
+                                                    : [...selectedValues, opt.value];
+                                                onChange && onChange(nextValues);
+                                            } else {
+                                                onChange && onChange(opt.value);
+                                                setOpen(false);
+                                            }
                                             setSearch("");
                                         }}
-                                        className={`px-3 py-2 ${isDisabled ? "cursor-not-allowed opacity-60" : "hover:bg-teal-100 cursor-pointer"}`}
+                                        className={`px-3 py-2 ${isDisabled ? "cursor-not-allowed opacity-60" : "hover:bg-(--surface-muted) cursor-pointer"}`}
                                         aria-disabled={isDisabled}
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <span>{opt.label}</span>
                                             {isDisabled && (
-                                                <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-(--surface-muted) text-(--muted)">
                                                     Non Active
                                                 </span>
                                             )}

@@ -1,5 +1,6 @@
 // src/modules/productPurchases/pages/ProductPurchase.jsx
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Check, X, Eye, Copy, RotateCcw, Edit, Trash2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDeletePurchase, usePurchases, useUpdatePurchaseStatus } from "../services/purchases.service.js";
@@ -12,9 +13,231 @@ import PageHeading from "../../../shared/components/PageHeading.jsx";
 import ScreenTabButton from "../../../shared/components/ScreenTabButton.jsx";
 import { showSuccess, showError } from "../../../shared/utilities/toastHelpers.js";
 import PermissionGuard from "../../../shared/components/PermissionGuard.jsx";
-import { useProducts } from "../../productsModule/services/product.service.js";
-import { useAllSuppliers } from "../../suppliers/services/suppliers.service";
-import { SearchableSelect } from "../../../shared/components/FormFields.jsx";
+import { ProductService } from "../../productsModule/api/productsApi.js";
+import { SupplierService } from "../../suppliers/services/suppliers.service.js";
+
+const searchProducts = async query => {
+    const products = await ProductService.search(query, 20);
+    return products.map(product => ({ value: product._id, label: product.name }));
+};
+
+const searchSuppliers = async query => {
+    const suppliers = await SupplierService.search(query, 20);
+    return suppliers.map(supplier => ({ value: supplier._id, label: supplier.name }));
+};
+
+function PurchaseFilterSelect({ searchOptions, value, onChange, onOptionsChange, placeholder, multiple = false }) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [options, setOptions] = useState([]);
+    const [knownOptions, setKnownOptions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const ref = useRef(null);
+    const menuRef = useRef(null);
+    const [menuPosition, setMenuPosition] = useState(null);
+    const selectedValues = multiple && Array.isArray(value) ? value : [];
+    const optionMap = new Map([...knownOptions, ...options].map(option => [option.value, option]));
+    const selectedOptions = multiple
+        ? selectedValues.map(selectedValue => optionMap.get(selectedValue)).filter(Boolean)
+        : [];
+    const selectedOption = multiple
+        ? null
+        : optionMap.get(value);
+
+    useEffect(() => {
+        const query = search.trim();
+        if (!open || query.length === 0) {
+            setOptions([]);
+            setLoading(false);
+            return undefined;
+        }
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const results = await searchOptions(query);
+                if (!cancelled) setOptions(results);
+            } catch {
+                if (!cancelled) setOptions([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [open, search, searchOptions]);
+
+    useEffect(() => {
+        const handleClickOutside = event => {
+            if (
+                !ref.current?.contains(event.target) &&
+                !menuRef.current?.contains(event.target)
+            ) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const updateMenuPosition = () => {
+        const bounds = ref.current?.getBoundingClientRect();
+        if (!bounds) return;
+
+        const spaceBelow = window.innerHeight - bounds.bottom - 8;
+        const spaceAbove = bounds.top - 8;
+        const opensAbove = spaceBelow < 256 && spaceAbove > spaceBelow;
+        const availableHeight = Math.max(100, Math.min(256, opensAbove ? spaceAbove : spaceBelow));
+
+        setMenuPosition({
+            left: bounds.left,
+            top: opensAbove ? bounds.top - availableHeight - 4 : bounds.bottom + 4,
+            width: bounds.width,
+            maxHeight: availableHeight,
+            listMaxHeight: Math.max(40, availableHeight - 58),
+        });
+    };
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const repositionMenu = () => updateMenuPosition();
+        window.addEventListener("resize", repositionMenu);
+        window.addEventListener("scroll", repositionMenu, true);
+        return () => {
+            window.removeEventListener("resize", repositionMenu);
+            window.removeEventListener("scroll", repositionMenu, true);
+        };
+    }, [open]);
+
+    const selectedLabel = multiple
+        ? selectedOptions.map(option => option.label).join(", ")
+        : selectedOption?.label;
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button
+                type="button"
+                onClick={() => {
+                    if (open) {
+                        setOpen(false);
+                    } else {
+                        updateMenuPosition();
+                        setOpen(true);
+                    }
+                }}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl transition text-left"
+                style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    color: selectedLabel ? "var(--ink)" : "var(--muted)",
+                }}
+            >
+                <span className="truncate">{selectedLabel || placeholder}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} />
+            </button>
+            {open && menuPosition && createPortal(
+                <div
+                    ref={menuRef}
+                    className="rounded-xl shadow-xl overflow-hidden"
+                    style={{
+                        position: "fixed",
+                        left: menuPosition.left,
+                        top: menuPosition.top,
+                        width: menuPosition.width,
+                        maxHeight: menuPosition.maxHeight,
+                        zIndex: 99999,
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                    }}
+                >
+                    <div className="p-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder={placeholder}
+                            value={search}
+                            onChange={event => setSearch(event.target.value)}
+                            className="w-full px-3 py-1.5 text-sm rounded-lg outline-none"
+                            style={{
+                                background: "var(--surface-muted)",
+                                border: "1px solid var(--border)",
+                                color: "var(--ink)",
+                            }}
+                        />
+                    </div>
+                    <div className="overflow-y-auto" style={{ maxHeight: menuPosition.listMaxHeight }}>
+                        {loading ? (
+                            <div className="px-3 py-2 text-sm" style={{ color: "var(--muted)" }}>Searching...</div>
+                        ) : search.trim().length === 0 ? (
+                            <div className="px-3 py-2 text-sm" style={{ color: "var(--muted)" }}>Type to search</div>
+                        ) : options.length > 0 ? options.map(option => {
+                            const isSelected = multiple
+                                ? selectedValues.includes(option.value)
+                                : value === option.value;
+                            return (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                        if (multiple) {
+                                            const nextValues = isSelected
+                                                ? selectedValues.filter(selected => selected !== option.value)
+                                                : [...selectedValues, option.value];
+                                            const nextOptions = nextValues
+                                                .map(selectedValue => optionMap.get(selectedValue) || option)
+                                                .filter((selectedOption, index, allOptions) =>
+                                                    allOptions.findIndex(item => item.value === selectedOption.value) === index
+                                                );
+                                            setKnownOptions(previous => [
+                                                ...previous.filter(item => item.value !== option.value),
+                                                option,
+                                            ]);
+                                            onChange(nextValues);
+                                            onOptionsChange?.(nextOptions);
+                                        } else {
+                                            setKnownOptions(previous => [
+                                                ...previous.filter(item => item.value !== option.value),
+                                                option,
+                                            ]);
+                                            onChange(option.value);
+                                            setOpen(false);
+                                        }
+                                        setSearch("");
+                                    }}
+                                    className="w-full px-3 py-2 text-sm text-left transition"
+                                    style={{
+                                        background: isSelected ? "rgba(15,118,110,0.08)" : "transparent",
+                                        color: isSelected ? "var(--accent-2)" : "var(--ink)",
+                                        fontWeight: isSelected ? 600 : 400,
+                                    }}
+                                    onMouseEnter={event => {
+                                        event.currentTarget.style.background = "rgba(15,118,110,0.06)";
+                                    }}
+                                    onMouseLeave={event => {
+                                        event.currentTarget.style.background = isSelected
+                                            ? "rgba(15,118,110,0.08)"
+                                            : "transparent";
+                                    }}
+                                >
+                                    {option.label}
+                                </button>
+                            );
+                        }) : (
+                            <div className="px-3 py-2 text-sm" style={{ color: "var(--muted)" }}>
+                                No results found
+                            </div>
+                        )}
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
 
 export default function ProductPurchasePage() {
     const navigate = useNavigate();
@@ -24,12 +247,6 @@ export default function ProductPurchasePage() {
     
     const [deletePurchase] = useDeletePurchase();
     const [updateStatus] = useUpdatePurchaseStatus();
-    const { data: productsData } = useProducts({ page: 1, limit: 1000 });
-    const { data: suppliersData } = useAllSuppliers();
-
-    const products = productsData || [];
-    const suppliers = suppliersData || [];
-
     const [modal,        setModal]        = useState(null);
     const [returnModal,  setReturnModal]  = useState(null);
     const [filterId, setFilterId] = useState("");
@@ -42,6 +259,7 @@ export default function ProductPurchasePage() {
     const [filterStartDate, setFilterStartDate] = useState("");
     const [filterEndDate, setFilterEndDate] = useState("");
     const [filterProducts, setFilterProducts] = useState([]);
+    const [filterProductOptions, setFilterProductOptions] = useState([]);
     const [filterSupplier, setFilterSupplier] = useState("");
 
     const listRef = useRef(null);
@@ -53,6 +271,7 @@ export default function ProductPurchasePage() {
         setFilterStartDate("");
         setFilterEndDate("");
         setFilterProducts([]);
+        setFilterProductOptions([]);
         setFilterSupplier("");
     };
 
@@ -217,27 +436,31 @@ export default function ProductPurchasePage() {
                                         </div>
 
                                         {/* Products Filter */}
+                                        {/*
                                         <div className="mb-4">
                                             <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
                                                 {language === "en" ? "Products" : "پروڈکٹس"}
                                             </label>
-                                            <SearchableSelect
+                                            <PurchaseFilterSelect
+                                                searchOptions={searchProducts}
                                                 placeholder={language === "en" ? "Search products..." : "پروڈکٹس تلاش کریں..."}
-                                                options={products.map(p => ({ value: p._id, label: p.name }))}
                                                 value={filterProducts}
                                                 onChange={setFilterProducts}
-                                                isMulti={true}
-                                                className="w-full"
+                                                onOptionsChange={setFilterProductOptions}
+                                                multiple
                                             />
                                             {filterProducts.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {filterProducts.map(productId => {
-                                                        const product = products.find(p => p._id === productId);
+                                                        const product = filterProductOptions.find(option => option.value === productId);
                                                         return (
                                                             <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-(--accent-2)/10 text-(--accent-2) rounded-md text-xs">
-                                                                {product?.name || productId}
+                                                                {product?.label || productId}
                                                                 <button
-                                                                    onClick={() => setFilterProducts(prev => prev.filter(id => id !== productId))}
+                                                                    onClick={() => {
+                                                                        setFilterProducts(prev => prev.filter(id => id !== productId));
+                                                                        setFilterProductOptions(prev => prev.filter(option => option.value !== productId));
+                                                                    }}
                                                                     className="hover:text-red-500"
                                                                 >
                                                                     <X size={10} />
@@ -248,21 +471,22 @@ export default function ProductPurchasePage() {
                                                 </div>
                                             )}
                                         </div>
+                                        */}
 
                                         {/* Supplier Filter */}
+                                        {/*
                                         <div className="mb-4">
                                             <label className="block text-xs font-semibold mb-1.5 text-(--muted)">
                                                 {language === "en" ? "Supplier" : "سپلائر"}
                                             </label>
-                                            <SearchableSelect
+                                            <PurchaseFilterSelect
+                                                searchOptions={searchSuppliers}
                                                 placeholder={language === "en" ? "Select supplier..." : "سپلائر منتخب کریں..."}
-                                                options={suppliers.map(s => ({ value: s._id, label: s.name }))}
                                                 value={filterSupplier}
                                                 onChange={setFilterSupplier}
-                                                isMulti={false}
-                                                className="w-full"
                                             />
                                         </div>
+                                        */}
                                     </div>
                                 )}
                             </div>

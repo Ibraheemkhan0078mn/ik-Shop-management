@@ -115,10 +115,17 @@ const getPurchaseById = async (id) => {
 };
 const getPurchaseByInvoiceNumber = (invoiceNumber) => findOnePurchaseService({ invoiceNumber }, populateOptions);
 
-const getPaginatedPurchases = async ({ page = 1, limit = 20, invoiceNumber, supplier, startDate, endDate } = {}) => {
+const getPaginatedPurchases = async ({ page = 1, limit = 20, invoiceNumber, supplier, startDate, endDate, products } = {}) => {
     const query = {};
     if (invoiceNumber) query.invoiceNumber = { $regex: invoiceNumber, $options: "i" };
     if (supplier) query.supplier = supplier;
+    if (products) {
+        const selectedProductIds = (Array.isArray(products) ? products : [products])
+            .flatMap(value => String(value).split(","))
+            .map(value => value.trim())
+            .filter(value => mongoose.isValidObjectId(value));
+        query["items.product"] = { $in: selectedProductIds };
+    }
     if (startDate || endDate) {
         query.date = {};
         if (startDate) query.date.$gte = new Date(startDate);
